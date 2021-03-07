@@ -30,7 +30,7 @@ localparam [PROCESSING_STATE_WIDTH - 1:0]
     State_break_offer_send = 4'b101,
     State_waiting_for_contract_send = 4'b110,
     State_break_offer_response_extra = 4'b111,
-    State_loop_offer_response_extra = 4'b1000;
+    State_loop_offer_response_extra = 4'b1000,
     State_wait_cache_reset = 4'b1001;
 
 

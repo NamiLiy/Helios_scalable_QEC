@@ -466,7 +466,7 @@ always @(*) begin
                     msg_to_router = {{(CORDINATE_WIDTH){1'b1}}, {(CORDINATE_WIDTH){1'b1}}, get_source_row(stage_1_msg), get_source_col(stage_1_msg), ROW_ID, COL_ID, timestamp,  cost_add(NEIGHBOUR_COST, get_cost(stage_1_msg)), MAX_HOP, MSG_MatchOffer};
                 end
             end else if(get_msg_type(stage_1_msg) == MSG_AcceptBrokeredOffer) begin
-                if(qubit_state == state_matched && match_row == get_broker_row(stage_1_msg) && match_col == get_broker_col(stage_1_msg)) begin
+                if(qubit_state == State_matched && match_row == get_broker_row(stage_1_msg) && match_col == get_broker_col(stage_1_msg)) begin
                     if (get_source_row(stage_1_msg) == ROW_ID && get_source_col(stage_1_msg) == COL_ID) begin
                         msg_to_router = {match_row, match_col,ROW_ID, COL_ID, ROW_ID, COL_ID, get_target_row(stage_1_msg), get_target_col(stage_1_msg),{(CORDINATE_WIDTH*2){1'b0}}, MSG_BrokeredContract};
                     end else begin
@@ -486,9 +486,9 @@ always @(*) begin
                     msg_to_router = {broker_next_hop_row, broker_next_hop_col, get_source_row(stage_1_msg), get_source_col(stage_1_msg), ROW_ID, COL_ID, get_target_row(stage_1_msg), get_target_col(stage_1_msg),{(CORDINATE_WIDTH*2){1'b0}}, MSG_Contract};
                 end
             end else if(get_msg_type(stage_1_msg) == MSG_BrokeredBreakOffer) begin
-                if(qubit_state == state_matched && match_row == get_broker_row(stage_1_msg) && match_col == get_broker_col(stage_1_msg)) begin
+                if(qubit_state == State_matched && match_row == get_broker_row(stage_1_msg) && match_col == get_broker_col(stage_1_msg)) begin
                     if(compare_i_j(ROW_ID,COL_ID,get_source_row(stage_1_msg), get_source_col(stage_1_msg)) &&  cost_is_negative (cost_add(get_cost(stage_1_msg), BOUNDARY_COST))) begin
-                        msg_to_router = {broker_row, broker_col, get_source_row(stage_1_msg), get_source_col(stage_1_msg),  ROW_ID, COL_ID, ROW_ID, COL_ID, 4'b0, {(MAX_HOP_WIDTH){1'bx}}, MSG_AcceptBrokeredOffer};
+                        msg_to_router = {get_broker_row(stage_1_msg), get_broker_col(stage_1_msg), get_source_row(stage_1_msg), get_source_col(stage_1_msg),  ROW_ID, COL_ID, ROW_ID, COL_ID, 4'b0, {(MAX_HOP_WIDTH){1'bx}}, MSG_AcceptBrokeredOffer};
                     end else begin
                         msg_to_router = {{(CORDINATE_WIDTH){1'b1}}, {(CORDINATE_WIDTH){1'b1}}, get_source_row(stage_1_msg), get_source_col(stage_1_msg), ROW_ID, COL_ID, get_timestamp(stage_1_msg), cost_add(NEIGHBOUR_COST, get_cost(stage_1_msg)), MAX_HOP, MSG_BreakOffer};
                     end
@@ -558,7 +558,7 @@ always @(*) begin
                         valid_to_router = 1'b1;
                     end
                 end else if(get_msg_type(stage_1_msg) == MSG_BrokeredBreakOffer) begin
-                    if(qubit_state == state_matched && match_row == get_broker_row(stage_1_msg) && match_col == get_broker_col(stage_1_msg)) begin
+                    if(qubit_state == State_matched && match_row == get_broker_row(stage_1_msg) && match_col == get_broker_col(stage_1_msg)) begin
                         valid_to_router = 1'b1;
                     end
                 end else if(get_msg_type(stage_1_msg) == MSG_BreakOffer) begin
@@ -587,7 +587,7 @@ always @(*) begin
             end
         end
         State_break_offer_response_extra: begin
-            if(!(get_source_row(stage_2_msg) == match_row && get_source_col(stage_2_msg) == match_col) && !(get_source_row(stage_2_msg) == ROW_ID && get_source_col(stage_2_msg) == COL_ID) && qubit_state == state_matched) begin
+            if(!(get_source_row(stage_2_msg) == match_row && get_source_col(stage_2_msg) == match_col) && !(get_source_row(stage_2_msg) == ROW_ID && get_source_col(stage_2_msg) == COL_ID) && qubit_state == State_matched) begin
                 valid_to_router = 1'b1;
             end
         end
@@ -650,7 +650,7 @@ always @(posedge clk, posedge reset) begin
                     qubit_state <= State_matched;
                 end
             end else if  (get_msg_type(stage_1_msg) == MSG_AcceptBrokeredOffer) begin
-                if(qubit_state == state_matched && match_row == get_broker_row(stage_1_msg) && match_col == get_broker_col(stage_1_msg)) begin
+                if(qubit_state == State_matched && match_row == get_broker_row(stage_1_msg) && match_col == get_broker_col(stage_1_msg)) begin
                     if (get_source_row(stage_1_msg) == ROW_ID && get_source_col(stage_1_msg) == COL_ID) begin
                         qubit_state <= State_send_offer;
                         match_row <= {(CORDINATE_WIDTH){1'b0}};
@@ -678,7 +678,7 @@ always @(posedge clk, posedge reset) begin
                     qubit_cost <= BOUNDARY_COST;
                 end
             end else if(get_msg_type(stage_1_msg) == MSG_BrokeredBreakOffer) begin
-                if(qubit_state == state_matched && match_row == get_broker_row(stage_1_msg) && match_col == get_broker_col(stage_1_msg)) begin
+                if(qubit_state == State_matched && match_row == get_broker_row(stage_1_msg) && match_col == get_broker_col(stage_1_msg)) begin
                     if(compare_i_j(ROW_ID,COL_ID,get_source_row(stage_1_msg), get_source_col(stage_1_msg)) &&  cost_is_negative (cost_add(get_cost(stage_1_msg), BOUNDARY_COST))) begin
                         qubit_state <= State_waiting_contract;
                     end
