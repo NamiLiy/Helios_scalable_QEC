@@ -526,7 +526,11 @@ end
 always @(*) begin
     valid_to_router = 1'b0;
     case(processing_state)
-        State_waiting_from_readout,
+        State_initial_resend: begin
+            if(measurement == 1'b1) begin
+                valid_to_router = 1'b1;
+            end
+        end
         State_brokered_break_offer_send,
         State_loop_offer_send: begin
             valid_to_router = 1'b1;
@@ -793,21 +797,21 @@ function [MAX_HOP_WIDTH-1:0] get_max_hops;
     end
 endfunction
 
-function [MAX_HOP_WIDTH-1:0] get_target_row;
+function [CORDINATE_WIDTH-1:0] get_target_row;
     input [MSG_WIDTH-1 : 0] msg;
     begin
         get_target_row = msg [MSG_WIDTH -1 - CORDINATE_WIDTH*6  : MSG_WIDTH - CORDINATE_WIDTH*7];
     end
 endfunction
 
-function [MAX_HOP_WIDTH-1:0] get_target_col;
+function [CORDINATE_WIDTH-1:0] get_target_col;
     input [MSG_WIDTH-1 : 0] msg;
     begin
         get_target_col = msg [MSG_WIDTH -1 - CORDINATE_WIDTH*7  : MSG_WIDTH - CORDINATE_WIDTH*8];
     end
 endfunction
 
-function [MAX_HOP_WIDTH-1:0] get_is_loop;
+function  get_is_loop;
     input [MSG_WIDTH-1 : 0] msg;
     begin
         get_is_loop = msg [MAX_HOP_WIDTH + MSG_TYPE_WIDTH + 1  : MAX_HOP_WIDTH + MSG_TYPE_WIDTH];

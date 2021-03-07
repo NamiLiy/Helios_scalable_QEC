@@ -292,7 +292,7 @@ function [CORDINATE_WIDTH - 1:0] cordinate_add;
     end
 endfunction
 
-function [CORDINATE_WIDTH - CORDINATE_WIDTH - CORDINATE_WIDTH - 1:0] message_except_dest;
+function [MSG_WIDTH - CORDINATE_WIDTH - CORDINATE_WIDTH - 1:0] message_except_dest;
     input [MSG_WIDTH-1 : 0] msg;
     begin
         message_except_dest = msg [MSG_WIDTH - CORDINATE_WIDTH*2 -1 :0];
