@@ -229,7 +229,7 @@ always@(*) begin
     else begin
         if(processing_state == State_msg_processing && stage_1_valid && get_msg_type(stage_1_msg) == MSG_MatchOffer) begin
             if(cache_valid == 1'b1) begin
-                if(cache_cost > msg_cost || cache_timestamp < msg_timestamp) begin
+                if(cost_is_less_than(msg_cost, cache_cost)  || cache_timestamp < msg_timestamp) begin
                     cache_write = 1'b1;
                 end else begin
                     cache_write = 1'b0;
@@ -239,7 +239,7 @@ always@(*) begin
             end
         end else if (processing_state == State_msg_processing && stage_1_valid && get_msg_type(stage_1_msg) == MSG_BreakOffer) begin
             if(cache_valid == 1'b1) begin
-                if(cache_cost > msg_cost || cache_timestamp < msg_timestamp) begin
+                if(cost_is_less_than(msg_cost, cache_cost) || cache_timestamp < msg_timestamp) begin
                     cache_write = 1'b1;
                 end else begin
                     cache_write = 1'b0;
@@ -260,7 +260,7 @@ always@(*) begin
     else begin
         if(processing_state == State_msg_processing && stage_1_valid && get_msg_type(stage_1_msg) == MSG_LoopOffer) begin
             if(loop_cache_valid == 1'b1) begin
-                if(loop_cache_cost > msg_cost || loop_cache_timestamp < msg_timestamp) begin
+                if(cost_is_less_than(msg_cost, loop_cache_cost) || loop_cache_timestamp < msg_timestamp) begin
                     loop_cache_write = 1'b1;
                 end else begin
                     loop_cache_write = 1'b0;
@@ -487,7 +487,7 @@ always @(*) begin
                 end
             end else if(get_msg_type(stage_1_msg) == MSG_BrokeredBreakOffer) begin
                 if(qubit_state == State_matched && match_row == get_broker_row(stage_1_msg) && match_col == get_broker_col(stage_1_msg)) begin
-                    if(compare_i_j(ROW_ID,COL_ID,get_source_row(stage_1_msg), get_source_col(stage_1_msg)) &&  cost_is_negative (cost_add(get_cost(stage_1_msg), BOUNDARY_COST))) begin
+                    if(compare_i_j(ROW_ID,COL_ID,get_source_row(stage_1_msg), get_source_col(stage_1_msg)) == 2'b11 &&  cost_is_negative (cost_add(get_cost(stage_1_msg), BOUNDARY_COST))) begin
                         msg_to_router = {get_broker_row(stage_1_msg), get_broker_col(stage_1_msg), get_source_row(stage_1_msg), get_source_col(stage_1_msg),  ROW_ID, COL_ID, ROW_ID, COL_ID, 4'b0, {(MAX_HOP_WIDTH){1'bx}}, MSG_AcceptBrokeredOffer};
                     end else begin
                         msg_to_router = {{(CORDINATE_WIDTH){1'b1}}, {(CORDINATE_WIDTH){1'b1}}, get_source_row(stage_1_msg), get_source_col(stage_1_msg), ROW_ID, COL_ID, get_timestamp(stage_1_msg), cost_add(NEIGHBOUR_COST, get_cost(stage_1_msg)), MAX_HOP, MSG_BreakOffer};
@@ -586,7 +586,7 @@ always @(*) begin
             end
         end
         State_waiting_for_contract_send : begin
-            if (compare_i_j(ROW_ID, COL_ID, get_source_row(stage_2_msg), get_source_col(stage_2_msg)) && get_cost(stage_2_msg) < qubit_cost) begin
+            if (compare_i_j(ROW_ID, COL_ID, get_source_row(stage_2_msg), get_source_col(stage_2_msg)) == 2'b11 && cost_is_less_than(get_cost(stage_2_msg) , qubit_cost)) begin
                 valid_to_router = 1'b1;
             end
         end
@@ -600,7 +600,7 @@ always @(*) begin
                 if(cost_is_negative(get_cost(stage_2_msg))) begin
                     valid_to_router = 1'b1;
                 end
-            end else if (compare_i_j(get_source_row(stage_2_msg), get_source_col(stage_2_msg), ROW_ID, COL_ID) && compare_i_j(get_source_row(stage_2_msg), get_source_col(stage_2_msg), match_row, match_col)) begin
+            end else if (compare_i_j(get_source_row(stage_2_msg), get_source_col(stage_2_msg), ROW_ID, COL_ID)  == 2'b11 && compare_i_j(get_source_row(stage_2_msg), get_source_col(stage_2_msg), match_row, match_col) == 2'b11 ) begin
                 valid_to_router = 1'b1;
             end
         end
@@ -618,7 +618,8 @@ always @(posedge clk, posedge reset) begin
             broker_next_hop_valid <= 1'b0;
         end else if(processing_state == State_initial_resend) begin
             qubit_state <= State_send_offer;
-        end else if(processing_state == State_waiting_for_contract_send && compare_i_j(ROW_ID, COL_ID, get_source_row(stage_2_msg), get_source_col(stage_2_msg)) && get_cost(stage_2_msg) < qubit_cost) begin
+            qubit_cost <= BOUNDARY_COST;
+        end else if(processing_state == State_waiting_for_contract_send && compare_i_j(ROW_ID, COL_ID, get_source_row(stage_2_msg), get_source_col(stage_2_msg))  == 2'b11 && cost_is_less_than(get_cost(stage_2_msg) , qubit_cost)) begin
             qubit_state <= State_waiting_contract;
         end else if (processing_state == State_msg_processing && stage_1_valid && ready_from_router == 1'b1) begin
             if(get_msg_type(stage_1_msg) == MSG_AcceptOffer) begin
@@ -683,7 +684,7 @@ always @(posedge clk, posedge reset) begin
                 end
             end else if(get_msg_type(stage_1_msg) == MSG_BrokeredBreakOffer) begin
                 if(qubit_state == State_matched && match_row == get_broker_row(stage_1_msg) && match_col == get_broker_col(stage_1_msg)) begin
-                    if(compare_i_j(ROW_ID,COL_ID,get_source_row(stage_1_msg), get_source_col(stage_1_msg)) &&  cost_is_negative (cost_add(get_cost(stage_1_msg), BOUNDARY_COST))) begin
+                    if(compare_i_j(ROW_ID,COL_ID,get_source_row(stage_1_msg), get_source_col(stage_1_msg))  == 2'b11 &&  cost_is_less_than(get_cost(stage_1_msg), BOUNDARY_COST)) begin
                         qubit_state <= State_waiting_contract;
                     end
                 end
@@ -861,6 +862,29 @@ function  cost_is_negative;
     end
 endfunction
 
+function  cost_is_less_than;
+    input [COST_WIDTH-1 : 0] costa, costb;
+    begin
+        if (costa[COST_WIDTH-1] == 0 && costb[COST_WIDTH-1] == 0) begin
+            if(costa < costb) begin
+                cost_is_less_than = 1'b1;
+            end else begin
+                cost_is_less_than = 1'b0;
+            end
+        end else if (costa[COST_WIDTH-1] == 1 && costb[COST_WIDTH-1] == 1) begin
+            if(costa > costb) begin
+                cost_is_less_than = 1'b1;
+            end else begin
+                cost_is_less_than = 1'b0;
+            end
+        end else if (costa[COST_WIDTH-1] == 1 && costb[COST_WIDTH-1] == 0) begin
+            cost_is_less_than = 1'b1;
+        end else begin
+            cost_is_less_than = 1'b0;
+        end
+    end
+endfunction
+
 //helper function to compare i,j
 function  [1:0] compare_i_j;
     input [CORDINATE_WIDTH-1 : 0] i1, j1, i2, j2;
@@ -869,14 +893,14 @@ function  [1:0] compare_i_j;
             if (j1 == j2) begin
                 compare_i_j = 2'b0;
             end else if ( j1 < j2 ) begin
-                compare_i_j = 2'b11;
+                compare_i_j = 2'b11; // negative
             end else begin
-                compare_i_j = 2'b1;
+                compare_i_j = 2'b1; // positive
             end
         end else if (i1 < i2) begin
-            compare_i_j = 2'b11;
+            compare_i_j = 2'b11; // negative
         end else begin
-            compare_i_j = 2'b1;
+            compare_i_j = 2'b1; // positive
         end
     end
 endfunction

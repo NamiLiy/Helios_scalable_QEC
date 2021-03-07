@@ -125,7 +125,12 @@ begin
     start_offer = 1;
     #10;
     start_offer = 0;
-    #2000;
+    #12000;
+    mailbox_east_valid_in = 1;
+    mailbox_east_value_in =  {4'd4, 4'd2, 4'd4, 4'd3, 4'd4, 4'd3, 6'd30, 6'd59, 4'd15, MSG_MatchOffer};
+    #10;
+    mailbox_east_valid_in = 0;
+    #1000;
 end
 
 wire [MSG_TYPE_WIDTH-1:0] get_msg_type;
