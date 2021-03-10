@@ -16,7 +16,7 @@ localparam MSG_TYPE = 4;
 localparam  MSG_TYPE_WIDTH = 4;
 localparam MSG_WIDTH = MSG_TYPE_WIDTH + TIMESTAMP_WIDTH + CORDINATE_WIDTH*6 + COST_WIDTH + MAX_HOP_WIDTH;
 
-
+localparam FIFO_DEPTH = 8; //depth of fifo between PU
 localparam  NEIGHBOUR_COST = 1;
 
 localparam PROCESSING_STATE_WIDTH = 4;

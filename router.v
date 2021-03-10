@@ -108,7 +108,7 @@ assign mailbox_east_ready_out = ~east_full;
 assign mailbox_west_ready_out = ~west_full;
 assign mailbox_self_ready_out = ~self_full;
 
-fifo_generator_0 north_fifo(
+fifo_fwft #(.DEPTH(FIFO_DEPTH), .WIDTH(MSG_WIDTH)) north_fifo(
   .clk(clk),
   .srst(reset),
   .din(mailbox_north_value_in),
@@ -119,7 +119,7 @@ fifo_generator_0 north_fifo(
   .empty(north_empty)
 );
 
-fifo_generator_0 south_fifo(
+fifo_fwft #(.DEPTH(FIFO_DEPTH), .WIDTH(MSG_WIDTH))  south_fifo(
   .clk(clk),
   .srst(reset),
   .din(mailbox_south_value_in),
@@ -130,7 +130,7 @@ fifo_generator_0 south_fifo(
   .empty(south_empty)
 );
 
-fifo_generator_0 east_fifo(
+fifo_fwft #(.DEPTH(FIFO_DEPTH), .WIDTH(MSG_WIDTH)) east_fifo(
   .clk(clk),
   .srst(reset),
   .din(mailbox_east_value_in),
@@ -141,7 +141,7 @@ fifo_generator_0 east_fifo(
   .empty(east_empty)
 );
 
-fifo_generator_0 west_fifo(
+fifo_fwft #(.DEPTH(FIFO_DEPTH), .WIDTH(MSG_WIDTH)) west_fifo(
   .clk(clk),
   .srst(reset),
   .din(mailbox_west_value_in),
@@ -152,7 +152,7 @@ fifo_generator_0 west_fifo(
   .empty(west_empty)
 );
 
-fifo_generator_0 self_fifo(
+fifo_fwft #(.DEPTH(FIFO_DEPTH), .WIDTH(MSG_WIDTH)) self_fifo(
   .clk(clk),
   .srst(reset),
   .din(mailbox_self_value_in),
