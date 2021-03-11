@@ -31,6 +31,7 @@ module pe
     match_value_out,
     start_offer,
     stop_offer,
+    measurement,
     ROW_ID,
     COL_ID,
     BOUNDARY_COST
@@ -75,7 +76,7 @@ output outqueue_south_valid_out;
 input outqueue_south_ready_in;
 output [MATCH_VALUE_WIDTH -1 : 0] match_value_out;
 
-reg measurement;
+output reg measurement;
 reg [PROCESSING_STATE_WIDTH - 1:0] processing_state;
 reg [PROCESSING_STATE_WIDTH - 1:0] processing_next_state;
 reg [COST_WIDTH - 1:0] qubit_cost;

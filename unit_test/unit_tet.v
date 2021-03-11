@@ -35,6 +35,7 @@ wire [MSG_WIDTH -1 : 0] outqueue_south_value_out;
 wire outqueue_south_valid_out;
 reg outqueue_south_ready_in;
 wire [MATCH_VALUE_WIDTH -1 : 0] match_value_out;
+wire measurement;
 
 reg [CORDINATE_WIDTH - 1:0] ROW_ID;
 reg [CORDINATE_WIDTH - 1:0] COL_ID;
@@ -82,6 +83,7 @@ pe uut
     .outqueue_south_value_out(outqueue_south_value_out),
     .outqueue_south_valid_out(outqueue_south_valid_out),
     .outqueue_south_ready_in(outqueue_south_ready_in),
+    .measurement(measurement),
     .ROW_ID(ROW_ID),
     .COL_ID(COL_ID),
     .BOUNDARY_COST(BOUNDARY_COST)
