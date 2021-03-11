@@ -12,6 +12,8 @@ wire [MATCH_VALUE_WIDTH -1 : 0] match_value_out[0:1][0:2];
 wire measurement[0:1][0:2];
 reg start_offer;
 reg stop_offer;
+reg clk;
+reg reset;
 
 always
 begin
@@ -73,22 +75,22 @@ begin
 	#10;
 	stop_offer = 0;
 	if(measurement[0][0] == 1'b1) begin;
-		$display("%t \t (y,x) = 0,0 \t match = \%d,\%d",$time,match_value_out_0_0[MATCH_VALUE_WIDTH -1:CORDINATE_WIDTH], match_value_out_0_0[CORDINATE_WIDTH -1:0]);
+		$display("%t \t (y,x) = 0,0 \t match = \%d,\%d",$time,match_value_out[0][0][MATCH_VALUE_WIDTH -1:CORDINATE_WIDTH], match_value_out[0][0][CORDINATE_WIDTH -1:0]);
 	end
 	if(measurement[0][1] == 1'b1) begin;
-		$display("%t \t (y,x) = 0,1 \t match = \%d,\%d",$time,match_value_out_0_1[MATCH_VALUE_WIDTH -1:CORDINATE_WIDTH], match_value_out_0_1[CORDINATE_WIDTH -1:0]);
+		$display("%t \t (y,x) = 0,1 \t match = \%d,\%d",$time,match_value_out[0][1][MATCH_VALUE_WIDTH -1:CORDINATE_WIDTH], match_value_out[0][1][CORDINATE_WIDTH -1:0]);
 	end
 	if(measurement[0][2] == 1'b1) begin;
-		$display("%t \t (y,x) = 0,2 \t match = \%d,\%d",$time,match_value_out_0_2[MATCH_VALUE_WIDTH -1:CORDINATE_WIDTH], match_value_out_0_2[CORDINATE_WIDTH -1:0]);
+		$display("%t \t (y,x) = 0,2 \t match = \%d,\%d",$time,match_value_out[0][2][MATCH_VALUE_WIDTH -1:CORDINATE_WIDTH], match_value_out[0][2][CORDINATE_WIDTH -1:0]);
 	end
 	if(measurement[1][0] == 1'b1) begin;
-		$display("%t \t (y,x) = 1,0 \t match = \%d,\%d",$time,match_value_out_1_0[MATCH_VALUE_WIDTH -1:CORDINATE_WIDTH], match_value_out_1_0[CORDINATE_WIDTH -1:0]);
+		$display("%t \t (y,x) = 1,0 \t match = \%d,\%d",$time,match_value_out[1][0][MATCH_VALUE_WIDTH -1:CORDINATE_WIDTH], match_value_out[1][0][CORDINATE_WIDTH -1:0]);
 	end
 	if(measurement[1][1] == 1'b1) begin;
-		$display("%t \t (y,x) = 1,1 \t match = \%d,\%d",$time,match_value_out_1_1[MATCH_VALUE_WIDTH -1:CORDINATE_WIDTH], match_value_out_1_1[CORDINATE_WIDTH -1:0]);
+		$display("%t \t (y,x) = 1,1 \t match = \%d,\%d",$time,match_value_out[1][1][MATCH_VALUE_WIDTH -1:CORDINATE_WIDTH], match_value_out[1][1][CORDINATE_WIDTH -1:0]);
 	end
 	if(measurement[1][2] == 1'b1) begin;
-		$display("%t \t (y,x) = 1,2 \t match = \%d,\%d",$time,match_value_out_1_2[MATCH_VALUE_WIDTH -1:CORDINATE_WIDTH], match_value_out_1_2[CORDINATE_WIDTH -1:0]);
+		$display("%t \t (y,x) = 1,2 \t match = \%d,\%d",$time,match_value_out[1][2][MATCH_VALUE_WIDTH -1:CORDINATE_WIDTH], match_value_out[1][2][CORDINATE_WIDTH -1:0]);
 	end
 end
 

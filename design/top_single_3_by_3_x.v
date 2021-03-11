@@ -1,5 +1,7 @@
 module top_single_3_by_3_x 
 (
+	clk,
+	reset,
 	measurement_value_in_0_0,
 	measurement_valid_in_0_0,
 	match_value_out_0_0,
@@ -32,6 +34,8 @@ module top_single_3_by_3_x
 
 `include "parameters.v"
 
+input clk;
+input reset;
 input measurement_value_in_0_0;
 input measurement_valid_in_0_0;
 output [MATCH_VALUE_WIDTH -1 : 0] match_value_out_0_0;
@@ -167,8 +171,7 @@ pe unit_0_0 (
 	.stop_offer(stop_offer),
 	.ROW_ID(0),
 	.COL_ID(0),
-	.BOUNDARY_COST(1),
-	.BOUNDARY_COST(stop_offer),
+	.BOUNDARY_COST(1)
 );
 
 pe unit_0_1 (
@@ -206,8 +209,7 @@ pe unit_0_1 (
 	.stop_offer(stop_offer),
 	.ROW_ID(0),
 	.COL_ID(1),
-	.BOUNDARY_COST(1),
-	.BOUNDARY_COST(stop_offer),
+	.BOUNDARY_COST(1)
 );
 
 pe unit_0_2 (
@@ -245,8 +247,7 @@ pe unit_0_2 (
 	.stop_offer(stop_offer),
 	.ROW_ID(0),
 	.COL_ID(2),
-	.BOUNDARY_COST(1),
-	.BOUNDARY_COST(stop_offer),
+	.BOUNDARY_COST(1)
 );
 
 pe unit_1_0 (
@@ -284,8 +285,7 @@ pe unit_1_0 (
 	.stop_offer(stop_offer),
 	.ROW_ID(1),
 	.COL_ID(0),
-	.BOUNDARY_COST(1),
-	.BOUNDARY_COST(stop_offer),
+	.BOUNDARY_COST(1)
 );
 
 pe unit_1_1 (
@@ -323,8 +323,7 @@ pe unit_1_1 (
 	.stop_offer(stop_offer),
 	.ROW_ID(1),
 	.COL_ID(1),
-	.BOUNDARY_COST(1),
-	.BOUNDARY_COST(stop_offer),
+	.BOUNDARY_COST(1)
 );
 
 pe unit_1_2 (
@@ -362,8 +361,7 @@ pe unit_1_2 (
 	.stop_offer(stop_offer),
 	.ROW_ID(1),
 	.COL_ID(2),
-	.BOUNDARY_COST(1),
-	.BOUNDARY_COST(stop_offer),
+	.BOUNDARY_COST(1)
 );
 
 endmodule
