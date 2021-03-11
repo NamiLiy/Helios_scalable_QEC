@@ -1,5 +1,125 @@
 module top_single_3_by_3_x 
+(
+	measurement_value_in_0_0,
+	measurement_valid_in_0_0,
+	match_value_out_0_0,
+	measurement_value_in_0_1,
+	measurement_valid_in_0_1,
+	match_value_out_0_1,
+	measurement_value_in_0_2,
+	measurement_valid_in_0_2,
+	match_value_out_0_2,
+	measurement_value_in_1_0,
+	measurement_valid_in_1_0,
+	match_value_out_1_0,
+	measurement_value_in_1_1,
+	measurement_valid_in_1_1,
+	match_value_out_1_1,
+	measurement_value_in_1_2,
+	measurement_valid_in_1_2,
+	match_value_out_1_2,
+	start_offer,
+	stop_offer
+);
+
 // This is 3 by 2 grid of x stabilizers
+
+`include "parameters.v"
+
+input measurement_value_in_0_0;
+input measurement_valid_in_0_0;
+output [MATCH_VALUE_WIDTH -1 : 0] match_value_out_0_0;
+input measurement_value_in_0_1;
+input measurement_valid_in_0_1;
+output [MATCH_VALUE_WIDTH -1 : 0] match_value_out_0_1;
+input measurement_value_in_0_2;
+input measurement_valid_in_0_2;
+output [MATCH_VALUE_WIDTH -1 : 0] match_value_out_0_2;
+input measurement_value_in_1_0;
+input measurement_valid_in_1_0;
+output [MATCH_VALUE_WIDTH -1 : 0] match_value_out_1_0;
+input measurement_value_in_1_1;
+input measurement_valid_in_1_1;
+output [MATCH_VALUE_WIDTH -1 : 0] match_value_out_1_1;
+input measurement_value_in_1_2;
+input measurement_valid_in_1_2;
+output [MATCH_VALUE_WIDTH -1 : 0] match_value_out_1_2;
+input start_offer;
+input stop_offer;
+
+wire [MSG_WIDTH -1 : 0] north_south_value_0_0_1_0;
+wire north_south_valid_0_0_1_0;
+wire north_south_ready_0_0_1_0;
+wire [MSG_WIDTH -1 : 0] south_north_value_0_0_1_0;
+wire south_north_valid_0_0_1_0;
+wire south_north_ready_0_0_1_0;
+wire [MSG_WIDTH -1 : 0] north_south_value_0_1_1_1;
+wire north_south_valid_0_1_1_1;
+wire north_south_ready_0_1_1_1;
+wire [MSG_WIDTH -1 : 0] south_north_value_0_1_1_1;
+wire south_north_valid_0_1_1_1;
+wire south_north_ready_0_1_1_1;
+wire [MSG_WIDTH -1 : 0] north_south_value_0_2_1_2;
+wire north_south_valid_0_2_1_2;
+wire north_south_ready_0_2_1_2;
+wire [MSG_WIDTH -1 : 0] south_north_value_0_2_1_2;
+wire south_north_valid_0_2_1_2;
+wire south_north_ready_0_2_1_2;
+wire [MSG_WIDTH -1 : 0] east_west_value_0_0_1_0;
+wire east_west_valid_0_0_0_1;
+wire east_west_ready_0_0_0_1;
+wire [MSG_WIDTH -1 : 0] west_east_value_0_0_0_1;
+wire west_east_valid_0_0_0_1;
+wire west_east_ready_0_0_0_1;
+wire [MSG_WIDTH -1 : 0] east_west_value_0_1_1_1;
+wire east_west_valid_0_1_0_2;
+wire east_west_ready_0_1_0_2;
+wire [MSG_WIDTH -1 : 0] west_east_value_0_1_0_2;
+wire west_east_valid_0_1_0_2;
+wire west_east_ready_0_1_0_2;
+wire [MSG_WIDTH -1 : 0] east_west_value_1_0_2_0;
+wire east_west_valid_1_0_1_1;
+wire east_west_ready_1_0_1_1;
+wire [MSG_WIDTH -1 : 0] west_east_value_1_0_1_1;
+wire west_east_valid_1_0_1_1;
+wire west_east_ready_1_0_1_1;
+wire [MSG_WIDTH -1 : 0] east_west_value_1_1_2_1;
+wire east_west_valid_1_1_1_2;
+wire east_west_ready_1_1_1_2;
+wire [MSG_WIDTH -1 : 0] west_east_value_1_1_1_2;
+wire west_east_valid_1_1_1_2;
+wire west_east_ready_1_1_1_2;
+wire ready_open_north_0_0;
+wire [MSG_WIDTH -1 : 0] value_open_north_0_0;
+wire valid_open_north_0_0;
+wire ready_open_south_1_0;
+wire [MSG_WIDTH -1 : 0] value_open_south_1_0;
+wire valid_open_south_1_0;
+wire ready_open_north_0_1;
+wire [MSG_WIDTH -1 : 0] value_open_north_0_1;
+wire valid_open_north_0_1;
+wire ready_open_south_1_1;
+wire [MSG_WIDTH -1 : 0] value_open_south_1_1;
+wire valid_open_south_1_1;
+wire ready_open_north_0_2;
+wire [MSG_WIDTH -1 : 0] value_open_north_0_2;
+wire valid_open_north_0_2;
+wire ready_open_south_1_2;
+wire [MSG_WIDTH -1 : 0] value_open_south_1_2;
+wire valid_open_south_1_2;
+wire ready_open_west_0_0;
+wire [MSG_WIDTH -1 : 0] value_open_west_0_0;
+wire valid_open_west_0_0;
+wire ready_open_east_0_2;
+wire [MSG_WIDTH -1 : 0] value_open_east_0_2;
+wire valid_open_east_0_2;
+wire ready_open_west_1_0;
+wire [MSG_WIDTH -1 : 0] value_open_west_1_0;
+wire valid_open_west_1_0;
+wire ready_open_east_1_2;
+wire [MSG_WIDTH -1 : 0] value_open_east_1_2;
+wire valid_open_east_1_2;
+
 pe unit_0_0 (
 	.clk(clk),
 	.reset(reset),
