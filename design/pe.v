@@ -370,9 +370,9 @@ always @(*) begin
             State_msg_processing : begin
                 if(ready_from_router == 1'b1 && stage_1_valid) begin
                     if(get_msg_type(stage_1_msg) == MSG_MatchOffer) begin
-                        if(cache_write == 1'b1 && qubit_state == State_matched) begin
+                        if(measurement == 1'b1 && cache_write == 1'b1 && qubit_state == State_matched) begin
                             processing_next_state = State_break_offer_send;
-                        end else if(qubit_state == State_send_offer) begin
+                        end else if(measurement == 1'b1 && qubit_state == State_send_offer) begin
                             processing_next_state = State_waiting_for_contract_send;
                         end
                     end else if (get_msg_type(stage_1_msg) == MSG_RefuseAcceptance) begin
@@ -384,7 +384,7 @@ always @(*) begin
                             processing_next_state = State_initial_resend;
                         end
                     end else if (get_msg_type(stage_1_msg) == MSG_BreakOffer) begin
-                        if(cache_write == 1'b1) begin
+                        if(cache_write == 1'b1 && qubit_state == State_matched) begin
                             processing_next_state = State_break_offer_response_extra;
                         end
                     end else if (get_msg_type(stage_1_msg) == MSG_LoopOffer) begin
