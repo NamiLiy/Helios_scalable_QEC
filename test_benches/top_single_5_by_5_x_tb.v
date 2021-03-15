@@ -124,10 +124,10 @@ begin
 	measurement_value_in[1][4] = 0;
 	measurement_value_in[2][0] = 0;
 	measurement_value_in[2][1] = 0;
-	measurement_value_in[2][2] = 0;
-	measurement_value_in[2][3] = 0;
+	measurement_value_in[2][2] = 1;
+	measurement_value_in[2][3] = 1;
 	measurement_value_in[2][4] = 0;
-	measurement_value_in[3][0] = 0;
+	measurement_value_in[3][0] = 1;
 	measurement_value_in[3][1] = 0;
 	measurement_value_in[3][2] = 0;
 	measurement_value_in[3][3] = 0;
