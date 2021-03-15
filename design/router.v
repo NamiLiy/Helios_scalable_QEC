@@ -202,12 +202,12 @@ always@(*) begin
     outqueue_self_valid_out = 0;
     message_can_be_pushed = 0;
     if (next_msg_valid) begin
-        if (msg_row == {(CORDINATE_WIDTH){1'b1}} && msg_col == {(CORDINATE_WIDTH){1'b1}} &&
+        if (msg_row == {(CORDINATE_WIDTH){1'b1}}  &&
         outqueue_north_ready_in == 1'b1 && outqueue_south_ready_in == 1'b1 && outqueue_west_ready_in == 1'b1 && outqueue_east_ready_in == 1'b1) begin
-            outqueue_north_valid_out = 1;
-            outqueue_south_valid_out = 1;
-            outqueue_east_valid_out = 1;
-            outqueue_west_valid_out = 1;
+            outqueue_north_valid_out = msg_col[3];
+            outqueue_south_valid_out = msg_col[0];
+            outqueue_east_valid_out = msg_col[2];
+            outqueue_west_valid_out = msg_col[1];
             message_can_be_pushed = 1;
         end else if(msg_row == ROW_ID && msg_col == COL_ID && outqueue_self_ready_in == 1'b1) begin
             outqueue_self_valid_out = 1;

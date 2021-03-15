@@ -435,7 +435,7 @@ always @(*) begin
         State_msg_processing: begin
             if(get_msg_type(stage_1_msg) == MSG_MatchOffer) begin
                 if(cache_write == 1'b1) begin
-                    msg_to_router = {{(CORDINATE_WIDTH){1'b1}}, {(CORDINATE_WIDTH){1'b1}}, get_source_row(stage_1_msg), get_source_col(stage_1_msg), get_broker_row(stage_1_msg), get_broker_col(stage_1_msg), get_timestamp(stage_1_msg), cost_add(get_cost(stage_1_msg), NEIGHBOUR_COST), get_max_hops(stage_1_msg), MSG_MatchOffer};
+                    msg_to_router = {{(CORDINATE_WIDTH){1'b1}}, get_destination(get_broker_row(stage_1_msg), get_broker_col(stage_1_msg),ROW_ID, COL_ID), get_source_row(stage_1_msg), get_source_col(stage_1_msg), get_broker_row(stage_1_msg), get_broker_col(stage_1_msg), get_timestamp(stage_1_msg), cost_add(get_cost(stage_1_msg), NEIGHBOUR_COST), get_max_hops(stage_1_msg), MSG_MatchOffer};
                 end
             end else if(get_msg_type(stage_1_msg) == MSG_AcceptOffer) begin
                 if( get_source_row(stage_1_msg) == ROW_ID && get_source_col(stage_1_msg) == COL_ID ) begin
@@ -495,9 +495,9 @@ always @(*) begin
                     end
                 end
             end else if(get_msg_type(stage_1_msg) == MSG_BreakOffer) begin
-                msg_to_router = {{(CORDINATE_WIDTH){1'b1}}, {(CORDINATE_WIDTH){1'b1}}, get_source_row(stage_1_msg), get_source_col(stage_1_msg), get_broker_row(stage_1_msg), get_broker_col(stage_1_msg), get_timestamp(stage_1_msg), cost_add(NEIGHBOUR_COST, get_cost(stage_1_msg)), MAX_HOP, MSG_BreakOffer};
+                msg_to_router = {{(CORDINATE_WIDTH){1'b1}}, get_destination(get_broker_row(stage_1_msg), get_broker_col(stage_1_msg),ROW_ID, COL_ID), get_source_row(stage_1_msg), get_source_col(stage_1_msg), get_broker_row(stage_1_msg), get_broker_col(stage_1_msg), get_timestamp(stage_1_msg), cost_add(NEIGHBOUR_COST, get_cost(stage_1_msg)), MAX_HOP, MSG_BreakOffer};
             end else if(get_msg_type(stage_1_msg) == MSG_LoopOffer) begin
-                msg_to_router = {{(CORDINATE_WIDTH){1'b1}}, {(CORDINATE_WIDTH){1'b1}}, get_source_row(stage_1_msg), get_source_col(stage_1_msg), get_broker_row(stage_1_msg), get_broker_col(stage_1_msg), get_timestamp(stage_1_msg), cost_add(NEIGHBOUR_COST, get_cost(stage_1_msg)), MAX_HOP, MSG_LoopOffer};
+                msg_to_router = {{(CORDINATE_WIDTH){1'b1}},get_destination(get_broker_row(stage_1_msg), get_broker_col(stage_1_msg),ROW_ID, COL_ID), get_source_row(stage_1_msg), get_source_col(stage_1_msg), get_broker_row(stage_1_msg), get_broker_col(stage_1_msg), get_timestamp(stage_1_msg), cost_add(NEIGHBOUR_COST, get_cost(stage_1_msg)), MAX_HOP, MSG_LoopOffer};
             end else if(get_msg_type(stage_1_msg) == MSG_BrokeredLoopOffer) begin
                 msg_to_router = {{(CORDINATE_WIDTH){1'b1}}, {(CORDINATE_WIDTH){1'b1}}, get_source_row(stage_1_msg), get_source_col(stage_1_msg), ROW_ID, COL_ID, get_timestamp(stage_1_msg), cost_add(NEIGHBOUR_COST, get_cost(stage_1_msg)), MAX_HOP, MSG_LoopOffer};
             end
@@ -914,6 +914,23 @@ function [COST_WIDTH - 1:0] cost_of_matching;
         dj = (j1 > j2) ? (j1 - j2) : j2 - j1;
         d_sum = di + dj;
         cost_of_matching = d_sum[COST_WIDTH :1]; //divide by 2
+    end
+endfunction
+
+function [CORDINATE_WIDTH-1 : 0] get_destination;
+    input [CORDINATE_WIDTH-1 : 0] origin_row, origin_col, my_row, my_col;
+    begin
+        if (origin_row == my_row && origin_col == my_col) begin
+            get_destination = 4'b1111; //send through news
+        end else if (origin_row < my_row && origin_col == my_col) begin
+            get_destination = 4'b0111; //send through ews
+        end else if (origin_row > my_row && origin_col == my_col) begin
+            get_destination = 4'b1110;
+        end else if (origin_col < my_col) begin
+            get_destination = 4'b0100;
+        end else begin
+            get_destination = 4'b0010;
+        end
     end
 endfunction
 
