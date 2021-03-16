@@ -538,7 +538,9 @@ always @(*) begin
             end
         end
         State_loop_offer_send: begin
-            valid_to_router = 1'b1;
+            if(measurement == 1'b1 && qubit_state == State_matched && compare_i_j(ROW_ID,COL_ID, match_row, match_col) == 2'b11) begin
+                valid_to_router = 1'b1;
+            end
         end
         State_msg_processing : begin
             if (stage_1_valid) begin
@@ -622,7 +624,9 @@ always @(posedge clk, posedge reset) begin
             qubit_state <= State_initial;
             broker_next_hop_valid <= 1'b0;
         end else if(processing_state == State_initial_resend) begin
-            qubit_state <= State_send_offer;
+            if(qubit_state == State_initial) begin
+                qubit_state <= State_send_offer;
+            end 
             qubit_cost <= BOUNDARY_COST;
         end else if(processing_state == State_waiting_for_contract_send && compare_i_j(ROW_ID, COL_ID, get_source_row(stage_2_msg), get_source_col(stage_2_msg))  == 2'b11 && cost_is_less_than(get_cost(stage_2_msg) , qubit_cost)) begin
             qubit_state <= State_waiting_contract;
