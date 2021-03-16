@@ -350,7 +350,7 @@ always @(*) begin
             end
             State_initial_resend : begin
                 if(ready_from_router == 1'b1) begin
-                    processing_next_state = State_msg_processing;
+                    processing_next_state = State_brokered_break_offer_send;
                 end
             end
             State_brokered_break_offer_send : begin
@@ -528,11 +528,15 @@ always @(*) begin
     valid_to_router = 1'b0;
     case(processing_state)
         State_initial_resend: begin
-            if(measurement == 1'b1) begin
+            if(measurement == 1'b1 && (qubit_state == State_initial || qubit_state == State_send_offer)) begin
                 valid_to_router = 1'b1;
             end
         end
-        State_brokered_break_offer_send,
+        State_brokered_break_offer_send: begin
+            if(measurement == 1'b1 && qubit_state == State_matched) begin
+                valid_to_router = 1'b1;
+            end
+        end
         State_loop_offer_send: begin
             valid_to_router = 1'b1;
         end
