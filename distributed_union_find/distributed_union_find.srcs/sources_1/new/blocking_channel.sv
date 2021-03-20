@@ -16,6 +16,8 @@ module blocking_channel #(
 // TODO: improve performance
 // current implementation doesn't support 1 message / clock, it only supports 1 message / 2 clock cycles
 // improve this later but keep the same interface
+// the challenge here is that `in_is_full` should not be a combinational logic based on `out_is_taken`
+// otherwise multiple processing units could have a super long path of dependency, making the clock rate of the system scaling down with code distance
 
 reg [WIDTH-1:0] buffer_data;
 reg buffer_valid;
