@@ -17,7 +17,7 @@ reg buffer_valid;
 assign out_data = buffer_data;
 assign out_valid = buffer_valid;
 
-always @(posedge clk) begin
+always_ff @(posedge clk) begin
     if (reset) begin
         buffer_valid <= 0;
     end else begin
