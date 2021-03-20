@@ -1,23 +1,4 @@
 `timescale 1ns / 1ps
-//////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: Namitha Liyanage and Yue Wu
-// 
-// Create Date: 03/20/2021 05:56:34 PM
-// Design Name: 
-// Module Name: nonblocking_channel
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
-// 
-// Dependencies: 
-// 
-// Revision:
-// Revision 0.01 - File Created
-// Additional Comments:
-// 
-//////////////////////////////////////////////////////////////////////////////////
 
 module nonblocking_channel #(
     parameter WIDTH = 8  // width of data
