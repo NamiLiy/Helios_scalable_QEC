@@ -30,15 +30,15 @@ reg [CHANNEL_WIDTH-1:0] distance_solver_result_idx;
 // neighbor links using `neighbor_link` module
 reg [NEIGHBOR_COUNT-1:0] neighbor_is_fully_grown;
 wire [ADDRESS_WIDTH-1:0] old_root;  // connect to *_old_root_in, shared by all neighbors
-reg [(ADDRESS_WIDTH * NEIGHBOR_COUNT)-1:0] neighbor_old_root;  // connect to *_old_root_out
+reg [(ADDRESS_WIDTH * NEIGHBOR_COUNT)-1:0] neighbor_old_roots;  // connect to *_old_root_out
 wire neighbor_increase;  // connect to *_increase, shared by all neighbors
 // union channels using `nonblocking_channel`, each message is packed [old_root, updated_root]
 wire [(UNION_MESSAGE_WIDTH * CHANNEL_COUNT)-1:0] union_out_channels_data;
-wire [CHANNEL_COUNT-1:0] union_out_channels_valid;
+wire union_out_channels_valid;
 reg [(UNION_MESSAGE_WIDTH * CHANNEL_COUNT)-1:0] union_in_channels_data;
 reg [CHANNEL_COUNT-1:0] union_in_channels_valid;
 // direct channels using `blocking_channel`, each message is packed [receiver, is_odd_cardinality_root, is_touching_boundary]
-wire [(DIRECT_MESSAGE_WIDTH * CHANNEL_COUNT)-1:0] direct_out_channels_data;
+wire [DIRECT_MESSAGE_WIDTH-1:0] direct_out_channels_data_single;
 wire [CHANNEL_COUNT-1:0] direct_out_channels_valid;
 reg [CHANNEL_COUNT-1:0] direct_out_channels_is_full;
 reg [(DIRECT_MESSAGE_WIDTH * CHANNEL_COUNT)-1:0] direct_in_channels_data;
@@ -61,18 +61,18 @@ processing_unit #(
     .distance_solver_target(distance_solver_target),
     .distance_solver_result_idx(distance_solver_result_idx),
     .neighbor_is_fully_grown(neighbor_is_fully_grown),
-    .old_root(old_root),
-    .neighbor_old_root(neighbor_old_root),
+    .neighbor_old_roots(neighbor_old_roots),
     .union_out_channels_data(union_out_channels_data),
     .union_out_channels_valid(union_out_channels_valid),
     .union_in_channels_data(union_in_channels_data),
     .union_in_channels_valid(union_in_channels_valid),
-    .direct_out_channels_data(direct_out_channels_data),
+    .direct_out_channels_data_single(direct_out_channels_data_single),
     .direct_out_channels_valid(direct_out_channels_valid),
     .direct_out_channels_is_full(direct_out_channels_is_full),
     .direct_in_channels_data(direct_in_channels_data),
     .direct_in_channels_valid(direct_in_channels_valid),
-    .direct_in_channels_is_taken(direct_in_channels_is_taken)
+    .direct_in_channels_is_taken(direct_in_channels_is_taken),
+    .old_root(old_root)
 );
 
 

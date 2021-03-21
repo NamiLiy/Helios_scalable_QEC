@@ -26,8 +26,8 @@ module processing_unit #(
     distance_solver_result_idx,
     // neighbor links
     neighbor_is_fully_grown,
-    old_root,  // connect to *_old_root_in
-    neighbor_old_root,  // connect to *_old_root_out
+        // `old_root` should connect to *_old_root_in
+    neighbor_old_roots,  // connect to *_old_root_out
     neighbor_increase,  // connect to *_increase
     // union channels using `nonblocking_channel`
     union_out_channels_data,
@@ -35,19 +35,29 @@ module processing_unit #(
     union_in_channels_data,
     union_in_channels_valid,
     // direct channels using `blocking_channel`
-    direct_out_channels_data,
+    direct_out_channels_data_single,
     direct_out_channels_valid,
     direct_out_channels_is_full,
     direct_in_channels_data,
     direct_in_channels_valid,
-    direct_in_channels_is_taken
+    direct_in_channels_is_taken,
+    // internal states are also published
+    old_root,
+    updated_root,
+    is_error_syndrome,
+    boundary_increased,
+    is_odd_cluster,
+    is_touching_boundary,
+    is_odd_cardinality,
+    pending_tell_new_root_cardinality,
+    pending_tell_new_root_touching_boundary
 );
 
 `include "parameters.sv"
 
 localparam CHANNEL_COUNT = NEIGHBOR_COUNT + FAST_CHANNEL_COUNT;
 localparam CHANNEL_WIDTH = $clog2(CHANNEL_COUNT);  // the index of channel, both neighbor and direct ones
-localparam UNION_MESSAGE_WIDTH = 2 * ADDRESS_WIDTH;  // [old_root, new_root]
+localparam UNION_MESSAGE_WIDTH = 2 * ADDRESS_WIDTH;  // [old_root, updated_root]
 localparam DIRECT_MESSAGE_WIDTH = ADDRESS_WIDTH + 1 + 1;  // [receiver, is_odd_cardinality_root, is_touching_boundary]
 
 input clk;
@@ -69,16 +79,15 @@ output [ADDRESS_WIDTH-1:0] distance_solver_target;
 input [CHANNEL_WIDTH-1:0] distance_solver_result_idx;
 // neighbor links using `neighbor_link` module
 input [NEIGHBOR_COUNT-1:0] neighbor_is_fully_grown;
-output [ADDRESS_WIDTH-1:0] old_root;  // connect to *_old_root_in, shared by all neighbors
-input [(ADDRESS_WIDTH * NEIGHBOR_COUNT)-1:0] neighbor_old_root;  // connect to *_old_root_out
+input [(ADDRESS_WIDTH * NEIGHBOR_COUNT)-1:0] neighbor_old_roots;  // connect to *_old_root_out
 output neighbor_increase;  // connect to *_increase, shared by all neighbors
 // union channels using `nonblocking_channel`, each message is packed [old_root, updated_root]
 output [(UNION_MESSAGE_WIDTH * CHANNEL_COUNT)-1:0] union_out_channels_data;
-output [CHANNEL_COUNT-1:0] union_out_channels_valid;
+output union_out_channels_valid; // single wire connects to all union channels
 input [(UNION_MESSAGE_WIDTH * CHANNEL_COUNT)-1:0] union_in_channels_data;
 input [CHANNEL_COUNT-1:0] union_in_channels_valid;
 // direct channels using `blocking_channel`, each message is packed [receiver, is_odd_cardinality_root, is_touching_boundary]
-output [(DIRECT_MESSAGE_WIDTH * CHANNEL_COUNT)-1:0] direct_out_channels_data;
+output [DIRECT_MESSAGE_WIDTH-1:0] direct_out_channels_data_single;
 output [CHANNEL_COUNT-1:0] direct_out_channels_valid;
 input [CHANNEL_COUNT-1:0] direct_out_channels_is_full;
 input [(DIRECT_MESSAGE_WIDTH * CHANNEL_COUNT)-1:0] direct_in_channels_data;
@@ -87,35 +96,39 @@ output [CHANNEL_COUNT-1:0] direct_in_channels_is_taken;
 
 // internal states
 reg [ADDRESS_WIDTH-1:0] address;  // my address
-reg [ADDRESS_WIDTH-1:0] old_root;
-reg [ADDRESS_WIDTH-1:0] updated_root;
+output reg [ADDRESS_WIDTH-1:0] old_root;
+output reg [ADDRESS_WIDTH-1:0] updated_root;
 reg [STAGE_WIDTH-1:0] last_stage;
-reg is_error_syndrome;
+output reg is_error_syndrome;
 reg has_boundary;
 reg [BOUNDARY_WIDTH-1:0] boundary_cost;
-reg is_odd_cluster;
-reg is_touching_boundary;
-reg is_odd_cardinality;
-reg pending_tell_new_root_cardinality;
-reg pending_tell_new_root_touching_boundary;
+output reg [BOUNDARY_WIDTH-1:0] boundary_increased;
+output reg is_odd_cluster;
+output reg is_touching_boundary;
+output reg is_odd_cardinality;
+output reg pending_tell_new_root_cardinality;
+output reg pending_tell_new_root_touching_boundary;
 
 // create separate local wires for packed arrays, because Vivado doesn't seem to support things like input  logic [0:15] [127:0] mux_in,
 // i defined in range [0, CHANNEL_COUNT)
 `define compare_solver_addr(i) compare_solver_addrs[((i+1) * ADDRESS_WIDTH) - 1 : (i * ADDRESS_WIDTH)]
 `define compare_solver_valid(i) compare_solver_addrs_valid[i]
 `define union_out_data(i) union_out_channels_data[((i+1) * UNION_MESSAGE_WIDTH) - 1 : (i * UNION_MESSAGE_WIDTH)]
-`define union_out_valid(i) union_out_channels_valid[i]
 `define union_in_data(i) union_in_channels_data[((i+1) * UNION_MESSAGE_WIDTH) - 1 : (i * UNION_MESSAGE_WIDTH)]
+`define union_in_data_old_root(i) union_in_channels_data[((i+1) * UNION_MESSAGE_WIDTH) - 1 : (i * UNION_MESSAGE_WIDTH) + ADDRESS_WIDTH]
+`define union_in_data_updated_root(i) union_in_channels_data[((i+1) * UNION_MESSAGE_WIDTH) - 1 - ADDRESS_WIDTH : (i * UNION_MESSAGE_WIDTH)]
 `define union_in_valid(i) union_in_channels_valid[i]
-`define direct_out_data(i) direct_out_channels_data[((i+1) * DIRECT_MESSAGE_WIDTH) - 1 : (i * DIRECT_MESSAGE_WIDTH)]
 `define direct_out_valid(i) direct_out_channels_valid[i]
 `define direct_out_is_full(i) direct_out_channels_is_full[i]
 `define direct_in_data(i) direct_in_channels_data[((i+1) * DIRECT_MESSAGE_WIDTH) - 1 : (i * DIRECT_MESSAGE_WIDTH)]
+`define direct_in_data_receiver(i) direct_in_channels_data[((i+1) * DIRECT_MESSAGE_WIDTH) - 1 : (i * DIRECT_MESSAGE_WIDTH) + 2]
+`define direct_in_data_is_odd_cardinality(i) direct_in_channels_data[(i * DIRECT_MESSAGE_WIDTH) + 1]
+`define direct_in_data_is_touching_boundary(i) direct_in_channels_data[(i * DIRECT_MESSAGE_WIDTH)]
 `define direct_in_valid(i) direct_in_channels_valid[i]
 `define direct_in_is_taken(i) direct_in_channels_is_taken[i]
 // i defined in range [0, NEIGHBOR_COUNT)
 `define is_fully_grown(i) neighbor_is_fully_grown[i]
-`define old_root(i) neighbor_old_root[((i+1) * ADDRESS_WIDTH) - 1 : (i * ADDRESS_WIDTH)]
+`define neighbor_old_root(i) neighbor_old_roots[((i+1) * ADDRESS_WIDTH) - 1 : (i * ADDRESS_WIDTH)]
 
 // compute `new_updated_root` based on messages and neighbors, used in `STAGE_SPREAD_CLUSTER` stage
 wire [ADDRESS_WIDTH-1:0] new_updated_root;
@@ -127,8 +140,8 @@ generate
         wire elected_valid;
         if (i < NEIGHBOR_COUNT) begin  // first for neighbors
             // if has union message in the channel, use that one; otherwise use the old_root from neighbor link
-            assign elected_valid = 1;  // always valid
-            assign elected_updated_root = `union_in_valid(i) ? `union_in_data(i) : `old_root(i);
+            assign elected_valid = `union_in_valid(i) || `is_fully_grown(i);
+            assign elected_updated_root = `union_in_valid(i) ? `union_in_data(i) : `neighbor_old_root(i);
         end else begin  // then for non-neighbors (fast channels only)
             assign elected_valid = `union_in_valid(i);
             assign elected_updated_root = `union_in_data(i);
@@ -139,9 +152,165 @@ generate
 endgenerate
 assign new_updated_root = compare_solver_result;  // combinational logic that computes within a sinlge clock cycle
 
-// compute the 
+// send out union messages
+wire should_send_union_messages;
+assign union_out_channels_valid = (stage == STAGE_SPREAD_CLUSTER) && (new_updated_root != updated_root);
+generate
+    for (i=0; i < CHANNEL_COUNT; i=i+1) begin: sending_union_messages
+        assign `union_out_data(i) = { ((i < NEIGHBOR_COUNT) ? (`neighbor_old_root(i)) : (old_root)), new_updated_root };
+    end
+endgenerate
 
-// increase neighbor link
+// tree structured information gathering for general channels (both union channels and direct channels)
+localparam CHANNEL_DEPTH = $clog2(CHANNEL_COUNT);
+localparam CHANNEL_EXPAND_COUNT = 2 ** CHANNEL_DEPTH;
+localparam CHANNEL_ALL_EXPAND_COUNT = 2 * CHANNEL_EXPAND_COUNT - 1;  // the length of tree structured gathering
+`define CHANNEL_LAYER_WIDTH (2 ** (CHANNEL_DEPTH - 1 - i))
+`define CHANNEL_LAYERT_IDX (2 ** (CHANNEL_DEPTH + 1) - 2 ** (CHANNEL_DEPTH - i))
+`define CHANNEL_LAST_LAYERT_IDX (2 ** (CHANNEL_DEPTH + 1) - 2 ** (CHANNEL_DEPTH + 1 - i))
+`define CHANNEL_CURRENT_IDX (`CHANNEL_LAYERT_IDX + j)
+`define CHANNEL_CHILD_1_IDX (`CHANNEL_LAST_LAYERT_IDX + 2 * j)
+`define CHANNEL_CHILD_2_IDX (`CHANNEL_CHILD_1_IDX + 1)
+localparam CHANNEL_ROOT_IDX = CHANNEL_ALL_EXPAND_COUNT - 1;
+
+// direct channel local handling
+wire [CHANNEL_COUNT-1:0] direct_in_channels_local_handled;
+generate
+    for (i=0; i < CHANNEL_COUNT; i=i+1) begin: direct_in_channels_local_handling
+        assign direct_in_channels_local_handled[i] = `direct_in_valid(i) && (`direct_in_data_receiver(i) == address);
+    end
+endgenerate
+
+// gather `is_odd_cardinality` and `is_touching_boundary` from direct channels in a tree structure to reduce longest path
+// elect a message from the direct_in channels that are not locally handled (which one doesn't matter, here we choose the one with smallest index)
+wire [CHANNEL_ALL_EXPAND_COUNT-1:0] tree_gathering_is_odd_cardinality;
+wire [CHANNEL_ALL_EXPAND_COUNT-1:0] tree_gathering_is_touching_boundary;
+wire [CHANNEL_ALL_EXPAND_COUNT-1:0] tree_gathering_elected_direct_message_valid;
+wire [(DIRECT_MESSAGE_WIDTH * CHANNEL_ALL_EXPAND_COUNT)-1:0] tree_gathering_elected_direct_message_data;
+`define expanded_elected_direct_message_data(i) tree_gathering_elected_direct_message_data[((i+1) * DIRECT_MESSAGE_WIDTH) - 1 : (i * DIRECT_MESSAGE_WIDTH)]
+wire [(CHANNEL_WIDTH * CHANNEL_ALL_EXPAND_COUNT)-1:0] tree_gathering_elected_direct_message_index;
+`define expanded_elected_direct_message_index(i) tree_gathering_elected_direct_message_index[((i+1) * CHANNEL_WIDTH) - 1 : (i * CHANNEL_WIDTH)]
+generate
+    for (i=0; i < CHANNEL_EXPAND_COUNT; i=i+1) begin: direct_channel_gathering_initialization
+        if (i < CHANNEL_COUNT) begin
+            assign tree_gathering_is_odd_cardinality[i] = direct_in_channels_local_handled[i] && `direct_in_data_is_odd_cardinality(i);
+            assign tree_gathering_is_touching_boundary[i] = direct_in_channels_local_handled[i] && `direct_in_data_is_touching_boundary(i);
+            assign tree_gathering_elected_direct_message_valid[i] = !direct_in_channels_local_handled[i];
+            assign `expanded_elected_direct_message_index(i) = i;
+            assign `expanded_elected_direct_message_data(i) = `direct_in_data(i);
+        end else begin
+            assign tree_gathering_is_odd_cardinality[i] = 0;
+            assign tree_gathering_is_touching_boundary[i] = 0;
+            assign tree_gathering_elected_direct_message_valid[i] = 0;
+        end
+    end
+    for (i=0; i < CHANNEL_DEPTH; i=i+1) begin: direct_channel_gathering_election
+        genvar j;
+        for (j=0; j < `CHANNEL_LAYER_WIDTH; j=j+1) begin: direct_channel_gathering_layer_election
+            assign tree_gathering_is_odd_cardinality[`CHANNEL_CURRENT_IDX] = tree_gathering_is_odd_cardinality[`CHANNEL_CHILD_1_IDX] ^ tree_gathering_is_odd_cardinality[`CHANNEL_CHILD_2_IDX];
+            assign tree_gathering_is_touching_boundary[`CHANNEL_CURRENT_IDX] = tree_gathering_is_touching_boundary[`CHANNEL_CHILD_1_IDX] | tree_gathering_is_touching_boundary[`CHANNEL_CHILD_2_IDX];
+            assign tree_gathering_elected_direct_message_valid[`CHANNEL_CURRENT_IDX] = tree_gathering_elected_direct_message_valid[`CHANNEL_CHILD_1_IDX] | tree_gathering_elected_direct_message_valid[`CHANNEL_CHILD_2_IDX];
+            assign `expanded_elected_direct_message_index(`CHANNEL_CURRENT_IDX) = tree_gathering_elected_direct_message_valid[`CHANNEL_CHILD_1_IDX] ? (
+                `expanded_elected_direct_message_index(`CHANNEL_CHILD_1_IDX)
+            ) : (
+                `expanded_elected_direct_message_index(`CHANNEL_CHILD_2_IDX)
+            );
+            assign `expanded_elected_direct_message_data(`CHANNEL_CURRENT_IDX) = tree_gathering_elected_direct_message_valid[`CHANNEL_CHILD_1_IDX] ? (
+                `expanded_elected_direct_message_data(`CHANNEL_CHILD_1_IDX)
+            ) : (
+                `expanded_elected_direct_message_data(`CHANNEL_CHILD_2_IDX)
+            );
+        end
+    end
+endgenerate
+`define gathered_is_odd_cardinality (tree_gathering_is_odd_cardinality[CHANNEL_ROOT_IDX])
+`define gathered_is_touching_boundary (tree_gathering_is_touching_boundary[CHANNEL_ROOT_IDX])
+`define gathered_elected_direct_message_valid (tree_gathering_elected_direct_message_valid[CHANNEL_ROOT_IDX])
+`define gathered_elected_direct_message_index (`expanded_elected_direct_message_index(CHANNEL_ROOT_IDX))
+`define gathered_elected_direct_message_data (`expanded_elected_direct_message_data(CHANNEL_ROOT_IDX))
+
+// compute `updated_is_touching_boundary`
+wire updated_is_touching_boundary;
+assign updated_is_touching_boundary = has_boundary && (boundary_increased == boundary_cost);
+
+// compute `intermediate_pending_tell_new_root_cardinality` and `intermediate_pending_tell_new_root_touching_boundary`
+wire intermediate_pending_tell_new_root_cardinality;
+wire intermediate_pending_tell_new_root_touching_boundary;
+assign intermediate_pending_tell_new_root_cardinality = pending_tell_new_root_cardinality ? (
+    new_updated_root != address  // don't need to send message to myself
+) : (
+    new_updated_root != updated_root && is_error_syndrome
+);
+assign intermediate_pending_tell_new_root_touching_boundary = pending_tell_new_root_touching_boundary ? (
+    new_updated_root != address  // don't need to send message to myself
+) : (
+    (new_updated_root != updated_root && updated_is_touching_boundary) || (updated_is_touching_boundary != is_touching_boundary)
+);
+
+// decide which message to send
+wire pending_direct_message_valid;
+wire [DIRECT_MESSAGE_WIDTH-1:0] pending_direct_message;
+`define pending_direct_message_receiver (pending_direct_message[DIRECT_MESSAGE_WIDTH-1:2])
+wire generate_my_direct_message;
+assign generate_my_direct_message = intermediate_pending_tell_new_root_cardinality || intermediate_pending_tell_new_root_touching_boundary;
+assign pending_direct_message_valid = (generate_my_direct_message || `gathered_elected_direct_message_valid);
+assign pending_direct_message = generate_my_direct_message ? (
+    { new_updated_root, intermediate_pending_tell_new_root_cardinality, intermediate_pending_tell_new_root_touching_boundary }
+) : (
+    `gathered_elected_direct_message_data
+);
+
+// decide the nearest port to send out the pending message, get the result from `distance_solver_result_idx`
+assign distance_solver_target = `pending_direct_message_receiver;
+`define best_channel_for_pending_message_idx distance_solver_result_idx
+
+// check if it can be sent successfully
+wire pending_message_sent_successfully;
+wire [CHANNEL_ALL_EXPAND_COUNT-1:0] tree_gathering_pending_message_sent_successfully;
+generate
+    for (i=0; i < CHANNEL_EXPAND_COUNT; i=i+1) begin: pending_message_sent_successfully_gathering_initialization
+        if (i < CHANNEL_COUNT) begin
+            assign tree_gathering_pending_message_sent_successfully[i] = (i == `best_channel_for_pending_message_idx) ? (
+                !`direct_out_is_full(i)
+            ) : 0;
+        end else begin
+            assign tree_gathering_pending_message_sent_successfully[i] = 0;
+        end
+    end
+    for (i=0; i < CHANNEL_DEPTH; i=i+1) begin: pending_message_sent_successfully_gathering_election
+        genvar j;
+        for (j=0; j < `CHANNEL_LAYER_WIDTH; j=j+1) begin: direct_channel_gathering_layer_election
+            assign tree_gathering_pending_message_sent_successfully[`CHANNEL_CURRENT_IDX] =
+                tree_gathering_pending_message_sent_successfully[`CHANNEL_CHILD_1_IDX] | tree_gathering_pending_message_sent_successfully[`CHANNEL_CHILD_2_IDX];
+        end
+    end
+endgenerate
+`define gathered_pending_message_sent_successfully (tree_gathering_pending_message_sent_successfully[CHANNEL_ROOT_IDX])
+assign pending_message_sent_successfully = `gathered_pending_message_sent_successfully && pending_direct_message_valid;
+
+// update the states
+wire new_pending_tell_new_root_cardinality;
+wire new_pending_tell_new_root_touching_boundary;
+assign new_pending_tell_new_root_cardinality = intermediate_pending_tell_new_root_cardinality && !pending_message_sent_successfully;
+assign new_pending_tell_new_root_touching_boundary = intermediate_pending_tell_new_root_touching_boundary && !pending_message_sent_successfully;
+
+// send the message
+assign direct_out_channels_data_single = pending_direct_message;
+generate
+    for (i=0; i < CHANNEL_COUNT; i=i+1) begin: sending_direct_message
+        assign `direct_out_valid(i) = (i == `best_channel_for_pending_message_idx) && !`direct_out_is_full(i) && pending_direct_message_valid;
+    end
+endgenerate
+
+// take the direct message from channel
+generate
+    for (i=0; i < CHANNEL_COUNT; i=i+1) begin: taking_direct_message
+        assign `direct_in_is_taken(i) = ((i == `gathered_elected_direct_message_index) && `gathered_elected_direct_message_valid && !generate_my_direct_message) || 
+            direct_in_channels_local_handled[i];  // either brokerd this message or handled locally
+    end
+endgenerate
+
+// increase neighbor link in STAGE_GROW_BOUNDARY stage
 assign neighbor_increase = (stage == STAGE_GROW_BOUNDARY) && (last_stage != STAGE_GROW_BOUNDARY);
 
 // state machine
@@ -154,6 +323,7 @@ always @(posedge clk) begin
         is_error_syndrome <= init_is_error_syndrome;
         has_boundary <= init_has_boundary;
         boundary_cost <= init_boundary_cost;
+        boundary_increased <= 0;
         is_odd_cluster <= init_is_error_syndrome;
         is_touching_boundary <= 0;
         is_odd_cardinality <= init_is_error_syndrome;
@@ -164,10 +334,19 @@ always @(posedge clk) begin
         if (stage == STAGE_IDLE) begin
             // PUs do nothing
         end else if (stage == STAGE_SPREAD_CLUSTER) begin
-            
+            is_touching_boundary <= updated_is_touching_boundary;
+            updated_root <= new_updated_root;
+            pending_tell_new_root_cardinality <= new_pending_tell_new_root_cardinality;
+            pending_tell_new_root_touching_boundary <= new_pending_tell_new_root_touching_boundary;
         end else if (stage == STAGE_GROW_BOUNDARY) begin
             // only gives a trigger to neighbor links
             // see `assign neighbor_increase = (stage == STAGE_GROW_BOUNDARY) && (last_stage != STAGE_GROW_BOUNDARY);`
+            if (last_stage != STAGE_GROW_BOUNDARY) begin
+                // only trigger once when set to STAGE_GROW_BOUNDARY
+                if (has_boundary && (boundary_increased < boundary_cost)) begin
+                    boundary_increased <= boundary_increased + 1;
+                end
+            end
         end else if (stage == STAGE_SYNC_IS_ODD_CLUSTER) begin
         
         end

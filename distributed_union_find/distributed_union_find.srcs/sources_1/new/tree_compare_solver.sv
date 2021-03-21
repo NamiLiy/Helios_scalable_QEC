@@ -1,5 +1,9 @@
 `timescale 1ns / 1ps
 
+// compare solver with tree structure combinational logic
+// it will return the smallest number among `CHANNEL_COUNT` and the default value
+// the longest path is O(log(CHANNEL_COUNT)), to fit into a single clock cycle as much as possible
+
 module tree_compare_solver #(
     parameter DATA_WIDTH = 8,  // width of data to be compared
     parameter CHANNEL_COUNT = 4  // number of channels to be compared
