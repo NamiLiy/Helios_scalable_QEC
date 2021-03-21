@@ -139,6 +139,8 @@ generate
 endgenerate
 assign new_updated_root = compare_solver_result;  // combinational logic that computes within a sinlge clock cycle
 
+// compute the 
+
 // increase neighbor link
 assign neighbor_increase = (stage == STAGE_GROW_BOUNDARY) && (last_stage != STAGE_GROW_BOUNDARY);
 
