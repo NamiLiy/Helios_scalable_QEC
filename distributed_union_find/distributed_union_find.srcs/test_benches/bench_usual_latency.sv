@@ -8,8 +8,6 @@ module bench_usual_latency(
     init_has_boundary,
     init_boundary_cost,
     stage,
-    distance_solver_target,
-    distance_solver_result_idx,
     neighbor_is_fully_grown,
     neighbor_old_roots,
     neighbor_increase,
@@ -31,7 +29,10 @@ module bench_usual_latency(
     is_touching_boundary,
     is_odd_cardinality,
     pending_tell_new_root_cardinality,
-    pending_tell_new_root_touching_boundary
+    pending_tell_new_root_touching_boundary,
+    
+    // the addresses of peer of channels
+    channel_addresses
 );
 
 // instantiate a processing unit, a compare solver and a distance solver
@@ -58,9 +59,6 @@ input init_has_boundary;
 input [BOUNDARY_WIDTH-1:0] init_boundary_cost;
 // stage indicator
 input [STAGE_WIDTH-1:0] stage;
-// distance solvers should take a target and multiple points and output the nearest point to the target, the multiple points are fixed and could be optimized
-output [ADDRESS_WIDTH-1:0] distance_solver_target;
-input [CHANNEL_WIDTH-1:0] distance_solver_result_idx;
 // neighbor links using `neighbor_link` module
 input [NEIGHBOR_COUNT-1:0] neighbor_is_fully_grown;
 input [(ADDRESS_WIDTH * NEIGHBOR_COUNT)-1:0] neighbor_old_roots;  // connect to *_old_root_out
@@ -88,13 +86,15 @@ output is_odd_cardinality;
 output pending_tell_new_root_cardinality;
 output pending_tell_new_root_touching_boundary;
 
+input [(ADDRESS_WIDTH * CHANNEL_COUNT)-1:0] channel_addresses;
+
 // compare solvers should be a combinational logic that takes multiple addresses and output the smallest one
 wire [ADDRESS_WIDTH-1:0] compare_solver_default_addr;
 wire [(ADDRESS_WIDTH * CHANNEL_COUNT)-1:0] compare_solver_addrs;
 wire [CHANNEL_COUNT-1:0] compare_solver_addrs_valid;
 wire [ADDRESS_WIDTH-1:0] compare_solver_result;
 
-// generate CHANNEL_COUNT compare solver
+// instant CHANNEL_COUNT compare solver
 tree_compare_solver #(
     .DATA_WIDTH(ADDRESS_WIDTH),
     .CHANNEL_COUNT(CHANNEL_COUNT)
@@ -103,6 +103,19 @@ tree_compare_solver #(
     .values(compare_solver_addrs),
     .valids(compare_solver_addrs_valid),
     .result(compare_solver_result)
+);
+
+wire [ADDRESS_WIDTH-1:0] distance_solver_target;
+wire [CHANNEL_WIDTH-1:0] distance_solver_result_idx;
+
+// instantiate CHANNEL_COUNT distance 2d solver
+tree_distance_2d_solver #(
+    .PER_DIMENSION_WIDTH(4),
+    .CHANNEL_COUNT(CHANNEL_COUNT)
+) u_tree_distance_2d_solver(
+    .points(channel_addresses),
+    .target(distance_solver_target),
+    .result_idx(distance_solver_result_idx)
 );
 
 // instantiate processing unit
