@@ -13,7 +13,7 @@ reg in_valid;
 wire [DATA_WIDTH-1:0] out_data;
 wire out_valid;
 
-// instantiate a nonblocking channel
+// instantiate
 nonblocking_channel #(.WIDTH(DATA_WIDTH)) u_nonblocking_channel(
     .in_data(in_data),
     .in_valid(in_valid),

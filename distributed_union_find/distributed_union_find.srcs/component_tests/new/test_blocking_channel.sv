@@ -16,7 +16,7 @@ wire out_valid;
 reg out_is_taken;
 
 
-// instantiate a blocking channel
+// instantiate
 blocking_channel #(.WIDTH(DATA_WIDTH)) u_blocking_channel(
     .in_data(in_data),
     .in_valid(in_valid),

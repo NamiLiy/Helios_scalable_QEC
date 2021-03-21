@@ -19,15 +19,15 @@ module neighbor_link #(
 
 localparam COUNTER_WIDTH = $clog2(LENGTH + 2);  // in the worse case, counter would have a value of LENGTH + 1
 
-reg a_old_root;
-reg b_old_root;
+reg [ADDRESS_WIDTH-1:0] a_old_root;
+reg [ADDRESS_WIDTH-1:0] b_old_root;
 reg [COUNTER_WIDTH-1:0] increased;
 
 assign a_old_root_out = a_old_root;
 assign b_old_root_out = b_old_root;
 assign is_fully_grown = increased >= LENGTH;
 
-always_ff @(posedge clk) begin
+always @(posedge clk) begin
     if (reset) begin
         increased <= 0;
         a_old_root <= 0;
