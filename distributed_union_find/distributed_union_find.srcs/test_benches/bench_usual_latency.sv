@@ -94,7 +94,7 @@ wire [(ADDRESS_WIDTH * CHANNEL_COUNT)-1:0] compare_solver_addrs;
 wire [CHANNEL_COUNT-1:0] compare_solver_addrs_valid;
 wire [ADDRESS_WIDTH-1:0] compare_solver_result;
 
-// instant CHANNEL_COUNT compare solver
+// instant compare solver
 tree_compare_solver #(
     .DATA_WIDTH(ADDRESS_WIDTH),
     .CHANNEL_COUNT(CHANNEL_COUNT)
@@ -108,7 +108,7 @@ tree_compare_solver #(
 wire [ADDRESS_WIDTH-1:0] distance_solver_target;
 wire [CHANNEL_WIDTH-1:0] distance_solver_result_idx;
 
-// instantiate CHANNEL_COUNT distance 2d solver
+// instantiate distance 2d solver
 tree_distance_2d_solver #(
     .PER_DIMENSION_WIDTH(4),
     .CHANNEL_COUNT(CHANNEL_COUNT)
