@@ -109,6 +109,9 @@ output reg is_odd_cardinality;
 output reg pending_tell_new_root_cardinality;
 output reg pending_tell_new_root_touching_boundary;
 
+wire is_stage_spread_cluster;
+assign is_stage_spread_cluster = (!reset) && (stage == STAGE_SPREAD_CLUSTER);
+
 // create separate local wires for packed arrays, because Vivado doesn't seem to support things like input  logic [0:15] [127:0] mux_in,
 // i defined in range [0, CHANNEL_COUNT)
 `define compare_solver_addr(i) compare_solver_addrs[((i+1) * ADDRESS_WIDTH) - 1 : (i * ADDRESS_WIDTH)]
@@ -130,10 +133,53 @@ output reg pending_tell_new_root_touching_boundary;
 `define is_fully_grown(i) neighbor_is_fully_grown[i]
 `define neighbor_old_root(i) neighbor_old_roots[((i+1) * ADDRESS_WIDTH) - 1 : (i * ADDRESS_WIDTH)]
 
+// tree structured information gathering for general channels (both union channels and direct channels)
+localparam CHANNEL_DEPTH = $clog2(CHANNEL_COUNT);
+localparam CHANNEL_EXPAND_COUNT = 2 ** CHANNEL_DEPTH;
+localparam CHANNEL_ALL_EXPAND_COUNT = 2 * CHANNEL_EXPAND_COUNT - 1;  // the length of tree structured gathering
+`define CHANNEL_LAYER_WIDTH (2 ** (CHANNEL_DEPTH - 1 - i))
+`define CHANNEL_LAYERT_IDX (2 ** (CHANNEL_DEPTH + 1) - 2 ** (CHANNEL_DEPTH - i))
+`define CHANNEL_LAST_LAYERT_IDX (2 ** (CHANNEL_DEPTH + 1) - 2 ** (CHANNEL_DEPTH + 1 - i))
+`define CHANNEL_CURRENT_IDX (`CHANNEL_LAYERT_IDX + j)
+`define CHANNEL_CHILD_1_IDX (`CHANNEL_LAST_LAYERT_IDX + 2 * j)
+`define CHANNEL_CHILD_2_IDX (`CHANNEL_CHILD_1_IDX + 1)
+localparam CHANNEL_ROOT_IDX = CHANNEL_ALL_EXPAND_COUNT - 1;
+genvar i;
+
+// prepare variables for sync is_odd_cluster
+wire myself_is_odd_cardinality_but_not_touching_boundary;
+assign myself_is_odd_cardinality_but_not_touching_boundary = (address == updated_root) && (!is_touching_boundary) && is_odd_cardinality;
+
+// compute `updated_is_odd_cluster`
+wire updated_is_odd_cluster;
+wire [CHANNEL_ALL_EXPAND_COUNT-1:0] tree_gathering_is_odd_cluster;
+generate
+    for (i=0; i < CHANNEL_EXPAND_COUNT; i=i+1) begin: pending_is_odd_cluster_gathering_initialization
+        if (i < CHANNEL_COUNT) begin
+            assign tree_gathering_is_odd_cluster[i] = `union_in_valid(i) && `union_in_data_old_root(i) == old_root;
+        end else begin
+            assign tree_gathering_is_odd_cluster[i] = 0;
+        end
+    end
+    for (i=0; i < CHANNEL_DEPTH; i=i+1) begin: pending_is_odd_cluster_gathering_election
+        genvar j;
+        for (j=0; j < `CHANNEL_LAYER_WIDTH; j=j+1) begin: direct_channel_gathering_layer_election
+            assign tree_gathering_is_odd_cluster[`CHANNEL_CURRENT_IDX] =
+                tree_gathering_is_odd_cluster[`CHANNEL_CHILD_1_IDX] | tree_gathering_is_odd_cluster[`CHANNEL_CHILD_2_IDX];
+        end
+    end
+endgenerate
+`define gathered_is_odd_cluster (tree_gathering_is_odd_cluster[CHANNEL_ROOT_IDX])
+assign updated_is_odd_cluster = is_odd_cluster | `gathered_is_odd_cluster;
+
+// compute `should_broadcast_is_odd_cardinality`
+wire should_broadcast_is_odd_cardinality;
+assign should_broadcast_is_odd_cardinality = (!reset) && (stage == STAGE_SYNC_IS_ODD_CLUSTER) && 
+    ((last_stage != STAGE_SYNC_IS_ODD_CLUSTER) ? (myself_is_odd_cardinality_but_not_touching_boundary) : (updated_is_odd_cluster != is_odd_cluster));
+
 // compute `new_updated_root` based on messages and neighbors, used in `STAGE_SPREAD_CLUSTER` stage
 wire [ADDRESS_WIDTH-1:0] new_updated_root;
 assign compare_solver_default_addr = old_root;
-genvar i;
 generate
     for (i=0; i < CHANNEL_COUNT; i=i+1) begin: compare_new_updated_root
         wire [ADDRESS_WIDTH-1:0] elected_updated_root;
@@ -154,24 +200,18 @@ assign new_updated_root = compare_solver_result;  // combinational logic that co
 
 // send out union messages
 wire should_send_union_messages;
-assign union_out_channels_valid = (stage == STAGE_SPREAD_CLUSTER) && (new_updated_root != updated_root);
+assign union_out_channels_valid = (is_stage_spread_cluster && (new_updated_root != updated_root)) || should_broadcast_is_odd_cardinality;
 generate
     for (i=0; i < CHANNEL_COUNT; i=i+1) begin: sending_union_messages
-        assign `union_out_data(i) = { ((i < NEIGHBOR_COUNT) ? (`neighbor_old_root(i)) : (old_root)), new_updated_root };
+        assign `union_out_data(i) = should_broadcast_is_odd_cardinality ? (
+            // STAGE_SYNC_IS_ODD_CLUSTER
+            { updated_root, updated_root }
+        ) : (
+            // STAGE_SPREAD_CLUSTER
+            { ((i < NEIGHBOR_COUNT) ? (`neighbor_old_root(i)) : (old_root)), new_updated_root }
+        );
     end
 endgenerate
-
-// tree structured information gathering for general channels (both union channels and direct channels)
-localparam CHANNEL_DEPTH = $clog2(CHANNEL_COUNT);
-localparam CHANNEL_EXPAND_COUNT = 2 ** CHANNEL_DEPTH;
-localparam CHANNEL_ALL_EXPAND_COUNT = 2 * CHANNEL_EXPAND_COUNT - 1;  // the length of tree structured gathering
-`define CHANNEL_LAYER_WIDTH (2 ** (CHANNEL_DEPTH - 1 - i))
-`define CHANNEL_LAYERT_IDX (2 ** (CHANNEL_DEPTH + 1) - 2 ** (CHANNEL_DEPTH - i))
-`define CHANNEL_LAST_LAYERT_IDX (2 ** (CHANNEL_DEPTH + 1) - 2 ** (CHANNEL_DEPTH + 1 - i))
-`define CHANNEL_CURRENT_IDX (`CHANNEL_LAYERT_IDX + j)
-`define CHANNEL_CHILD_1_IDX (`CHANNEL_LAST_LAYERT_IDX + 2 * j)
-`define CHANNEL_CHILD_2_IDX (`CHANNEL_CHILD_1_IDX + 1)
-localparam CHANNEL_ROOT_IDX = CHANNEL_ALL_EXPAND_COUNT - 1;
 
 // direct channel local handling
 wire [CHANNEL_COUNT-1:0] direct_in_channels_local_handled;
@@ -231,7 +271,11 @@ endgenerate
 
 // compute `updated_is_touching_boundary`
 wire updated_is_touching_boundary;
-assign updated_is_touching_boundary = has_boundary && (boundary_increased == boundary_cost);
+assign updated_is_touching_boundary = (has_boundary && (boundary_increased == boundary_cost)) || `gathered_is_touching_boundary;
+
+// compute `updated_is_odd_cardinality`
+wire updated_is_odd_cardinality;
+assign updated_is_odd_cardinality = is_odd_cardinality ^ `gathered_is_odd_cardinality;
 
 // compute `intermediate_pending_tell_new_root_cardinality` and `intermediate_pending_tell_new_root_touching_boundary`
 wire intermediate_pending_tell_new_root_cardinality;
@@ -298,20 +342,21 @@ assign new_pending_tell_new_root_touching_boundary = intermediate_pending_tell_n
 assign direct_out_channels_data_single = pending_direct_message;
 generate
     for (i=0; i < CHANNEL_COUNT; i=i+1) begin: sending_direct_message
-        assign `direct_out_valid(i) = (i == `best_channel_for_pending_message_idx) && !`direct_out_is_full(i) && pending_direct_message_valid;
+        assign `direct_out_valid(i) = is_stage_spread_cluster && (i == `best_channel_for_pending_message_idx) && !`direct_out_is_full(i) && pending_direct_message_valid;
     end
 endgenerate
 
 // take the direct message from channel
 generate
     for (i=0; i < CHANNEL_COUNT; i=i+1) begin: taking_direct_message
-        assign `direct_in_is_taken(i) = ((i == `gathered_elected_direct_message_index) && `gathered_elected_direct_message_valid && !generate_my_direct_message) || 
-            direct_in_channels_local_handled[i];  // either brokerd this message or handled locally
+        assign `direct_in_is_taken(i) = is_stage_spread_cluster && 
+            (((i == `gathered_elected_direct_message_index) && `gathered_elected_direct_message_valid && !generate_my_direct_message) || 
+                direct_in_channels_local_handled[i]);  // either brokerd this message or handled locally
     end
 endgenerate
 
 // increase neighbor link in STAGE_GROW_BOUNDARY stage
-assign neighbor_increase = (stage == STAGE_GROW_BOUNDARY) && (last_stage != STAGE_GROW_BOUNDARY);
+assign neighbor_increase = !reset && is_odd_cluster && (stage == STAGE_GROW_BOUNDARY) && (last_stage != STAGE_GROW_BOUNDARY);
 
 // state machine
 always @(posedge clk) begin
@@ -335,20 +380,27 @@ always @(posedge clk) begin
             // PUs do nothing
         end else if (stage == STAGE_SPREAD_CLUSTER) begin
             is_touching_boundary <= updated_is_touching_boundary;
+            is_odd_cardinality <= updated_is_odd_cardinality;
             updated_root <= new_updated_root;
             pending_tell_new_root_cardinality <= new_pending_tell_new_root_cardinality;
             pending_tell_new_root_touching_boundary <= new_pending_tell_new_root_touching_boundary;
         end else if (stage == STAGE_GROW_BOUNDARY) begin
             // only gives a trigger to neighbor links
-            // see `assign neighbor_increase = (stage == STAGE_GROW_BOUNDARY) && (last_stage != STAGE_GROW_BOUNDARY);`
-            if (last_stage != STAGE_GROW_BOUNDARY) begin
+            // see `assign neighbor_increase = !reset && is_odd_cluster && (stage == STAGE_GROW_BOUNDARY) && (last_stage != STAGE_GROW_BOUNDARY);`
+            if (is_odd_cluster && last_stage != STAGE_GROW_BOUNDARY) begin
                 // only trigger once when set to STAGE_GROW_BOUNDARY
                 if (has_boundary && (boundary_increased < boundary_cost)) begin
                     boundary_increased <= boundary_increased + 1;
                 end
             end
         end else if (stage == STAGE_SYNC_IS_ODD_CLUSTER) begin
-        
+            if (last_stage != STAGE_SYNC_IS_ODD_CLUSTER) begin
+                // first set them all to even cluster, if it's not itself odd cardinality but not touching boundary
+                is_odd_cluster <= myself_is_odd_cardinality_but_not_touching_boundary;
+                old_root <= updated_root;  // update old_root
+            end else begin
+                is_odd_cluster <= updated_is_odd_cluster;
+            end
         end
     end
 end
