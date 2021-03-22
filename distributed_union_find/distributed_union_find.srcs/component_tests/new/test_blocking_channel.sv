@@ -40,26 +40,49 @@ initial begin
     out_is_taken = 0;
     #200;  // delay for 200ns
     reset = 0;
-    #200;
+    #202;
     
     // start test
     `assert(out_valid == 0, "there is no valid output after reset");
     `assert(in_is_full == 0, "initial state should not be full");
     in_data = DATA1;
     in_valid = 1;
-    #20;
+    #10;
     `assert(out_valid == 1, "valid data sent through channel");
     `assert(out_data == DATA1, "valid data sent through channel");
-    `assert(in_is_full == 1, "data inserted into the channel with capacity of 1, so it's full");
-    #20;
+    `assert(in_is_full == 0, "data inserted into the channel with capacity of 2, so it's not full");
+    #10;
     `assert(out_valid == 1, "valid data sent through channel");
     `assert(out_data == DATA1, "valid data sent through channel");
-    `assert(in_is_full == 1, "data inserted into the channel with capacity of 1, so it's full");
+    `assert(in_is_full == 1, "data inserted into the channel with capacity of 2, so it's full");
     // take data from the channel
     out_is_taken = 1;
-    #20;
+    in_valid = 0;
+    #10;
+    `assert(out_valid == 1, "one data should be taken other remains");
+    `assert(out_data == DATA1, "valid data sent through channel");
+    `assert(in_is_full == 0, "data should be taken");
+    #10;
     `assert(out_valid == 0, "data should be taken");
     `assert(in_is_full == 0, "data should be taken");
+    // insert another one
+    out_is_taken = 0;
+    in_data = DATA2;
+    in_valid = 1;
+    #10;
+    `assert(out_valid == 1, "valid data sent through channel");
+    `assert(out_data == DATA2, "valid data sent through channel");
+    `assert(in_is_full == 0, "data inserted into the channel with capacity of 2, so it's not full");
+    in_data = DATA3;
+    in_valid = 1;
+    out_is_taken = 1;
+    #10;
+    in_valid = 0;
+    `assert(out_valid == 1, "DATA3 should now be the valid data");
+    `assert(out_data == DATA3, "valid data sent through channel");
+    `assert(in_is_full == 0, "register is not full");
+    out_is_taken = 1;
+    #10;
     // insert another one
     out_is_taken = 0;
     in_data = DATA2;
@@ -67,29 +90,21 @@ initial begin
     #20;
     `assert(out_valid == 1, "valid data sent through channel");
     `assert(out_data == DATA2, "valid data sent through channel");
-    `assert(in_is_full == 1, "data inserted into the channel with capacity of 1, so it's full");
+    `assert(in_is_full == 1, "data inserted into the channel with capacity of 1, so it's not full");
     // try to insert when `in_is_full` is 1, should fail to insert even though the peer is taking the last message
     in_data = DATA3;
     in_valid = 1;
     out_is_taken = 1;
-    #20;
+    #10;
+    in_valid = 0;
+    #10;
     `assert(out_valid == 0, "data is taken without DATA3 inserted");
     `assert(in_is_full == 0, "data is taken without DATA3 inserted");
-    in_data = DATA3;
-    in_valid = 1;
     out_is_taken = 0;
-    #20;
-    `assert(out_valid == 1, "valid data sent through channel");
-    `assert(out_data == DATA3, "valid data sent through channel");
-    out_is_taken = 1;
-    in_valid = 0;
-    #20;
-    `assert(out_valid == 0, "data is taken");
-    `assert(in_is_full == 0, "data is taken");
-    out_is_taken = 0;
+    
 
 end
 
-always #10 clk = ~clk;  // flip every 10ns, that is 50MHz clock
+always #5 clk = ~clk;  // flip every 10ns, that is 50MHz clock
 
 endmodule
