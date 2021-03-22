@@ -110,7 +110,7 @@ output reg pending_tell_new_root_cardinality;
 output reg pending_tell_new_root_touching_boundary;
 
 wire is_stage_spread_cluster;
-assign is_stage_spread_cluster = (!reset) && (stage == STAGE_SPREAD_CLUSTER);
+assign is_stage_spread_cluster = (stage == STAGE_SPREAD_CLUSTER);
 
 // create separate local wires for packed arrays, because Vivado doesn't seem to support things like input  logic [0:15] [127:0] mux_in,
 // i defined in range [0, CHANNEL_COUNT)
@@ -134,16 +134,16 @@ assign is_stage_spread_cluster = (!reset) && (stage == STAGE_SPREAD_CLUSTER);
 `define neighbor_old_root(i) neighbor_old_roots[((i+1) * ADDRESS_WIDTH) - 1 : (i * ADDRESS_WIDTH)]
 
 // tree structured information gathering for general channels (both union channels and direct channels)
-localparam CHANNEL_DEPTH = $clog2(CHANNEL_COUNT);
-localparam CHANNEL_EXPAND_COUNT = 2 ** CHANNEL_DEPTH;
-localparam CHANNEL_ALL_EXPAND_COUNT = 2 * CHANNEL_EXPAND_COUNT - 1;  // the length of tree structured gathering
+localparam CHANNEL_DEPTH = $clog2(CHANNEL_COUNT); //2
+localparam CHANNEL_EXPAND_COUNT = 2 ** CHANNEL_DEPTH; //4
+localparam CHANNEL_ALL_EXPAND_COUNT = 2 * CHANNEL_EXPAND_COUNT - 1;  // the length of tree structured gathering // 7
 `define CHANNEL_LAYER_WIDTH (2 ** (CHANNEL_DEPTH - 1 - i))
 `define CHANNEL_LAYERT_IDX (2 ** (CHANNEL_DEPTH + 1) - 2 ** (CHANNEL_DEPTH - i))
 `define CHANNEL_LAST_LAYERT_IDX (2 ** (CHANNEL_DEPTH + 1) - 2 ** (CHANNEL_DEPTH + 1 - i))
 `define CHANNEL_CURRENT_IDX (`CHANNEL_LAYERT_IDX + j)
 `define CHANNEL_CHILD_1_IDX (`CHANNEL_LAST_LAYERT_IDX + 2 * j)
 `define CHANNEL_CHILD_2_IDX (`CHANNEL_CHILD_1_IDX + 1)
-localparam CHANNEL_ROOT_IDX = CHANNEL_ALL_EXPAND_COUNT - 1;
+localparam CHANNEL_ROOT_IDX = CHANNEL_ALL_EXPAND_COUNT - 1; // 6
 genvar i;
 
 // prepare variables for sync is_odd_cluster
@@ -174,7 +174,7 @@ assign updated_is_odd_cluster = is_odd_cluster | `gathered_is_odd_cluster;
 
 // compute `should_broadcast_is_odd_cardinality`
 wire should_broadcast_is_odd_cardinality;
-assign should_broadcast_is_odd_cardinality = (!reset) && (stage == STAGE_SYNC_IS_ODD_CLUSTER) && 
+assign should_broadcast_is_odd_cardinality = (stage == STAGE_SYNC_IS_ODD_CLUSTER) && 
     ((last_stage != STAGE_SYNC_IS_ODD_CLUSTER) ? (myself_is_odd_cardinality_but_not_touching_boundary) : (updated_is_odd_cluster != is_odd_cluster));
 
 // compute `new_updated_root` based on messages and neighbors, used in `STAGE_SPREAD_CLUSTER` stage
@@ -223,6 +223,7 @@ endgenerate
 
 // gather `is_odd_cardinality` and `is_touching_boundary` from direct channels in a tree structure to reduce longest path
 // elect a message from the direct_in channels that are not locally handled (which one doesn't matter, here we choose the one with smallest index)
+// TODO :  simplify this logic. This is hard to understand and may cause multi driven nets
 wire [CHANNEL_ALL_EXPAND_COUNT-1:0] tree_gathering_is_odd_cardinality;
 wire [CHANNEL_ALL_EXPAND_COUNT-1:0] tree_gathering_is_touching_boundary;
 wire [CHANNEL_ALL_EXPAND_COUNT-1:0] tree_gathering_elected_direct_message_valid;
@@ -356,7 +357,7 @@ generate
 endgenerate
 
 // increase neighbor link in STAGE_GROW_BOUNDARY stage
-assign neighbor_increase = !reset && is_odd_cluster && (stage == STAGE_GROW_BOUNDARY) && (last_stage != STAGE_GROW_BOUNDARY);
+assign neighbor_increase = is_odd_cluster && (stage == STAGE_GROW_BOUNDARY) && (last_stage != STAGE_GROW_BOUNDARY);
 
 // state machine
 always @(posedge clk) begin
@@ -369,6 +370,7 @@ always @(posedge clk) begin
         has_boundary <= init_has_boundary;
         boundary_cost <= init_boundary_cost;
         boundary_increased <= 0;
+        // TODO : Move is_odd_cluster logic from reset logic
         is_odd_cluster <= init_is_error_syndrome;
         is_touching_boundary <= 0;
         is_odd_cardinality <= init_is_error_syndrome;
