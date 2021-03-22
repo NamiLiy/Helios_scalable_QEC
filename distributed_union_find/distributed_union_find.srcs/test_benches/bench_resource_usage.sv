@@ -1,9 +1,9 @@
 `timescale 1ns / 1ps
 
 module bench_resource_usage #(
-    CODE_DISTANCE = 12  // has CODE_DISTANCE ¡Á (CODE_DISTANCE-1) processing units
+    CODE_DISTANCE = 3  // has CODE_DISTANCE ¡Á (CODE_DISTANCE-1) processing units
 ) (
-    clk,
+    clk_in,
     reset,
     stage,
     is_error_syndromes,
@@ -23,13 +23,20 @@ localparam BOUNDARY_WIDTH = $clog2(BOUNDARY_COST + 1);
 localparam UNION_MESSAGE_WIDTH = 2 * ADDRESS_WIDTH;  // [old_root, updated_root]
 localparam DIRECT_MESSAGE_WIDTH = ADDRESS_WIDTH + 1 + 1;  // [receiver, is_odd_cardinality_root, is_touching_boundary]
 
-input clk;
+input clk_in;
 input reset;
 input [STAGE_WIDTH-1:0] stage;
 input [PU_COUNT-1:0] is_error_syndromes;
 wire [PU_COUNT-1:0] is_odd_clusters;
 output is_odd_clusters_xor;
 assign is_odd_clusters_xor = ^is_odd_clusters;  // compress information to fit into limited ports
+
+wire clk;
+clk_wiz_0 u_clk_wiz_0(
+    .reset(reset),
+    .clk_in(clk_in),
+    .clk_out(clk)
+);
 
 genvar i;
 genvar j;
