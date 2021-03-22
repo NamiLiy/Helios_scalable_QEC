@@ -2,7 +2,7 @@
 
 module test_nonblocking_channel;
 
-`define assert(condition, reason) if(!condition) begin $display(reason); $finish(1); end
+`define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
 reg clk;
 reg reset;

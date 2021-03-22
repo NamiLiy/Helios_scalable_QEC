@@ -2,7 +2,7 @@
 
 module test_tree_compare_solver;
 
-`define assert(condition, reason) if(!condition) begin $display(reason); $finish(1); end
+`define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
 localparam DATA_WIDTH = 8;
 localparam CHANNEL_COUNT = 5;

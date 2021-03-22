@@ -3,7 +3,7 @@
 module test_processing_unit;
 
 `include "../../sources_1/new/parameters.sv"
-`define assert(condition, reason) if(!condition) begin $display(reason); $finish(1); end
+`define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
 reg clk;
 reg reset;
