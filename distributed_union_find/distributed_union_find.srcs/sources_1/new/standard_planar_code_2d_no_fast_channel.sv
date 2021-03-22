@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 
 module standard_planar_code_2d_no_fast_channel #(
-    CODE_DISTANCE = 3  // has CODE_DISTANCE ¡Á (CODE_DISTANCE-1) processing units
+    CODE_DISTANCE = 5  // has CODE_DISTANCE ï¿½ï¿½ (CODE_DISTANCE-1) processing units
 ) (
     clk,
     reset,
@@ -217,7 +217,7 @@ generate
                 .init_is_error_syndrome(`init_is_error_syndrome(i, j)),
                 .init_has_boundary(`init_has_boundary(i, j)),
                 .init_boundary_cost(BOUNDARY_COST),
-                .stage(stage),
+                .stage_in(stage),
                 .compare_solver_default_addr(compare_solver_default_addr),
                 .compare_solver_addrs(compare_solver_addrs),
                 .compare_solver_addrs_valid(compare_solver_addrs_valid),

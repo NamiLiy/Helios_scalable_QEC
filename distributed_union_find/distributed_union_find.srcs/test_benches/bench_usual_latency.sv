@@ -132,7 +132,7 @@ processing_unit #(
     .init_is_error_syndrome(init_is_error_syndrome),
     .init_has_boundary(init_has_boundary),
     .init_boundary_cost(init_boundary_cost),
-    .stage(stage),
+    .stage_in(stage),
     .compare_solver_default_addr(compare_solver_default_addr),
     .compare_solver_addrs(compare_solver_addrs),
     .compare_solver_addrs_valid(compare_solver_addrs_valid),

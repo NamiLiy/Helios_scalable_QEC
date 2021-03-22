@@ -15,7 +15,7 @@ module processing_unit #(
     init_has_boundary,
     init_boundary_cost,
     // stage indicator
-    stage,
+    stage_in,
     // external compare solver
     compare_solver_default_addr,
     compare_solver_addrs,
@@ -68,7 +68,7 @@ input init_is_error_syndrome;
 input init_has_boundary;
 input [BOUNDARY_WIDTH-1:0] init_boundary_cost;
 // stage indicator
-input [STAGE_WIDTH-1:0] stage;
+input [STAGE_WIDTH-1:0] stage_in;
 // compare solvers should be a combinational logic that takes multiple addresses and output the smallest one
 output [ADDRESS_WIDTH-1:0] compare_solver_default_addr;
 output [(ADDRESS_WIDTH * CHANNEL_COUNT)-1:0] compare_solver_addrs;
@@ -99,6 +99,7 @@ reg [ADDRESS_WIDTH-1:0] address;  // my address
 output reg [ADDRESS_WIDTH-1:0] old_root;
 output reg [ADDRESS_WIDTH-1:0] updated_root;
 reg [STAGE_WIDTH-1:0] last_stage;
+reg [STAGE_WIDTH-1:0] stage;
 output reg is_error_syndrome;
 reg has_boundary;
 reg [BOUNDARY_WIDTH-1:0] boundary_cost;
@@ -404,6 +405,14 @@ always @(posedge clk) begin
                 is_odd_cluster <= updated_is_odd_cluster;
             end
         end
+    end
+end
+
+always @(posedge clk) begin
+    if (reset) begin
+        stage <= STAGE_IDLE;
+    end else begin
+        stage <= stage_in;
     end
 end
 
