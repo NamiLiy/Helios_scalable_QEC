@@ -62,7 +62,7 @@ generate
             tree_compare_solver #(
                 .DATA_WIDTH(ADDRESS_WIDTH),
                 .CHANNEL_COUNT(`CHANNEL_COUNT)
-            ) u_tree_compare_solver(
+            ) u_tree_compare_solver (
                 .default_value(compare_solver_default_addr),
                 .values(compare_solver_addrs),
                 .valids(compare_solver_addrs_valid),
@@ -181,7 +181,7 @@ generate
             tree_distance_2d_solver #(
                 .PER_DIMENSION_WIDTH(PER_DIMENSION_WIDTH),
                 .CHANNEL_COUNT(`CHANNEL_COUNT)
-            ) u_tree_distance_2d_solver(
+            ) u_tree_distance_2d_solver (
                 .points(channel_addresses),
                 .target(distance_solver_target),
                 .result_idx(distance_solver_result_idx)
@@ -210,7 +210,7 @@ generate
                 .BOUNDARY_WIDTH(BOUNDARY_WIDTH),
                 .NEIGHBOR_COUNT(`NEIGHBOR_COUNT),
                 .FAST_CHANNEL_COUNT(FAST_CHANNEL_COUNT)
-            ) u_processing_unit(
+            ) u_processing_unit (
                 .clk(clk),
                 .reset(reset),
                 .init_address(init_address),

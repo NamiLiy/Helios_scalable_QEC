@@ -218,9 +218,11 @@ endgenerate
 
 // direct channel local handling
 wire [CHANNEL_COUNT-1:0] direct_in_channels_local_handled;
+wire [CHANNEL_COUNT-1:0] direct_in_channels_address_matched;
 generate
     for (i=0; i < CHANNEL_COUNT; i=i+1) begin: direct_in_channels_local_handling
-        assign direct_in_channels_local_handled[i] = `direct_in_valid(i) && (`direct_in_data_receiver(i) == address);
+        assign direct_in_channels_address_matched[i] = (`direct_in_data_receiver(i) == address);
+        assign direct_in_channels_local_handled[i] = `direct_in_valid(i) && direct_in_channels_address_matched[i];
     end
 endgenerate
 
@@ -239,7 +241,7 @@ generate
         if (i < CHANNEL_COUNT) begin
             assign tree_gathering_is_odd_cardinality[i] = direct_in_channels_local_handled[i] && `direct_in_data_is_odd_cardinality(i);
             assign tree_gathering_is_touching_boundary[i] = direct_in_channels_local_handled[i] && `direct_in_data_is_touching_boundary(i);
-            assign tree_gathering_elected_direct_message_valid[i] = !direct_in_channels_local_handled[i];
+            assign tree_gathering_elected_direct_message_valid[i] = `direct_in_valid(i) && !direct_in_channels_address_matched[i];
             assign `expanded_elected_direct_message_index(i) = i;
             assign `expanded_elected_direct_message_data(i) = `direct_in_data(i);
         end else begin
@@ -346,7 +348,7 @@ assign new_pending_tell_new_root_touching_boundary = intermediate_pending_tell_n
 assign direct_out_channels_data_single = pending_direct_message;
 generate
     for (i=0; i < CHANNEL_COUNT; i=i+1) begin: sending_direct_message
-        assign `direct_out_valid(i) = is_stage_spread_cluster && (i == `best_channel_for_pending_message_idx) && !`direct_out_is_full(i) && pending_direct_message_valid;
+        assign `direct_out_valid(i) = is_stage_spread_cluster && pending_direct_message_valid && (i == `best_channel_for_pending_message_idx) && !`direct_out_is_full(i);
     end
 endgenerate
 
