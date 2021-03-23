@@ -110,6 +110,8 @@ output reg is_odd_cardinality;
 output reg pending_tell_new_root_cardinality;
 output reg pending_tell_new_root_touching_boundary;
 
+genvar i;
+
 wire is_stage_spread_cluster;
 assign is_stage_spread_cluster = (stage == STAGE_SPREAD_CLUSTER);
 
@@ -134,6 +136,16 @@ assign is_stage_spread_cluster = (stage == STAGE_SPREAD_CLUSTER);
 `define is_fully_grown(i) neighbor_is_fully_grown[i]
 `define neighbor_old_root(i) neighbor_old_roots[((i+1) * ADDRESS_WIDTH) - 1 : (i * ADDRESS_WIDTH)]
 
+// split messages in channels
+wire [CHANNEL_COUNT-1:0] direct_in_channels_data_is_odd_cardinality;
+wire [CHANNEL_COUNT-1:0] direct_in_channels_data_is_touching_boundary;
+generate
+    for (i=0; i < CHANNEL_EXPAND_COUNT; i=i+1) begin: splitting_direct_in_channel_messages
+        assign direct_in_channels_data_is_odd_cardinality[i] = `direct_in_data_is_odd_cardinality(i);
+        assign direct_in_channels_data_is_touching_boundary[i] = `direct_in_data_is_touching_boundary(i);
+    end
+endgenerate
+
 // tree structured information gathering for general channels (both union channels and direct channels)
 localparam CHANNEL_DEPTH = $clog2(CHANNEL_COUNT); //2
 localparam CHANNEL_EXPAND_COUNT = 2 ** CHANNEL_DEPTH; //4
@@ -145,7 +157,6 @@ localparam CHANNEL_ALL_EXPAND_COUNT = 2 * CHANNEL_EXPAND_COUNT - 1;  // the leng
 `define CHANNEL_CHILD_1_IDX (`CHANNEL_LAST_LAYERT_IDX + 2 * j)
 `define CHANNEL_CHILD_2_IDX (`CHANNEL_CHILD_1_IDX + 1)
 localparam CHANNEL_ROOT_IDX = CHANNEL_ALL_EXPAND_COUNT - 1; // 6
-genvar i;
 
 // prepare variables for sync is_odd_cluster
 wire myself_is_odd_cardinality_but_not_touching_boundary;
@@ -229,8 +240,6 @@ endgenerate
 // gather `is_odd_cardinality` and `is_touching_boundary` from direct channels in a tree structure to reduce longest path
 // elect a message from the direct_in channels that are not locally handled (which one doesn't matter, here we choose the one with smallest index)
 // TODO :  simplify this logic. This is hard to understand and may cause multi driven nets
-wire [CHANNEL_ALL_EXPAND_COUNT-1:0] tree_gathering_is_odd_cardinality;
-wire [CHANNEL_ALL_EXPAND_COUNT-1:0] tree_gathering_is_touching_boundary;
 wire [CHANNEL_ALL_EXPAND_COUNT-1:0] tree_gathering_elected_direct_message_valid;
 wire [(DIRECT_MESSAGE_WIDTH * CHANNEL_ALL_EXPAND_COUNT)-1:0] tree_gathering_elected_direct_message_data;
 `define expanded_elected_direct_message_data(i) tree_gathering_elected_direct_message_data[((i+1) * DIRECT_MESSAGE_WIDTH) - 1 : (i * DIRECT_MESSAGE_WIDTH)]
@@ -239,22 +248,16 @@ wire [(CHANNEL_WIDTH * CHANNEL_ALL_EXPAND_COUNT)-1:0] tree_gathering_elected_dir
 generate
     for (i=0; i < CHANNEL_EXPAND_COUNT; i=i+1) begin: direct_channel_gathering_initialization
         if (i < CHANNEL_COUNT) begin
-            assign tree_gathering_is_odd_cardinality[i] = direct_in_channels_local_handled[i] && `direct_in_data_is_odd_cardinality(i);
-            assign tree_gathering_is_touching_boundary[i] = direct_in_channels_local_handled[i] && `direct_in_data_is_touching_boundary(i);
             assign tree_gathering_elected_direct_message_valid[i] = `direct_in_valid(i) && !direct_in_channels_address_matched[i];
             assign `expanded_elected_direct_message_index(i) = i;
             assign `expanded_elected_direct_message_data(i) = `direct_in_data(i);
         end else begin
-            assign tree_gathering_is_odd_cardinality[i] = 0;
-            assign tree_gathering_is_touching_boundary[i] = 0;
             assign tree_gathering_elected_direct_message_valid[i] = 0;
         end
     end
     for (i=0; i < CHANNEL_DEPTH; i=i+1) begin: direct_channel_gathering_election
         genvar j;
         for (j=0; j < `CHANNEL_LAYER_WIDTH; j=j+1) begin: direct_channel_gathering_layer_election
-            assign tree_gathering_is_odd_cardinality[`CHANNEL_CURRENT_IDX] = tree_gathering_is_odd_cardinality[`CHANNEL_CHILD_1_IDX] ^ tree_gathering_is_odd_cardinality[`CHANNEL_CHILD_2_IDX];
-            assign tree_gathering_is_touching_boundary[`CHANNEL_CURRENT_IDX] = tree_gathering_is_touching_boundary[`CHANNEL_CHILD_1_IDX] | tree_gathering_is_touching_boundary[`CHANNEL_CHILD_2_IDX];
             assign tree_gathering_elected_direct_message_valid[`CHANNEL_CURRENT_IDX] = tree_gathering_elected_direct_message_valid[`CHANNEL_CHILD_1_IDX] | tree_gathering_elected_direct_message_valid[`CHANNEL_CHILD_2_IDX];
             assign `expanded_elected_direct_message_index(`CHANNEL_CURRENT_IDX) = tree_gathering_elected_direct_message_valid[`CHANNEL_CHILD_1_IDX] ? (
                 `expanded_elected_direct_message_index(`CHANNEL_CHILD_1_IDX)
@@ -269,8 +272,8 @@ generate
         end
     end
 endgenerate
-`define gathered_is_odd_cardinality (tree_gathering_is_odd_cardinality[CHANNEL_ROOT_IDX])
-`define gathered_is_touching_boundary (tree_gathering_is_touching_boundary[CHANNEL_ROOT_IDX])
+`define gathered_is_odd_cardinality (^(direct_in_channels_local_handled & direct_in_channels_data_is_odd_cardinality))
+`define gathered_is_touching_boundary (|(direct_in_channels_local_handled & direct_in_channels_data_is_touching_boundary))
 `define gathered_elected_direct_message_valid (tree_gathering_elected_direct_message_valid[CHANNEL_ROOT_IDX])
 `define gathered_elected_direct_message_index (`expanded_elected_direct_message_index(CHANNEL_ROOT_IDX))
 `define gathered_elected_direct_message_data (`expanded_elected_direct_message_data(CHANNEL_ROOT_IDX))
