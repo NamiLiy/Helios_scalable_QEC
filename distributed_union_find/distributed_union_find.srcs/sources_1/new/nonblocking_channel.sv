@@ -8,7 +8,8 @@ module nonblocking_channel #(
     output [WIDTH-1:0] out_data,
     output out_valid,
     input clk,
-    input reset
+    input reset,
+    input initialize
 );
 
 reg [WIDTH-1:0] buffer_data;
@@ -19,6 +20,8 @@ assign out_valid = buffer_valid;
 
 always @(posedge clk) begin
     if (reset) begin
+        buffer_valid <= 0;
+    end else if (initialize) begin
         buffer_valid <= 0;
     end else begin
         buffer_valid <= in_valid;

@@ -14,6 +14,7 @@ localparam ITERATION_COUNTER_WIDTH = 8;  // counts up to CODE_DISTANCE iteration
 
 reg clk;
 reg reset;
+reg new_round_start;
 
 reg [PU_COUNT-1:0] is_error_syndromes;
 wire [PU_COUNT-1:0] is_odd_cardinalities;
@@ -33,6 +34,7 @@ wire [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
 standard_planar_code_2d_no_fast_channel_with_stage_controller #(.CODE_DISTANCE(CODE_DISTANCE)) decoder (
     .clk(clk),
     .reset(reset),
+    .new_round_start(new_round_start),
     .is_error_syndromes(is_error_syndromes),
     .is_odd_cardinalities(is_odd_cardinalities),
     .roots(roots),
@@ -60,7 +62,9 @@ initial begin
     #100;
     reset = 1'b0;
     #100;
-    
+    new_round_start = 1;
+    #10;
+    new_round_start = 0;
     #500;
     `assert(`root(0, 0) == make_address(0, 0), "root should be itself");
     `assert(`root(1, 0) == make_address(1, 0), "root should be (1, 0)");
@@ -74,7 +78,7 @@ initial begin
     
     
     // Rust distributed_uf_decoder.rs: distributed_union_find_decoder_test_case_3()
-    reset = 1'b1;
+    #10;
     is_error_syndromes = 0;
     `is_error_syndrome(0, 0) = 1;
     `is_error_syndrome(0, 1) = 1;
@@ -82,8 +86,9 @@ initial begin
     `is_error_syndrome(1, 1) = 1;
     `is_error_syndrome(1, 2) = 1;
     #20;
-    reset = 1'b0;
-    #20;
+    new_round_start = 1;
+    #10;
+    new_round_start = 0;
     #500;
     `assert(`root(0, 0) == make_address(0, 0), "root should be (0, 0)");
     `assert(`root(0, 1) == make_address(0, 0), "root should be (0, 0)");

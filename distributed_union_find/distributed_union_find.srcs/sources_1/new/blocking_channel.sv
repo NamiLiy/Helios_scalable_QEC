@@ -10,7 +10,8 @@ module blocking_channel #(
     output out_valid,
     input out_is_taken,
     input clk,
-    input reset
+    input reset,
+    input initialize
 );
 
 // Nami : Improved this by converting to a ping-pong buffer.
@@ -36,7 +37,9 @@ always @(posedge clk) begin
     if (reset) begin
         buffer_valid_a <= 0;
     end else begin
-        if (buffer_valid_a) begin  // do not take input data
+        if (initialize) begin
+            buffer_valid_a <= 0;
+        end else if (buffer_valid_a) begin  // do not take input data
             if (out_is_taken && !selected_read_reg) begin
                 buffer_valid_a <= 0;
             end
@@ -53,7 +56,9 @@ always @(posedge clk) begin
     if (reset) begin
         buffer_valid_b <= 0;
     end else begin
-        if (buffer_valid_b) begin  // do not take input data
+        if (initialize) begin
+            buffer_valid_b <= 0;
+        end else if (buffer_valid_b) begin  // do not take input data
             if (out_is_taken && selected_read_reg) begin
                 buffer_valid_b <= 0;
             end
@@ -70,7 +75,9 @@ always @(posedge clk) begin
     if (reset) begin
         selected_read_reg <= 0;
     end else begin
-        if (selected_read_reg) begin
+        if (initialize) begin
+            selected_read_reg <= 0;
+        end else if (selected_read_reg) begin
             if (buffer_valid_b && out_is_taken) begin  // do not take input data
                 selected_read_reg <= 0;
             end
@@ -86,7 +93,9 @@ always @(posedge clk) begin
     if (reset) begin
         selected_write_reg <= 0;
     end else begin
-        if (selected_write_reg) begin
+        if (initialize) begin
+            selected_write_reg <= 0;
+        end else if (selected_write_reg) begin
             if (!buffer_valid_b && in_valid) begin  // do not take input data
                 selected_write_reg <= 0;
             end

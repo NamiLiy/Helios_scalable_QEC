@@ -10,6 +10,7 @@ module decoder_stage_controller #(
 ) (
     input clk,
     input reset,
+    input new_round_start,
     input has_message_flying,
     input has_odd_clusters,
     output reg [STAGE_WIDTH-1:0] stage,
@@ -27,6 +28,9 @@ always @(posedge clk) begin
     if (reset) begin
         iteration_counter <= 0;
     end else begin
+        if (stage == STAGE_MEASUREMENT_LOADING) begin
+            iteration_counter <= 0;
+        end
         if (stage == STAGE_SYNC_IS_ODD_CLUSTER && delay_counter >= SYNC_IS_ODD_CLUSTER_DELAY && !has_message_flying) begin
             iteration_counter <= iteration_counter + 1;
         end
@@ -40,8 +44,8 @@ always @(posedge clk) begin
     end else begin
         case (stage)
             STAGE_IDLE: begin
-                if (!result_valid) begin
-                    stage <= STAGE_SPREAD_CLUSTER;
+                if (new_round_start) begin
+                    stage <= STAGE_MEASUREMENT_LOADING;
                     delay_counter <= 0;
                 end
             end
@@ -78,6 +82,12 @@ always @(posedge clk) begin
                     delay_counter <= delay_counter + 1;
                 end
             end
+            STAGE_MEASUREMENT_LOADING: begin
+                // Currently this is single cycle as only from external buffer happens.
+                // In future might need multiple
+                stage <= STAGE_SPREAD_CLUSTER;
+                delay_counter <= 0;
+            end
         endcase
     end
 end
@@ -86,8 +96,12 @@ always @(posedge clk) begin
     if (reset) begin
         result_valid <= 0;
     end else begin
-        if (stage == STAGE_SYNC_IS_ODD_CLUSTER && delay_counter >= SYNC_IS_ODD_CLUSTER_DELAY && !has_message_flying && !has_odd_clusters) begin
+        if (new_round_start) begin
+            result_valid <= 0;
+        end else if (stage == STAGE_SYNC_IS_ODD_CLUSTER && delay_counter >= SYNC_IS_ODD_CLUSTER_DELAY && !has_message_flying && !has_odd_clusters) begin
             result_valid <= 1;
+        end else if(stage == STAGE_MEASUREMENT_LOADING) begin
+            result_valid <= 0;
         end
     end
 end

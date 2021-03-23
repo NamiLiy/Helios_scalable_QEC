@@ -6,6 +6,7 @@ module neighbor_link #(
 ) (
     input clk,
     input reset,
+    input initialize,
     output is_fully_grown,
     // used by node a
     input [ADDRESS_WIDTH-1:0] a_old_root_in,
@@ -29,6 +30,10 @@ assign is_fully_grown = increased >= LENGTH;
 
 always @(posedge clk) begin
     if (reset) begin
+        increased <= 0;
+        a_old_root <= 0;
+        b_old_root <= 0;
+    end else if (initialize) begin
         increased <= 0;
         a_old_root <= 0;
         b_old_root <= 0;

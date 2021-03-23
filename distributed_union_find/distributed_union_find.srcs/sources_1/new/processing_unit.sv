@@ -367,18 +367,17 @@ assign neighbor_increase = is_odd_cluster && (stage == STAGE_GROW_BOUNDARY) && (
 // state machine
 always @(posedge clk) begin
     if (reset) begin
-        address <= init_address;
-        old_root <= init_address;
-        updated_root <= init_address;
+        address <= init_address; // constant per PU
+        old_root <= init_address; // constant per PU
+        updated_root <= init_address; // constant per PU
         last_stage <= STAGE_IDLE;
-        is_error_syndrome <= init_is_error_syndrome;
-        has_boundary <= init_has_boundary;
-        boundary_cost <= init_boundary_cost;
+        is_error_syndrome <= 0;
+        has_boundary <= init_has_boundary; // constant per PU
+        boundary_cost <= init_boundary_cost; // constant per PU
         boundary_increased <= 0;
-        // TODO : Move is_odd_cluster logic from reset logic
-        is_odd_cluster <= init_is_error_syndrome;
+        is_odd_cluster <= 0;
         is_touching_boundary <= 0;
-        is_odd_cardinality <= init_is_error_syndrome;
+        is_odd_cardinality <= 0;
         pending_tell_new_root_cardinality <= 0;
         pending_tell_new_root_touching_boundary <= 0;
     end else begin
@@ -408,6 +407,20 @@ always @(posedge clk) begin
             end else begin
                 is_odd_cluster <= updated_is_odd_cluster;
             end
+        end else if (stage == STAGE_MEASUREMENT_LOADING) begin
+            address <= init_address;
+            old_root <= init_address;
+            updated_root <= init_address;
+            last_stage <= STAGE_IDLE;
+            is_error_syndrome <= init_is_error_syndrome;
+            has_boundary <= init_has_boundary;
+            boundary_cost <= init_boundary_cost;
+            boundary_increased <= 0;
+            is_odd_cluster <= init_is_error_syndrome;
+            is_touching_boundary <= 0;
+            is_odd_cardinality <= init_is_error_syndrome;
+            pending_tell_new_root_cardinality <= 0;
+            pending_tell_new_root_touching_boundary <= 0;
         end
     end
 end

@@ -35,12 +35,26 @@ output [PU_COUNT-1:0] is_odd_cardinalities;
 output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 output has_message_flying;
 wire [PU_COUNT-1:0] has_message_flyings;
+wire initialize_neighbors;
+reg [STAGE_WIDTH-1:0] stage_internal;
+
 assign has_message_flying = |has_message_flyings;
 
 genvar i;
 genvar j;
 
 wire [PU_COUNT-1:0] test;
+
+// this is to emualte the delay in the PUs
+always @(posedge clk) begin
+    if (reset) begin
+        stage_internal <= STAGE_IDLE;
+    end else begin
+        stage_internal <= stage;
+    end
+end
+
+assign initialize_neighbors = (stage_internal == STAGE_MEASUREMENT_LOADING);
 
 // generate macros
 `define CHANNEL_COUNT_IJ(i, j) ((i>0?1:0) + (i<(CODE_DISTANCE-1)?1:0) + (j>0?1:0) + (j<(CODE_DISTANCE-2)?1:0))
@@ -267,7 +281,7 @@ endgenerate
 // instantiate vertical neighbor link and connect signals properly
 `define NEIGHBOR_VERTICAL_INSTANTIATE \
 neighbor_link #(.LENGTH(NEIGHBOR_COST), .ADDRESS_WIDTH(ADDRESS_WIDTH)) neighbor_vertical (\
-    .clk(clk), .reset(reset), .is_fully_grown(`PU(i, j).neighbor_is_fully_grown[`NEIGHBOR_IDX_BOTTOM(i, j)]),\
+    .clk(clk), .reset(reset), .initialize(initialize_neighbors), .is_fully_grown(`PU(i, j).neighbor_is_fully_grown[`NEIGHBOR_IDX_BOTTOM(i, j)]),\
     .a_old_root_in(`PU(i, j).old_root), .a_increase(`PU(i, j).neighbor_increase),\
     .b_old_root_out(`SLICE_ADDRESS_VEC(`PU(i, j).neighbor_old_roots, `NEIGHBOR_IDX_BOTTOM(i, j))),\
     .b_old_root_in(`PU(i+1, j).old_root), .b_increase(`PU(i+1, j).neighbor_increase),\
@@ -278,7 +292,7 @@ assign `PU(i+1, j).neighbor_is_fully_grown[`NEIGHBOR_IDX_TOP(i+1, j)] = `PU(i, j
 // instantiate horizontal neighbor link and connect signals properly
 `define NEIGHBOR_HORIZONTAL_INSTANTIATE \
 neighbor_link #(.LENGTH(NEIGHBOR_COST), .ADDRESS_WIDTH(ADDRESS_WIDTH)) neighbor_horizontal (\
-    .clk(clk), .reset(reset), .is_fully_grown(`PU(i, j).neighbor_is_fully_grown[`NEIGHBOR_IDX_RIGHT(i, j)]),\
+    .clk(clk), .reset(reset), .initialize(initialize_neighbors), .is_fully_grown(`PU(i, j).neighbor_is_fully_grown[`NEIGHBOR_IDX_RIGHT(i, j)]),\
     .a_old_root_in(`PU(i, j).old_root), .a_increase(`PU(i, j).neighbor_increase),\
     .b_old_root_out(`SLICE_ADDRESS_VEC(`PU(i, j).neighbor_old_roots, `NEIGHBOR_IDX_RIGHT(i, j))),\
     .b_old_root_in(`PU(i, j+1).old_root), .b_increase(`PU(i, j+1).neighbor_increase),\
@@ -289,14 +303,14 @@ assign `PU(i, j+1).neighbor_is_fully_grown[`NEIGHBOR_IDX_LEFT(i, j+1)] = `PU(i, 
 // instantiate vertical union channels and connect signals properly
 `define UNION_CHANNEL_VERTICAL_INSTANTIATE \
 nonblocking_channel #(.WIDTH(UNION_MESSAGE_WIDTH)) nonblocking_channel_down (\
-    .clk(clk), .reset(reset),\
+    .clk(clk), .reset(reset), .initialize(initialize_neighbors),\
     .in_data(`SLICE_UNION_MESSAGE_VEC(`PU(i, j).union_out_channels_data, `NEIGHBOR_IDX_BOTTOM(i, j))),\
     .in_valid(`PU(i, j).union_out_channels_valid),\
     .out_data(`SLICE_UNION_MESSAGE_VEC(`PU(i+1, j).union_in_channels_data, `NEIGHBOR_IDX_TOP(i+1, j))),\
     .out_valid(`PU(i+1, j).union_in_channels_valid[`NEIGHBOR_IDX_TOP(i+1, j)])\
 );\
 nonblocking_channel #(.WIDTH(UNION_MESSAGE_WIDTH)) nonblocking_channel_up (\
-    .clk(clk), .reset(reset),\
+    .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
     .in_data(`SLICE_UNION_MESSAGE_VEC(`PU(i+1, j).union_out_channels_data, `NEIGHBOR_IDX_TOP(i+1, j))),\
     .in_valid(`PU(i+1, j).union_out_channels_valid),\
     .out_data(`SLICE_UNION_MESSAGE_VEC(`PU(i, j).union_in_channels_data, `NEIGHBOR_IDX_BOTTOM(i, j))),\
@@ -306,14 +320,14 @@ nonblocking_channel #(.WIDTH(UNION_MESSAGE_WIDTH)) nonblocking_channel_up (\
 // instantiate horizontal union channels and connect signals properly
 `define UNION_CHANNEL_HORIZONTAL_INSTANTIATE \
 nonblocking_channel #(.WIDTH(UNION_MESSAGE_WIDTH)) nonblocking_channel_right (\
-    .clk(clk), .reset(reset),\
+    .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
     .in_data(`SLICE_UNION_MESSAGE_VEC(`PU(i, j).union_out_channels_data, `NEIGHBOR_IDX_RIGHT(i, j))),\
     .in_valid(`PU(i, j).union_out_channels_valid),\
     .out_data(`SLICE_UNION_MESSAGE_VEC(`PU(i, j+1).union_in_channels_data, `NEIGHBOR_IDX_LEFT(i, j+1))),\
     .out_valid(`PU(i, j+1).union_in_channels_valid[`NEIGHBOR_IDX_LEFT(i, j+1)])\
 );\
 nonblocking_channel #(.WIDTH(UNION_MESSAGE_WIDTH)) nonblocking_channel_left (\
-    .clk(clk), .reset(reset),\
+    .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
     .in_data(`SLICE_UNION_MESSAGE_VEC(`PU(i, j+1).union_out_channels_data, `NEIGHBOR_IDX_LEFT(i, j+1))),\
     .in_valid(`PU(i, j+1).union_out_channels_valid),\
     .out_data(`SLICE_UNION_MESSAGE_VEC(`PU(i, j).union_in_channels_data, `NEIGHBOR_IDX_RIGHT(i, j))),\
@@ -323,7 +337,7 @@ nonblocking_channel #(.WIDTH(UNION_MESSAGE_WIDTH)) nonblocking_channel_left (\
 // instantiate vertical direct channels and connect signals properly
 `define DIRECT_CHANNEL_VERTICAL_INSTANTIATE \
 blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_down (\
-    .clk(clk), .reset(reset),\
+    .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
     .in_data(`PU(i, j).direct_out_channels_data_single),\
     .in_valid(`PU(i, j).direct_out_channels_valid[`NEIGHBOR_IDX_BOTTOM(i, j)]),\
     .in_is_full(`PU(i, j).direct_out_channels_is_full[`NEIGHBOR_IDX_BOTTOM(i, j)]),\
@@ -332,7 +346,7 @@ blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_down (\
     .out_is_taken(`PU(i+1, j).direct_in_channels_is_taken[`NEIGHBOR_IDX_TOP(i+1, j)])\
 );\
 blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_up (\
-    .clk(clk), .reset(reset),\
+    .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
     .in_data(`PU(i+1, j).direct_out_channels_data_single),\
     .in_valid(`PU(i+1, j).direct_out_channels_valid[`NEIGHBOR_IDX_TOP(i+1, j)]),\
     .in_is_full(`PU(i+1, j).direct_out_channels_is_full[`NEIGHBOR_IDX_TOP(i+1, j)]),\
@@ -344,7 +358,7 @@ blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_up (\
 // instantiate horizontal direct channels and connect signals properly
 `define DIRECT_CHANNEL_HORIZONTAL_INSTANTIATE \
 blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_right (\
-    .clk(clk), .reset(reset),\
+    .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
     .in_data(`PU(i, j).direct_out_channels_data_single),\
     .in_valid(`PU(i, j).direct_out_channels_valid[`NEIGHBOR_IDX_RIGHT(i, j)]),\
     .in_is_full(`PU(i, j).direct_out_channels_is_full[`NEIGHBOR_IDX_RIGHT(i, j)]),\
@@ -353,7 +367,7 @@ blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_right (\
     .out_is_taken(`PU(i, j+1).direct_in_channels_is_taken[`NEIGHBOR_IDX_LEFT(i, j+1)])\
 );\
 blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_left (\
-    .clk(clk), .reset(reset),\
+    .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
     .in_data(`PU(i, j+1).direct_out_channels_data_single),\
     .in_valid(`PU(i, j+1).direct_out_channels_valid[`NEIGHBOR_IDX_LEFT(i, j+1)]),\
     .in_is_full(`PU(i, j+1).direct_out_channels_is_full[`NEIGHBOR_IDX_LEFT(i, j+1)]),\

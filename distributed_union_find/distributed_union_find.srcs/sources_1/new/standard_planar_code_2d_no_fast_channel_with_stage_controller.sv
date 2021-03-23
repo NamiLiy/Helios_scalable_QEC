@@ -6,6 +6,7 @@ module standard_planar_code_2d_no_fast_channel_with_stage_controller #(
 ) (
     clk,
     reset,
+    new_round_start,
     is_error_syndromes,
     is_odd_cardinalities,
     roots,
@@ -20,6 +21,7 @@ localparam ITERATION_COUNTER_WIDTH = 8;  // counts up to CODE_DISTANCE iteration
 
 input clk;
 input reset;
+input new_round_start;
 input [PU_COUNT-1:0] is_error_syndromes;
 output [PU_COUNT-1:0] is_odd_cardinalities;
 output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
@@ -49,6 +51,7 @@ decoder_stage_controller #(.ITERATION_COUNTER_WIDTH(ITERATION_COUNTER_WIDTH)) u_
     .reset(reset),
     .has_message_flying(has_message_flying),
     .has_odd_clusters(has_odd_clusters),
+    .new_round_start(new_round_start),
     .stage(stage),
     .result_valid(result_valid),
     .iteration_counter(iteration_counter)
