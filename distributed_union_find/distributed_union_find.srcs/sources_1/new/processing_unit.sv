@@ -277,7 +277,7 @@ endgenerate
 
 // compute `updated_is_touching_boundary`
 wire updated_is_touching_boundary;
-assign updated_is_touching_boundary = (has_boundary && (boundary_increased == boundary_cost)) || `gathered_is_touching_boundary;
+assign updated_is_touching_boundary = is_touching_boundary || (has_boundary && (boundary_increased == boundary_cost)) || `gathered_is_touching_boundary;
 
 // compute `updated_is_odd_cardinality`
 wire updated_is_odd_cardinality;

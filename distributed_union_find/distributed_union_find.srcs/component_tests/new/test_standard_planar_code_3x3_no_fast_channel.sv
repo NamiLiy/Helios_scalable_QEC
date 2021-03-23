@@ -130,6 +130,70 @@ initial begin
     `assert(`PU(1, 1).neighbor_is_fully_grown == 3'b100, "left neighbor link of (1,1) is fully grown");
     `assert(`is_odd_cluster(1, 0) == 0, "it's a even cluster");
 
+
+
+    // test case 2, connect to boundary
+    reset = 1'b1;
+    `is_error_syndrome(0, 0) = 0;
+    `is_error_syndrome(0, 1) = 0;
+    `is_error_syndrome(1, 0) = 1;  // should match with boundary
+    `is_error_syndrome(1, 1) = 0;
+    `is_error_syndrome(2, 0) = 0;
+    `is_error_syndrome(2, 1) = 0;
+    stage = STAGE_IDLE;
+    #40;
+    reset = 1'b0;
+    #40;
+    
+    // first iteration, it touches nothing
+    stage = STAGE_GROW_BOUNDARY;
+    #100;
+    stage = STAGE_SPREAD_CLUSTER;
+    #100
+    stage = STAGE_SYNC_IS_ODD_CLUSTER;
+    #100;
+    `assert(`root(0, 0) == make_address(0, 0), "root should be itself");
+    `assert(`root(0, 1) == make_address(0, 1), "root should be itself");
+    `assert(`root(1, 0) == make_address(1, 0), "root should be (1, 0)");
+    `assert(`root(1, 1) == make_address(1, 1), "root should be itself");
+    `assert(`root(2, 0) == make_address(2, 0), "root should be itself");
+    `assert(`root(2, 1) == make_address(2, 1), "root should be itself");
+    `assert(`is_odd_cluster(1, 0) == 1, "it's a odd cluster");
+    
+    // second iteration, it touches boundary
+    stage = STAGE_GROW_BOUNDARY;
+    #100;
+    stage = STAGE_SPREAD_CLUSTER;
+    #100
+    stage = STAGE_SYNC_IS_ODD_CLUSTER;
+    #100;
+    `assert(`root(0, 0) == make_address(0, 0), "root should be (0, 0)");
+    `assert(`root(0, 1) == make_address(0, 1), "root should be itself");
+    `assert(`root(1, 0) == make_address(0, 0), "root should be (0, 0)");
+    `assert(`root(1, 1) == make_address(0, 0), "root should be (0, 0)");
+    `assert(`root(2, 0) == make_address(0, 0), "root should be (0, 0)");
+    `assert(`root(2, 1) == make_address(2, 1), "root should be itself");
+    `assert(`is_odd_cluster(0, 0) == 0, "it's a even cluster");
+    `assert(`PU(1, 0).is_touching_boundary == 1, "it's itself touching boundary");
+    `assert(`PU(0, 0).is_touching_boundary == 1, "it's the root of a set that touching boundary");
+
+    // thrid iteration, do nothing
+    stage = STAGE_GROW_BOUNDARY;
+    #100;
+    stage = STAGE_SPREAD_CLUSTER;
+    #100
+    stage = STAGE_SYNC_IS_ODD_CLUSTER;
+    #100;
+    `assert(`root(0, 0) == make_address(0, 0), "root should be (0, 0)");
+    `assert(`root(0, 1) == make_address(0, 1), "root should be itself");
+    `assert(`root(1, 0) == make_address(0, 0), "root should be (0, 0)");
+    `assert(`root(1, 1) == make_address(0, 0), "root should be (0, 0)");
+    `assert(`root(2, 0) == make_address(0, 0), "root should be (0, 0)");
+    `assert(`root(2, 1) == make_address(2, 1), "root should be itself");
+    `assert(`is_odd_cluster(0, 0) == 0, "it's a even cluster");
+    `assert(`PU(1, 0).is_touching_boundary == 1, "it's itself touching boundary");
+    `assert(`PU(0, 0).is_touching_boundary == 1, "it's the root of a set that touching boundary");
+
 end
 
 always #10 clk = ~clk;  // flip every 10ns, that is 50MHz clock
