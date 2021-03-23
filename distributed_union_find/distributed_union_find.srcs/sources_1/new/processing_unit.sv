@@ -180,18 +180,20 @@ assign should_broadcast_is_odd_cardinality = (stage == STAGE_SYNC_IS_ODD_CLUSTER
 
 // compute `new_updated_root` based on messages and neighbors, used in `STAGE_SPREAD_CLUSTER` stage
 wire [ADDRESS_WIDTH-1:0] new_updated_root;
-assign compare_solver_default_addr = old_root;
+assign compare_solver_default_addr = updated_root;
 generate
     for (i=0; i < CHANNEL_COUNT; i=i+1) begin: compare_new_updated_root
         wire [ADDRESS_WIDTH-1:0] elected_updated_root;
         wire elected_valid;
+        wire union_in_accepted;
+        assign union_in_accepted = `union_in_valid(i) && `union_in_data_old_root(i) == old_root;
         if (i < NEIGHBOR_COUNT) begin  // first for neighbors
             // if has union message in the channel, use that one; otherwise use the old_root from neighbor link
-            assign elected_valid = `union_in_valid(i) || `is_fully_grown(i);
-            assign elected_updated_root = `union_in_valid(i) ? `union_in_data(i) : `neighbor_old_root(i);
+            assign elected_valid = union_in_accepted || `is_fully_grown(i);
+            assign elected_updated_root = union_in_accepted ? `union_in_data_updated_root(i) : `neighbor_old_root(i);
         end else begin  // then for non-neighbors (fast channels only)
-            assign elected_valid = `union_in_valid(i);
-            assign elected_updated_root = `union_in_data(i);
+            assign elected_valid = union_in_accepted;
+            assign elected_updated_root = `union_in_data_updated_root(i);
         end
         assign `compare_solver_addr(i) = elected_updated_root;
         assign `compare_solver_valid(i) = elected_valid;
@@ -209,7 +211,7 @@ generate
             { updated_root, updated_root }
         ) : (
             // STAGE_SPREAD_CLUSTER
-            { ((i < NEIGHBOR_COUNT) ? (`neighbor_old_root(i)) : (old_root)), new_updated_root }
+            { ((i < NEIGHBOR_COUNT && `is_fully_grown(i)) ? (`neighbor_old_root(i)) : (old_root)), new_updated_root }
         );
     end
 endgenerate

@@ -238,14 +238,8 @@ generate
                 .direct_in_channels_valid(direct_in_channels_valid),
                 .direct_in_channels_is_taken(direct_in_channels_is_taken),
                 .old_root(old_root),
-//                .updated_root(updated_root),
-//                .is_error_syndrome(is_error_syndrome),
-//                .boundary_increased(boundary_increased),
+                .updated_root(`roots(i, j)),
                 .is_odd_cluster(`is_odd_cluster(i, j))
-//                .is_touching_boundary(is_touching_boundary),
-//                .is_odd_cardinality(is_odd_cardinality),
-//                .pending_tell_new_root_cardinality(pending_tell_new_root_cardinality),
-//                .pending_tell_new_root_touching_boundary(pending_tell_new_root_touching_boundary)
             );
         end
     end
