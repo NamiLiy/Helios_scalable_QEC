@@ -16,45 +16,28 @@ reg clk;
 reg reset;
 
 reg [PU_COUNT-1:0] is_error_syndromes;
-wire [PU_COUNT-1:0] is_odd_clusters;
 wire [PU_COUNT-1:0] is_odd_cardinalities;
 wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 `define INDEX(i, j) (i * (CODE_DISTANCE-1) + j)
 `define is_error_syndrome(i, j) is_error_syndromes[`INDEX(i, j)]
-`define is_odd_cluster(i, j) is_odd_clusters[`INDEX(i, j)]
+`define is_odd_cluster(i, j) decoder.is_odd_clusters[`INDEX(i, j)]
 `define root(i, j) roots[ADDRESS_WIDTH*(`INDEX(i, j)+1)-1:ADDRESS_WIDTH*`INDEX(i, j)]
 `define root_x(i, j) roots[ADDRESS_WIDTH*(`INDEX(i, j)+1)-1:ADDRESS_WIDTH*`INDEX(i, j)+PER_DIMENSION_WIDTH]
 `define root_y(i, j) roots[ADDRESS_WIDTH*(`INDEX(i, j)+1)-PER_DIMENSION_WIDTH-1:ADDRESS_WIDTH*`INDEX(i, j)]
-`define PU(i, j) decoder.pu_i[i].pu_j[j].u_processing_unit
+`define PU(i, j) decoder.decoder.pu_i[i].pu_j[j].u_processing_unit
 
-wire has_message_flying;
-wire has_odd_clusters;
-wire [STAGE_WIDTH-1:0] stage;
 wire result_valid;
 wire [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
-assign has_odd_clusters = |is_odd_clusters;
 
 // instantiate
-decoder_stage_controller #(.ITERATION_COUNTER_WIDTH(ITERATION_COUNTER_WIDTH)) u_decoder_stage_controller (
+standard_planar_code_2d_no_fast_channel_with_stage_controller #(.CODE_DISTANCE(CODE_DISTANCE)) decoder (
     .clk(clk),
     .reset(reset),
-    .has_message_flying(has_message_flying),
-    .has_odd_clusters(has_odd_clusters),
-    .stage(stage),
-    .result_valid(result_valid),
-    .iteration_counter(iteration_counter)
-);
-
-// instantiate
-standard_planar_code_2d_no_fast_channel #(.CODE_DISTANCE(CODE_DISTANCE)) decoder (
-    .clk(clk),
-    .reset(reset),
-    .stage(stage),
     .is_error_syndromes(is_error_syndromes),
-    .is_odd_clusters(is_odd_clusters),
     .is_odd_cardinalities(is_odd_cardinalities),
     .roots(roots),
-    .has_message_flying(has_message_flying)
+    .result_valid(result_valid),
+    .iteration_counter(iteration_counter)
 );
 
 function [ADDRESS_WIDTH-1:0] make_address;
@@ -74,11 +57,11 @@ initial begin
     `is_error_syndrome(1, 1) = 1;
     `is_error_syndrome(1, 2) = 1;
     `is_error_syndrome(1, 3) = 1;
-    #200;  // delay for 200ns
+    #100;
     reset = 1'b0;
-    #200;
+    #100;
     
-    #1000;
+    #500;
     `assert(`root(0, 0) == make_address(0, 0), "root should be itself");
     `assert(`root(1, 0) == make_address(1, 0), "root should be (1, 0)");
     `assert(`root(1, 1) == make_address(1, 0), "root should be (1, 0)");
@@ -98,10 +81,10 @@ initial begin
     `is_error_syndrome(0, 2) = 1;
     `is_error_syndrome(1, 1) = 1;
     `is_error_syndrome(1, 2) = 1;
-    #40;
+    #20;
     reset = 1'b0;
-    #40;
-    #1000;
+    #20;
+    #500;
     `assert(`root(0, 0) == make_address(0, 0), "root should be (0, 0)");
     `assert(`root(0, 1) == make_address(0, 0), "root should be (0, 0)");
     `assert(`root(0, 2) == make_address(0, 0), "root should be (0, 0)");
@@ -125,6 +108,6 @@ initial begin
 
 end
 
-always #10 clk = ~clk;  // flip every 10ns, that is 50MHz clock
+always #5 clk = ~clk;  // flip every 10ns, that is 50MHz clock
 
 endmodule
