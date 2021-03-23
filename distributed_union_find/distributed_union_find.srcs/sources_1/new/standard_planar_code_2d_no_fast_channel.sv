@@ -8,7 +8,9 @@ module standard_planar_code_2d_no_fast_channel #(
     stage,
     is_error_syndromes,
     is_odd_clusters,
-    roots
+    is_odd_cardinalities,
+    roots,
+    has_message_flying
 );
 
 `include "parameters.sv"
@@ -29,7 +31,11 @@ input reset;
 input [STAGE_WIDTH-1:0] stage;
 input [PU_COUNT-1:0] is_error_syndromes;
 output [PU_COUNT-1:0] is_odd_clusters;
+output [PU_COUNT-1:0] is_odd_cardinalities;
 output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
+output has_message_flying;
+wire [PU_COUNT-1:0] has_message_flyings;
+assign has_message_flying = |has_message_flyings;
 
 genvar i;
 genvar j;
@@ -48,7 +54,9 @@ localparam FAST_CHANNEL_COUNT = 0;
 `define init_is_error_syndrome(i, j) is_error_syndromes[`INDEX(i, j)]
 `define init_has_boundary(i, j) ((j==0) || (j==(CODE_DISTANCE-2)))
 `define is_odd_cluster(i, j) is_odd_clusters[`INDEX(i, j)]
+`define is_odd_cardinality(i, j) is_odd_cardinalities[`INDEX(i, j)]
 `define roots(i, j) roots[ADDRESS_WIDTH*(`INDEX(i, j)+1)-1:ADDRESS_WIDTH*`INDEX(i, j)]
+`define has_message_flying(i, j) has_message_flyings[`INDEX(i, j)]
 
 // instantiate processing units and their local solver
 generate
@@ -239,8 +247,10 @@ generate
                 .direct_in_channels_is_taken(direct_in_channels_is_taken),
                 .old_root(old_root),
                 .updated_root(`roots(i, j)),
-                .is_odd_cluster(`is_odd_cluster(i, j))
+                .is_odd_cluster(`is_odd_cluster(i, j)),
+                .is_odd_cardinality(`is_odd_cardinality(i, j))
             );
+            assign `has_message_flying(i, j) = union_out_channels_valid | (|union_in_channels_valid) | (|direct_out_channels_valid) | (|direct_in_channels_valid);
         end
     end
 endgenerate

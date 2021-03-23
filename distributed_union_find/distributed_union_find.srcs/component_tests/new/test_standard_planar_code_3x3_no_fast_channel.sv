@@ -16,7 +16,9 @@ reg reset;
 reg [STAGE_WIDTH-1:0] stage;
 reg [PU_COUNT-1:0] is_error_syndromes;
 wire [PU_COUNT-1:0] is_odd_clusters;
+wire [PU_COUNT-1:0] is_odd_cardinalities;
 wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
+wire has_message_flying;
 `define INDEX(i, j) (i * (CODE_DISTANCE-1) + j)
 `define is_error_syndrome(i, j) is_error_syndromes[`INDEX(i, j)]
 `define is_odd_cluster(i, j) is_odd_clusters[`INDEX(i, j)]
@@ -32,14 +34,16 @@ standard_planar_code_2d_no_fast_channel #(.CODE_DISTANCE(CODE_DISTANCE)) decoder
     .stage(stage),
     .is_error_syndromes(is_error_syndromes),
     .is_odd_clusters(is_odd_clusters),
-    .roots(roots)
+    .is_odd_cardinalities(is_odd_cardinalities),
+    .roots(roots),
+    .has_message_flying(has_message_flying)
 );
 
 function [ADDRESS_WIDTH-1:0] make_address;
 input [PER_DIMENSION_WIDTH-1:0] i;
 input [PER_DIMENSION_WIDTH-1:0] j;
 begin
-make_address = { i, j };
+    make_address = { i, j };
 end
 endfunction
 
@@ -68,7 +72,7 @@ initial begin
     
     // after several clock cycles in STAGE_SPREAD_CLUSTER, the root should still be itself
     stage = STAGE_SPREAD_CLUSTER;
-    #60;
+    #100;
     `assert(`root(0, 0) == make_address(0, 0), "root should be itself");
     `assert(`root(0, 1) == make_address(0, 1), "root should be itself");
     `assert(`root(1, 0) == make_address(1, 0), "root should be itself");
@@ -78,7 +82,7 @@ initial begin
     
     // after several clock cycles in STAGE_SYNC_IS_ODD_CLUSTER, the root should still be itself
     stage = STAGE_SYNC_IS_ODD_CLUSTER;
-    #60;
+    #100;
     `assert(`root(0, 0) == make_address(0, 0), "root should be itself");
     `assert(`root(0, 1) == make_address(0, 1), "root should be itself");
     `assert(`root(1, 0) == make_address(1, 0), "root should be itself");

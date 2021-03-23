@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 
 module bench_resource_usage #(
-    CODE_DISTANCE = 3  // has CODE_DISTANCE ¡Á (CODE_DISTANCE-1) processing units
+    CODE_DISTANCE = 5  // has CODE_DISTANCE ¡Á (CODE_DISTANCE-1) processing units
 ) (
     clk_in,
     reset,
