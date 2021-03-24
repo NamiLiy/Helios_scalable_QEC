@@ -29,6 +29,7 @@ reg new_round_start = 0;
 
 reg [PU_COUNT-1:0] is_error_syndromes;
 wire [PU_COUNT-1:0] is_odd_cardinalities;
+wire [31:0] cycle_counter;
 wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 `define INDEX(i, j) (i * (CODE_DISTANCE-1) + j)
 `define is_error_syndrome(i, j) is_error_syndromes[`INDEX(i, j)]
@@ -50,7 +51,8 @@ standard_planar_code_2d_no_fast_channel_with_stage_controller #(.CODE_DISTANCE(C
     .is_odd_cardinalities(is_odd_cardinalities),
     .roots(roots),
     .result_valid(result_valid),
-    .iteration_counter(iteration_counter)
+    .iteration_counter(iteration_counter),
+    .cycle_counter(cycle_counter)
 );
 
 function [ADDRESS_WIDTH-1:0] make_address;
@@ -60,69 +62,6 @@ begin
     make_address = { i, j };
 end
 endfunction
-
-initial begin
-    clk = 1'b1;
-    reset = 1'b1;
-    // is_error_syndromes = 0;
-    // Rust distributed_uf_decoder.rs: distributed_union_find_decoder_test_case_2()
-    // `is_error_syndrome(1, 0) = 1;
-    // `is_error_syndrome(1, 1) = 1;
-    // `is_error_syndrome(1, 2) = 1;
-    // `is_error_syndrome(1, 3) = 1;
-    #107;
-    reset = 1'b0;
-    #100;
-    // new_round_start = 1;
-    // #10;
-    // new_round_start = 0;
-    // #500;
-    // `assert(`root(0, 0) == make_address(0, 0), "root should be itself");
-    // `assert(`root(1, 0) == make_address(1, 0), "root should be (1, 0)");
-    // `assert(`root(1, 1) == make_address(1, 0), "root should be (1, 0)");
-    // `assert(`root(1, 2) == make_address(1, 0), "root should be (1, 0)");
-    // `assert(`root(1, 3) == make_address(1, 0), "root should be (1, 0)");
-    // `assert(`root(2, 0) == make_address(2, 0), "root should be itself");
-    // `assert(`is_odd_cluster(1, 0) == 0, "it's a even cluster");
-    // `assert(result_valid, "decoder should terminate after 1us");
-    // `assert(iteration_counter == 2, "this simple case should terminate after 2 iterations");
-    
-    
-    // Rust distributed_uf_decoder.rs: distributed_union_find_decoder_test_case_3()
-    // #10;
-    // is_error_syndromes = 0;
-    // `is_error_syndrome(0, 0) = 1;
-    // `is_error_syndrome(0, 1) = 1;
-    // `is_error_syndrome(0, 2) = 1;
-    // `is_error_syndrome(1, 1) = 1;
-    // `is_error_syndrome(1, 2) = 1;
-    // #20;
-    // new_round_start = 1;
-    // #10;
-    // new_round_start = 0;
-    // #500;
-    // `assert(`root(0, 0) == make_address(0, 0), "root should be (0, 0)");
-    // `assert(`root(0, 1) == make_address(0, 0), "root should be (0, 0)");
-    // `assert(`root(0, 2) == make_address(0, 0), "root should be (0, 0)");
-    // `assert(`root(0, 3) == make_address(0, 0), "root should be (0, 0)");
-    // `assert(`root(1, 0) == make_address(0, 0), "root should be (0, 0)");
-    // `assert(`root(1, 1) == make_address(0, 0), "root should be (0, 0)");
-    // `assert(`root(1, 2) == make_address(0, 0), "root should be (0, 0)");
-    // `assert(`root(1, 3) == make_address(0, 0), "root should be (0, 0)");
-    // `assert(`root(2, 0) == make_address(2, 0), "root should be itself");
-    // `assert(`root(2, 1) == make_address(0, 0), "root should be (0, 0)");
-    // `assert(`root(2, 2) == make_address(0, 0), "root should be (0, 0)");
-    // `assert(`root(2, 3) == make_address(2, 3), "root should be itself");
-    // `assert(`root(3, 0) == make_address(3, 0), "root should be itself");
-    // `assert(`root(3, 1) == make_address(3, 1), "root should be itself");
-    // `assert(`root(3, 2) == make_address(3, 2), "root should be itself");
-    // `assert(`root(3, 3) == make_address(3, 3), "root should be itself");
-    // `assert(`is_odd_cluster(0, 0) == 0, "it's a even cluster");
-    // `assert(`PU(0, 0).is_touching_boundary == 1, "it's the root of a set that touching boundary");
-    // `assert(result_valid, "decoder should terminate after 1000ns");
-    // `assert(iteration_counter == 3, "this simple case should terminate after 3 iterations");
-
-end
 
 always #5 clk = ~clk;  // flip every 5ns, that is 100MHz clock
 
@@ -199,15 +138,78 @@ always @(posedge clk) begin
             end
         end
         if (!test_fail) begin
-            $display("%t\tTest case %d pass", $time, test_case);
+            $display("%t\tTest case %d pass %d cycles", $time, test_case, cycle_counter);
         end else begin
-            $display("%t\tTest case %d fail", $time, test_case);
+            $display("%t\tTest case %d fail %d cycles ", $time, test_case, cycle_counter);
         end
     end
 end
 
 always@(posedge clk) begin
     valid_delayed <= result_valid;
+end
+
+initial begin
+    clk = 1'b1;
+    reset = 1'b1;
+    // is_error_syndromes = 0;
+    // Rust distributed_uf_decoder.rs: distributed_union_find_decoder_test_case_2()
+    // `is_error_syndrome(1, 0) = 1;
+    // `is_error_syndrome(1, 1) = 1;
+    // `is_error_syndrome(1, 2) = 1;
+    // `is_error_syndrome(1, 3) = 1;
+    #107;
+    reset = 1'b0;
+    #100;
+    // new_round_start = 1;
+    // #10;
+    // new_round_start = 0;
+    // #500;
+    // `assert(`root(0, 0) == make_address(0, 0), "root should be itself");
+    // `assert(`root(1, 0) == make_address(1, 0), "root should be (1, 0)");
+    // `assert(`root(1, 1) == make_address(1, 0), "root should be (1, 0)");
+    // `assert(`root(1, 2) == make_address(1, 0), "root should be (1, 0)");
+    // `assert(`root(1, 3) == make_address(1, 0), "root should be (1, 0)");
+    // `assert(`root(2, 0) == make_address(2, 0), "root should be itself");
+    // `assert(`is_odd_cluster(1, 0) == 0, "it's a even cluster");
+    // `assert(result_valid, "decoder should terminate after 1us");
+    // `assert(iteration_counter == 2, "this simple case should terminate after 2 iterations");
+    
+    
+    // Rust distributed_uf_decoder.rs: distributed_union_find_decoder_test_case_3()
+    // #10;
+    // is_error_syndromes = 0;
+    // `is_error_syndrome(0, 0) = 1;
+    // `is_error_syndrome(0, 1) = 1;
+    // `is_error_syndrome(0, 2) = 1;
+    // `is_error_syndrome(1, 1) = 1;
+    // `is_error_syndrome(1, 2) = 1;
+    // #20;
+    // new_round_start = 1;
+    // #10;
+    // new_round_start = 0;
+    // #500;
+    // `assert(`root(0, 0) == make_address(0, 0), "root should be (0, 0)");
+    // `assert(`root(0, 1) == make_address(0, 0), "root should be (0, 0)");
+    // `assert(`root(0, 2) == make_address(0, 0), "root should be (0, 0)");
+    // `assert(`root(0, 3) == make_address(0, 0), "root should be (0, 0)");
+    // `assert(`root(1, 0) == make_address(0, 0), "root should be (0, 0)");
+    // `assert(`root(1, 1) == make_address(0, 0), "root should be (0, 0)");
+    // `assert(`root(1, 2) == make_address(0, 0), "root should be (0, 0)");
+    // `assert(`root(1, 3) == make_address(0, 0), "root should be (0, 0)");
+    // `assert(`root(2, 0) == make_address(2, 0), "root should be itself");
+    // `assert(`root(2, 1) == make_address(0, 0), "root should be (0, 0)");
+    // `assert(`root(2, 2) == make_address(0, 0), "root should be (0, 0)");
+    // `assert(`root(2, 3) == make_address(2, 3), "root should be itself");
+    // `assert(`root(3, 0) == make_address(3, 0), "root should be itself");
+    // `assert(`root(3, 1) == make_address(3, 1), "root should be itself");
+    // `assert(`root(3, 2) == make_address(3, 2), "root should be itself");
+    // `assert(`root(3, 3) == make_address(3, 3), "root should be itself");
+    // `assert(`is_odd_cluster(0, 0) == 0, "it's a even cluster");
+    // `assert(`PU(0, 0).is_touching_boundary == 1, "it's the root of a set that touching boundary");
+    // `assert(result_valid, "decoder should terminate after 1000ns");
+    // `assert(iteration_counter == 3, "this simple case should terminate after 3 iterations");
+
 end
 
 

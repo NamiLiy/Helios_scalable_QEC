@@ -15,7 +15,8 @@ module decoder_stage_controller #(
     input has_odd_clusters,
     output reg [STAGE_WIDTH-1:0] stage,
     output reg result_valid,
-    output reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter
+    output reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter,
+    output reg [31:0] cycle_counter
 );
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
@@ -30,9 +31,20 @@ always @(posedge clk) begin
     end else begin
         if (stage == STAGE_MEASUREMENT_LOADING) begin
             iteration_counter <= 0;
-        end
-        if (stage == STAGE_SYNC_IS_ODD_CLUSTER && delay_counter >= SYNC_IS_ODD_CLUSTER_DELAY && !has_message_flying) begin
+        end else if (stage == STAGE_SYNC_IS_ODD_CLUSTER && delay_counter >= SYNC_IS_ODD_CLUSTER_DELAY && !has_message_flying) begin
             iteration_counter <= iteration_counter + 1;
+        end
+    end
+end
+
+always @(posedge clk) begin
+    if (reset) begin
+        cycle_counter <= 0;
+    end else begin
+        if (stage == STAGE_MEASUREMENT_LOADING) begin
+            cycle_counter <= 1;
+        end else if (!result_valid) begin
+            cycle_counter <= cycle_counter + 1;
         end
     end
 end
