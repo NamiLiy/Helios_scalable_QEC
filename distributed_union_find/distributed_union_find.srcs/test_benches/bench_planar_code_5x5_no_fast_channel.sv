@@ -1,5 +1,16 @@
 `timescale 1ns / 10ps
 
+// Output file format
+// Each line is 32 bit. Cordinates are entered as two 16 bit entries in a single line
+// Test ID
+// root_of_0,0
+// root_of_0,1
+// .....
+// Test ID
+// root_of_0,0
+// root_of_0,1
+// .......
+
 module bench_planar_code_5x5_no_fast_channel;
 
 `include "../sources_1/new/parameters.sv"
@@ -22,9 +33,9 @@ wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 `define INDEX(i, j) (i * (CODE_DISTANCE-1) + j)
 `define is_error_syndrome(i, j) is_error_syndromes[`INDEX(i, j)]
 `define is_odd_cluster(i, j) decoder.is_odd_clusters[`INDEX(i, j)]
-`define root(i, j) roots[ADDRESS_WIDTH*(`INDEX(i, j)+1)-1:ADDRESS_WIDTH*`INDEX(i, j)]
-`define root_x(i, j) roots[ADDRESS_WIDTH*(`INDEX(i, j)+1)-1:ADDRESS_WIDTH*`INDEX(i, j)+PER_DIMENSION_WIDTH]
-`define root_y(i, j) roots[ADDRESS_WIDTH*(`INDEX(i, j)+1)-PER_DIMENSION_WIDTH-1:ADDRESS_WIDTH*`INDEX(i, j)]
+`define root(i, j) roots[ADDRESS_WIDTH*`INDEX(i, j) +: ADDRESS_WIDTH]
+`define root_x(i, j) roots[ADDRESS_WIDTH*`INDEX(i, j)+PER_DIMENSION_WIDTH +: PER_DIMENSION_WIDTH]
+`define root_y(i, j) roots[ADDRESS_WIDTH*`INDEX(i, j) +: PER_DIMENSION_WIDTH]
 `define PU(i, j) decoder.decoder.pu_i[i].pu_j[j].u_processing_unit
 
 wire result_valid;
@@ -114,5 +125,63 @@ initial begin
 end
 
 always #5 clk = ~clk;  // flip every 10ns, that is 50MHz clock
+
+reg valid_delayed;
+integer i;
+integer j;
+integer file;
+reg open = 1;
+reg eof = 0;
+reg [31:0] read_value, test_case;
+reg [PER_DIMENSION_WIDTH-1 : 0] expected_x, expected_y;
+reg test_fail;
+
+
+// always @(posedge clk) begin
+//     if(open == 1) begin
+//         file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/output_data.txt", "r");
+//         open = 0;
+//     end
+//     else if (eof == 0)begin 
+//         $fscanf (file, "%h\n", read_value);
+//         $display("fgetc:%d %d",read_value[31:16], read_value[15:0]);
+//         eof = $feof(file);
+//     end
+// end
+
+always @(posedge clk) begin
+    valid_delayed <= result_valid;
+    if (!valid_delayed && result_valid) begin
+        if(open == 1) begin
+            file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/output_data.txt", "r");
+            open = 0;
+        end
+        if (eof == 0)begin 
+            $fscanf (file, "%h\n", test_case);
+            test_fail = 0;
+            eof = $feof(file);
+        end
+        for (i=0 ;i <CODE_DISTANCE; i++) begin
+            for (j=0 ;j <CODE_DISTANCE - 1; j++) begin
+                if (eof == 0)begin 
+                    $fscanf (file, "%h\n", read_value);
+                    expected_y = read_value[PER_DIMENSION_WIDTH - 1:0];
+                    expected_x = read_value[PER_DIMENSION_WIDTH - 1 + 16 :16];
+                    eof = $feof(file);
+                    if (expected_x != `root_x(i, j) || expected_y != `root_y(i, j)) begin
+                        $display("%t \t Root(%0d,%0d) = (%0d,%0d) : Expected (%0d,%0d)" , $time, i ,j, `root_x(i, j), `root_y(i, j), expected_x, expected_y);
+                        test_fail = 1;
+                    end
+                end
+            end
+        end
+        if (!test_fail) begin
+            $display("Test case %d pass", test_case);
+        end else begin
+            $display("Test case %d fail", test_case);
+        end
+    end
+end
+
 
 endmodule
