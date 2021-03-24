@@ -77,8 +77,10 @@ reg [31:0] read_value, test_case, input_read_value;
 reg [PER_DIMENSION_WIDTH-1 : 0] expected_x, expected_y;
 reg test_fail;
 reg processing = 0;
-
-
+reg [31:0] syndrome_count;
+reg [31:0] pass_count = 0;
+reg [31:0] fail_count = 0;
+reg [31:0] total_count;
 
 // Input loading logic
 always @(negedge clk) begin
@@ -94,6 +96,7 @@ always @(negedge clk) begin
             if (input_eof == 0)begin 
                 new_round_start = 1;
                 processing = 1;
+                syndrome_count = 0;
             end
         end
         for (i=0 ;i <CODE_DISTANCE; i++) begin
@@ -101,6 +104,9 @@ always @(negedge clk) begin
                 if (input_eof == 0)begin 
                     $fscanf (input_file, "%h\n", input_read_value);
                     `is_error_syndrome(i, j) = input_read_value;
+                    if (input_read_value == 1) begin
+                        syndrome_count = syndrome_count + 1;
+                    end
                 end
             end
         end
@@ -138,10 +144,20 @@ always @(posedge clk) begin
             end
         end
         if (!test_fail) begin
-            $display("%t\tTest case %d pass %d cycles", $time, test_case, cycle_counter);
+            $display("%t\tTest case %d pass %d cycles %d syndromes", $time, test_case, cycle_counter, syndrome_count);
+            pass_count = pass_count + 1;
         end else begin
-            $display("%t\tTest case %d fail %d cycles ", $time, test_case, cycle_counter);
+            $display("%t\tTest case %d fail %d cycles %d syndromes", $time, test_case, cycle_counter, syndrome_count);
+            fail_count = fail_count + 1;
         end
+    end
+    if (input_eof == 1)begin
+        total_count = pass_count + fail_count;
+        $display("%t\t Done:", $time);
+        $display("Total : %d",total_count);
+        $display("Passed : %d",pass_count);
+        $display("Failed : %d",fail_count);
+        $finish;
     end
 end
 
