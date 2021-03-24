@@ -25,7 +25,7 @@ localparam ITERATION_COUNTER_WIDTH = 8;  // counts up to CODE_DISTANCE iteration
 
 reg clk;
 reg reset;
-reg new_round_start;
+reg new_round_start = 0;
 
 reg [PU_COUNT-1:0] is_error_syndromes;
 wire [PU_COUNT-1:0] is_odd_cardinalities;
@@ -62,96 +62,119 @@ end
 endfunction
 
 initial begin
-    clk = 1'b0;
+    clk = 1'b1;
     reset = 1'b1;
-    is_error_syndromes = 0;
+    // is_error_syndromes = 0;
     // Rust distributed_uf_decoder.rs: distributed_union_find_decoder_test_case_2()
-    `is_error_syndrome(1, 0) = 1;
-    `is_error_syndrome(1, 1) = 1;
-    `is_error_syndrome(1, 2) = 1;
-    `is_error_syndrome(1, 3) = 1;
-    #100;
+    // `is_error_syndrome(1, 0) = 1;
+    // `is_error_syndrome(1, 1) = 1;
+    // `is_error_syndrome(1, 2) = 1;
+    // `is_error_syndrome(1, 3) = 1;
+    #107;
     reset = 1'b0;
     #100;
-    new_round_start = 1;
-    #10;
-    new_round_start = 0;
-    #500;
-    `assert(`root(0, 0) == make_address(0, 0), "root should be itself");
-    `assert(`root(1, 0) == make_address(1, 0), "root should be (1, 0)");
-    `assert(`root(1, 1) == make_address(1, 0), "root should be (1, 0)");
-    `assert(`root(1, 2) == make_address(1, 0), "root should be (1, 0)");
-    `assert(`root(1, 3) == make_address(1, 0), "root should be (1, 0)");
-    `assert(`root(2, 0) == make_address(2, 0), "root should be itself");
-    `assert(`is_odd_cluster(1, 0) == 0, "it's a even cluster");
-    `assert(result_valid, "decoder should terminate after 1us");
-    `assert(iteration_counter == 2, "this simple case should terminate after 2 iterations");
+    // new_round_start = 1;
+    // #10;
+    // new_round_start = 0;
+    // #500;
+    // `assert(`root(0, 0) == make_address(0, 0), "root should be itself");
+    // `assert(`root(1, 0) == make_address(1, 0), "root should be (1, 0)");
+    // `assert(`root(1, 1) == make_address(1, 0), "root should be (1, 0)");
+    // `assert(`root(1, 2) == make_address(1, 0), "root should be (1, 0)");
+    // `assert(`root(1, 3) == make_address(1, 0), "root should be (1, 0)");
+    // `assert(`root(2, 0) == make_address(2, 0), "root should be itself");
+    // `assert(`is_odd_cluster(1, 0) == 0, "it's a even cluster");
+    // `assert(result_valid, "decoder should terminate after 1us");
+    // `assert(iteration_counter == 2, "this simple case should terminate after 2 iterations");
     
     
     // Rust distributed_uf_decoder.rs: distributed_union_find_decoder_test_case_3()
-    #10;
-    is_error_syndromes = 0;
-    `is_error_syndrome(0, 0) = 1;
-    `is_error_syndrome(0, 1) = 1;
-    `is_error_syndrome(0, 2) = 1;
-    `is_error_syndrome(1, 1) = 1;
-    `is_error_syndrome(1, 2) = 1;
-    #20;
-    new_round_start = 1;
-    #10;
-    new_round_start = 0;
-    #500;
-    `assert(`root(0, 0) == make_address(0, 0), "root should be (0, 0)");
-    `assert(`root(0, 1) == make_address(0, 0), "root should be (0, 0)");
-    `assert(`root(0, 2) == make_address(0, 0), "root should be (0, 0)");
-    `assert(`root(0, 3) == make_address(0, 0), "root should be (0, 0)");
-    `assert(`root(1, 0) == make_address(0, 0), "root should be (0, 0)");
-    `assert(`root(1, 1) == make_address(0, 0), "root should be (0, 0)");
-    `assert(`root(1, 2) == make_address(0, 0), "root should be (0, 0)");
-    `assert(`root(1, 3) == make_address(0, 0), "root should be (0, 0)");
-    `assert(`root(2, 0) == make_address(2, 0), "root should be itself");
-    `assert(`root(2, 1) == make_address(0, 0), "root should be (0, 0)");
-    `assert(`root(2, 2) == make_address(0, 0), "root should be (0, 0)");
-    `assert(`root(2, 3) == make_address(2, 3), "root should be itself");
-    `assert(`root(3, 0) == make_address(3, 0), "root should be itself");
-    `assert(`root(3, 1) == make_address(3, 1), "root should be itself");
-    `assert(`root(3, 2) == make_address(3, 2), "root should be itself");
-    `assert(`root(3, 3) == make_address(3, 3), "root should be itself");
-    `assert(`is_odd_cluster(0, 0) == 0, "it's a even cluster");
-    `assert(`PU(0, 0).is_touching_boundary == 1, "it's the root of a set that touching boundary");
-    `assert(result_valid, "decoder should terminate after 1000ns");
-    `assert(iteration_counter == 3, "this simple case should terminate after 3 iterations");
+    // #10;
+    // is_error_syndromes = 0;
+    // `is_error_syndrome(0, 0) = 1;
+    // `is_error_syndrome(0, 1) = 1;
+    // `is_error_syndrome(0, 2) = 1;
+    // `is_error_syndrome(1, 1) = 1;
+    // `is_error_syndrome(1, 2) = 1;
+    // #20;
+    // new_round_start = 1;
+    // #10;
+    // new_round_start = 0;
+    // #500;
+    // `assert(`root(0, 0) == make_address(0, 0), "root should be (0, 0)");
+    // `assert(`root(0, 1) == make_address(0, 0), "root should be (0, 0)");
+    // `assert(`root(0, 2) == make_address(0, 0), "root should be (0, 0)");
+    // `assert(`root(0, 3) == make_address(0, 0), "root should be (0, 0)");
+    // `assert(`root(1, 0) == make_address(0, 0), "root should be (0, 0)");
+    // `assert(`root(1, 1) == make_address(0, 0), "root should be (0, 0)");
+    // `assert(`root(1, 2) == make_address(0, 0), "root should be (0, 0)");
+    // `assert(`root(1, 3) == make_address(0, 0), "root should be (0, 0)");
+    // `assert(`root(2, 0) == make_address(2, 0), "root should be itself");
+    // `assert(`root(2, 1) == make_address(0, 0), "root should be (0, 0)");
+    // `assert(`root(2, 2) == make_address(0, 0), "root should be (0, 0)");
+    // `assert(`root(2, 3) == make_address(2, 3), "root should be itself");
+    // `assert(`root(3, 0) == make_address(3, 0), "root should be itself");
+    // `assert(`root(3, 1) == make_address(3, 1), "root should be itself");
+    // `assert(`root(3, 2) == make_address(3, 2), "root should be itself");
+    // `assert(`root(3, 3) == make_address(3, 3), "root should be itself");
+    // `assert(`is_odd_cluster(0, 0) == 0, "it's a even cluster");
+    // `assert(`PU(0, 0).is_touching_boundary == 1, "it's the root of a set that touching boundary");
+    // `assert(result_valid, "decoder should terminate after 1000ns");
+    // `assert(iteration_counter == 3, "this simple case should terminate after 3 iterations");
 
 end
 
-always #5 clk = ~clk;  // flip every 10ns, that is 50MHz clock
+always #5 clk = ~clk;  // flip every 5ns, that is 100MHz clock
 
-reg valid_delayed;
+reg valid_delayed = 0;
 integer i;
 integer j;
-integer file;
+integer file, input_file;
 reg open = 1;
+reg input_open = 1;
 reg eof = 0;
-reg [31:0] read_value, test_case;
+reg input_eof = 0;
+reg [31:0] read_value, test_case, input_read_value;
 reg [PER_DIMENSION_WIDTH-1 : 0] expected_x, expected_y;
 reg test_fail;
+reg processing = 0;
 
 
-// always @(posedge clk) begin
-//     if(open == 1) begin
-//         file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/output_data.txt", "r");
-//         open = 0;
-//     end
-//     else if (eof == 0)begin 
-//         $fscanf (file, "%h\n", read_value);
-//         $display("fgetc:%d %d",read_value[31:16], read_value[15:0]);
-//         eof = $feof(file);
-//     end
-// end
 
+// Input loading logic
+always @(negedge clk) begin
+    if (!processing && !reset) begin
+        is_error_syndromes = 0;
+        if(input_open == 1) begin
+            input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/input_data.txt", "r");
+            input_open = 0;
+        end
+        if (input_eof == 0)begin 
+            $fscanf (input_file, "%h\n", input_read_value);
+            input_eof = $feof(input_file);
+            if (input_eof == 0)begin 
+                new_round_start = 1;
+                processing = 1;
+            end
+        end
+        for (i=0 ;i <CODE_DISTANCE; i++) begin
+            for (j=0 ;j <CODE_DISTANCE - 1; j++) begin
+                if (input_eof == 0)begin 
+                    $fscanf (input_file, "%h\n", input_read_value);
+                    `is_error_syndrome(i, j) = input_read_value;
+                end
+            end
+        end
+    end else begin
+        new_round_start = 0;
+    end
+end
+
+
+// Output verification logic
 always @(posedge clk) begin
-    valid_delayed <= result_valid;
     if (!valid_delayed && result_valid) begin
+        processing = 0;
         if(open == 1) begin
             file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/output_data.txt", "r");
             open = 0;
@@ -169,18 +192,22 @@ always @(posedge clk) begin
                     expected_x = read_value[PER_DIMENSION_WIDTH - 1 + 16 :16];
                     eof = $feof(file);
                     if (expected_x != `root_x(i, j) || expected_y != `root_y(i, j)) begin
-                        $display("%t \t Root(%0d,%0d) = (%0d,%0d) : Expected (%0d,%0d)" , $time, i ,j, `root_x(i, j), `root_y(i, j), expected_x, expected_y);
+                        $display("%t\t Root(%0d,%0d) = (%0d,%0d) : Expected (%0d,%0d)" , $time, i ,j, `root_x(i, j), `root_y(i, j), expected_x, expected_y);
                         test_fail = 1;
                     end
                 end
             end
         end
         if (!test_fail) begin
-            $display("Test case %d pass", test_case);
+            $display("%t\tTest case %d pass", $time, test_case);
         end else begin
-            $display("Test case %d fail", test_case);
+            $display("%t\tTest case %d fail", $time, test_case);
         end
     end
+end
+
+always@(posedge clk) begin
+    valid_delayed <= result_valid;
 end
 
 
