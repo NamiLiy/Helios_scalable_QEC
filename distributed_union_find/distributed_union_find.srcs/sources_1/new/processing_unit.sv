@@ -351,7 +351,7 @@ assign new_pending_tell_new_root_touching_boundary = intermediate_pending_tell_n
 assign direct_out_channels_data_single = pending_direct_message;
 generate
     for (i=0; i < CHANNEL_COUNT; i=i+1) begin: sending_direct_message
-        assign `direct_out_valid(i) = is_stage_spread_cluster && pending_direct_message_valid && (i == `best_channel_for_pending_message_idx) && !`direct_out_is_full(i);
+        assign `direct_out_valid(i) = is_stage_spread_cluster && pending_direct_message_valid && (i == `best_channel_for_pending_message_idx);
     end
 endgenerate
 
@@ -359,7 +359,7 @@ endgenerate
 generate
     for (i=0; i < CHANNEL_COUNT; i=i+1) begin: taking_direct_message
         assign `direct_in_is_taken(i) = is_stage_spread_cluster && 
-            (((i == `gathered_elected_direct_message_index) && `gathered_elected_direct_message_valid && !generate_my_direct_message) || 
+            (((i == `gathered_elected_direct_message_index) && `gathered_elected_direct_message_valid && !generate_my_direct_message &&pending_message_sent_successfully) || 
                 direct_in_channels_local_handled[i]);  // either brokerd this message or handled locally
     end
 endgenerate
