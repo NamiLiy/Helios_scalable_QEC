@@ -12,7 +12,8 @@ module standard_planar_code_2d_no_fast_channel_with_stage_controller #(
     roots,
     result_valid,
     iteration_counter,
-    cycle_counter
+    cycle_counter,
+    deadlock
 );
 
 localparam PU_COUNT = CODE_DISTANCE * (CODE_DISTANCE - 1);
@@ -29,6 +30,7 @@ output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 output reg result_valid;
 output reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
 output [31:0] cycle_counter;
+output deadlock;
 
 wire has_message_flying;
 wire [STAGE_WIDTH-1:0] stage;
@@ -48,7 +50,10 @@ standard_planar_code_2d_no_fast_channel #(.CODE_DISTANCE(CODE_DISTANCE)) decoder
     .has_message_flying(has_message_flying)
 );
 
-decoder_stage_controller #(.ITERATION_COUNTER_WIDTH(ITERATION_COUNTER_WIDTH)) u_decoder_stage_controller (
+decoder_stage_controller #(
+    .CODE_DISTANCE(CODE_DISTANCE), 
+    .ITERATION_COUNTER_WIDTH(ITERATION_COUNTER_WIDTH)
+) u_decoder_stage_controller (
     .clk(clk),
     .reset(reset),
     .has_message_flying(has_message_flying),
@@ -57,7 +62,8 @@ decoder_stage_controller #(.ITERATION_COUNTER_WIDTH(ITERATION_COUNTER_WIDTH)) u_
     .stage(stage),
     .result_valid(result_valid),
     .iteration_counter(iteration_counter),
-    .cycle_counter(cycle_counter)
+    .cycle_counter(cycle_counter),
+    .deadlock(deadlock)
 );
 
 endmodule
