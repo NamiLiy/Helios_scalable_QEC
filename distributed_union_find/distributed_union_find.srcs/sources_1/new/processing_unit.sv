@@ -303,22 +303,45 @@ assign intermediate_pending_tell_new_root_touching_boundary = pending_tell_new_r
 // decide which message to send
 wire pending_direct_message_valid;
 wire [DIRECT_MESSAGE_WIDTH-1:0] pending_direct_message;
+reg my_stored_direct_message_valid;
+reg [DIRECT_MESSAGE_WIDTH-1:0] my_stored_direct_message;
 `define pending_direct_message_receiver (pending_direct_message[DIRECT_MESSAGE_WIDTH-1:2])
 wire generate_my_direct_message;
 assign generate_my_direct_message = intermediate_pending_tell_new_root_cardinality || intermediate_pending_tell_new_root_touching_boundary;
-assign pending_direct_message_valid = (generate_my_direct_message || `gathered_elected_direct_message_valid);
-assign pending_direct_message = generate_my_direct_message ? (
-    { new_updated_root, intermediate_pending_tell_new_root_cardinality, intermediate_pending_tell_new_root_touching_boundary }
-) : (
-    `gathered_elected_direct_message_data
+assign pending_direct_message_valid = (generate_my_direct_message || `gathered_elected_direct_message_valid || my_stored_direct_message_valid);
+assign pending_direct_message = `gathered_elected_direct_message_valid ? (
+    `gathered_elected_direct_message_data ) : (
+        generate_my_direct_message ? (
+             { new_updated_root, intermediate_pending_tell_new_root_cardinality, intermediate_pending_tell_new_root_touching_boundary }
+        ) : (
+            my_stored_direct_message
+        )
 );
 
+wire pending_message_sent_successfully;
+
+always@(posedge clk) begin
+    if (reset) begin
+        my_stored_direct_message_valid <= 0;
+    end else begin
+        if (pending_message_sent_successfully && !`gathered_elected_direct_message_valid) begin
+            my_stored_direct_message_valid <= 0;
+        end else if (generate_my_direct_message && `gathered_elected_direct_message_valid) begin
+            my_stored_direct_message_valid <= 1;
+        end
+    end
+end
+
+always@(posedge clk) begin
+    if (generate_my_direct_message) begin
+        my_stored_direct_message <= { new_updated_root, intermediate_pending_tell_new_root_cardinality, intermediate_pending_tell_new_root_touching_boundary };
+    end
+end 
 // decide the nearest port to send out the pending message, get the result from `distance_solver_result_idx`
 assign distance_solver_target = `pending_direct_message_receiver;
 `define best_channel_for_pending_message_idx distance_solver_result_idx
 
 // check if it can be sent successfully
-wire pending_message_sent_successfully;
 wire [CHANNEL_ALL_EXPAND_COUNT-1:0] tree_gathering_pending_message_sent_successfully;
 generate
     for (i=0; i < CHANNEL_EXPAND_COUNT; i=i+1) begin: pending_message_sent_successfully_gathering_initialization
@@ -359,7 +382,7 @@ endgenerate
 generate
     for (i=0; i < CHANNEL_COUNT; i=i+1) begin: taking_direct_message
         assign `direct_in_is_taken(i) = is_stage_spread_cluster && 
-            (((i == `gathered_elected_direct_message_index) && `gathered_elected_direct_message_valid && !generate_my_direct_message &&pending_message_sent_successfully) || 
+            (((i == `gathered_elected_direct_message_index) && `gathered_elected_direct_message_valid  && pending_message_sent_successfully) || 
                 direct_in_channels_local_handled[i]);  // either brokerd this message or handled locally
     end
 endgenerate

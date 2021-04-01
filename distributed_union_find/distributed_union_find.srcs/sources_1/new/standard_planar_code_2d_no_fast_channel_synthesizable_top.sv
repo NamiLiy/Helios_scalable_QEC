@@ -40,7 +40,8 @@ standard_planar_code_2d_no_fast_channel_with_stage_controller #(.CODE_DISTANCE(C
     .roots(roots),
     .result_valid(result_valid),
     .iteration_counter(),
-    .cycle_counter()
+    .cycle_counter(),
+    .deadlock()
 );
 
 endmodule
