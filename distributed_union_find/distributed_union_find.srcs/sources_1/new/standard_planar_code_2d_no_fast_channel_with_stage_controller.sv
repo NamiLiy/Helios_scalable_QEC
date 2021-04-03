@@ -35,9 +35,11 @@ output deadlock;
 wire has_message_flying;
 wire [STAGE_WIDTH-1:0] stage;
 wire [PU_COUNT-1:0] is_odd_clusters;
-wire has_odd_clusters;
+reg has_odd_clusters;
 
-assign has_odd_clusters = |is_odd_clusters;
+always@(posedge clk) begin
+    has_odd_clusters <= |is_odd_clusters;
+end
 
 standard_planar_code_2d_no_fast_channel #(.CODE_DISTANCE(CODE_DISTANCE)) decoder (
     .clk(clk),
