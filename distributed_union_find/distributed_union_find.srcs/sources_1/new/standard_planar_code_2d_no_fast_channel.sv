@@ -35,10 +35,17 @@ output [PU_COUNT-1:0] is_odd_cardinalities;
 output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 output has_message_flying;
 wire [PU_COUNT-1:0] has_message_flyings;
+reg [PU_COUNT-1:0] has_message_flyings_reg;
 wire initialize_neighbors;
 reg [STAGE_WIDTH-1:0] stage_internal;
 
-assign has_message_flying = |has_message_flyings;
+
+assign  has_message_flying = |has_message_flyings_reg;
+
+always@(posedge clk) begin
+    has_message_flyings_reg <= has_message_flyings;
+end
+
 
 genvar i;
 genvar j;

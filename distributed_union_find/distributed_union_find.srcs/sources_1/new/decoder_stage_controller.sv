@@ -3,6 +3,7 @@
 `include "parameters.sv"
 
 module decoder_stage_controller #(
+    parameter CODE_DISTANCE = 5,
     parameter ITERATION_COUNTER_WIDTH = 8,  // counts to 255 iterations
     parameter BOUNDARY_GROW_DELAY = 3,  // clock cycles
     parameter SPREAD_CLUSTER_DELAY = 2,  // clock cycles
@@ -16,7 +17,8 @@ module decoder_stage_controller #(
     output reg [STAGE_WIDTH-1:0] stage,
     output reg result_valid,
     output reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter,
-    output reg [31:0] cycle_counter
+    output reg [31:0] cycle_counter,
+    output reg deadlock
 );
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
@@ -24,6 +26,32 @@ module decoder_stage_controller #(
 localparam MAXIMUM_DELAY = `MAX3(BOUNDARY_GROW_DELAY, SPREAD_CLUSTER_DELAY, SYNC_IS_ODD_CLUSTER_DELAY);
 localparam COUNTER_WIDTH = $clog2(MAXIMUM_DELAY + 1);
 reg [COUNTER_WIDTH-1:0] delay_counter;
+reg [31:0] cycles_in_stage;
+
+// deadlock detection logic
+always @(posedge clk) begin
+    if (reset) begin
+        cycles_in_stage <= 0;
+    end else begin
+        if (stage == STAGE_MEASUREMENT_LOADING || stage == STAGE_IDLE || stage == STAGE_GROW_BOUNDARY) begin
+            cycles_in_stage <= 0;
+        end else if (stage == STAGE_SYNC_IS_ODD_CLUSTER || stage == STAGE_SPREAD_CLUSTER) begin
+            cycles_in_stage <= cycles_in_stage + 1;
+        end
+    end
+end
+
+always @(posedge clk) begin
+    if (reset) begin
+        deadlock <= 0;
+    end else begin
+        if (new_round_start) begin
+            deadlock <= 0;
+        end else if (cycles_in_stage > CODE_DISTANCE*CODE_DISTANCE*10) begin
+            deadlock <= 1;
+        end
+    end
+end
 
 always @(posedge clk) begin
     if (reset) begin
@@ -66,6 +94,8 @@ always @(posedge clk) begin
                     if (!has_message_flying) begin
                         stage <= STAGE_SYNC_IS_ODD_CLUSTER;
                         delay_counter <= 0;
+                    end else if (cycles_in_stage > CODE_DISTANCE*CODE_DISTANCE*10)  begin
+                        stage <= STAGE_IDLE;
                     end
                 end else begin
                     delay_counter <= delay_counter + 1;
@@ -89,6 +119,8 @@ always @(posedge clk) begin
                             stage <= STAGE_IDLE;
                             delay_counter <= 0;
                         end
+                    end else if (cycles_in_stage > CODE_DISTANCE*CODE_DISTANCE*10)  begin
+                        stage <= STAGE_IDLE;
                     end
                 end else begin
                     delay_counter <= delay_counter + 1;

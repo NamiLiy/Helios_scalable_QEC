@@ -16,7 +16,7 @@ module bench_planar_code_no_fast_channel;
 `include "../sources_1/new/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
-localparam CODE_DISTANCE = 7;
+localparam CODE_DISTANCE = 11;
 localparam PU_COUNT = CODE_DISTANCE * (CODE_DISTANCE - 1);
 localparam PER_DIMENSION_WIDTH = $clog2(CODE_DISTANCE);
 localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 2;
@@ -41,6 +41,7 @@ wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 
 wire result_valid;
 wire [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
+wire deadlock;
 
 // instantiate
 standard_planar_code_2d_no_fast_channel_with_stage_controller #(.CODE_DISTANCE(CODE_DISTANCE)) decoder (
@@ -52,7 +53,8 @@ standard_planar_code_2d_no_fast_channel_with_stage_controller #(.CODE_DISTANCE(C
     .roots(roots),
     .result_valid(result_valid),
     .iteration_counter(iteration_counter),
-    .cycle_counter(cycle_counter)
+    .cycle_counter(cycle_counter),
+    .deadlock(deadlock)
 );
 
 function [ADDRESS_WIDTH-1:0] make_address;
@@ -95,7 +97,7 @@ always @(negedge clk) begin
                 input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/input_data_9.txt", "r");
             end else if (CODE_DISTANCE == 11) begin
                 input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/input_data_11.txt", "r");
-            end else if (CODE_DISTANCE == 7) begin
+            end else if (CODE_DISTANCE == 13) begin
                 input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/input_data_13.txt", "r");
             end
             input_open = 0;
@@ -128,7 +130,7 @@ end
 
 // Output verification logic
 always @(posedge clk) begin
-    if (!valid_delayed && result_valid) begin
+    if (!valid_delayed && (result_valid || deadlock)) begin
         processing = 0;
         if(open == 1) begin
             if (CODE_DISTANCE == 5) begin
@@ -156,12 +158,18 @@ always @(posedge clk) begin
                     expected_y = read_value[PER_DIMENSION_WIDTH - 1:0];
                     expected_x = read_value[PER_DIMENSION_WIDTH - 1 + 16 :16];
                     eof = $feof(file);
-                    if (expected_x != `root_x(i, j) || expected_y != `root_y(i, j)) begin
-                        $display("%t\t Root(%0d,%0d) = (%0d,%0d) : Expected (%0d,%0d)" , $time, i ,j, `root_x(i, j), `root_y(i, j), expected_x, expected_y);
-                        test_fail = 1;
+                    if (result_valid) begin
+                        if (expected_x != `root_x(i, j) || expected_y != `root_y(i, j)) begin
+                            $display("%t\t Root(%0d,%0d) = (%0d,%0d) : Expected (%0d,%0d)" , $time, i ,j, `root_x(i, j), `root_y(i, j), expected_x, expected_y);
+                            test_fail = 1;
+                        end
                     end
                 end
             end
+        end
+        if (deadlock) begin
+            $display("%t\tTest case %d hit a deadlock", $time, test_case);
+            test_fail = 1;
         end
         if (!test_fail) begin
             $display("%t\tTest case %d pass %d cycles %d syndromes", $time, test_case, cycle_counter, syndrome_count);
