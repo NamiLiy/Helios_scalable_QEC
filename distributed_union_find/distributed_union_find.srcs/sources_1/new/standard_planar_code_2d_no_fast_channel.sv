@@ -82,9 +82,6 @@ generate
     for (i=0; i < CODE_DISTANCE; i=i+1) begin: pu_i
         for (j=0; j < CODE_DISTANCE-1; j=j+1) begin: pu_j
             // instantiate processing unit
-            wire [ADDRESS_WIDTH-1:0] init_address;
-            assign init_address[ADDRESS_WIDTH-1:PER_DIMENSION_WIDTH] = i;
-            assign init_address[PER_DIMENSION_WIDTH-1:0] = j;
             wire [`NEIGHBOR_COUNT-1:0] neighbor_is_fully_grown;
             wire [(ADDRESS_WIDTH * `NEIGHBOR_COUNT)-1:0] neighbor_old_roots;
             wire neighbor_increase;
@@ -107,14 +104,12 @@ generate
                 .FAST_CHANNEL_COUNT(FAST_CHANNEL_COUNT),
                 .I(i),
                 .J(j),
-                .CODE_DISTANCE(CODE_DISTANCE)
+                .CODE_DISTANCE(CODE_DISTANCE),
+                .INIT_BOUNDARY_COST(BOUNDARY_COST)
             ) u_processing_unit (
                 .clk(clk),
                 .reset(reset),
-                .init_address(init_address),
                 .init_is_error_syndrome(`init_is_error_syndrome(i, j)),
-                .init_has_boundary(`init_has_boundary(i, j)),
-                .init_boundary_cost(BOUNDARY_COST),
                 .stage_in(stage),
                 .neighbor_is_fully_grown(neighbor_is_fully_grown),
                 .neighbor_old_roots(neighbor_old_roots),

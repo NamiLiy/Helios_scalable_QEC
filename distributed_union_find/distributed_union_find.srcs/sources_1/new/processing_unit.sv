@@ -8,15 +8,13 @@ module processing_unit #(
     parameter FAST_CHANNEL_COUNT = 0,  // CHANNEL_COUNT = NEIGHBOR_COUNT + FAST_CHANNEL_COUNT
     parameter I = 0,
     parameter J = 0,
-    parameter CODE_DISTANCE = 5
+    parameter CODE_DISTANCE = 5,
+    parameter INIT_BOUNDARY_COST = 2
 ) (
     clk,
     reset,
-    // initialize information, which is read on reset
-    init_address,
+    // input data. The error syndrome read in STAGE_MEASUREMENT_LOADING
     init_is_error_syndrome,
-    init_has_boundary,
-    init_boundary_cost,
     // stage indicator
     stage_in,
     // neighbor links
@@ -59,10 +57,7 @@ localparam PER_DIMENSION_WIDTH = DISTANCE_WIDTH - 1;
 input clk;
 input reset;
 // initialization information, which is read on reset
-input [ADDRESS_WIDTH-1:0] init_address;
 input init_is_error_syndrome;
-input init_has_boundary;
-input [BOUNDARY_WIDTH-1:0] init_boundary_cost;
 // stage indicator
 input [STAGE_WIDTH-1:0] stage_in;
 // neighbor links using `neighbor_link` module
@@ -97,6 +92,17 @@ output reg is_touching_boundary;
 output reg is_odd_cardinality;
 output reg pending_tell_new_root_cardinality;
 output reg pending_tell_new_root_touching_boundary;
+
+wire [ADDRESS_WIDTH-1:0] init_address;
+assign init_address[ADDRESS_WIDTH-1:PER_DIMENSION_WIDTH] = I;
+assign init_address[PER_DIMENSION_WIDTH-1:0] = J;
+
+`define init_has_boundary(i, j) ((j==0) || (j==(CODE_DISTANCE-2)))
+wire init_has_boundary;
+assign init_has_boundary = `init_has_boundary(I, J);
+
+wire [BOUNDARY_WIDTH-1:0] init_boundary_cost;
+assign init_boundary_cost = INIT_BOUNDARY_COST;
 
 genvar i;
 
