@@ -69,8 +69,6 @@ assign initialize_neighbors = (stage_internal == STAGE_MEASUREMENT_LOADING);
 `define CHANNEL_WIDTH ($clog2(`CHANNEL_COUNT))
 `define NEIGHBOR_COUNT `CHANNEL_COUNT
 localparam FAST_CHANNEL_COUNT = 0;
-`define channel_addresses_i(idx) channel_addresses[(idx+1)*ADDRESS_WIDTH-1 : idx*ADDRESS_WIDTH+PER_DIMENSION_WIDTH]
-`define channel_addresses_j(idx) channel_addresses[(idx+1)*ADDRESS_WIDTH-1-PER_DIMENSION_WIDTH : idx*ADDRESS_WIDTH]
 `define INDEX(i, j) (i * (CODE_DISTANCE-1) + j)
 `define init_is_error_syndrome(i, j) is_error_syndromes[`INDEX(i, j)]
 `define init_has_boundary(i, j) ((j==0) || (j==(CODE_DISTANCE-2)))
@@ -83,138 +81,6 @@ localparam FAST_CHANNEL_COUNT = 0;
 generate
     for (i=0; i < CODE_DISTANCE; i=i+1) begin: pu_i
         for (j=0; j < CODE_DISTANCE-1; j=j+1) begin: pu_j
-            // instant compare solver
-            wire [ADDRESS_WIDTH-1:0] compare_solver_default_addr;
-            wire [(ADDRESS_WIDTH * `CHANNEL_COUNT)-1:0] compare_solver_addrs;
-            wire [`CHANNEL_COUNT-1:0] compare_solver_addrs_valid;
-            wire [ADDRESS_WIDTH-1:0] compare_solver_result;
-            tree_compare_solver #(
-                .DATA_WIDTH(ADDRESS_WIDTH),
-                .CHANNEL_COUNT(`CHANNEL_COUNT)
-            ) u_tree_compare_solver (
-                .default_value(compare_solver_default_addr),
-                .values(compare_solver_addrs),
-                .valids(compare_solver_addrs_valid),
-                .result(compare_solver_result)
-            );
-            // instantiate distance 2d solver
-            wire [ADDRESS_WIDTH-1:0] distance_solver_target;
-            wire [`CHANNEL_WIDTH-1:0] distance_solver_result_idx;
-            wire [(ADDRESS_WIDTH * `CHANNEL_COUNT)-1:0] channel_addresses;
-            // address order: top, bottom, left, right
-            if (i>0) begin
-                if (i<(CODE_DISTANCE-1)) begin
-                    if (j>0) begin
-                        if (j<(CODE_DISTANCE-2)) begin
-                            // middle part
-                            // top
-                            assign `channel_addresses_i(0) = i - 1;
-                            assign `channel_addresses_j(0) = j;
-                            // bottom
-                            assign `channel_addresses_i(1) = i + 1;
-                            assign `channel_addresses_j(1) = j;
-                            // left
-                            assign `channel_addresses_i(2) = i;
-                            assign `channel_addresses_j(2) = j - 1;
-                            // right
-                            assign `channel_addresses_i(3) = i;
-                            assign `channel_addresses_j(3) = j + 1;
-                        end else begin  // if (j<(CODE_DISTANCE-2))
-                            // right boundary
-                            // top
-                            assign `channel_addresses_i(0) = i - 1;
-                            assign `channel_addresses_j(0) = j;
-                            // bottom
-                            assign `channel_addresses_i(1) = i + 1;
-                            assign `channel_addresses_j(1) = j;
-                            // left
-                            assign `channel_addresses_i(2) = i;
-                            assign `channel_addresses_j(2) = j - 1;
-                        end  // if (j<(CODE_DISTANCE-2))
-                    end else begin  // if (j>0)
-                        // left boundary
-                        // top
-                        assign `channel_addresses_i(0) = i - 1;
-                        assign `channel_addresses_j(0) = j;
-                        // bottom
-                        assign `channel_addresses_i(1) = i + 1;
-                        assign `channel_addresses_j(1) = j;
-                        // right
-                        assign `channel_addresses_i(2) = i;
-                        assign `channel_addresses_j(2) = j + 1;
-                    end  // if (j>0)
-                end else begin  // if (i<(CODE_DISTANCE-1))
-                    if (j>0) begin
-                        if (j<(CODE_DISTANCE-2)) begin
-                            // bottom boundary
-                            // top
-                            assign `channel_addresses_i(0) = i - 1;
-                            assign `channel_addresses_j(0) = j;
-                            // left
-                            assign `channel_addresses_i(1) = i;
-                            assign `channel_addresses_j(1) = j - 1;
-                            // right
-                            assign `channel_addresses_i(2) = i;
-                            assign `channel_addresses_j(2) = j + 1;
-                        end else begin  // if (j<(CODE_DISTANCE-2))
-                            // bottom right corner
-                            // top
-                            assign `channel_addresses_i(0) = i - 1;
-                            assign `channel_addresses_j(0) = j;
-                            // left
-                            assign `channel_addresses_i(1) = i;
-                            assign `channel_addresses_j(1) = j - 1;
-                        end  // if (j<(CODE_DISTANCE-2))
-                    end else begin  // if (j>0)
-                        // bottom left corner
-                        // top
-                        assign `channel_addresses_i(0) = i - 1;
-                        assign `channel_addresses_j(0) = j;
-                        // right
-                        assign `channel_addresses_i(1) = i;
-                        assign `channel_addresses_j(1) = j + 1;
-                    end  // if (j>0)
-                end  // if (i<(CODE_DISTANCE-1))
-            end else begin  // if (i>0)
-                if (j>0) begin
-                    if (j<(CODE_DISTANCE-2)) begin
-                        // top boundary
-                        // bottom
-                        assign `channel_addresses_i(0) = i + 1;
-                        assign `channel_addresses_j(0) = j;
-                        // left
-                        assign `channel_addresses_i(1) = i;
-                        assign `channel_addresses_j(1) = j - 1;
-                        // right
-                        assign `channel_addresses_i(2) = i;
-                        assign `channel_addresses_j(2) = j + 1;
-                    end else begin  // if (j<(CODE_DISTANCE-2))
-                        // top right corner
-                        // bottom
-                        assign `channel_addresses_i(0) = i + 1;
-                        assign `channel_addresses_j(0) = j;
-                        // left
-                        assign `channel_addresses_i(1) = i;
-                        assign `channel_addresses_j(1) = j - 1;
-                    end  // if (j<(CODE_DISTANCE-2))
-                end else begin  // if (j>0)
-                    // top left corner
-                    // bottom
-                    assign `channel_addresses_i(0) = i + 1;
-                    assign `channel_addresses_j(0) = j;
-                    // right
-                    assign `channel_addresses_i(1) = i;
-                    assign `channel_addresses_j(1) = j + 1;
-                end  // if (j>0)
-            end  // if (i>0)
-            tree_distance_2d_solver #(
-                .PER_DIMENSION_WIDTH(PER_DIMENSION_WIDTH),
-                .CHANNEL_COUNT(`CHANNEL_COUNT)
-            ) u_tree_distance_2d_solver (
-                .points(channel_addresses),
-                .target(distance_solver_target),
-                .result_idx(distance_solver_result_idx)
-            );
             // instantiate processing unit
             wire [ADDRESS_WIDTH-1:0] init_address;
             assign init_address[ADDRESS_WIDTH-1:PER_DIMENSION_WIDTH] = i;
@@ -238,7 +104,10 @@ generate
                 .DISTANCE_WIDTH(DISTANCE_WIDTH),
                 .BOUNDARY_WIDTH(BOUNDARY_WIDTH),
                 .NEIGHBOR_COUNT(`NEIGHBOR_COUNT),
-                .FAST_CHANNEL_COUNT(FAST_CHANNEL_COUNT)
+                .FAST_CHANNEL_COUNT(FAST_CHANNEL_COUNT),
+                .I(i),
+                .J(j),
+                .CODE_DISTANCE(CODE_DISTANCE)
             ) u_processing_unit (
                 .clk(clk),
                 .reset(reset),
@@ -247,12 +116,6 @@ generate
                 .init_has_boundary(`init_has_boundary(i, j)),
                 .init_boundary_cost(BOUNDARY_COST),
                 .stage_in(stage),
-                .compare_solver_default_addr(compare_solver_default_addr),
-                .compare_solver_addrs(compare_solver_addrs),
-                .compare_solver_addrs_valid(compare_solver_addrs_valid),
-                .compare_solver_result(compare_solver_result),
-                .distance_solver_target(distance_solver_target),
-                .distance_solver_result_idx(distance_solver_result_idx),
                 .neighbor_is_fully_grown(neighbor_is_fully_grown),
                 .neighbor_old_roots(neighbor_old_roots),
                 .neighbor_increase(neighbor_increase),

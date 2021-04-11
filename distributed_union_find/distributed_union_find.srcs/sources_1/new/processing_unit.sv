@@ -5,7 +5,10 @@ module processing_unit #(
     parameter DISTANCE_WIDTH = 6,  // the maximum distance between two nodes should fit into DISTANCE_WIDTH bits
     parameter BOUNDARY_WIDTH = 2,  // usually boundary cost would be 2, so by default 2 bits for boundary cost
     parameter NEIGHBOR_COUNT = 4,  // the direct neighbor of a stabilizer, usually between 2 and 4 for surface code
-    parameter FAST_CHANNEL_COUNT = 0  // CHANNEL_COUNT = NEIGHBOR_COUNT + FAST_CHANNEL_COUNT
+    parameter FAST_CHANNEL_COUNT = 0,  // CHANNEL_COUNT = NEIGHBOR_COUNT + FAST_CHANNEL_COUNT
+    parameter I = 0,
+    parameter J = 0,
+    parameter CODE_DISTANCE = 5
 ) (
     clk,
     reset,
@@ -16,14 +19,6 @@ module processing_unit #(
     init_boundary_cost,
     // stage indicator
     stage_in,
-    // external compare solver
-    compare_solver_default_addr,
-    compare_solver_addrs,
-    compare_solver_addrs_valid,
-    compare_solver_result,
-    // external distance solver
-    distance_solver_target,
-    distance_solver_result_idx,
     // neighbor links
     neighbor_is_fully_grown,
         // `old_root` should connect to *_old_root_in
@@ -59,6 +54,7 @@ localparam CHANNEL_COUNT = NEIGHBOR_COUNT + FAST_CHANNEL_COUNT;
 localparam CHANNEL_WIDTH = $clog2(CHANNEL_COUNT);  // the index of channel, both neighbor and direct ones
 localparam UNION_MESSAGE_WIDTH = 2 * ADDRESS_WIDTH;  // [old_root, updated_root]
 localparam DIRECT_MESSAGE_WIDTH = ADDRESS_WIDTH + 1 + 1;  // [receiver, is_odd_cardinality_root, is_touching_boundary]
+localparam PER_DIMENSION_WIDTH = DISTANCE_WIDTH - 1;
 
 input clk;
 input reset;
@@ -69,14 +65,6 @@ input init_has_boundary;
 input [BOUNDARY_WIDTH-1:0] init_boundary_cost;
 // stage indicator
 input [STAGE_WIDTH-1:0] stage_in;
-// compare solvers should be a combinational logic that takes multiple addresses and output the smallest one
-output [ADDRESS_WIDTH-1:0] compare_solver_default_addr;
-output [(ADDRESS_WIDTH * CHANNEL_COUNT)-1:0] compare_solver_addrs;
-output [CHANNEL_COUNT-1:0] compare_solver_addrs_valid;
-input [ADDRESS_WIDTH-1:0] compare_solver_result;
-// distance solvers should take a target and multiple points and output the nearest point to the target, the multiple points are fixed and could be optimized
-output [ADDRESS_WIDTH-1:0] distance_solver_target;
-input [CHANNEL_WIDTH-1:0] distance_solver_result_idx;
 // neighbor links using `neighbor_link` module
 input [NEIGHBOR_COUNT-1:0] neighbor_is_fully_grown;
 input [(ADDRESS_WIDTH * NEIGHBOR_COUNT)-1:0] neighbor_old_roots;  // connect to *_old_root_out
@@ -135,8 +123,153 @@ assign is_stage_spread_cluster = (stage == STAGE_SPREAD_CLUSTER);
 // i defined in range [0, NEIGHBOR_COUNT)
 `define is_fully_grown(i) neighbor_is_fully_grown[i]
 `define neighbor_old_root(i) neighbor_old_roots[((i+1) * ADDRESS_WIDTH) - 1 : (i * ADDRESS_WIDTH)]
+`define channel_addresses_i(idx) channel_addresses[(idx+1)*ADDRESS_WIDTH-1 : idx*ADDRESS_WIDTH+PER_DIMENSION_WIDTH]
+`define channel_addresses_j(idx) channel_addresses[(idx+1)*ADDRESS_WIDTH-1-PER_DIMENSION_WIDTH : idx*ADDRESS_WIDTH]
+
+// compare solvers should be a combinational logic that takes multiple addresses and output the smallest one
+wire [ADDRESS_WIDTH-1:0] compare_solver_default_addr;
+wire [(ADDRESS_WIDTH * CHANNEL_COUNT)-1:0] compare_solver_addrs;
+wire [CHANNEL_COUNT-1:0] compare_solver_addrs_valid;
+wire [ADDRESS_WIDTH-1:0] compare_solver_result;
+
+// tree compare solver
+tree_compare_solver #(
+    .DATA_WIDTH(ADDRESS_WIDTH),
+    .CHANNEL_COUNT(NEIGHBOR_COUNT)
+) u_tree_compare_solver (
+    .default_value(compare_solver_default_addr),
+    .values(compare_solver_addrs),
+    .valids(compare_solver_addrs_valid),
+    .result(compare_solver_result)
+);
+
+// distance solvers should take a target and multiple points and output the nearest point to the target, the multiple points are fixed and could be optimized
+wire [ADDRESS_WIDTH-1:0] distance_solver_target;
+wire [CHANNEL_WIDTH-1:0] distance_solver_result_idx;
+wire [(ADDRESS_WIDTH * CHANNEL_COUNT)-1:0] channel_addresses;
+
+generate
+    // address order: top, bottom, left, right
+    if (I>0) begin
+        if (I<(CODE_DISTANCE-1)) begin
+            if (J>0) begin
+                if (J<(CODE_DISTANCE-2)) begin
+                    // middle part
+                    // top
+                    assign `channel_addresses_i(0) = I - 1;
+                    assign `channel_addresses_j(0) = J;
+                    // bottom
+                    assign `channel_addresses_i(1) = I + 1;
+                    assign `channel_addresses_j(1) = J;
+                    // left
+                    assign `channel_addresses_i(2) = I;
+                    assign `channel_addresses_j(2) = J - 1;
+                    // right
+                    assign `channel_addresses_i(3) = I;
+                    assign `channel_addresses_j(3) = J + 1;
+                end else begin  // if (j<(CODE_DISTANCE-2))
+                    // right boundary
+                    // top
+                    assign `channel_addresses_i(0) = I - 1;
+                    assign `channel_addresses_j(0) = J;
+                    // bottom
+                    assign `channel_addresses_i(1) = I + 1;
+                    assign `channel_addresses_j(1) = J;
+                    // left
+                    assign `channel_addresses_i(2) = I;
+                    assign `channel_addresses_j(2) = J - 1;
+                end  // if (j<(CODE_DISTANCE-2))
+            end else begin  // if (j>0)
+                // left boundary
+                // top
+                assign `channel_addresses_i(0) = I - 1;
+                assign `channel_addresses_j(0) = J;
+                // bottom
+                assign `channel_addresses_i(1) = I + 1;
+                assign `channel_addresses_j(1) = J;
+                // right
+                assign `channel_addresses_i(2) = I;
+                assign `channel_addresses_j(2) = J + 1;
+            end  // if (j>0)
+        end else begin  // if (i<(CODE_DISTANCE-1))
+            if (J>0) begin
+                if (J<(CODE_DISTANCE-2)) begin
+                    // bottom boundary
+                    // top
+                    assign `channel_addresses_i(0) = I - 1;
+                    assign `channel_addresses_j(0) = J;
+                    // left
+                    assign `channel_addresses_i(1) = I;
+                    assign `channel_addresses_j(1) = J - 1;
+                    // right
+                    assign `channel_addresses_i(2) = I;
+                    assign `channel_addresses_j(2) = J + 1;
+                end else begin  // if (j<(CODE_DISTANCE-2))
+                    // bottom right corner
+                    // top
+                    assign `channel_addresses_i(0) = I - 1;
+                    assign `channel_addresses_j(0) = J;
+                    // left
+                    assign `channel_addresses_i(1) = I;
+                    assign `channel_addresses_j(1) = J - 1;
+                end  // if (j<(CODE_DISTANCE-2))
+            end else begin  // if (j>0)
+                // bottom left corner
+                // top
+                assign `channel_addresses_i(0) = I - 1;
+                assign `channel_addresses_j(0) = J;
+                // right
+                assign `channel_addresses_i(1) = I;
+                assign `channel_addresses_j(1) = J + 1;
+            end  // if (j>0)
+        end  // if (i<(CODE_DISTANCE-1))
+    end else begin  // if (i>0)
+        if (J>0) begin
+            if (J<(CODE_DISTANCE-2)) begin
+                // top boundary
+                // bottom
+                assign `channel_addresses_i(0) = I + 1;
+                assign `channel_addresses_j(0) = J;
+                // left
+                assign `channel_addresses_i(1) = I;
+                assign `channel_addresses_j(1) = J - 1;
+                // right
+                assign `channel_addresses_i(2) = I;
+                assign `channel_addresses_j(2) = J + 1;
+            end else begin  // if (j<(CODE_DISTANCE-2))
+                // top right corner
+                // bottom
+                assign `channel_addresses_i(0) = I + 1;
+                assign `channel_addresses_j(0) = J;
+                // left
+                assign `channel_addresses_i(1) = I;
+                assign `channel_addresses_j(1) = J - 1;
+            end  // if (j<(CODE_DISTANCE-2))
+        end else begin  // if (j>0)
+            // top left corner
+            // bottom
+            assign `channel_addresses_i(0) = I + 1;
+            assign `channel_addresses_j(0) = J;
+            // right
+            assign `channel_addresses_i(1) = I;
+            assign `channel_addresses_j(1) = J + 1;
+        end  // if (j>0)
+    end  // if (i>0)
+endgenerate
+
+tree_distance_2d_solver #(
+    .PER_DIMENSION_WIDTH(PER_DIMENSION_WIDTH),
+    .CHANNEL_COUNT(NEIGHBOR_COUNT)
+) u_tree_distance_2d_solver (
+    .points(channel_addresses),
+    .target(distance_solver_target),
+    .result_idx(distance_solver_result_idx)
+);
 
 // split messages in channels
+localparam CHANNEL_DEPTH = $clog2(CHANNEL_COUNT); //2
+localparam CHANNEL_EXPAND_COUNT = 2 ** CHANNEL_DEPTH; //4
+localparam CHANNEL_ALL_EXPAND_COUNT = 2 * CHANNEL_EXPAND_COUNT - 1;  // the length of tree structured gathering // 7
 wire [CHANNEL_COUNT-1:0] direct_in_channels_data_is_odd_cardinality;
 wire [CHANNEL_COUNT-1:0] direct_in_channels_data_is_touching_boundary;
 generate
@@ -147,9 +280,6 @@ generate
 endgenerate
 
 // tree structured information gathering for general channels (both union channels and direct channels)
-localparam CHANNEL_DEPTH = $clog2(CHANNEL_COUNT); //2
-localparam CHANNEL_EXPAND_COUNT = 2 ** CHANNEL_DEPTH; //4
-localparam CHANNEL_ALL_EXPAND_COUNT = 2 * CHANNEL_EXPAND_COUNT - 1;  // the length of tree structured gathering // 7
 `define CHANNEL_LAYER_WIDTH (2 ** (CHANNEL_DEPTH - 1 - i))
 `define CHANNEL_LAYERT_IDX (2 ** (CHANNEL_DEPTH + 1) - 2 ** (CHANNEL_DEPTH - i))
 `define CHANNEL_LAST_LAYERT_IDX (2 ** (CHANNEL_DEPTH + 1) - 2 ** (CHANNEL_DEPTH + 1 - i))
