@@ -83,6 +83,7 @@ output reg [ADDRESS_WIDTH-1:0] old_root;
 output reg [ADDRESS_WIDTH-1:0] updated_root;
 reg [STAGE_WIDTH-1:0] last_stage;
 reg [STAGE_WIDTH-1:0] stage;
+reg [STAGE_WIDTH-1:0] stage_delayed;
 output reg is_error_syndrome;
 reg has_boundary;
 reg [BOUNDARY_WIDTH-1:0] boundary_cost;
@@ -108,6 +109,7 @@ genvar i;
 
 wire is_stage_spread_cluster;
 assign is_stage_spread_cluster = (stage == STAGE_SPREAD_CLUSTER);
+assign is_stage_spread_cluster_delayed = (stage_delayed == STAGE_SPREAD_CLUSTER);
 
 // create separate local wires for packed arrays, because Vivado doesn't seem to support things like input  logic [0:15] [127:0] mux_in,
 // i defined in range [0, CHANNEL_COUNT)
@@ -137,6 +139,7 @@ wire [ADDRESS_WIDTH-1:0] compare_solver_default_addr;
 wire [(ADDRESS_WIDTH * CHANNEL_COUNT)-1:0] compare_solver_addrs;
 wire [CHANNEL_COUNT-1:0] compare_solver_addrs_valid;
 wire [ADDRESS_WIDTH-1:0] compare_solver_result;
+reg [ADDRESS_WIDTH-1:0] compare_solver_result_stored;
 
 // tree compare solver
 tree_compare_solver #(
@@ -348,6 +351,14 @@ generate
 endgenerate
 assign new_updated_root = compare_solver_result;  // combinational logic that computes within a sinlge clock cycle
 
+// always @(posedge clk) begin
+//     if(reset) begin
+//         compare_solver_result <= init_address;
+//     end else begin
+//         compare_solver_result_stored <= compare_solver_result;
+//     end
+// end
+
 // send out union messages
 wire should_send_union_messages;
 assign union_out_channels_valid = (is_stage_spread_cluster && (new_updated_root != updated_root)) || should_broadcast_is_odd_cardinality;
@@ -436,12 +447,37 @@ assign intermediate_pending_tell_new_root_touching_boundary = pending_tell_new_r
     (new_updated_root != updated_root && updated_is_touching_boundary) || (updated_is_touching_boundary != is_touching_boundary)
 );
 
+wire pending_message_sent_successfully;
+
 // decide which message to send
 wire pending_direct_message_valid;
 wire [DIRECT_MESSAGE_WIDTH-1:0] pending_direct_message;
+wire intermediate_buffer_is_full;
+wire pending_direct_message_valid_delayed;
+wire [DIRECT_MESSAGE_WIDTH-1:0] pending_direct_message_delayed;
+wire intermediate_buffer_is_taken;
+wire intermediatre_initialize;
+wire intermediate_message_sent_sucessfully;
+assign intermediatre_initialize = stage == STAGE_MEASUREMENT_LOADING;
+assign intermediate_message_sent_sucessfully = pending_direct_message_valid && !intermediate_buffer_is_full;
+
+blocking_channel #(
+    .WIDTH(DIRECT_MESSAGE_WIDTH) // width of data
+) intermediate_stage (
+    .in_data(pending_direct_message),
+    .in_valid(pending_direct_message_valid),
+    .in_is_full(intermediate_buffer_is_full),
+    .out_data(pending_direct_message_delayed),
+    .out_valid(pending_direct_message_valid_delayed),
+    .out_is_taken(pending_message_sent_successfully),
+    .clk(clk),
+    .reset(reset),
+    .initialize(intermediatre_initialize)
+);
+
 reg my_stored_direct_message_valid;
 reg [DIRECT_MESSAGE_WIDTH-1:0] my_stored_direct_message;
-`define pending_direct_message_receiver (pending_direct_message[DIRECT_MESSAGE_WIDTH-1:2])
+`define pending_direct_message_receiver (pending_direct_message_delayed[DIRECT_MESSAGE_WIDTH-1:2])
 wire generate_my_direct_message;
 assign generate_my_direct_message = intermediate_pending_tell_new_root_cardinality || intermediate_pending_tell_new_root_touching_boundary;
 assign pending_direct_message_valid = (generate_my_direct_message || `gathered_elected_direct_message_valid || my_stored_direct_message_valid);
@@ -454,13 +490,11 @@ assign pending_direct_message = `gathered_elected_direct_message_valid ? (
         )
 );
 
-wire pending_message_sent_successfully;
-
 always@(posedge clk) begin
     if (reset) begin
         my_stored_direct_message_valid <= 0;
     end else begin
-        if (pending_message_sent_successfully && !`gathered_elected_direct_message_valid) begin
+        if (intermediate_message_sent_sucessfully && !`gathered_elected_direct_message_valid) begin
             my_stored_direct_message_valid <= 0;
         end else if (generate_my_direct_message && `gathered_elected_direct_message_valid) begin
             my_stored_direct_message_valid <= 1;
@@ -498,19 +532,19 @@ generate
     end
 endgenerate
 `define gathered_pending_message_sent_successfully (tree_gathering_pending_message_sent_successfully[CHANNEL_ROOT_IDX])
-assign pending_message_sent_successfully = `gathered_pending_message_sent_successfully && pending_direct_message_valid;
+assign pending_message_sent_successfully = `gathered_pending_message_sent_successfully && pending_direct_message_valid_delayed;
 
 // update the states
 wire new_pending_tell_new_root_cardinality;
 wire new_pending_tell_new_root_touching_boundary;
-assign new_pending_tell_new_root_cardinality = intermediate_pending_tell_new_root_cardinality && !pending_message_sent_successfully;
-assign new_pending_tell_new_root_touching_boundary = intermediate_pending_tell_new_root_touching_boundary && !pending_message_sent_successfully;
+assign new_pending_tell_new_root_cardinality = intermediate_pending_tell_new_root_cardinality && !intermediate_message_sent_sucessfully;
+assign new_pending_tell_new_root_touching_boundary = intermediate_pending_tell_new_root_touching_boundary && !intermediate_message_sent_sucessfully;
 
 // send the message
-assign direct_out_channels_data_single = pending_direct_message;
+assign direct_out_channels_data_single = pending_direct_message_delayed;
 generate
     for (i=0; i < CHANNEL_COUNT; i=i+1) begin: sending_direct_message
-        assign `direct_out_valid(i) = is_stage_spread_cluster && pending_direct_message_valid && (i == `best_channel_for_pending_message_idx);
+        assign `direct_out_valid(i) = is_stage_spread_cluster_delayed && pending_direct_message_valid_delayed && (i == `best_channel_for_pending_message_idx);
     end
 endgenerate
 
@@ -518,7 +552,7 @@ endgenerate
 generate
     for (i=0; i < CHANNEL_COUNT; i=i+1) begin: taking_direct_message
         assign `direct_in_is_taken(i) = is_stage_spread_cluster && 
-            (((i == `gathered_elected_direct_message_index) && `gathered_elected_direct_message_valid  && pending_message_sent_successfully) || 
+            (((i == `gathered_elected_direct_message_index) && `gathered_elected_direct_message_valid  && intermediate_message_sent_sucessfully) || 
                 direct_in_channels_local_handled[i]);  // either brokerd this message or handled locally
     end
 endgenerate
@@ -590,8 +624,10 @@ end
 always @(posedge clk) begin
     if (reset) begin
         stage <= STAGE_IDLE;
+        stage_delayed <= STAGE_IDLE;
     end else begin
         stage <= stage_in;
+        stage_delayed <= stage;
     end
 end
 
