@@ -43,7 +43,8 @@ module processing_unit #(
     is_touching_boundary,
     is_odd_cardinality,
     pending_tell_new_root_cardinality,
-    pending_tell_new_root_touching_boundary
+    pending_tell_new_root_touching_boundary,
+    is_processing
 );
 
 `include "parameters.sv"
@@ -93,6 +94,9 @@ output reg is_touching_boundary;
 output reg is_odd_cardinality;
 output reg pending_tell_new_root_cardinality;
 output reg pending_tell_new_root_touching_boundary;
+output is_processing;
+
+assign is_processing = union_out_channels_valid | (|union_in_channels_valid) | (|direct_out_channels_valid) | (|direct_in_channels_valid) | pending_direct_message_valid_delayed | my_stored_direct_message_valid;
 
 wire [ADDRESS_WIDTH-1:0] init_address;
 assign init_address[ADDRESS_WIDTH-1:PER_DIMENSION_WIDTH] = I;
@@ -439,12 +443,12 @@ wire intermediate_pending_tell_new_root_touching_boundary;
 assign intermediate_pending_tell_new_root_cardinality = pending_tell_new_root_cardinality ? (
     new_updated_root != address  // don't need to send message to myself
 ) : (
-    new_updated_root != updated_root && is_error_syndrome
+    new_updated_root != updated_root && is_error_syndrome && new_updated_root != address
 );
 assign intermediate_pending_tell_new_root_touching_boundary = pending_tell_new_root_touching_boundary ? (
     new_updated_root != address  // don't need to send message to myself
 ) : (
-    (new_updated_root != updated_root && updated_is_touching_boundary) || (updated_is_touching_boundary != is_touching_boundary)
+    new_updated_root != address && ((new_updated_root != updated_root && updated_is_touching_boundary) || (updated_is_touching_boundary != is_touching_boundary))
 );
 
 wire pending_message_sent_successfully;
@@ -480,24 +484,28 @@ reg [DIRECT_MESSAGE_WIDTH-1:0] my_stored_direct_message;
 `define pending_direct_message_receiver (pending_direct_message_delayed[DIRECT_MESSAGE_WIDTH-1:2])
 wire generate_my_direct_message;
 assign generate_my_direct_message = intermediate_pending_tell_new_root_cardinality || intermediate_pending_tell_new_root_touching_boundary;
-assign pending_direct_message_valid = (generate_my_direct_message || `gathered_elected_direct_message_valid || my_stored_direct_message_valid);
+
+assign pending_direct_message_valid = (`gathered_elected_direct_message_valid || my_stored_direct_message_valid);
+// assign pending_direct_message_valid = (generate_my_direct_message || `gathered_elected_direct_message_valid || my_stored_direct_message_valid);
 assign pending_direct_message = `gathered_elected_direct_message_valid ? (
     `gathered_elected_direct_message_data ) : (
-        generate_my_direct_message ? (
-             { new_updated_root, intermediate_pending_tell_new_root_cardinality, intermediate_pending_tell_new_root_touching_boundary }
-        ) : (
+        // generate_my_direct_message ? (
+            //  { new_updated_root, intermediate_pending_tell_new_root_cardinality, intermediate_pending_tell_new_root_touching_boundary }
+        // ) : (
             my_stored_direct_message
-        )
+        // )
 );
 
 always@(posedge clk) begin
     if (reset) begin
         my_stored_direct_message_valid <= 0;
     end else begin
-        if (intermediate_message_sent_sucessfully && !`gathered_elected_direct_message_valid) begin
+        if (intermediatre_initialize) begin
             my_stored_direct_message_valid <= 0;
-        end else if (generate_my_direct_message && `gathered_elected_direct_message_valid) begin
+        end else if (generate_my_direct_message && is_stage_spread_cluster) begin
             my_stored_direct_message_valid <= 1;
+        end else if (intermediate_message_sent_sucessfully && !`gathered_elected_direct_message_valid) begin
+            my_stored_direct_message_valid <= 0;
         end
     end
 end
@@ -584,8 +592,8 @@ always @(posedge clk) begin
             is_touching_boundary <= updated_is_touching_boundary;
             is_odd_cardinality <= updated_is_odd_cardinality;
             updated_root <= new_updated_root;
-            pending_tell_new_root_cardinality <= new_pending_tell_new_root_cardinality;
-            pending_tell_new_root_touching_boundary <= new_pending_tell_new_root_touching_boundary;
+            // pending_tell_new_root_cardinality <= new_pending_tell_new_root_cardinality;
+            // pending_tell_new_root_touching_boundary <= new_pending_tell_new_root_touching_boundary;
         end else if (stage == STAGE_GROW_BOUNDARY) begin
             // only gives a trigger to neighbor links
             // see `assign neighbor_increase = !reset && is_odd_cluster && (stage == STAGE_GROW_BOUNDARY) && (last_stage != STAGE_GROW_BOUNDARY);`

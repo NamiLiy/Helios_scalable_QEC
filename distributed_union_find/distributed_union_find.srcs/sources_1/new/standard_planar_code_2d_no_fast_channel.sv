@@ -77,6 +77,14 @@ localparam FAST_CHANNEL_COUNT = 0;
 `define roots(i, j) roots[ADDRESS_WIDTH*(`INDEX(i, j)+1)-1:ADDRESS_WIDTH*`INDEX(i, j)]
 `define has_message_flying(i, j) has_message_flyings[`INDEX(i, j)]
 
+
+generate
+    for (i=0; i < 20; i=i+1) begin
+        wire [ADDRESS_WIDTH-1:0] roots_temp;
+        assign roots_temp = roots[ADDRESS_WIDTH*(i+1)-1 : ADDRESS_WIDTH*i];
+    end
+endgenerate
+
 // instantiate processing units and their local solver
 generate
     for (i=0; i < CODE_DISTANCE; i=i+1) begin: pu_i
@@ -127,9 +135,10 @@ generate
                 .old_root(old_root),
                 .updated_root(`roots(i, j)),
                 .is_odd_cluster(`is_odd_cluster(i, j)),
-                .is_odd_cardinality(`is_odd_cardinality(i, j))
+                .is_odd_cardinality(`is_odd_cardinality(i, j)),
+                .is_processing(`has_message_flying(i, j))
             );
-            assign `has_message_flying(i, j) = union_out_channels_valid | (|union_in_channels_valid) | (|direct_out_channels_valid) | (|direct_in_channels_valid);
+            // assign `has_message_flying(i, j) = union_out_channels_valid | (|union_in_channels_valid) | (|direct_out_channels_valid) | (|direct_in_channels_valid);
         end
     end
 endgenerate
