@@ -3,16 +3,16 @@
 // distance solver with high dimensional vector
 // given CHANNEL_COUNT points and a target, solve the index of the nearest point to target
 
-module tree_distance_2d_solver #(
+module tree_distance_3d_solver #(
     parameter PER_DIMENSION_WIDTH = 4,  // width of each coordinate
-    parameter CHANNEL_COUNT = 4  // number of channels to be compared
+    parameter CHANNEL_COUNT = 6  // number of channels to be compared
 ) (
     points,
     target,
     result_idx
 );
 
-localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 2;
+localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
 localparam CHANNEL_WIDTH = $clog2(CHANNEL_COUNT);  // the index of channel, both neighbor and direct ones
 localparam DISTANCE_WIDTH = 1 + PER_DIMENSION_WIDTH;  // the maximum width should fit into this width
 
@@ -30,9 +30,11 @@ wire [(DISTANCE_WIDTH * ALL_EXPAND_COUNT)-1:0] expanded_distances;
 `define index(i) expanded_indices[((i+1) * CHANNEL_WIDTH) - 1 : (i * CHANNEL_WIDTH)]
 `define distance(i) expanded_distances[((i+1) * DISTANCE_WIDTH) - 1 : (i * DISTANCE_WIDTH)]
 `define point(i) points[((i+1) * ADDRESS_WIDTH) - 1 : (i * ADDRESS_WIDTH)]
-`define point_x(i) points[((i+1) * ADDRESS_WIDTH) - 1 : (i * ADDRESS_WIDTH) + PER_DIMENSION_WIDTH]
-`define point_y(i) points[((i+1) * ADDRESS_WIDTH) - 1 - PER_DIMENSION_WIDTH : (i * ADDRESS_WIDTH)]
-`define target_x target[ADDRESS_WIDTH - 1 : PER_DIMENSION_WIDTH]
+`define point_z(i) points[((i+1) * ADDRESS_WIDTH) - 1 : (i * ADDRESS_WIDTH) + 2*PER_DIMENSION_WIDTH]
+`define point_x(i) points[((i+1) * ADDRESS_WIDTH) - 1 - PER_DIMENSION_WIDTH : (i * ADDRESS_WIDTH) + PER_DIMENSION_WIDTH]
+`define point_y(i) points[((i+1) * ADDRESS_WIDTH) - 1 - 2*PER_DIMENSION_WIDTH : (i * ADDRESS_WIDTH)]
+`define target_z target[ADDRESS_WIDTH - 1 : PER_DIMENSION_WIDTH*2]
+`define target_x target[PER_DIMENSION_WIDTH*2 - 1 : PER_DIMENSION_WIDTH]
 `define target_y target[PER_DIMENSION_WIDTH - 1 : 0]
 
 generate
@@ -46,7 +48,9 @@ for (i=0; i < EXPAND_COUNT; i=i+1) begin: initialization
         assign distance_x = { 1'b0, ((`point_x(i) < `target_x) ? (`target_x - `point_x(i)) : (`point_x(i) - `target_x)) };
         wire [DISTANCE_WIDTH-1:0] distance_y;
         assign distance_y = { 1'b0, ((`point_y(i) < `target_y) ? (`target_y - `point_y(i)) : (`point_y(i) - `target_y)) };
-        assign `distance(i) = distance_x + distance_y;
+        wire [DISTANCE_WIDTH-1:0] distance_z;
+        assign distance_z = { 1'b0, ((`point_z(i) < `target_z) ? (`target_z - `point_z(i)) : (`point_z(i) - `target_z)) };
+        assign `distance(i) = distance_x + distance_y + distance_z;
     end else begin
         assign expanded_valids[i] = 0;  // not valid
     end

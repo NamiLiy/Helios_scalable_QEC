@@ -1,13 +1,14 @@
 `timescale 1ns / 1ps
 
 module processing_unit #(
-    parameter ADDRESS_WIDTH = 8,  // width of address, e.g. single measurement standard surface code under d <= 15 could be 4bit * 2 = 8bit
+    parameter ADDRESS_WIDTH = 18,  // width of address, e.g. single measurement standard surface code under d <= 15 could be 4bit * 2 = 8bit
     parameter DISTANCE_WIDTH = 6,  // the maximum distance between two nodes should fit into DISTANCE_WIDTH bits
     parameter BOUNDARY_WIDTH = 2,  // usually boundary cost would be 2, so by default 2 bits for boundary cost
-    parameter NEIGHBOR_COUNT = 4,  // the direct neighbor of a stabilizer, usually between 2 and 4 for surface code
+    parameter NEIGHBOR_COUNT = 6,  // the direct neighbor of a stabilizer, usually between 2 and 4 for surface code
     parameter FAST_CHANNEL_COUNT = 0,  // CHANNEL_COUNT = NEIGHBOR_COUNT + FAST_CHANNEL_COUNT
     parameter I = 0,
     parameter J = 0,
+    parameter K = 0,
     parameter CODE_DISTANCE = 5,
     parameter INIT_BOUNDARY_COST = 2
 ) (
@@ -42,7 +43,6 @@ module processing_unit #(
     is_odd_cluster,
     is_touching_boundary,
     is_odd_cardinality,
-    pending_tell_new_root_cardinality,
     pending_tell_new_root_touching_boundary,
     is_processing
 );
@@ -92,14 +92,14 @@ output reg [BOUNDARY_WIDTH-1:0] boundary_increased;
 output reg is_odd_cluster;
 output reg is_touching_boundary;
 output reg is_odd_cardinality;
-output reg pending_tell_new_root_cardinality;
 output reg pending_tell_new_root_touching_boundary;
 output is_processing;
 
 assign is_processing = union_out_channels_valid | (|union_in_channels_valid) | (|direct_out_channels_valid) | (|direct_in_channels_valid) | pending_direct_message_valid_delayed | my_stored_direct_message_valid;
 
 wire [ADDRESS_WIDTH-1:0] init_address;
-assign init_address[ADDRESS_WIDTH-1:PER_DIMENSION_WIDTH] = I;
+assign init_address[ADDRESS_WIDTH-1:PER_DIMENSION_WIDTH*2] = K;
+assign init_address[PER_DIMENSION_WIDTH*2-1:PER_DIMENSION_WIDTH] = I;
 assign init_address[PER_DIMENSION_WIDTH-1:0] = J;
 
 `define init_has_boundary(i, j) ((j==0) || (j==(CODE_DISTANCE-2)))
@@ -135,8 +135,9 @@ assign is_stage_spread_cluster_delayed = (stage_delayed == STAGE_SPREAD_CLUSTER)
 // i defined in range [0, NEIGHBOR_COUNT)
 `define is_fully_grown(i) neighbor_is_fully_grown[i]
 `define neighbor_old_root(i) neighbor_old_roots[((i+1) * ADDRESS_WIDTH) - 1 : (i * ADDRESS_WIDTH)]
-`define channel_addresses_i(idx) channel_addresses[(idx+1)*ADDRESS_WIDTH-1 : idx*ADDRESS_WIDTH+PER_DIMENSION_WIDTH]
-`define channel_addresses_j(idx) channel_addresses[(idx+1)*ADDRESS_WIDTH-1-PER_DIMENSION_WIDTH : idx*ADDRESS_WIDTH]
+`define channel_addresses_k(idx) channel_addresses[(idx+1)*ADDRESS_WIDTH-1 : idx*ADDRESS_WIDTH+2*PER_DIMENSION_WIDTH]
+`define channel_addresses_i(idx) channel_addresses[(idx+1)*ADDRESS_WIDTH-1-PER_DIMENSION_WIDTH : idx*ADDRESS_WIDTH+PER_DIMENSION_WIDTH]
+`define channel_addresses_j(idx) channel_addresses[(idx+1)*ADDRESS_WIDTH-1-2*PER_DIMENSION_WIDTH : idx*ADDRESS_WIDTH]
 
 // compare solvers should be a combinational logic that takes multiple addresses and output the smallest one
 wire [ADDRESS_WIDTH-1:0] compare_solver_default_addr;
@@ -161,8 +162,9 @@ wire [ADDRESS_WIDTH-1:0] distance_solver_target;
 wire [CHANNEL_WIDTH-1:0] distance_solver_result_idx;
 wire [(ADDRESS_WIDTH * CHANNEL_COUNT)-1:0] channel_addresses;
 
+// Todo simplify this logic. This is not easily understandable in debugging
 generate
-    // address order: top, bottom, left, right
+    // address order: top, bottom, left, right, down, up
     if (I>0) begin
         if (I<(CODE_DISTANCE-1)) begin
             if (J>0) begin
@@ -171,38 +173,120 @@ generate
                     // top
                     assign `channel_addresses_i(0) = I - 1;
                     assign `channel_addresses_j(0) = J;
+                    assign `channel_addresses_k(0) = K;
                     // bottom
                     assign `channel_addresses_i(1) = I + 1;
                     assign `channel_addresses_j(1) = J;
+                    assign `channel_addresses_k(1) = K;
                     // left
                     assign `channel_addresses_i(2) = I;
                     assign `channel_addresses_j(2) = J - 1;
+                    assign `channel_addresses_k(2) = K;
                     // right
                     assign `channel_addresses_i(3) = I;
                     assign `channel_addresses_j(3) = J + 1;
+                    assign `channel_addresses_k(3) = K;
+                    if (K>0) begin
+                        if (K < CODE_DISTANCE - 1) begin
+                            // down
+                            assign `channel_addresses_i(4) = I;
+                            assign `channel_addresses_j(4) = J;
+                            assign `channel_addresses_k(4) = K-1;
+                            // up
+                            assign `channel_addresses_i(5) = I;
+                            assign `channel_addresses_j(5) = J;
+                            assign `channel_addresses_k(5) = K+1;
+                        end else begin
+                            // upmost layer
+                            // down
+                            assign `channel_addresses_i(4) = I;
+                            assign `channel_addresses_j(4) = J;
+                            assign `channel_addresses_k(4) = K-1;
+                        end
+                    end else begin
+                        // bottom most layer
+                        // up
+                        assign `channel_addresses_i(4) = I;
+                        assign `channel_addresses_j(4) = J;
+                        assign `channel_addresses_k(4) = K+1;
+                    end
                 end else begin  // if (j<(CODE_DISTANCE-2))
                     // right boundary
                     // top
                     assign `channel_addresses_i(0) = I - 1;
                     assign `channel_addresses_j(0) = J;
+                    assign `channel_addresses_k(0) = K;
                     // bottom
                     assign `channel_addresses_i(1) = I + 1;
                     assign `channel_addresses_j(1) = J;
+                    assign `channel_addresses_k(1) = K;
                     // left
                     assign `channel_addresses_i(2) = I;
                     assign `channel_addresses_j(2) = J - 1;
+                    assign `channel_addresses_k(2) = K;
+                    if (K>0) begin
+                        if (K < CODE_DISTANCE - 1) begin
+                            // down
+                            assign `channel_addresses_i(3) = I;
+                            assign `channel_addresses_j(3) = J;
+                            assign `channel_addresses_k(3) = K-1;
+                            // up
+                            assign `channel_addresses_i(4) = I;
+                            assign `channel_addresses_j(4) = J;
+                            assign `channel_addresses_k(4) = K+1;
+                        end else begin
+                            // upmost layer
+                            // down
+                            assign `channel_addresses_i(3) = I;
+                            assign `channel_addresses_j(3) = J;
+                            assign `channel_addresses_k(3) = K-1;
+                        end
+                    end else begin
+                        // bottom most layer
+                        // up
+                        assign `channel_addresses_i(3) = I;
+                        assign `channel_addresses_j(3) = J;
+                        assign `channel_addresses_k(3) = K+1;
+                    end
                 end  // if (j<(CODE_DISTANCE-2))
             end else begin  // if (j>0)
                 // left boundary
                 // top
                 assign `channel_addresses_i(0) = I - 1;
                 assign `channel_addresses_j(0) = J;
+                assign `channel_addresses_k(0) = K;
                 // bottom
                 assign `channel_addresses_i(1) = I + 1;
                 assign `channel_addresses_j(1) = J;
+                assign `channel_addresses_k(1) = K;
                 // right
                 assign `channel_addresses_i(2) = I;
                 assign `channel_addresses_j(2) = J + 1;
+                assign `channel_addresses_k(2) = K;
+                if (K>0) begin
+                    if (K < CODE_DISTANCE - 1) begin
+                        // down
+                        assign `channel_addresses_i(3) = I;
+                        assign `channel_addresses_j(3) = J;
+                        assign `channel_addresses_k(3) = K-1;
+                        // up
+                        assign `channel_addresses_i(4) = I;
+                        assign `channel_addresses_j(4) = J;
+                        assign `channel_addresses_k(4) = K+1;
+                    end else begin
+                        // upmost layer
+                        // down
+                        assign `channel_addresses_i(3) = I;
+                        assign `channel_addresses_j(3) = J;
+                        assign `channel_addresses_k(3) = K-1;
+                    end
+                end else begin
+                    // bottom most layer
+                    // up
+                    assign `channel_addresses_i(3) = I;
+                    assign `channel_addresses_j(3) = J;
+                    assign `channel_addresses_k(3) = K+1;
+                end
             end  // if (j>0)
         end else begin  // if (i<(CODE_DISTANCE-1))
             if (J>0) begin
@@ -211,29 +295,110 @@ generate
                     // top
                     assign `channel_addresses_i(0) = I - 1;
                     assign `channel_addresses_j(0) = J;
+                    assign `channel_addresses_k(0) = K;
+
                     // left
                     assign `channel_addresses_i(1) = I;
                     assign `channel_addresses_j(1) = J - 1;
+                    assign `channel_addresses_k(1) = K;
                     // right
                     assign `channel_addresses_i(2) = I;
                     assign `channel_addresses_j(2) = J + 1;
+                    assign `channel_addresses_k(2) = K;
+                    if (K>0) begin
+                        if (K < CODE_DISTANCE - 1) begin
+                            // down
+                            assign `channel_addresses_i(3) = I;
+                            assign `channel_addresses_j(3) = J;
+                            assign `channel_addresses_k(3) = K-1;
+                            // up
+                            assign `channel_addresses_i(4) = I;
+                            assign `channel_addresses_j(4) = J;
+                            assign `channel_addresses_k(4) = K+1;
+                        end else begin
+                            // upmost layer
+                            // down
+                            assign `channel_addresses_i(3) = I;
+                            assign `channel_addresses_j(3) = J;
+                            assign `channel_addresses_k(3) = K-1;
+                        end
+                    end else begin
+                        // bottom most layer
+                        // up
+                        assign `channel_addresses_i(3) = I;
+                        assign `channel_addresses_j(3) = J;
+                        assign `channel_addresses_k(3) = K+1;
+                    end
                 end else begin  // if (j<(CODE_DISTANCE-2))
                     // bottom right corner
                     // top
                     assign `channel_addresses_i(0) = I - 1;
                     assign `channel_addresses_j(0) = J;
+                    assign `channel_addresses_k(0) = K;
                     // left
                     assign `channel_addresses_i(1) = I;
                     assign `channel_addresses_j(1) = J - 1;
+                    assign `channel_addresses_k(1) = K;
+                    if (K>0) begin
+                        if (K < CODE_DISTANCE - 1) begin
+                            // down
+                            assign `channel_addresses_i(2) = I;
+                            assign `channel_addresses_j(2) = J;
+                            assign `channel_addresses_k(2) = K-1;
+                            // up
+                            assign `channel_addresses_i(3) = I;
+                            assign `channel_addresses_j(3) = J;
+                            assign `channel_addresses_k(3) = K+1;
+                        end else begin
+                            // upmost layer
+                            // down
+                            assign `channel_addresses_i(2) = I;
+                            assign `channel_addresses_j(2) = J;
+                            assign `channel_addresses_k(2) = K-1;
+                        end
+                    end else begin
+                        // bottom most layer
+                        // up
+                        assign `channel_addresses_i(2) = I;
+                        assign `channel_addresses_j(2) = J;
+                        assign `channel_addresses_k(2) = K+1;
+                    end
+
                 end  // if (j<(CODE_DISTANCE-2))
             end else begin  // if (j>0)
                 // bottom left corner
                 // top
                 assign `channel_addresses_i(0) = I - 1;
                 assign `channel_addresses_j(0) = J;
+                assign `channel_addresses_k(0) = K;
                 // right
                 assign `channel_addresses_i(1) = I;
                 assign `channel_addresses_j(1) = J + 1;
+                assign `channel_addresses_k(1) = K;
+                if (K>0) begin
+                    if (K < CODE_DISTANCE - 1) begin
+                        // down
+                        assign `channel_addresses_i(2) = I;
+                        assign `channel_addresses_j(2) = J;
+                        assign `channel_addresses_k(2) = K-1;
+                        // up
+                        assign `channel_addresses_i(3) = I;
+                        assign `channel_addresses_j(3) = J;
+                        assign `channel_addresses_k(3) = K+1;
+                    end else begin
+                        // upmost layer
+                        // down
+                        assign `channel_addresses_i(2) = I;
+                        assign `channel_addresses_j(2) = J;
+                        assign `channel_addresses_k(2) = K-1;
+                    end
+                end else begin
+                    // bottom most layer
+                    // up
+                    assign `channel_addresses_i(2) = I;
+                    assign `channel_addresses_j(2) = J;
+                    assign `channel_addresses_k(2) = K+1;
+                end
             end  // if (j>0)
         end  // if (i<(CODE_DISTANCE-1))
     end else begin  // if (i>0)
@@ -243,37 +408,117 @@ generate
                 // bottom
                 assign `channel_addresses_i(0) = I + 1;
                 assign `channel_addresses_j(0) = J;
+                assign `channel_addresses_k(0) = K;
                 // left
                 assign `channel_addresses_i(1) = I;
                 assign `channel_addresses_j(1) = J - 1;
+                assign `channel_addresses_k(1) = K;
                 // right
                 assign `channel_addresses_i(2) = I;
                 assign `channel_addresses_j(2) = J + 1;
+                assign `channel_addresses_k(2) = K;
+                if (K>0) begin
+                    if (K < CODE_DISTANCE - 1) begin
+                        // down
+                        assign `channel_addresses_i(3) = I;
+                        assign `channel_addresses_j(3) = J;
+                        assign `channel_addresses_k(3) = K-1;
+                        // up
+                        assign `channel_addresses_i(4) = I;
+                        assign `channel_addresses_j(4) = J;
+                        assign `channel_addresses_k(4) = K+1;
+                    end else begin
+                        // upmost layer
+                        // down
+                        assign `channel_addresses_i(3) = I;
+                        assign `channel_addresses_j(3) = J;
+                        assign `channel_addresses_k(3) = K-1;
+                    end
+                end else begin
+                    // bottom most layer
+                    // up
+                    assign `channel_addresses_i(3) = I;
+                    assign `channel_addresses_j(3) = J;
+                    assign `channel_addresses_k(3) = K+1;
+                end
             end else begin  // if (j<(CODE_DISTANCE-2))
                 // top right corner
                 // bottom
                 assign `channel_addresses_i(0) = I + 1;
                 assign `channel_addresses_j(0) = J;
+                assign `channel_addresses_k(0) = K;
                 // left
                 assign `channel_addresses_i(1) = I;
                 assign `channel_addresses_j(1) = J - 1;
+                assign `channel_addresses_k(1) = K;
+                if (K>0) begin
+                    if (K < CODE_DISTANCE - 1) begin
+                        // down
+                        assign `channel_addresses_i(2) = I;
+                        assign `channel_addresses_j(2) = J;
+                        assign `channel_addresses_k(2) = K-1;
+                        // up
+                        assign `channel_addresses_i(3) = I;
+                        assign `channel_addresses_j(3) = J;
+                        assign `channel_addresses_k(3) = K+1;
+                    end else begin
+                        // upmost layer
+                        // down
+                        assign `channel_addresses_i(2) = I;
+                        assign `channel_addresses_j(2) = J;
+                        assign `channel_addresses_k(2) = K-1;
+                    end
+                end else begin
+                    // bottom most layer
+                    // up
+                    assign `channel_addresses_i(2) = I;
+                    assign `channel_addresses_j(2) = J;
+                    assign `channel_addresses_k(2) = K+1;
+                end
+
             end  // if (j<(CODE_DISTANCE-2))
         end else begin  // if (j>0)
             // top left corner
             // bottom
             assign `channel_addresses_i(0) = I + 1;
             assign `channel_addresses_j(0) = J;
+            assign `channel_addresses_k(0) = K;
             // right
             assign `channel_addresses_i(1) = I;
             assign `channel_addresses_j(1) = J + 1;
+            assign `channel_addresses_k(1) = K;
+            if (K>0) begin
+                if (K < CODE_DISTANCE - 1) begin
+                    // down
+                    assign `channel_addresses_i(2) = I;
+                    assign `channel_addresses_j(2) = J;
+                    assign `channel_addresses_k(2) = K-1;
+                    // up
+                    assign `channel_addresses_i(3) = I;
+                    assign `channel_addresses_j(3) = J;
+                    assign `channel_addresses_k(3) = K+1;
+                end else begin
+                    // upmost layer
+                    // down
+                    assign `channel_addresses_i(2) = I;
+                    assign `channel_addresses_j(2) = J;
+                    assign `channel_addresses_k(2) = K-1;
+                end
+            end else begin
+                // bottom most layer
+                // up
+                assign `channel_addresses_i(2) = I;
+                assign `channel_addresses_j(2) = J;
+                assign `channel_addresses_k(2) = K+1;
+            end
         end  // if (j>0)
     end  // if (i>0)
 endgenerate
 
-tree_distance_2d_solver #(
+tree_distance_3d_solver #(
     .PER_DIMENSION_WIDTH(PER_DIMENSION_WIDTH),
     .CHANNEL_COUNT(NEIGHBOR_COUNT)
-) u_tree_distance_2d_solver (
+) u_tree_distance_3d_solver (
     .points(channel_addresses),
     .target(distance_solver_target),
     .result_idx(distance_solver_result_idx)
@@ -440,16 +685,11 @@ assign updated_is_odd_cardinality = is_odd_cardinality ^ `gathered_is_odd_cardin
 // compute `intermediate_pending_tell_new_root_cardinality` and `intermediate_pending_tell_new_root_touching_boundary`
 wire intermediate_pending_tell_new_root_cardinality;
 wire intermediate_pending_tell_new_root_touching_boundary;
-assign intermediate_pending_tell_new_root_cardinality = pending_tell_new_root_cardinality ? (
-    new_updated_root != address  // don't need to send message to myself
-) : (
-    new_updated_root != updated_root && is_error_syndrome && new_updated_root != address
-);
-assign intermediate_pending_tell_new_root_touching_boundary = pending_tell_new_root_touching_boundary ? (
-    new_updated_root != address  // don't need to send message to myself
-) : (
-    new_updated_root != address && ((new_updated_root != updated_root && updated_is_touching_boundary) || (updated_is_touching_boundary != is_touching_boundary))
-);
+assign intermediate_pending_tell_new_root_cardinality = 
+    new_updated_root != updated_root && is_error_syndrome ;
+assign intermediate_pending_tell_new_root_touching_boundary = 
+     ((new_updated_root != updated_root && updated_is_touching_boundary) || (updated_is_touching_boundary != is_touching_boundary));
+
 
 wire pending_message_sent_successfully;
 
@@ -489,11 +729,7 @@ assign pending_direct_message_valid = (`gathered_elected_direct_message_valid ||
 // assign pending_direct_message_valid = (generate_my_direct_message || `gathered_elected_direct_message_valid || my_stored_direct_message_valid);
 assign pending_direct_message = `gathered_elected_direct_message_valid ? (
     `gathered_elected_direct_message_data ) : (
-        // generate_my_direct_message ? (
-            //  { new_updated_root, intermediate_pending_tell_new_root_cardinality, intermediate_pending_tell_new_root_touching_boundary }
-        // ) : (
-            my_stored_direct_message
-        // )
+        my_stored_direct_message
 );
 
 always@(posedge clk) begin
@@ -550,9 +786,11 @@ assign new_pending_tell_new_root_touching_boundary = intermediate_pending_tell_n
 
 // send the message
 assign direct_out_channels_data_single = pending_direct_message_delayed;
+wire not_addressed_to_me;
+assign not_addressed_to_me = `pending_direct_message_receiver != address;
 generate
     for (i=0; i < CHANNEL_COUNT; i=i+1) begin: sending_direct_message
-        assign `direct_out_valid(i) = is_stage_spread_cluster_delayed && pending_direct_message_valid_delayed && (i == `best_channel_for_pending_message_idx);
+        assign `direct_out_valid(i) = is_stage_spread_cluster_delayed && pending_direct_message_valid_delayed && (i == `best_channel_for_pending_message_idx) && not_addressed_to_me;
     end
 endgenerate
 
@@ -582,8 +820,6 @@ always @(posedge clk) begin
         is_odd_cluster <= 0;
         is_touching_boundary <= 0;
         is_odd_cardinality <= 0;
-        pending_tell_new_root_cardinality <= 0;
-        pending_tell_new_root_touching_boundary <= 0;
     end else begin
         last_stage <= stage;  // record last stage
         if (stage == STAGE_IDLE) begin
@@ -592,8 +828,6 @@ always @(posedge clk) begin
             is_touching_boundary <= updated_is_touching_boundary;
             is_odd_cardinality <= updated_is_odd_cardinality;
             updated_root <= new_updated_root;
-            // pending_tell_new_root_cardinality <= new_pending_tell_new_root_cardinality;
-            // pending_tell_new_root_touching_boundary <= new_pending_tell_new_root_touching_boundary;
         end else if (stage == STAGE_GROW_BOUNDARY) begin
             // only gives a trigger to neighbor links
             // see `assign neighbor_increase = !reset && is_odd_cluster && (stage == STAGE_GROW_BOUNDARY) && (last_stage != STAGE_GROW_BOUNDARY);`
@@ -623,8 +857,6 @@ always @(posedge clk) begin
             is_odd_cluster <= init_is_error_syndrome;
             is_touching_boundary <= 0;
             is_odd_cardinality <= init_is_error_syndrome;
-            pending_tell_new_root_cardinality <= 0;
-            pending_tell_new_root_touching_boundary <= 0;
         end
     end
 end
