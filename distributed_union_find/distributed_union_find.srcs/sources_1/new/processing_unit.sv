@@ -102,9 +102,9 @@ assign init_address[ADDRESS_WIDTH-1:PER_DIMENSION_WIDTH*2] = K;
 assign init_address[PER_DIMENSION_WIDTH*2-1:PER_DIMENSION_WIDTH] = I;
 assign init_address[PER_DIMENSION_WIDTH-1:0] = J;
 
-`define init_has_boundary(i, j) ((j==0) || (j==(CODE_DISTANCE-2)))
+`define init_has_boundary(i, j, k) ((j==0) || (j==(CODE_DISTANCE-2)) || k==0)
 wire init_has_boundary;
-assign init_has_boundary = `init_has_boundary(I, J);
+assign init_has_boundary = `init_has_boundary(I, J, K);
 
 wire [BOUNDARY_WIDTH-1:0] init_boundary_cost;
 assign init_boundary_cost = INIT_BOUNDARY_COST;

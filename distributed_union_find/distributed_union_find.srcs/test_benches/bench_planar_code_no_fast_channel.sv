@@ -16,7 +16,7 @@ module bench_planar_code_no_fast_channel;
 `include "../sources_1/new/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
-localparam CODE_DISTANCE = 3;
+localparam CODE_DISTANCE = 5;
 localparam PU_COUNT = CODE_DISTANCE * CODE_DISTANCE * (CODE_DISTANCE - 1);
 localparam PER_DIMENSION_WIDTH = $clog2(CODE_DISTANCE);
 localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
@@ -79,7 +79,7 @@ reg input_open = 1;
 reg eof = 0;
 reg input_eof = 0;
 reg [31:0] read_value, test_case, input_read_value;
-reg [PER_DIMENSION_WIDTH-1 : 0] expected_x, expected_y;
+reg [PER_DIMENSION_WIDTH-1 : 0] expected_x, expected_y, expected_z;
 reg test_fail;
 reg processing = 0;
 reg [31:0] syndrome_count;
@@ -92,7 +92,9 @@ always @(negedge clk) begin
     if (!processing && !reset) begin
         is_error_syndromes = 0;
         if(input_open == 1) begin
-            if (CODE_DISTANCE == 5) begin
+            if (CODE_DISTANCE == 3) begin
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/input_data_3.txt", "r");
+            end else if (CODE_DISTANCE == 5) begin
                 input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/input_data_5.txt", "r");
             end else if (CODE_DISTANCE == 7) begin
                 input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/input_data_7.txt", "r");
@@ -138,7 +140,9 @@ always @(posedge clk) begin
     if (!valid_delayed && (result_valid || deadlock)) begin
         processing = 0;
         if(open == 1) begin
-            if (CODE_DISTANCE == 5) begin
+            if (CODE_DISTANCE == 3) begin
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/output_data_3.txt", "r");
+            end else if (CODE_DISTANCE == 5) begin
                 file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/output_data_5.txt", "r");
             end else if (CODE_DISTANCE == 7) begin
                 file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/output_data_7.txt", "r");
@@ -156,18 +160,20 @@ always @(posedge clk) begin
             test_fail = 0;
             eof = $feof(file);
         end
-        for (i=0 ;i <CODE_DISTANCE; i++) begin
-            for (j=0 ;j <CODE_DISTANCE - 1; j++) begin
-                if (eof == 0)begin 
-                    $fscanf (file, "%h\n", read_value);
-                    expected_y = read_value[PER_DIMENSION_WIDTH - 1:0];
-                    expected_x = read_value[PER_DIMENSION_WIDTH - 1 + 16 :16];
-                    expected_z = read_value[PER_DIMENSION_WIDTH - 1 + 32 :16];
-                    eof = $feof(file);
-                    if (result_valid) begin
-                        if (expected_x != `root_x(i, j, k) || expected_y != `root_y(i, j, k) || expected_z != `root_z(i, j, k)) begin
-                            $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d)" , $time, i ,j, `root_z(i, j, k), `root_x(i, j, k), `root_y(i, j, k), expected_z, expected_x, expected_y);
-                            test_fail = 1;
+        for (k=0 ;k <CODE_DISTANCE; k++) begin
+            for (i=0 ;i <CODE_DISTANCE; i++) begin
+                for (j=0 ;j <CODE_DISTANCE - 1; j++) begin
+                    if (eof == 0)begin 
+                        $fscanf (file, "%h\n", read_value);
+                        expected_y = read_value[PER_DIMENSION_WIDTH - 1:0];
+                        expected_x = read_value[PER_DIMENSION_WIDTH - 1 + 8 :8];
+                        expected_z = read_value[PER_DIMENSION_WIDTH - 1 + 16 :16];
+                        eof = $feof(file);
+                        if (result_valid) begin
+                            if (expected_x != `root_x(i, j, k) || expected_y != `root_y(i, j, k) || expected_z != `root_z(i, j, k)) begin
+                                $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d)" , $time, k, i ,j, `root_z(i, j, k), `root_x(i, j, k), `root_y(i, j, k), expected_z, expected_x, expected_y);
+                                test_fail = 1;
+                            end
                         end
                     end
                 end

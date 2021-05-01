@@ -72,7 +72,7 @@ assign initialize_neighbors = (stage_internal == STAGE_MEASUREMENT_LOADING);
 localparam FAST_CHANNEL_COUNT = 0;
 `define INDEX(i, j, k) (i * (CODE_DISTANCE-1) + j + k * (CODE_DISTANCE-1)*CODE_DISTANCE)
 `define init_is_error_syndrome(i, j, k) is_error_syndromes[`INDEX(i, j, k)]
-`define init_has_boundary(i, j, k) ((j==0) || (j==(CODE_DISTANCE-2)))
+`define init_has_boundary(i, j, k) ((j==0) || (j==(CODE_DISTANCE-2)) || k==0)
 `define is_odd_cluster(i, j, k) is_odd_clusters[`INDEX(i, j, k)]
 `define is_odd_cardinality(i, j, k) is_odd_cardinalities[`INDEX(i, j, k)]
 `define roots(i, j, k) roots[ADDRESS_WIDTH*(`INDEX(i, j, k)+1)-1:ADDRESS_WIDTH*`INDEX(i, j, k)]

@@ -1,15 +1,12 @@
 `timescale 1ns / 1ps
 
 module processing_unit_synthesizable_test #(
-    parameter ADDRESS_WIDTH = 8,  // width of address, e.g. single measurement standard surface code under d <= 15 could be 4bit * 2 = 8bit
-    parameter DISTANCE_WIDTH = 6,  // the maximum distance between two nodes should fit into DISTANCE_WIDTH bits
-    parameter BOUNDARY_WIDTH = 2,  // usually boundary cost would be 2, so by default 2 bits for boundary cost
-    parameter NEIGHBOR_COUNT = 4,  // the direct neighbor of a stabilizer, usually between 2 and 4 for surface code
-    parameter FAST_CHANNEL_COUNT = 0,  // CHANNEL_COUNT = NEIGHBOR_COUNT + FAST_CHANNEL_COUNT
+    parameter CODE_DISTANCE = 5,
     parameter I = 4,
     parameter J = 4,
-    parameter CODE_DISTANCE = 11,
-    parameter INIT_BOUNDARY_COST = 2
+    parameter NEIGHBOR_COUNT = 4,
+    parameter FAST_CHANNEL_COUNT = 0,  // CHANNEL_COUNT = NEIGHBOR_COUNT + FAST_CHANNEL_COUNT
+    parameter INIT_BOUNDARY_COST = 2 
 ) (
     clk,
     reset,
@@ -47,11 +44,20 @@ module processing_unit_synthesizable_test #(
 
 `include "parameters.sv"
 
+localparam PU_COUNT = CODE_DISTANCE * CODE_DISTANCE * (CODE_DISTANCE - 1);
+localparam PER_DIMENSION_WIDTH = $clog2(CODE_DISTANCE);
+localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
+localparam ITERATION_COUNTER_WIDTH = 8;  // counts up to CODE_DISTANCE iterations
+
+localparam DISTANCE_WIDTH = 1 + PER_DIMENSION_WIDTH;
+localparam WEIGHT = 1;  // the weight in MWPM graph
+localparam BOUNDARY_COST = 2 * WEIGHT;
+localparam NEIGHBOR_COST = 2 * WEIGHT;
+localparam BOUNDARY_WIDTH = $clog2(BOUNDARY_COST + 1);
 localparam CHANNEL_COUNT = NEIGHBOR_COUNT + FAST_CHANNEL_COUNT;
 localparam CHANNEL_WIDTH = $clog2(CHANNEL_COUNT);  // the index of channel, both neighbor and direct ones
 localparam UNION_MESSAGE_WIDTH = 2 * ADDRESS_WIDTH;  // [old_root, updated_root]
 localparam DIRECT_MESSAGE_WIDTH = ADDRESS_WIDTH + 1 + 1;  // [receiver, is_odd_cardinality_root, is_touching_boundary]
-localparam PER_DIMENSION_WIDTH = DISTANCE_WIDTH - 1;
 
 input clk;
 input reset;
