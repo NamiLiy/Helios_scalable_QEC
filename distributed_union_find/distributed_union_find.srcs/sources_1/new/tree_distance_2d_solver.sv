@@ -14,7 +14,7 @@ module tree_distance_3d_solver #(
 
 localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
 localparam CHANNEL_WIDTH = $clog2(CHANNEL_COUNT);  // the index of channel, both neighbor and direct ones
-localparam DISTANCE_WIDTH = 1 + PER_DIMENSION_WIDTH;  // the maximum width should fit into this width
+localparam DISTANCE_WIDTH = 2 + PER_DIMENSION_WIDTH;  // the maximum width should fit into this width
 
 localparam DEPTH = $clog2(CHANNEL_COUNT);
 localparam EXPAND_COUNT = 2 ** DEPTH;

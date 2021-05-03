@@ -28,6 +28,8 @@ localparam COUNTER_WIDTH = $clog2(MAXIMUM_DELAY + 1);
 reg [COUNTER_WIDTH-1:0] delay_counter;
 reg [31:0] cycles_in_stage;
 
+localparam DEADLOCK_THRESHOLD = CODE_DISTANCE*CODE_DISTANCE*CODE_DISTANCE*10;
+
 // deadlock detection logic
 always @(posedge clk) begin
     if (reset) begin
@@ -47,7 +49,7 @@ always @(posedge clk) begin
     end else begin
         if (new_round_start) begin
             deadlock <= 0;
-        end else if (cycles_in_stage > CODE_DISTANCE*CODE_DISTANCE*10) begin
+        end else if (cycles_in_stage > DEADLOCK_THRESHOLD) begin
             deadlock <= 1;
         end
     end
@@ -94,7 +96,7 @@ always @(posedge clk) begin
                     if (!has_message_flying) begin
                         stage <= STAGE_SYNC_IS_ODD_CLUSTER;
                         delay_counter <= 0;
-                    end else if (cycles_in_stage > CODE_DISTANCE*CODE_DISTANCE*10)  begin
+                    end else if (cycles_in_stage > DEADLOCK_THRESHOLD)  begin
                         stage <= STAGE_IDLE;
                     end
                 end else begin
@@ -119,7 +121,7 @@ always @(posedge clk) begin
                             stage <= STAGE_IDLE;
                             delay_counter <= 0;
                         end
-                    end else if (cycles_in_stage > CODE_DISTANCE*CODE_DISTANCE*10)  begin
+                    end else if (cycles_in_stage > DEADLOCK_THRESHOLD)  begin
                         stage <= STAGE_IDLE;
                     end
                 end else begin
