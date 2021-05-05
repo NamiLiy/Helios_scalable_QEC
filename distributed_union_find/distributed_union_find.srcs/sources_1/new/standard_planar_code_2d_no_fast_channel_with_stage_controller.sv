@@ -1,7 +1,7 @@
 /// This module combines the stage controller with planar code grid.
 /// Use this for the main test bench
 
-module standard_planar_code_2d_no_fast_channel_with_stage_controller #(
+module standard_planar_code_3d_no_fast_channel_with_stage_controller #(
     CODE_DISTANCE = 5
 ) (
     clk,
@@ -16,9 +16,9 @@ module standard_planar_code_2d_no_fast_channel_with_stage_controller #(
     deadlock
 );
 
-localparam PU_COUNT = CODE_DISTANCE * (CODE_DISTANCE - 1);
+localparam PU_COUNT = CODE_DISTANCE * CODE_DISTANCE * (CODE_DISTANCE - 1);
 localparam PER_DIMENSION_WIDTH = $clog2(CODE_DISTANCE);
-localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 2;
+localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
 localparam ITERATION_COUNTER_WIDTH = 8;  // counts up to CODE_DISTANCE iterations
 
 input clk;
@@ -41,7 +41,7 @@ always@(posedge clk) begin
     has_odd_clusters <= |is_odd_clusters;
 end
 
-standard_planar_code_2d_no_fast_channel #(.CODE_DISTANCE(CODE_DISTANCE)) decoder (
+standard_planar_code_3d_no_fast_channel #(.CODE_DISTANCE(CODE_DISTANCE)) decoder (
     .clk(clk),
     .reset(reset),
     .stage(stage),

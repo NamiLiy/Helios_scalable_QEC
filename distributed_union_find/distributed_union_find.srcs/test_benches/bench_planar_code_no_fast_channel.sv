@@ -16,10 +16,10 @@ module bench_planar_code_no_fast_channel;
 `include "../sources_1/new/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
-localparam CODE_DISTANCE = 11;
-localparam PU_COUNT = CODE_DISTANCE * (CODE_DISTANCE - 1);
+localparam CODE_DISTANCE = 5;
+localparam PU_COUNT = CODE_DISTANCE * CODE_DISTANCE * (CODE_DISTANCE - 1);
 localparam PER_DIMENSION_WIDTH = $clog2(CODE_DISTANCE);
-localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 2;
+localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
 localparam DISTANCE_WIDTH = 1 + PER_DIMENSION_WIDTH;
 localparam ITERATION_COUNTER_WIDTH = 8;  // counts up to CODE_DISTANCE iterations
 
@@ -31,20 +31,21 @@ reg [PU_COUNT-1:0] is_error_syndromes;
 wire [PU_COUNT-1:0] is_odd_cardinalities;
 wire [31:0] cycle_counter;
 wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
-`define INDEX(i, j) (i * (CODE_DISTANCE-1) + j)
-`define is_error_syndrome(i, j) is_error_syndromes[`INDEX(i, j)]
-`define is_odd_cluster(i, j) decoder.is_odd_clusters[`INDEX(i, j)]
-`define root(i, j) roots[ADDRESS_WIDTH*`INDEX(i, j) +: ADDRESS_WIDTH]
-`define root_x(i, j) roots[ADDRESS_WIDTH*`INDEX(i, j)+PER_DIMENSION_WIDTH +: PER_DIMENSION_WIDTH]
-`define root_y(i, j) roots[ADDRESS_WIDTH*`INDEX(i, j) +: PER_DIMENSION_WIDTH]
-`define PU(i, j) decoder.decoder.pu_i[i].pu_j[j].u_processing_unit
+`define INDEX(i, j, k) (i * (CODE_DISTANCE-1) + j + k * (CODE_DISTANCE-1)*CODE_DISTANCE)
+`define is_error_syndrome(i, j, k) is_error_syndromes[`INDEX(i, j, k)]
+`define is_odd_cluster(i, j, k) decoder.is_odd_clusters[`INDEX(i, j, k)]
+`define root(i, j, k) roots[ADDRESS_WIDTH*`INDEX(i, j, k) +: ADDRESS_WIDTH]
+`define root_x(i, j, k) roots[ADDRESS_WIDTH*`INDEX(i, j, k)+PER_DIMENSION_WIDTH +: PER_DIMENSION_WIDTH]
+`define root_y(i, j, k) roots[ADDRESS_WIDTH*`INDEX(i, j, k) +: PER_DIMENSION_WIDTH]
+`define root_z(i, j, k) roots[ADDRESS_WIDTH*`INDEX(i, j, k)+(2*PER_DIMENSION_WIDTH) +: PER_DIMENSION_WIDTH]
+`define PU(i, j, k) decoder.decoder.pu_k[k].pu_i[i].pu_j[j].u_processing_unit
 
 wire result_valid;
 wire [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
 wire deadlock;
 
 // instantiate
-standard_planar_code_2d_no_fast_channel_with_stage_controller #(.CODE_DISTANCE(CODE_DISTANCE)) decoder (
+standard_planar_code_3d_no_fast_channel_with_stage_controller #(.CODE_DISTANCE(CODE_DISTANCE)) decoder (
     .clk(clk),
     .reset(reset),
     .new_round_start(new_round_start),
@@ -60,8 +61,9 @@ standard_planar_code_2d_no_fast_channel_with_stage_controller #(.CODE_DISTANCE(C
 function [ADDRESS_WIDTH-1:0] make_address;
 input [PER_DIMENSION_WIDTH-1:0] i;
 input [PER_DIMENSION_WIDTH-1:0] j;
+input [PER_DIMENSION_WIDTH-1:0] k;
 begin
-    make_address = { i, j };
+    make_address = { k, i, j };
 end
 endfunction
 
@@ -70,13 +72,14 @@ always #5 clk = ~clk;  // flip every 5ns, that is 100MHz clock
 reg valid_delayed = 0;
 integer i;
 integer j;
+integer k;
 integer file, input_file;
 reg open = 1;
 reg input_open = 1;
 reg eof = 0;
 reg input_eof = 0;
 reg [31:0] read_value, test_case, input_read_value;
-reg [PER_DIMENSION_WIDTH-1 : 0] expected_x, expected_y;
+reg [PER_DIMENSION_WIDTH-1 : 0] expected_x, expected_y, expected_z;
 reg test_fail;
 reg processing = 0;
 reg [31:0] syndrome_count;
@@ -89,7 +92,9 @@ always @(negedge clk) begin
     if (!processing && !reset) begin
         is_error_syndromes = 0;
         if(input_open == 1) begin
-            if (CODE_DISTANCE == 5) begin
+            if (CODE_DISTANCE == 3) begin
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/input_data_3.txt", "r");
+            end else if (CODE_DISTANCE == 5) begin
                 input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/input_data_5.txt", "r");
             end else if (CODE_DISTANCE == 7) begin
                 input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/input_data_7.txt", "r");
@@ -111,13 +116,15 @@ always @(negedge clk) begin
                 syndrome_count = 0;
             end
         end
-        for (i=0 ;i <CODE_DISTANCE; i++) begin
-            for (j=0 ;j <CODE_DISTANCE - 1; j++) begin
-                if (input_eof == 0)begin 
-                    $fscanf (input_file, "%h\n", input_read_value);
-                    `is_error_syndrome(i, j) = input_read_value;
-                    if (input_read_value == 1) begin
-                        syndrome_count = syndrome_count + 1;
+        for (k=0 ;k <CODE_DISTANCE; k++) begin
+            for (i=0 ;i <CODE_DISTANCE; i++) begin
+                for (j=0 ;j <CODE_DISTANCE - 1; j++) begin
+                    if (input_eof == 0)begin 
+                        $fscanf (input_file, "%h\n", input_read_value);
+                        `is_error_syndrome(i, j, k) = input_read_value;
+                        if (input_read_value == 1) begin
+                            syndrome_count = syndrome_count + 1;
+                        end
                     end
                 end
             end
@@ -133,7 +140,9 @@ always @(posedge clk) begin
     if (!valid_delayed && (result_valid || deadlock)) begin
         processing = 0;
         if(open == 1) begin
-            if (CODE_DISTANCE == 5) begin
+            if (CODE_DISTANCE == 3) begin
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/output_data_3.txt", "r");
+            end else if (CODE_DISTANCE == 5) begin
                 file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/output_data_5.txt", "r");
             end else if (CODE_DISTANCE == 7) begin
                 file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/output_data_7.txt", "r");
@@ -151,17 +160,20 @@ always @(posedge clk) begin
             test_fail = 0;
             eof = $feof(file);
         end
-        for (i=0 ;i <CODE_DISTANCE; i++) begin
-            for (j=0 ;j <CODE_DISTANCE - 1; j++) begin
-                if (eof == 0)begin 
-                    $fscanf (file, "%h\n", read_value);
-                    expected_y = read_value[PER_DIMENSION_WIDTH - 1:0];
-                    expected_x = read_value[PER_DIMENSION_WIDTH - 1 + 16 :16];
-                    eof = $feof(file);
-                    if (result_valid) begin
-                        if (expected_x != `root_x(i, j) || expected_y != `root_y(i, j)) begin
-                            $display("%t\t Root(%0d,%0d) = (%0d,%0d) : Expected (%0d,%0d)" , $time, i ,j, `root_x(i, j), `root_y(i, j), expected_x, expected_y);
-                            test_fail = 1;
+        for (k=0 ;k <CODE_DISTANCE; k++) begin
+            for (i=0 ;i <CODE_DISTANCE; i++) begin
+                for (j=0 ;j <CODE_DISTANCE - 1; j++) begin
+                    if (eof == 0)begin 
+                        $fscanf (file, "%h\n", read_value);
+                        expected_y = read_value[PER_DIMENSION_WIDTH - 1:0];
+                        expected_x = read_value[PER_DIMENSION_WIDTH - 1 + 8 :8];
+                        expected_z = read_value[PER_DIMENSION_WIDTH - 1 + 16 :16];
+                        eof = $feof(file);
+                        if (result_valid) begin
+                            if (expected_x != `root_x(i, j, k) || expected_y != `root_y(i, j, k) || expected_z != `root_z(i, j, k)) begin
+                                $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d)" , $time, k, i ,j, `root_z(i, j, k), `root_x(i, j, k), `root_y(i, j, k), expected_z, expected_x, expected_y);
+                                test_fail = 1;
+                            end
                         end
                     end
                 end

@@ -6,7 +6,7 @@
 
 module tree_compare_solver #(
     parameter DATA_WIDTH = 8,  // width of data to be compared
-    parameter CHANNEL_COUNT = 4  // number of channels to be compared
+    parameter CHANNEL_COUNT = 6  // number of channels to be compared
 ) (
     input wire [DATA_WIDTH-1:0] default_value,
     input wire [(DATA_WIDTH * CHANNEL_COUNT)-1:0] values,
