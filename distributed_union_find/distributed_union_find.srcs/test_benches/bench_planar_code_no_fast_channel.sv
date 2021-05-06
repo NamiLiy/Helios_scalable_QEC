@@ -16,7 +16,7 @@ module bench_planar_code_no_fast_channel;
 `include "../sources_1/new/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
-localparam CODE_DISTANCE = 5;
+localparam CODE_DISTANCE = 7;
 localparam PU_COUNT = CODE_DISTANCE * CODE_DISTANCE * (CODE_DISTANCE - 1);
 localparam PER_DIMENSION_WIDTH = $clog2(CODE_DISTANCE);
 localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
