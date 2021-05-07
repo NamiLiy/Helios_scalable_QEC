@@ -1,7 +1,8 @@
 `timescale 1ns / 1ps
 
 module blocking_channel #(
-    parameter WIDTH = 8  // width of data
+    parameter WIDTH = 8,
+    parameter DEPTH = 16  // width of data
 ) (
     input [WIDTH-1:0] in_data,
     input in_valid,
@@ -19,7 +20,7 @@ module blocking_channel #(
 wire empty;
 assign out_valid = !empty;
 
-fifo_fwft #(.DEPTH(16), .WIDTH(WIDTH)) temp_fifo 
+fifo_fwft #(.DEPTH(DEPTH), .WIDTH(WIDTH)) temp_fifo 
     (
     .clk(clk),
     .srst(initialize | reset),

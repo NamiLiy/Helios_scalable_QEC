@@ -256,9 +256,31 @@ blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_top (\
     .out_is_taken(`PU(i, j, k).direct_in_channels_is_taken[0])\
 );
 
+`define DIRECT_CHANNEL_VERTICAL_WRAP_INSTANTIATE \
+blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH), .DEPTH(128)) blocking_channel_top (\
+    .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
+    .in_data(`PU((i+1)%CODE_DISTANCE, j, k).direct_out_channels_data_single),\
+    .in_valid(`PU((i+1)%CODE_DISTANCE, j, k).direct_out_channels_valid[0]),\
+    .in_is_full(`PU((i+1)%CODE_DISTANCE, j, k).direct_out_channels_is_full[0]),\
+    .out_data(`SLICE_DIRECT_MESSAGE_VEC(`PU(i, j, k).direct_in_channels_data, 0)),\
+    .out_valid(`PU(i, j, k).direct_in_channels_valid[0]),\
+    .out_is_taken(`PU(i, j, k).direct_in_channels_is_taken[0])\
+);
+
 // instantiate horizontal direct channels and connect signals properly
 `define DIRECT_CHANNEL_HORIZONTAL_INSTANTIATE \
 blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_left (\
+    .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
+    .in_data(`PU(i, (j+1)%(CODE_DISTANCE-1), k).direct_out_channels_data_single),\
+    .in_valid(`PU(i, (j+1)%(CODE_DISTANCE-1), k).direct_out_channels_valid[1]),\
+    .in_is_full(`PU(i, (j+1)%(CODE_DISTANCE-1), k).direct_out_channels_is_full[1]),\
+    .out_data(`SLICE_DIRECT_MESSAGE_VEC(`PU(i, j, k).direct_in_channels_data, 1)),\
+    .out_valid(`PU(i, j, k).direct_in_channels_valid[1]),\
+    .out_is_taken(`PU(i, j, k).direct_in_channels_is_taken[1])\
+);
+
+`define DIRECT_CHANNEL_HORIZONTAL_WRAP_INSTANTIATE \
+blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH), .DEPTH(128)) blocking_channel_left (\
     .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
     .in_data(`PU(i, (j+1)%(CODE_DISTANCE-1), k).direct_out_channels_data_single),\
     .in_valid(`PU(i, (j+1)%(CODE_DISTANCE-1), k).direct_out_channels_valid[1]),\
@@ -280,6 +302,17 @@ blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_down (\
     .out_is_taken(`PU(i, j, k).direct_in_channels_is_taken[2])\
 );
 
+`define DIRECT_CHANNEL_UPDOWN_WRAP_INSTANTIATE \
+blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH), .DEPTH(128)) blocking_channel_down (\
+    .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
+    .in_data(`PU(i, j, (k+1)%CODE_DISTANCE).direct_out_channels_data_single),\
+    .in_valid(`PU(i, j, (k+1)%CODE_DISTANCE).direct_out_channels_valid[2]),\
+    .in_is_full(`PU(i, j, (k+1)%CODE_DISTANCE).direct_out_channels_is_full[2]),\
+    .out_data(`SLICE_DIRECT_MESSAGE_VEC(`PU(i, j, k).direct_in_channels_data, 2)),\
+    .out_valid(`PU(i, j, k).direct_in_channels_valid[2]),\
+    .out_is_taken(`PU(i, j, k).direct_in_channels_is_taken[2])\
+);
+
 // instantiate vertical and horizontal links and channels
 `define VERTICAL_INSTANTIATE \
 `NEIGHBOR_VERTICAL_INSTANTIATE \
@@ -288,6 +321,7 @@ blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_down (\
 `define HORIZONTAL_INSTANTIATE \
 `NEIGHBOR_HORIZONTAL_INSTANTIATE \
 `UNION_CHANNEL_HORIZONTAL_INSTANTIATE
+
 `define UPDOWN_INSTANTIATE \
 `NEIGHBOR_UPDOWN_INSTANTIATE \
 `UNION_CHANNEL_UPDOWN_INSTANTIATE
@@ -299,16 +333,25 @@ generate
             for (j=0; j < CODE_DISTANCE-1; j=j+1) begin: neighbor_j
                  if (i < (CODE_DISTANCE-1)) begin
                      `VERTICAL_INSTANTIATE
+                     `DIRECT_CHANNEL_VERTICAL_INSTANTIATE
+                 end else begin
+                     `DIRECT_CHANNEL_VERTICAL_WRAP_INSTANTIATE
                  end
+                 
                  if (j < (CODE_DISTANCE-2)) begin
                      `HORIZONTAL_INSTANTIATE
+                     `DIRECT_CHANNEL_HORIZONTAL_INSTANTIATE
+                 end else begin
+                     `DIRECT_CHANNEL_HORIZONTAL_WRAP_INSTANTIATE
                  end
+                 
                  if (k < (CODE_DISTANCE-1)) begin
                      `UPDOWN_INSTANTIATE
+                     `DIRECT_CHANNEL_UPDOWN_INSTANTIATE
+                 end else begin
+                     `DIRECT_CHANNEL_UPDOWN_WRAP_INSTANTIATE
                  end
-                `DIRECT_CHANNEL_VERTICAL_INSTANTIATE
-                `DIRECT_CHANNEL_HORIZONTAL_INSTANTIATE
-                `DIRECT_CHANNEL_UPDOWN_INSTANTIATE
+                
             end
         end
     end
