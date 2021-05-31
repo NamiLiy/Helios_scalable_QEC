@@ -9,6 +9,7 @@ module standard_planar_code_3d_no_fast_channel #(
     is_error_syndromes,
     is_odd_clusters,
     is_odd_cardinalities,
+    is_touching_boundaries,
     roots,
     has_message_flying
 );
@@ -32,6 +33,7 @@ input [STAGE_WIDTH-1:0] stage;
 input [PU_COUNT-1:0] is_error_syndromes;
 output [PU_COUNT-1:0] is_odd_clusters;
 output [PU_COUNT-1:0] is_odd_cardinalities;
+output [PU_COUNT-1:0] is_touching_boundaries;
 output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 output has_message_flying;
 wire [PU_COUNT-1:0] has_message_flyings;
@@ -75,6 +77,7 @@ localparam FAST_CHANNEL_COUNT = 0;
 `define init_has_boundary(i, j, k) ((j==0) || (j==(CODE_DISTANCE-2)) || k==0)
 `define is_odd_cluster(i, j, k) is_odd_clusters[`INDEX(i, j, k)]
 `define is_odd_cardinality(i, j, k) is_odd_cardinalities[`INDEX(i, j, k)]
+`define is_touching_boundary(i, j, k) is_touching_boundaries[`INDEX(i, j, k)]
 `define roots(i, j, k) roots[ADDRESS_WIDTH*(`INDEX(i, j, k)+1)-1:ADDRESS_WIDTH*`INDEX(i, j, k)]
 `define has_message_flying(i, j, k) has_message_flyings[`INDEX(i, j, k)]
 `define DIRECT_CHANNEL_COUNT (3)
@@ -141,6 +144,7 @@ generate
                     .updated_root(`roots(i, j, k)),
                     .is_odd_cluster(`is_odd_cluster(i, j, k)),
                     .is_odd_cardinality(`is_odd_cardinality(i, j, k)),
+                    .is_touching_boundary(`is_touching_boundary(i, j, k)),
                     .is_processing(`has_message_flying(i, j, k))
                 );
                 // assign `has_message_flying(i, j) = union_out_channels_valid | (|union_in_channels_valid) | (|direct_out_channels_valid) | (|direct_in_channels_valid);

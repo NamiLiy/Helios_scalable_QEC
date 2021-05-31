@@ -16,7 +16,7 @@ module bench_planar_code_no_fast_channel;
 `include "../sources_1/new/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
-localparam CODE_DISTANCE = 11;
+localparam CODE_DISTANCE = 5;
 localparam PU_COUNT = CODE_DISTANCE * CODE_DISTANCE * (CODE_DISTANCE - 1);
 localparam PER_DIMENSION_WIDTH = $clog2(CODE_DISTANCE);
 localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
@@ -50,12 +50,12 @@ standard_planar_code_3d_no_fast_channel_with_stage_controller #(.CODE_DISTANCE(C
     .reset(reset),
     .new_round_start(new_round_start),
     .is_error_syndromes(is_error_syndromes),
-    .is_odd_cardinalities(is_odd_cardinalities),
     .roots(roots),
     .result_valid(result_valid),
     .iteration_counter(iteration_counter),
     .cycle_counter(cycle_counter),
-    .deadlock(deadlock)
+    .deadlock(deadlock),
+    .final_cardinality(final_cardinality)
 );
 
 function [ADDRESS_WIDTH-1:0] make_address;

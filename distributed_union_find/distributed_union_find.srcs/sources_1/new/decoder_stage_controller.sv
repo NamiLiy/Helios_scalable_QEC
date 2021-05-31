@@ -7,18 +7,25 @@ module decoder_stage_controller #(
     parameter ITERATION_COUNTER_WIDTH = 8,  // counts to 255 iterations
     parameter BOUNDARY_GROW_DELAY = 3,  // clock cycles
     parameter SPREAD_CLUSTER_DELAY = 2,  // clock cycles
-    parameter SYNC_IS_ODD_CLUSTER_DELAY = 2  // clock cycles
+    parameter SYNC_IS_ODD_CLUSTER_DELAY = 2,  // clock cycles
+    parameter PER_DIMENSION_WIDTH = $clog2(CODE_DISTANCE),
+    parameter ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3,
+    parameter PU_COUNT = CODE_DISTANCE*CODE_DISTANCE*(CODE_DISTANCE-1)
 ) (
     input clk,
     input reset,
     input new_round_start,
     input has_message_flying,
     input has_odd_clusters,
+    input [PU_COUNT-1:0] is_touching_boundaries,
+    input [PU_COUNT-1:0] is_odd_cardinalities,
+    output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots,
     output reg [STAGE_WIDTH-1:0] stage,
     output reg result_valid,
     output reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter,
     output reg [31:0] cycle_counter,
-    output reg deadlock
+    output reg deadlock,
+    output final_cardinality
 );
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
@@ -29,6 +36,9 @@ reg [COUNTER_WIDTH-1:0] delay_counter;
 reg [31:0] cycles_in_stage;
 
 localparam DEADLOCK_THRESHOLD = CODE_DISTANCE*CODE_DISTANCE*CODE_DISTANCE*10;
+
+reg go_to_result_calculator;
+wire done_from_calculator;
 
 // deadlock detection logic
 always @(posedge clk) begin
@@ -89,7 +99,11 @@ always @(posedge clk) begin
                 if (new_round_start) begin
                     stage <= STAGE_MEASUREMENT_LOADING;
                     delay_counter <= 0;
+                    result_valid <= 0;
+                end else begin
+                    result_valid <= done_from_calculator;
                 end
+                go_to_result_calculator <= 0;
             end
             STAGE_SPREAD_CLUSTER: begin
                 if (delay_counter >= SPREAD_CLUSTER_DELAY) begin
@@ -118,7 +132,7 @@ always @(posedge clk) begin
                             stage <= STAGE_GROW_BOUNDARY;
                             delay_counter <= 0;
                         end else begin
-                            stage <= STAGE_IDLE;
+                            stage <= STAGE_RESULT_CALCULATING;
                             delay_counter <= 0;
                         end
                     end else if (cycles_in_stage > DEADLOCK_THRESHOLD)  begin
@@ -133,23 +147,41 @@ always @(posedge clk) begin
                 // In future might need multiple
                 stage <= STAGE_SPREAD_CLUSTER;
                 delay_counter <= 0;
+                result_valid <= 0; // for safety
+            end
+            STAGE_RESULT_CALCULATING: begin
+                stage <= STAGE_IDLE;
+                go_to_result_calculator <= 1;
             end
         endcase
     end
 end
 
-always @(posedge clk) begin
-    if (reset) begin
-        result_valid <= 0;
-    end else begin
-        if (new_round_start) begin
-            result_valid <= 0;
-        end else if (stage == STAGE_SYNC_IS_ODD_CLUSTER && delay_counter >= SYNC_IS_ODD_CLUSTER_DELAY && !has_message_flying && !has_odd_clusters) begin
-            result_valid <= 1;
-        end else if(stage == STAGE_MEASUREMENT_LOADING) begin
-            result_valid <= 0;
-        end
-    end
-end
+get_boundry_cardinality #(
+    .CODE_DISTANCE(CODE_DISTANCE)
+) result_calculator(
+    .clk(clk),
+    .reset(reset),
+    .is_touching_boundaries(is_touching_boundaries),
+    .is_odd_cardinalities(is_odd_cardinalities),
+    .roots(roots),
+    .final_cardinality(final_cardinality),
+    .go(go_to_result_calculator),
+    .done(done_from_calculator)
+);
+
+// always @(posedge clk) begin
+//     if (reset) begin
+//         result_valid <= 0;
+//     end else begin
+//         if (new_round_start) begin
+//             result_valid <= 0;
+//         end else if (stage == STAGE_SYNC_IS_ODD_CLUSTER && delay_counter >= SYNC_IS_ODD_CLUSTER_DELAY && !has_message_flying && !has_odd_clusters) begin
+//             result_valid <= 1;
+//         end else if(stage == STAGE_MEASUREMENT_LOADING) begin
+//             result_valid <= 0;
+//         end
+//     end
+// end
 
 endmodule
