@@ -25,8 +25,8 @@ input reset;
 input new_round_start;
 input [PU_COUNT-1:0] is_error_syndromes;
 output result_valid;
-output cycle_counter;
-output iteration_counter;
+output [7:0] iteration_counter;
+output [31:0] cycle_counter;
 output deadlock;
 output final_cardinality;
 

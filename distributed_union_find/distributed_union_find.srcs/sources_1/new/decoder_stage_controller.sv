@@ -93,6 +93,7 @@ always @(posedge clk) begin
     if (reset) begin
         stage <= STAGE_IDLE;
         delay_counter <= 0;
+        result_valid <= 0;
     end else begin
         case (stage)
             STAGE_IDLE: begin
@@ -101,7 +102,9 @@ always @(posedge clk) begin
                     delay_counter <= 0;
                     result_valid <= 0;
                 end else begin
-                    result_valid <= done_from_calculator;
+                    if (done_from_calculator == 1'b1) begin
+                        result_valid <= 1'b1;
+                    end
                 end
                 go_to_result_calculator <= 0;
             end
@@ -152,6 +155,7 @@ always @(posedge clk) begin
             STAGE_RESULT_CALCULATING: begin
                 stage <= STAGE_IDLE;
                 go_to_result_calculator <= 1;
+                result_valid <= 0; // for safety
             end
         endcase
     end
