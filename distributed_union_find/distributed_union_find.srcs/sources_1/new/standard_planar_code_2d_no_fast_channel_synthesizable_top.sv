@@ -30,10 +30,17 @@ output [31:0] cycle_counter;
 output deadlock;
 output final_cardinality;
 
+wire [FINAL_FIFO_WIDTH - 1 :0] final_fifo_out_data;
+wire final_fifo_out_valid;
+wire final_fifo_out_ready;
+wire [FINAL_FIFO_WIDTH - 1 :0] final_fifo_in_data;
+wire final_fifo_in_valid;
+wire final_fifo_in_ready;
+
 // output reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
 // output [31:0] cycle_counter;
 
-standard_planar_code_3d_no_fast_channel_with_stage_controller #(.CODE_DISTANCE(CODE_DISTANCE)) top_module (
+standard_planar_code_3d_no_fast_channel_with_stage_controller_left #(.CODE_DISTANCE(CODE_DISTANCE)) left_module (
     .clk(clk),
     .reset(reset),
     .new_round_start(new_round_start), //pulse signal
@@ -43,7 +50,13 @@ standard_planar_code_3d_no_fast_channel_with_stage_controller #(.CODE_DISTANCE(C
     .iteration_counter(iteration_counter),
     .cycle_counter(cycle_counter),
     .deadlock(deadlock),
-    .final_cardinality(final_cardinality)
+    .final_cardinality(final_cardinality),
+    .final_fifo_out_data(final_fifo_out_data),
+    .final_fifo_out_valid(final_fifo_out_valid),
+    .final_fifo_out_ready(final_fifo_out_ready),
+    .final_fifo_in_data(final_fifo_in_data),
+    .final_fifo_in_valid(final_fifo_in_valid),
+    .final_fifo_in_ready(final_fifo_in_ready)
 );
 
 endmodule
