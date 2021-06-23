@@ -46,9 +46,9 @@ output final_cardinality;
 
 output [FINAL_FIFO_WIDTH - 1 :0] final_fifo_out_data;
 output final_fifo_out_valid;
-output final_fifo_out_ready;
-output [FINAL_FIFO_WIDTH - 1 :0] final_fifo_in_data;
-output final_fifo_in_valid;
+input final_fifo_out_ready;
+input [FINAL_FIFO_WIDTH - 1 :0] final_fifo_in_data;
+input final_fifo_in_valid;
 output final_fifo_in_ready;
 
 wire [PU_COUNT-1:0] is_odd_cardinalities;
@@ -189,9 +189,9 @@ output final_cardinality;
 
 output [FINAL_FIFO_WIDTH - 1 :0] final_fifo_out_data;
 output final_fifo_out_valid;
-output final_fifo_out_ready;
-output [FINAL_FIFO_WIDTH - 1 :0] final_fifo_in_data;
-output final_fifo_in_valid;
+input final_fifo_out_ready;
+input [FINAL_FIFO_WIDTH - 1 :0] final_fifo_in_data;
+input final_fifo_in_valid;
 output final_fifo_in_ready;
 
 wire [PU_COUNT-1:0] is_odd_cardinalities;
