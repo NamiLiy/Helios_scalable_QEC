@@ -203,6 +203,7 @@ generate
                 wire [DIRECT_MESSAGE_WIDTH-1: 0] blocking_fifo_in_data;
                 wire blocking_fifo_in_valid;
                 wire blocking_fifo_in_ready;
+                wire blocking_fifo_in_full;
                 // wire [MASTER_FIFO_WIDTH-1: 0] master_fifo_out_data;
                 // wire master_fifo_out_valid;
                 // wire master_fifo_out_ready;
@@ -229,7 +230,7 @@ generate
                     .blocking_fifo_out_ready(blocking_fifo_out_ready),
                     .blocking_fifo_in_data(blocking_fifo_in_data),
                     .blocking_fifo_in_valid(blocking_fifo_in_valid),
-                    .blocking_fifo_in_full(blocking_fifo_in_full)
+                    .blocking_fifo_in_ready(blocking_fifo_in_ready),
                     .master_fifo_out_data(`MASTER_FIFO_VEC(master_fifo_out_data_vector, `FIFO_INDEX(j, k))),
                     .master_fifo_out_valid(`MASTER_FIFO_SIGNAL_VEC(master_fifo_out_valid_vector, `FIFO_INDEX(j, k))),
                     .master_fifo_out_ready(`MASTER_FIFO_SIGNAL_VEC(master_fifo_out_ready_vector, `FIFO_INDEX(j, k))),
@@ -237,6 +238,8 @@ generate
                     .master_fifo_in_valid(`MASTER_FIFO_SIGNAL_VEC(master_fifo_in_valid_vector, `FIFO_INDEX(j, k))),
                     .master_fifo_in_ready(`MASTER_FIFO_SIGNAL_VEC(master_fifo_in_ready_vector, `FIFO_INDEX(j, k))),
                 );
+
+                assign blocking_fifo_in_full = ~blocking_fifo_in_ready;
             end
         end
     end
@@ -721,6 +724,7 @@ generate
                 wire [DIRECT_MESSAGE_WIDTH-1: 0] blocking_fifo_in_data;
                 wire blocking_fifo_in_valid;
                 wire blocking_fifo_in_ready;
+                wire blocking_fifo_in_full;
                 // wire [MASTER_FIFO_WIDTH-1: 0] master_fifo_out_data;
                 // wire master_fifo_out_valid;
                 // wire master_fifo_out_ready;
@@ -755,6 +759,7 @@ generate
                     .master_fifo_in_valid(`MASTER_FIFO_SIGNAL_VEC(master_fifo_in_valid_vector, `FIFO_INDEX(j, k))),
                     .master_fifo_in_ready(`MASTER_FIFO_SIGNAL_VEC(master_fifo_in_ready_vector, `FIFO_INDEX(j, k))),
                 );
+                assign blocking_fifo_in_full = ~blocking_fifo_in_ready;
             end
         end
     end
