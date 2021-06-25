@@ -135,6 +135,10 @@ assign non_blocking_fifo_in_data = master_fifo_in_data_internal;
 assign blocking_fifo_in_data = master_fifo_in_data_internal;
 
 always@(*) begin
+    master_fifo_in_ready_internal = 1'b0;
+    neighbor_fifo_in_valid = 1'b0;
+    non_blocking_fifo_in_valid = 1'b0;
+    blocking_fifo_in_valid = 1'b0;
     if(!master_fifo_in_empty_internal) begin
         if(master_fifo_out_data[UNION_MESSAGE_WIDTH+1 : UNION_MESSAGE_WIDTH] = 2'b00) begin
             master_fifo_in_ready_internal = neighbor_fifo_in_ready;

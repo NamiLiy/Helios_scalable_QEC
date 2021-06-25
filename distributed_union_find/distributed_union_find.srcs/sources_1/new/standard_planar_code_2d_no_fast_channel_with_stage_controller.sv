@@ -30,8 +30,8 @@ localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
 localparam ITERATION_COUNTER_WIDTH = 8;  // counts up to CODE_DISTANCE iterations
 localparam UNION_MESSAGE_WIDTH = 2 * ADDRESS_WIDTH;  // [old_root, updated_root]
 localparam MASTER_FIFO_WIDTH = UNION_MESSAGE_WIDTH + 1 + 1;
-localparam FINAL_FIFO_WIDTH = MASTER_FIFO_WIDTH + ADDRESS_WIDTH;
 localparam FIFO_COUNT = CODE_DISTANCE * (CODE_DISTANCE - 1);
+localparam FINAL_FIFO_WIDTH = MASTER_FIFO_WIDTH + $clog2(FIFO_COUNT);
 
 input clk;
 input reset;
@@ -121,12 +121,14 @@ decoder_stage_controller_left #(
 );
 
 final_arbitration_unit u_final_arbitration_unit_left (
+    .clk(clk),
+    .reset(reset),
     .master_fifo_out_data(master_fifo_out_data_vector),
     .master_fifo_out_valid(master_fifo_out_valid_vector),
     .master_fifo_out_ready(master_fifo_out_ready_vector),
     .master_fifo_in_data(master_fifo_in_data_vector),
     .master_fifo_in_valid(master_fifo_in_valid_vector),
-    .master_fifo_in_ready(master_fifo_in_ready_vector)
+    .master_fifo_in_ready(master_fifo_in_ready_vector),
     .sc_fifo_out_data(sc_fifo_out_data),
     .sc_fifo_out_valid(sc_fifo_out_valid),
     .sc_fifo_out_ready(sc_fifo_out_ready),
@@ -139,7 +141,6 @@ final_arbitration_unit u_final_arbitration_unit_left (
     .final_fifo_in_data(final_fifo_in_data),
     .final_fifo_in_valid(final_fifo_in_valid),
     .final_fifo_in_ready(final_fifo_in_ready)
-    
 );
 
 endmodule
