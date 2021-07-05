@@ -205,7 +205,7 @@ always @(*) begin
     // end else begin
     sc_fifo_out_data_internal[2:0] = 3'b0;
     sc_fifo_out_valid_internal = 1'b0;
-    sc_fifo_in_ready_internal =
+    sc_fifo_in_ready_internal = 1'b0;
         case (stage)
             STAGE_IDLE: begin
                 if (new_round_start) begin
@@ -233,7 +233,7 @@ always @(*) begin
                         // stage <= STAGE_IDLE;
                         sc_fifo_out_data_internal[2:0] = 3'b10;
                         sc_fifo_out_valid_internal = 1'b1;
-                        sc_fifo_in_ready_internal = 1'b1;
+                        // sc_fifo_in_ready_internal = 1'b1;
                     end
                 end else begin
                     // delay_counter <= delay_counter + 1;
@@ -448,160 +448,29 @@ always @(posedge clk) begin
     end else begin
         case (stage)
             STAGE_IDLE: begin
-                if (new_round_start) begin
+                if(sc_fifo_in_data == 3'b1) begin
                     stage <= STAGE_MEASUREMENT_LOADING;
-                    delay_counter <= 0;
-                    result_valid <= 0;
-                end else begin
-                    if (done_from_calculator == 1'b1) begin
-                        result_valid <= 1'b1;
-                    end
-                end
-                go_to_result_calculator <= 0;
-            end
-            STAGE_SPREAD_CLUSTER: begin
-                if (delay_counter >= SPREAD_CLUSTER_DELAY) begin
-                    if (!has_message_flying_both_sides) begin
-                        stage <= STAGE_SYNC_IS_ODD_CLUSTER;
-                        delay_counter <= 0;
-                    end else if (cycles_in_stage > DEADLOCK_THRESHOLD)  begin
-                        stage <= STAGE_IDLE;
-                    end
-                end else begin
-                    delay_counter <= delay_counter + 1;
                 end
             end
-            STAGE_GROW_BOUNDARY: begin
-                if (delay_counter >= BOUNDARY_GROW_DELAY) begin
-                    stage <= STAGE_SPREAD_CLUSTER;
-                    delay_counter <= 0;
-                end else begin
-                    delay_counter <= delay_counter + 1;
-                end
-            end
-            STAGE_SYNC_IS_ODD_CLUSTER: begin
-                if (delay_counter >= SYNC_IS_ODD_CLUSTER_DELAY) begin
-                    if (!has_messages_flying_both_sides) begin
-                        if (has_odd_clusters_both_sides) begin
-                            stage <= STAGE_GROW_BOUNDARY;
-                            delay_counter <= 0;
-                        end else begin
-                            stage <= STAGE_RESULT_CALCULATING;
-                            delay_counter <= 0;
-                        end
-                    end else if (cycles_in_stage > DEADLOCK_THRESHOLD)  begin
-                        stage <= STAGE_IDLE;
-                    end
-                end else begin
-                    delay_counter <= delay_counter + 1;
-                end
-            end
-            STAGE_MEASUREMENT_LOADING: begin
-                // Currently this is single cycle as only from external buffer happens.
-                // In future might need multiple
-                stage <= STAGE_SPREAD_CLUSTER;
-                delay_counter <= 0;
-                result_valid <= 0; // for safety
-            end
-            STAGE_RESULT_CALCULATING: begin
-                if (sc_fifo_in_data_internal[2:0] == 32'd4 && sc_fifo_in_data_internal_valid) begin
-                    stage <= STAGE_IDLE;
-                    go_to_result_calculator <= 1;
-                    result_valid <= 0; // for safety
-                end
-            end
-        endcase
-    end
-end
-
-always @(*) begin
-    // if (reset) begin
-    //     stage <= STAGE_IDLE;
-    //     delay_counter <= 0;
-    //     result_valid <= 0;
-    // end else begin
-    //sc_fifo_out_data_internal[2:0] = 3'b0;
-    //sc_fifo_out_valid_internal = 1'b0;
-
-    // What data stream to use for syncing stages? representing as sc_fifo_left_in_data
-    // Sync stages
-    case (stage)
-        STAGE_IDLE: begin
-            if(sc_fifo_left_in_data == 3'b1) begin
-                stage <= STAGE_MEASUREMENT_LOADING;
-            end
-        end
-        STAGE_SPREAD_CLUSTER:   begin
-                if(sc_fifo_left_in_data == 3'b1) begin
+            STAGE_SPREAD_CLUSTER:   begin
+                if(sc_fifo_in_data == 3'b1) begin
                     stage <= STAGE_SYNC_IS_ODD_CLUSTER;
-                end else if(sc_fifo_left_in_data = 3'b10) begin
+                end else if(sc_fifo_in_data = 3'b10) begin
                     stage <= STAGE_IDLE;
-                end
-        end
-        STAGE_GROW_BOUNDARY: begin
-            if(sc_fifo_left_in_data == 3'b1) begin
-                stage <= STAGE_SPREAD_CLUSTER;
-            end
-        end
-        STAGE_SYNC_IS_ODD_CLUSTER: begin
-            if(sc_fifo_left_in_data == 3'b1) begin
-                stage <= STAGE_GROW_BOUNDARY;
-            end else if(sc_fifo_left_in_data == 3'b10) begin
-                stage <= STAGE_RESULT_CALCULATING;
-            end else if(sc_fifo_left_in_data == 3'b11) begin
-                stage <= STAGE_IDLE;
-            end
-        end
-    endcase
-    sc_fifo_in_ready_internal =
-        case (stage)
-            STAGE_IDLE: begin
-                if (new_round_start) begin
-                    stage <= STAGE_MEASUREMENT_LOADING;
-                    delay_counter <= 0;
-                    result_valid <= 0;
-                end else begin
-                    if (done_from_calculator == 1'b1) begin
-                        result_valid <= 1'b1;
-                    end
-                end
-                go_to_result_calculator <= 0;
-            end
-            STAGE_SPREAD_CLUSTER: begin
-                if (delay_counter >= SPREAD_CLUSTER_DELAY) begin
-                    if (!has_message_flying_both_sides) begin
-                        stage <= STAGE_SYNC_IS_ODD_CLUSTER;
-                        delay_counter <= 0;
-                    end else if (cycles_in_stage > DEADLOCK_THRESHOLD)  begin
-                        stage <= STAGE_IDLE;
-                    end
-                end else begin
-                    delay_counter <= delay_counter + 1;
                 end
             end
             STAGE_GROW_BOUNDARY: begin
-                if (delay_counter >= BOUNDARY_GROW_DELAY) begin
+                if(sc_fifo_in_data == 3'b1) begin
                     stage <= STAGE_SPREAD_CLUSTER;
-                    delay_counter <= 0;
-                end else begin
-                    delay_counter <= delay_counter + 1;
                 end
             end
             STAGE_SYNC_IS_ODD_CLUSTER: begin
-                if (delay_counter >= SYNC_IS_ODD_CLUSTER_DELAY) begin
-                    if (!has_messages_flying_both_sides) begin
-                        if (has_odd_clusters_both_sides) begin
-                            stage <= STAGE_GROW_BOUNDARY;
-                            delay_counter <= 0;
-                        end else begin
-                            stage <= STAGE_RESULT_CALCULATING;
-                            delay_counter <= 0;
-                        end
-                    end else if (cycles_in_stage > DEADLOCK_THRESHOLD)  begin
-                        stage <= STAGE_IDLE;
-                    end
-                end else begin
-                    delay_counter <= delay_counter + 1;
+                if(sc_fifo_in_data == 3'b1) begin
+                    stage <= STAGE_GROW_BOUNDARY;
+                end else if(sc_fifo_in_data == 3'b10) begin
+                    stage <= STAGE_RESULT_CALCULATING;
+                end else if(sc_fifo_in_data == 3'b11) begin
+                    stage <= STAGE_IDLE;
                 end
             end
             STAGE_MEASUREMENT_LOADING: begin
@@ -617,34 +486,7 @@ always @(*) begin
                 result_valid <= 0; // for safety
             end
         endcase
-    // end
+    end
 end
-
-get_boundry_cardinality #(
-    .CODE_DISTANCE(CODE_DISTANCE)
-) result_calculator(
-    .clk(clk),
-    .reset(reset),
-    .is_touching_boundaries(is_touching_boundaries),
-    .is_odd_cardinalities(is_odd_cardinalities),
-    .roots(roots),
-    .final_cardinality(final_cardinality),
-    .go(go_to_result_calculator),
-    .done(done_from_calculator)
-);
-
-// always @(posedge clk) begin
-//     if (reset) begin
-//         result_valid <= 0;
-//     end else begin
-//         if (new_round_start) begin
-//             result_valid <= 0;
-//         end else if (stage == STAGE_SYNC_IS_ODD_CLUSTER && delay_counter >= SYNC_IS_ODD_CLUSTER_DELAY && !has_message_flying && !has_odd_clusters) begin
-//             result_valid <= 1;
-//         end else if(stage == STAGE_MEASUREMENT_LOADING) begin
-//             result_valid <= 0;
-//         end
-//     end
-// end
 
 endmodule
