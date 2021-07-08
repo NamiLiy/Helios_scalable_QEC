@@ -32,6 +32,8 @@ assign a_old_root_out = a_old_root;
 assign b_old_root_out = b_old_root;
 assign is_fully_grown = increased >= LENGTH;
 
+reg b_increase;
+
 always @(posedge clk) begin
     if (reset) begin
         increased <= 0;
@@ -43,7 +45,6 @@ always @(posedge clk) begin
         a_increase_stored <= 0;
     end else begin
         a_old_root <= a_old_root_in;
-        b_old_root <= b_old_root_in;
         a_increase_stored <= a_increase;
         // only increase when it's not fully grown, to reduce bits needed
         if (increased < LENGTH) begin
@@ -76,10 +77,12 @@ always @(posedge clk) begin
     end
 end
 
-assign neighbor_fifo_out_data_internal = [a_increase, a_old_root_in];
+assign neighbor_fifo_out_data_internal = {a_increase, a_old_root_in};
 assign neighbor_fifo_in_ready = 1'b1;
 
-assert (neighbor_fifo_out_valid_internal && neighbor_fifo_out_is_full_internal && !reset && !initialize) 
+//assert (neighbor_fifo_out_valid_internal && neighbor_fifo_out_is_full_internal && !reset && !initialize) else   $error("Wrote to a full FIFO in neighbor");
+
+assert property(@(posedge clk) (|(neighbor_fifo_out_valid_internal && neighbor_fifo_out_is_full_internal && !reset && !initialize)))
 else   $error("Wrote to a full FIFO in neighbor");
 
 always @(*) begin
