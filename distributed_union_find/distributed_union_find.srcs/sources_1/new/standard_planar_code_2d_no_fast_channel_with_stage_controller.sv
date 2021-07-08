@@ -20,7 +20,10 @@ module standard_planar_code_3d_no_fast_channel_with_stage_controller_left #(
     final_fifo_out_ready,
     final_fifo_in_data,
     final_fifo_in_valid,
-    final_fifo_in_ready
+    final_fifo_in_ready,
+
+    has_message_flying_otherside,
+    has_odd_clusters_flying_other_side
 
 );
 
@@ -43,6 +46,9 @@ output reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
 output [31:0] cycle_counter;
 output deadlock;
 output final_cardinality;
+
+input has_message_flying_otherside;
+input has_odd_clusters_flying_other_side;
 
 output [FINAL_FIFO_WIDTH - 1 :0] final_fifo_out_data;
 output final_fifo_out_valid;
@@ -117,7 +123,9 @@ decoder_stage_controller_left #(
     .sc_fifo_out_ready(sc_fifo_out_ready),
     .sc_fifo_in_data(sc_fifo_in_data),
     .sc_fifo_in_valid(sc_fifo_in_valid),
-    .sc_fifo_in_ready(sc_fifo_in_ready)
+    .sc_fifo_in_ready(sc_fifo_in_ready),
+    .has_message_flying_otherside(has_message_flying_otherside),
+    .has_odd_clusters_flying_other_side(has_odd_clusters_flying_other_side)
 );
 
 final_arbitration_unit u_final_arbitration_unit_left (
@@ -164,7 +172,10 @@ module standard_planar_code_3d_no_fast_channel_with_stage_controller_right #(
     final_fifo_out_ready,
     final_fifo_in_data,
     final_fifo_in_valid,
-    final_fifo_in_ready
+    final_fifo_in_ready,
+
+    has_message_flying_otherside,
+    has_odd_clusters_flying_other_side
 
 );
 
@@ -194,6 +205,9 @@ input final_fifo_out_ready;
 input [FINAL_FIFO_WIDTH - 1 :0] final_fifo_in_data;
 input final_fifo_in_valid;
 output final_fifo_in_ready;
+
+output has_message_flying_otherside;
+output has_odd_clusters_flying_other_side;
 
 wire [PU_COUNT-1:0] is_odd_cardinalities;
 wire [PU_COUNT-1:0] is_touching_boundaries;
@@ -261,7 +275,9 @@ decoder_stage_controller_right #(
     .sc_fifo_out_ready(sc_fifo_out_ready),
     .sc_fifo_in_data(sc_fifo_in_data),
     .sc_fifo_in_valid(sc_fifo_in_valid),
-    .sc_fifo_in_ready(sc_fifo_in_ready)
+    .sc_fifo_in_ready(sc_fifo_in_ready),
+    .has_message_flying_otherside(has_message_flying_otherside),
+    .has_odd_clusters_flying_other_side(has_odd_clusters_flying_other_side)
 );
 
 final_arbitration_unit u_final_arbitration_unit_right (

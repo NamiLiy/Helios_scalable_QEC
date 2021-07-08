@@ -36,6 +36,8 @@ wire final_fifo_out_ready;
 wire [FINAL_FIFO_WIDTH - 1 :0] final_fifo_in_data;
 wire final_fifo_in_valid;
 wire final_fifo_in_ready;
+wire has_message_flying_otherside;
+wire has_odd_clusters_flying_other_side;
 
 // output reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
 // output [31:0] cycle_counter;
@@ -56,7 +58,9 @@ standard_planar_code_3d_no_fast_channel_with_stage_controller_left #(.CODE_DISTA
     .final_fifo_out_ready(final_fifo_out_ready),
     .final_fifo_in_data(final_fifo_in_data),
     .final_fifo_in_valid(final_fifo_in_valid),
-    .final_fifo_in_ready(final_fifo_in_ready)
+    .final_fifo_in_ready(final_fifo_in_ready),
+    .has_message_flying_otherside(has_message_flying_otherside),
+    .has_odd_clusters_flying_other_side(has_odd_clusters_flying_other_side)
 );
 
 standard_planar_code_3d_no_fast_channel_with_stage_controller_right #(.CODE_DISTANCE(CODE_DISTANCE)) right_module (
@@ -75,7 +79,9 @@ standard_planar_code_3d_no_fast_channel_with_stage_controller_right #(.CODE_DIST
     .final_fifo_out_ready(final_fifo_in_ready),
     .final_fifo_in_data(final_fifo_out_data),
     .final_fifo_in_valid(final_fifo_out_valid),
-    .final_fifo_in_ready(final_fifo_out_ready)
+    .final_fifo_in_ready(final_fifo_out_ready),
+    .has_message_flying_otherside(has_message_flying_otherside),
+    .has_odd_clusters_flying_other_side(has_odd_clusters_flying_other_side)
 );
 
 endmodule

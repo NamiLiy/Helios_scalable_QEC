@@ -11,8 +11,8 @@ module decoder_stage_controller_left #(
     parameter PER_DIMENSION_WIDTH = $clog2(CODE_DISTANCE),
     parameter ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3,
     parameter PU_COUNT = CODE_DISTANCE*CODE_DISTANCE*(CODE_DISTANCE-1),
-    parameter UNION_MESSAGE_WIDTH = 2 * ADDRESS_WIDTH;  // [old_root, updated_root]
-    parameter MASTER_FIFO_WIDTH = UNION_MESSAGE_WIDTH + 1 + 1;
+    parameter UNION_MESSAGE_WIDTH = 2 * ADDRESS_WIDTH,  // [old_root, updated_root]
+    parameter MASTER_FIFO_WIDTH = UNION_MESSAGE_WIDTH + 1 + 1
 ) (
     input clk,
     input reset,
@@ -28,12 +28,14 @@ module decoder_stage_controller_left #(
     output reg [31:0] cycle_counter,
     output reg deadlock,
     output final_cardinality,
-    output [MASTER_FIFO_WIDTH - 1 :0] sc_fifo_out_data;
-    output sc_fifo_out_valid;
-    input sc_fifo_out_ready;
-    input [MASTER_FIFO_WIDTH - 1 :0] sc_fifo_in_data;
-    input sc_fifo_in_valid;
-    output sc_fifo_in_ready;
+    output [MASTER_FIFO_WIDTH - 1 :0] sc_fifo_out_data,
+    output sc_fifo_out_valid,
+    input sc_fifo_out_ready,
+    input [MASTER_FIFO_WIDTH - 1 :0] sc_fifo_in_data,
+    input sc_fifo_in_valid,
+    output sc_fifo_in_ready,
+    input has_message_flying_otherside,
+    input has_odd_clusters_otherside
 );
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
@@ -53,21 +55,67 @@ reg has_odd_clusters_both_sides;
 
 reg [MASTER_FIFO_WIDTH - 1 :0] sc_fifo_out_data_internal;
 reg sc_fifo_out_valid_internal;
-wire sc_fifo_out_internal;
+wire sc_fifo_out_full_internal;
 
 wire [MASTER_FIFO_WIDTH - 1 :0] sc_fifo_in_data_internal;
 wire sc_fifo_in_empty_internal;
 reg sc_fifo_in_ready_internal;
 
+wire sc_fifo_out_empty;
+assign sc_fifo_out_ready = !sc_fifo_out_empty;
+
+fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH+1)) out_fifo 
+    (
+    .clk(clk),
+    .srst(reset),
+    .wr_en(sc_fifo_out_valid_internal),
+    .din(sc_fifo_out_data_internal),
+    .full(sc_fifo_out_full_internal),
+    .empty(sc_fifo_out_empty),
+    .dout(sc_fifo_out_data),
+    .rd_en(sc_fifo_out_ready)
+);
+
+wire sc_fifo_in_full;
+assign sc_fifo_in_ready = !sc_fifo_in_full;
+
+fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH+1)) in_fifo 
+    (
+    .clk(clk),
+    .srst(reset),
+    .wr_en(sc_fifo_in_valid),
+    .din(sc_fifo_in_data),
+    .full(sc_fifo_in_full),
+    .empty(sc_fifo_in_empty_internal),
+    .dout(sc_fifo_in_data_internal),
+    .rd_en(sc_fifo_in_ready_internal)
+);
+
+// always@(*) begin
+//     if (sc_fifo_in_data_internal[0] == 1'b1 && !sc_fifo_in_empty_internal) begin
+//         has_messages_flying_both_sides == 1'b1;
+//     end
+// end
+
+// always@(*) begin
+//     if (sc_fifo_in_data_internal[1] == 1'b1 && !sc_fifo_in_empty_internal) begin
+//         has_odd_clusters_both_sides == 1'b1;
+//     end
+// end
+
 always@(*) begin
-    if (sc_fifo_in_data_internal[0] == 1'b1 && !sc_fifo_in_empty_internal) begin
-        has_messages_flying_both_sides == 1'b1;
+    if (has_message_flying || has_message_flying_otherside) begin
+        has_messages_flying_both_sides = 1'b1;
+    end else begin
+        has_messages_flying_both_sides = 1'b0;
     end
 end
 
 always@(*) begin
-    if (sc_fifo_in_data_internal[1] == 1'b1 && !sc_fifo_in_empty_internal) begin
-        has_odd_clusters_both_sides == 1'b1;
+    if (has_odd_clusters || has_odd_clusters_otherside) begin
+        has_odd_clusters_both_sides = 1'b1;
+    end else begin
+        has_odd_clusters_both_sides = 1'b0;
     end
 end
 
@@ -141,7 +189,7 @@ always @(posedge clk) begin
             end
             STAGE_SPREAD_CLUSTER: begin
                 if (delay_counter >= SPREAD_CLUSTER_DELAY) begin
-                    if (!has_message_flying_both_sides) begin
+                    if (!has_messages_flying_both_sides) begin
                         stage <= STAGE_SYNC_IS_ODD_CLUSTER;
                         delay_counter <= 0;
                     end else if (cycles_in_stage > DEADLOCK_THRESHOLD)  begin
@@ -184,7 +232,7 @@ always @(posedge clk) begin
                 result_valid <= 0; // for safety
             end
             STAGE_RESULT_CALCULATING: begin
-                if (sc_fifo_in_data_internal[2:0] == 32'd4 && sc_fifo_in_data_internal_valid) begin
+                if (sc_fifo_in_data_internal[2:0] == 32'd4 && !sc_fifo_in_empty_internal) begin
                     stage <= STAGE_IDLE;
                     go_to_result_calculator <= 1;
                     result_valid <= 0; // for safety
@@ -223,7 +271,7 @@ always @(*) begin
             end
             STAGE_SPREAD_CLUSTER: begin
                 if (delay_counter >= SPREAD_CLUSTER_DELAY) begin
-                    if (!has_message_flying_both_sides) begin
+                    if (!has_messages_flying_both_sides) begin
                         // stage <= STAGE_SYNC_IS_ODD_CLUSTER;
                         // delay_counter <= 0;
                         sc_fifo_out_data_internal[2:0] = 3'b1;
@@ -331,8 +379,8 @@ module decoder_stage_controller_right #(
     parameter PER_DIMENSION_WIDTH = $clog2(CODE_DISTANCE),
     parameter ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3,
     parameter PU_COUNT = CODE_DISTANCE*CODE_DISTANCE*(CODE_DISTANCE-1),
-    parameter UNION_MESSAGE_WIDTH = 2 * ADDRESS_WIDTH;  // [old_root, updated_root]
-    parameter MASTER_FIFO_WIDTH = UNION_MESSAGE_WIDTH + 1 + 1;
+    parameter UNION_MESSAGE_WIDTH = 2 * ADDRESS_WIDTH,  // [old_root, updated_root]
+    parameter MASTER_FIFO_WIDTH = UNION_MESSAGE_WIDTH + 1 + 1
 ) (
     input clk,
     input reset,
@@ -348,12 +396,14 @@ module decoder_stage_controller_right #(
     output reg [31:0] cycle_counter,
     output reg deadlock,
     output final_cardinality,
-    output [MASTER_FIFO_WIDTH - 1 :0] sc_fifo_out_data;
-    output sc_fifo_out_valid;
-    input sc_fifo_out_ready;
-    input [MASTER_FIFO_WIDTH - 1 :0] sc_fifo_in_data;
-    input sc_fifo_in_valid;
-    output sc_fifo_in_ready;
+    output [MASTER_FIFO_WIDTH - 1 :0] sc_fifo_out_data,
+    output sc_fifo_out_valid,
+    input sc_fifo_out_ready,
+    input [MASTER_FIFO_WIDTH - 1 :0] sc_fifo_in_data,
+    input sc_fifo_in_valid,
+    output sc_fifo_in_ready,
+    output has_message_flying_otherside, // Temporary solution 
+    output has_odd_clusters_flying_other_side
 );
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
@@ -373,23 +423,56 @@ reg has_odd_clusters_both_sides;
 
 reg [MASTER_FIFO_WIDTH - 1 :0] sc_fifo_out_data_internal;
 reg sc_fifo_out_valid_internal;
-wire sc_fifo_out_internal;
+wire sc_fifo_out_full_internal;
 
 wire [MASTER_FIFO_WIDTH - 1 :0] sc_fifo_in_data_internal;
 wire sc_fifo_in_empty_internal;
 reg sc_fifo_in_ready_internal;
 
-always@(*) begin
-    if (sc_fifo_in_data_internal[0] == 1'b1 && !sc_fifo_in_empty_internal) begin
-        has_messages_flying_both_sides == 1'b1;
-    end
-end
+wire sc_fifo_out_empty;
+assign sc_fifo_out_ready = !sc_fifo_out_empty;
 
-always@(*) begin
-    if (sc_fifo_in_data_internal[1] == 1'b1 && !sc_fifo_in_empty_internal) begin
-        has_odd_clusters_both_sides == 1'b1;
-    end
-end
+fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH+1)) out_fifo 
+    (
+    .clk(clk),
+    .srst(reset),
+    .wr_en(sc_fifo_out_valid_internal),
+    .din(sc_fifo_out_data_internal),
+    .full(sc_fifo_out_full_internal),
+    .empty(sc_fifo_out_empty),
+    .dout(sc_fifo_out_data),
+    .rd_en(sc_fifo_out_ready)
+);
+
+wire sc_fifo_in_full;
+assign sc_fifo_in_ready = !sc_fifo_in_full;
+
+fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH+1)) in_fifo 
+    (
+    .clk(clk),
+    .srst(reset),
+    .wr_en(sc_fifo_in_valid),
+    .din(sc_fifo_in_data),
+    .full(sc_fifo_in_full),
+    .empty(sc_fifo_in_empty_internal),
+    .dout(sc_fifo_in_data_internal),
+    .rd_en(sc_fifo_in_ready_internal)
+);
+
+// always@(*) begin
+//     if (sc_fifo_in_data_internal[0] == 1'b1 && !sc_fifo_in_empty_internal) begin
+//         has_messages_flying_both_sides == 1'b1;
+//     end
+// end
+
+// always@(*) begin
+//     if (sc_fifo_in_data_internal[1] == 1'b1 && !sc_fifo_in_empty_internal) begin
+//         has_odd_clusters_both_sides == 1'b1;
+//     end
+// end
+
+assign has_message_flying_otherside = has_message_flying;
+assign has_odd_clusters_flying_other_side = has_odd_clusters;
 
 // deadlock detection logic
 always @(posedge clk) begin
@@ -448,28 +531,28 @@ always @(posedge clk) begin
     end else begin
         case (stage)
             STAGE_IDLE: begin
-                if(sc_fifo_in_data == 3'b1) begin
+                if(sc_fifo_in_data_internal == 3'b1) begin
                     stage <= STAGE_MEASUREMENT_LOADING;
                 end
             end
             STAGE_SPREAD_CLUSTER:   begin
                 if(sc_fifo_in_data == 3'b1) begin
                     stage <= STAGE_SYNC_IS_ODD_CLUSTER;
-                end else if(sc_fifo_in_data = 3'b10) begin
+                end else if(sc_fifo_in_data_internal == 3'b10) begin
                     stage <= STAGE_IDLE;
                 end
             end
             STAGE_GROW_BOUNDARY: begin
-                if(sc_fifo_in_data == 3'b1) begin
+                if(sc_fifo_in_data_internal == 3'b1) begin
                     stage <= STAGE_SPREAD_CLUSTER;
                 end
             end
             STAGE_SYNC_IS_ODD_CLUSTER: begin
-                if(sc_fifo_in_data == 3'b1) begin
+                if(sc_fifo_in_data_internal == 3'b1) begin
                     stage <= STAGE_GROW_BOUNDARY;
-                end else if(sc_fifo_in_data == 3'b10) begin
+                end else if(sc_fifo_in_data_internal == 3'b10) begin
                     stage <= STAGE_RESULT_CALCULATING;
-                end else if(sc_fifo_in_data == 3'b11) begin
+                end else if(sc_fifo_in_data_internal == 3'b11) begin
                     stage <= STAGE_IDLE;
                 end
             end
