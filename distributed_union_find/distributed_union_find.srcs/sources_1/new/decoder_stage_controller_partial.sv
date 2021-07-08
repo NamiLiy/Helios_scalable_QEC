@@ -281,7 +281,7 @@ always @(*) begin
                         // stage <= STAGE_IDLE;
                         sc_fifo_out_data_internal[2:0] = 3'b10;
                         sc_fifo_out_valid_internal = 1'b1;
-                        // sc_fifo_in_ready_internal = 1'b1;
+                        sc_fifo_in_ready_internal = 1'b1;
                     end
                 end else begin
                     // delay_counter <= delay_counter + 1;
@@ -305,11 +305,11 @@ always @(*) begin
                             // delay_counter <= 0;
                             sc_fifo_out_data_internal[2:0] = 3'b1;
                             sc_fifo_out_valid_internal = 1'b1;
-                            sc_fifo_in_ready_internal = 1'b1;
+                            //sc_fifo_in_ready_internal = 1'b1;
                         end else begin
                             sc_fifo_out_data_internal[2:0] = 3'b10;
                             sc_fifo_out_valid_internal = 1'b1;
-                            sc_fifo_in_ready_internal = 1'b1;
+                            //sc_fifo_in_ready_internal = 1'b1;
                             // stage <= STAGE_RESULT_CALCULATING;
                             // delay_counter <= 0;
                         end
@@ -531,32 +531,39 @@ always @(posedge clk) begin
     end else begin
         case (stage)
             STAGE_IDLE: begin
-                if(sc_fifo_in_data_internal == 3'b1) begin
+                if(sc_fifo_in_valid == 1'b1 && sc_fifo_in_data_internal == 3'b1) begin
                     stage <= STAGE_MEASUREMENT_LOADING;
+                    sc_fifo_in_ready_internal <= 1'b1;
                 end
             end
             STAGE_SPREAD_CLUSTER:   begin
-                if(sc_fifo_in_data == 3'b1) begin
+                if(sc_fifo_in_valid == 1'b1 && sc_fifo_in_data == 3'b1) begin
                     stage <= STAGE_SYNC_IS_ODD_CLUSTER;
-                end else if(sc_fifo_in_data_internal == 3'b10) begin
+                    sc_fifo_in_ready_internal <= 1'b1;
+                end else if(sc_fifo_in_valid == 1'b1 && sc_fifo_in_data_internal == 3'b10) begin
                     stage <= STAGE_IDLE;
+                    sc_fifo_in_ready_internal <= 1'b1;
                 end
             end
             STAGE_GROW_BOUNDARY: begin
-                if(sc_fifo_in_data_internal == 3'b1) begin
+                if(sc_fifo_in_valid == 1'b1 && sc_fifo_in_data_internal == 3'b1) begin
                     stage <= STAGE_SPREAD_CLUSTER;
+                    sc_fifo_in_ready_internal <= 1'b1;
                 end
             end
             STAGE_SYNC_IS_ODD_CLUSTER: begin
-                if(sc_fifo_in_data_internal == 3'b1) begin
+                if(sc_fifo_in_valid == 1'b1 && sc_fifo_in_data_internal == 3'b1) begin
                     stage <= STAGE_GROW_BOUNDARY;
-                end else if(sc_fifo_in_data_internal == 3'b10) begin
+                    sc_fifo_in_ready_internal <= 1'b1;
+                end else if(sc_fifo_in_valid == 1'b1 && sc_fifo_in_data_internal == 3'b10) begin
                     stage <= STAGE_RESULT_CALCULATING;
-                end else if(sc_fifo_in_data_internal == 3'b11) begin
+                    sc_fifo_in_ready_internal <= 1'b1;
+                end else if(sc_fifo_in_valid == 1'b1 && sc_fifo_in_data_internal == 3'b11) begin
                     stage <= STAGE_IDLE;
+                    sc_fifo_in_ready_internal <= 1'b1;
                 end
             end
-            STAGE_MEASUREMENT_LOADING: begin
+        STAGE_MEASUREMENT_LOADING: begin
                 // Currently this is single cycle as only from external buffer happens.
                 // In future might need multiple
                 stage <= STAGE_SPREAD_CLUSTER;
