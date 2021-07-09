@@ -20,7 +20,7 @@ assign nonblocking_fifo_out_valid = !empty;
 
 wire full;
 
-assert (in_valid && full && !reset && !initialize) 
+assert property(@(posedge clk) !(in_valid && full && !reset && !initialize))
 else   $error("Wrote to a full FIFO in nonblocking");
 
 
@@ -41,7 +41,7 @@ endmodule
 module nonblocking_channel_from_fifo #(
     parameter WIDTH = 8  // width of data
 ) (
-    input [ADDRESS_WIDTH:0] nonblocking_fifo_in_data,
+    input [WIDTH-1:0] nonblocking_fifo_in_data,
     input nonblocking_fifo_in_valid,
     output nonblocking_fifo_in_ready,
     output [WIDTH-1:0] out_data,

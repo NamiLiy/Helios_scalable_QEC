@@ -82,7 +82,7 @@ assign neighbor_fifo_in_ready = 1'b1;
 
 //assert (neighbor_fifo_out_valid_internal && neighbor_fifo_out_is_full_internal && !reset && !initialize) else   $error("Wrote to a full FIFO in neighbor");
 
-assert property(@(posedge clk) (|(neighbor_fifo_out_valid_internal && neighbor_fifo_out_is_full_internal && !reset && !initialize)))
+assert property(@(posedge clk) (!(neighbor_fifo_out_valid_internal && neighbor_fifo_out_is_full_internal && !reset && !initialize)))
 else   $error("Wrote to a full FIFO in neighbor");
 
 always @(*) begin

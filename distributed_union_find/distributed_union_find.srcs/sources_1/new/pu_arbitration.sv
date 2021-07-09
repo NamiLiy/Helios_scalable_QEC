@@ -1,4 +1,6 @@
-pu_arbitration_unit u_pu_arbitration_unit (
+module pu_arbitration_unit #(
+    parameter CODE_DISTANCE = 3
+)(
     clk,
     reset,
     neighbor_fifo_out_data,
@@ -18,7 +20,7 @@ pu_arbitration_unit u_pu_arbitration_unit (
     blocking_fifo_out_ready,
     blocking_fifo_in_data,
     blocking_fifo_in_valid,
-    blocking_fifo_in_full,
+    blocking_fifo_in_ready,
     master_fifo_out_data,
     master_fifo_out_valid,
     master_fifo_out_ready,
@@ -43,6 +45,9 @@ localparam MASTER_FIFO_WIDTH = UNION_MESSAGE_WIDTH + 1 + 1;
 localparam FINAL_FIFO_WIDTH = MASTER_FIFO_WIDTH + ADDRESS_WIDTH;
 localparam FIFO_COUNT = CODE_DISTANCE * (CODE_DISTANCE - 1);
 
+input clk;
+input reset;
+
 input [ADDRESS_WIDTH:0] neighbor_fifo_out_data; //not -1 to support extra signal
 input neighbor_fifo_out_valid;
 output reg neighbor_fifo_out_ready;
@@ -59,7 +64,7 @@ input [DIRECT_MESSAGE_WIDTH-1: 0] blocking_fifo_out_data;
 input blocking_fifo_out_valid;
 output reg  blocking_fifo_out_ready;
 output [DIRECT_MESSAGE_WIDTH-1: 0] blocking_fifo_in_data;
-output blocking_fifo_in_valid;
+output reg blocking_fifo_in_valid;
 input reg blocking_fifo_in_ready;
 output [MASTER_FIFO_WIDTH-1: 0] master_fifo_out_data;
 output master_fifo_out_valid;
@@ -73,7 +78,7 @@ wire master_fifo_out_valid_internal;
 wire master_fifo_out_is_full_internal;
 
 wire [MASTER_FIFO_WIDTH-1: 0] master_fifo_in_data_internal;
-reg master_fifo_in_ready_intrernal;
+reg master_fifo_in_ready_internal;
 wire master_fifo_in_empty_internal;
 
 wire master_fifo_out_empty;
@@ -98,18 +103,18 @@ always@(*) begin
     neighbor_fifo_out_ready = 1'b0;
     non_blocking_fifo_out_ready = 1'b0;
     blocking_fifo_out_ready = 1'b0;
-    master_fifo_out_data = {UNION_MESSAGE_WIDTH + 2}{1'b0};
-    master_fifo_out_data[UNION_MESSAGE_WIDTH+1 : UNION_MESSAGE_WIDTH] = 2'b11;
-    master_fifo_out_data[DIRECT_MESSAGE_WIDTH-1:0] = blocking_fifo_out_data;
+    master_fifo_out_data_internal = {(UNION_MESSAGE_WIDTH + 2){1'b0}};
+    master_fifo_out_data_internal[UNION_MESSAGE_WIDTH+1 : UNION_MESSAGE_WIDTH] = 2'b11;
+    master_fifo_out_data_internal[DIRECT_MESSAGE_WIDTH-1:0] = blocking_fifo_out_data;
     if(!master_fifo_out_is_full_internal) begin
         if(neighbor_fifo_out_valid) begin
-            neighbor_fifo_out_ready == 1'b1;
-            master_fifo_out_data[ADDRESS_WIDTH:0] = neighbor_fifo_out_data;
-            master_fifo_out_data[UNION_MESSAGE_WIDTH+1 : UNION_MESSAGE_WIDTH] = 2'b00;
+            neighbor_fifo_out_ready = 1'b1;
+            master_fifo_out_data_internal[ADDRESS_WIDTH:0] = neighbor_fifo_out_data;
+            master_fifo_out_data_internal[UNION_MESSAGE_WIDTH+1 : UNION_MESSAGE_WIDTH] = 2'b00;
         end else if (non_blocking_fifo_out_valid) begin
             non_blocking_fifo_out_ready = 1'b1;
-            master_fifo_out_data[UNION_MESSAGE_WIDTH-1:0] = non_blocking_fifo_out_data;
-            master_fifo_out_data[UNION_MESSAGE_WIDTH+1 : UNION_MESSAGE_WIDTH] = 2'b11;
+            master_fifo_out_data_internal[UNION_MESSAGE_WIDTH-1:0] = non_blocking_fifo_out_data;
+            master_fifo_out_data_internal[UNION_MESSAGE_WIDTH+1 : UNION_MESSAGE_WIDTH] = 2'b11;
         end else begin
             blocking_fifo_out_ready = 1'b1;
         end
@@ -140,10 +145,10 @@ always@(*) begin
     non_blocking_fifo_in_valid = 1'b0;
     blocking_fifo_in_valid = 1'b0;
     if(!master_fifo_in_empty_internal) begin
-        if(master_fifo_out_data[UNION_MESSAGE_WIDTH+1 : UNION_MESSAGE_WIDTH] = 2'b00) begin
+        if(master_fifo_in_data_internal[UNION_MESSAGE_WIDTH+1 : UNION_MESSAGE_WIDTH] == 2'b00) begin
             master_fifo_in_ready_internal = neighbor_fifo_in_ready;
             neighbor_fifo_in_valid = 1'b1;
-        end else if (master_fifo_out_data[UNION_MESSAGE_WIDTH+1 : UNION_MESSAGE_WIDTH] = 2'b01) begin
+        end else if (master_fifo_in_data_internal[UNION_MESSAGE_WIDTH+1 : UNION_MESSAGE_WIDTH] == 2'b01) begin
             master_fifo_in_ready_internal = non_blocking_fifo_in_ready;
             non_blocking_fifo_in_valid = 1'b1;
         end else begin
