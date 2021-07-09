@@ -74,6 +74,8 @@ input [MASTER_FIFO_WIDTH-1: 0] master_fifo_in_data;
 input master_fifo_in_valid;
 output master_fifo_in_ready;
 
+output has_flying_messages;
+
 reg [MASTER_FIFO_WIDTH-1: 0] master_fifo_out_data_internal;
 wire master_fifo_out_valid_internal;
 wire master_fifo_out_is_full_internal;
@@ -88,8 +90,7 @@ assign master_fifo_out_valid = ! master_fifo_out_empty;
 wire master_fifo_in_full;
 assign master_fifo_in_ready = ! master_fifo_in_full;
 
-wire has_flying_messages;
-assign has_flying_messages = neighbor_fifo_out_avalid || neighbor_fifo_in_valid || non_blocking_fifo_out_valid || non_blocking_fifo_in_valid || blocking_fifo_out_valid || blocking_fifo_in_valid || master_fifo_out_valid || master_fifo_in_valid;
+assign has_flying_messages = neighbor_fifo_out_valid || neighbor_fifo_in_valid || non_blocking_fifo_out_valid || non_blocking_fifo_in_valid || blocking_fifo_out_valid || blocking_fifo_in_valid || master_fifo_out_valid || master_fifo_in_valid;
 
 fifo_fwft #(.DEPTH(16), .WIDTH(ADDRESS_WIDTH+1)) out_fifo 
     (

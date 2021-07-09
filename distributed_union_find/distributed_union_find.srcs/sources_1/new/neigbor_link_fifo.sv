@@ -56,7 +56,6 @@ end
 wire [ADDRESS_WIDTH:0] neighbor_fifo_out_data_internal;
 reg neighbor_fifo_out_valid_internal;
 wire neighbor_fifo_out_is_full_internal;
-wire [ADDRESS_WIDTH:0] neighbor_fifo_in_data;
 wire neighbor_fifo_in_empty;
 wire neighbor_fifo_in_ready_internal;
 

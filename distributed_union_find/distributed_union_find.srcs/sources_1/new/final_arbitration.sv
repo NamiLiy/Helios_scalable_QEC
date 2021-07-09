@@ -66,6 +66,8 @@ input [FINAL_FIFO_WIDTH - 1 :0] final_fifo_in_data;
 input final_fifo_in_valid;
 output final_fifo_in_ready;
 
+output has_flying_messages;
+
 reg [FINAL_FIFO_WIDTH-1: 0] final_fifo_out_data_internal;
 wire final_fifo_out_valid_internal;
 wire final_fifo_out_is_full_internal;
@@ -80,7 +82,6 @@ assign final_fifo_out_valid = ! final_fifo_out_empty;
 wire final_fifo_in_full;
 assign final_fifo_in_ready = ! final_fifo_in_full;
 
-wire has_flying_messages;
 assign has_flying_messages = sc_fifo_out_valid || final_fifo_out_valid || (master_fifo_out_valid_vector != 0);
 
 fifo_fwft #(.DEPTH(16), .WIDTH(FINAL_FIFO_WIDTH)) out_fifo 
@@ -132,7 +133,7 @@ always@(*) begin
     end
 end
 
-assign final_fifo_out_valid_internal = sc_fifo_out_valid | (master_fifo_out_valid != 6'b0);
+assign final_fifo_out_valid_internal = sc_fifo_out_valid | (master_fifo_out_valid_vector != 6'b0);
 
 fifo_fwft #(.DEPTH(16), .WIDTH(FINAL_FIFO_WIDTH)) in_fifo 
     (

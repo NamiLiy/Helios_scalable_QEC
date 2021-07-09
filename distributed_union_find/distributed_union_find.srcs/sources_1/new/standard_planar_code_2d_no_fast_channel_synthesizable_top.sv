@@ -18,6 +18,11 @@ module standard_planar_code_3d_no_fast_channel_synthesizable_top #(
 localparam PU_COUNT = CODE_DISTANCE * CODE_DISTANCE * (CODE_DISTANCE - 1);
 localparam PER_DIMENSION_WIDTH = $clog2(CODE_DISTANCE);
 localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
+localparam ITERATION_COUNTER_WIDTH = 8;  // counts up to CODE_DISTANCE iterations
+localparam UNION_MESSAGE_WIDTH = 2 * ADDRESS_WIDTH;  // [old_root, updated_root]
+localparam MASTER_FIFO_WIDTH = UNION_MESSAGE_WIDTH + 1 + 1;
+localparam FIFO_COUNT = CODE_DISTANCE * (CODE_DISTANCE - 1);
+localparam FINAL_FIFO_WIDTH = MASTER_FIFO_WIDTH + $clog2(FIFO_COUNT);
 // localparam ITERATION_COUNTER_WIDTH = 8;  // counts up to CODE_DISTANCE iterations
 
 input clk;
