@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 
 module standard_planar_code_3d_no_fast_channel_left #(
-    CODE_DISTANCE = 5  // has CODE_DISTANCE �� (CODE_DISTANCE-1) processing units
+    CODE_DISTANCE = 3  // has CODE_DISTANCE �� (CODE_DISTANCE-1) processing units
 ) (
     clk,
     reset,
@@ -289,11 +289,11 @@ neighbor_link_to_fifo #(.LENGTH(NEIGHBOR_COST), .ADDRESS_WIDTH(ADDRESS_WIDTH)) n
     // .b_old_root_in(`PU(i+1, j, k).old_root), .b_increase(`PU(i+1, j, k).neighbor_increase),\
     // .a_old_root_out(`SLICE_ADDRESS_VEC(`PU(i+1, j, k).neighbor_old_roots, `NEIGHBOR_IDX_TOP(i+1, j, k)))\
     .neighbor_fifo_out_data(`PU_FIFO(j,k).neighbor_fifo_out_data), \
-    .neighbor_fifo_out_valid(`PU_FIFO(j,k).neighbor_fifo_out_valid),\ 
-    .neighbor_fifo_out_ready(`PU_FIFO(j,k).neighbor_fifo_out_ready),\
-    .neighbor_fifo_in_data(`PU_FIFO(j,k).neighbor_fifo_in_data), \
-    .neighbor_fifo_in_valid(`PU_FIFO(j,k).neighbor_fifo_in_valid), \
-    .neighbor_fifo_in_ready(`PU_FIFO(j,k).neighbor_fifo_in_ready) \
+    .neighbor_fifo_out_valid(`PU_FIFO(j,k).neighbor_fifo_out_valid) 
+//    .neighbor_fifo_out_ready(`PU_FIFO(j,k).neighbor_fifo_out_ready),\
+//    .neighbor_fifo_in_data(`PU_FIFO(j,k).neighbor_fifo_in_data), \
+//    .neighbor_fifo_in_valid(`PU_FIFO(j,k).neighbor_fifo_in_valid), \
+//    .neighbor_fifo_in_ready(`PU_FIFO(j,k).neighbor_fifo_in_ready) \
 );
 
 

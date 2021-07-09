@@ -2,7 +2,7 @@
 /// Use this for the main test bench
 
 module standard_planar_code_3d_no_fast_channel_with_stage_controller_left #(
-    CODE_DISTANCE = 5
+    CODE_DISTANCE = 3
 ) (
     clk,
     reset,
