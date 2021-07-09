@@ -23,7 +23,6 @@ localparam UNION_MESSAGE_WIDTH = 2 * ADDRESS_WIDTH;  // [old_root, updated_root]
 localparam MASTER_FIFO_WIDTH = UNION_MESSAGE_WIDTH + 1 + 1;
 localparam FIFO_COUNT = CODE_DISTANCE * (CODE_DISTANCE - 1);
 localparam FINAL_FIFO_WIDTH = MASTER_FIFO_WIDTH + $clog2(FIFO_COUNT);
-// localparam ITERATION_COUNTER_WIDTH = 8;  // counts up to CODE_DISTANCE iterations
 
 input clk;
 input reset;
@@ -65,7 +64,7 @@ standard_planar_code_3d_no_fast_channel_with_stage_controller_left #(.CODE_DISTA
     .final_fifo_in_valid(final_fifo_in_valid),
     .final_fifo_in_ready(final_fifo_in_ready),
     .has_message_flying_otherside(has_message_flying_otherside),
-    .has_odd_clusters_flying_other_side(has_odd_clusters_flying_other_side)
+    .has_odd_clusters_otherside(has_odd_clusters_otherside)
 );
 
 standard_planar_code_3d_no_fast_channel_with_stage_controller_right #(.CODE_DISTANCE(CODE_DISTANCE)) right_module (
@@ -86,7 +85,7 @@ standard_planar_code_3d_no_fast_channel_with_stage_controller_right #(.CODE_DIST
     .final_fifo_in_valid(final_fifo_out_valid),
     .final_fifo_in_ready(final_fifo_out_ready),
     .has_message_flying_otherside(has_message_flying_otherside),
-    .has_odd_clusters_flying_other_side(has_odd_clusters_flying_other_side)
+    .has_odd_clusters_otherside(has_odd_clusters_otherside)
 );
 
 endmodule
