@@ -27,6 +27,7 @@ module pu_arbitration_unit #(
     master_fifo_in_data,
     master_fifo_in_valid,
     master_fifo_in_ready,
+    has_flying_messages
 );
 
 `include "parameters.sv"
@@ -86,6 +87,9 @@ assign master_fifo_out_valid = ! master_fifo_out_empty;
 
 wire master_fifo_in_full;
 assign master_fifo_in_ready = ! master_fifo_in_full;
+
+wire has_flying_messages;
+assign has_flying_messages = neighbor_fifo_out_avalid || neighbor_fifo_in_valid || non_blocking_fifo_out_valid || non_blocking_fifo_in_valid || blocking_fifo_out_valid || blocking_fifo_in_valid || master_fifo_out_valid || master_fifo_in_valid;
 
 fifo_fwft #(.DEPTH(16), .WIDTH(ADDRESS_WIDTH+1)) out_fifo 
     (

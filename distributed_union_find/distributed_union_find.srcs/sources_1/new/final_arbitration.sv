@@ -20,7 +20,8 @@ module final_arbitration_unit #(
     final_fifo_out_ready,
     final_fifo_in_data,
     final_fifo_in_valid,
-    final_fifo_in_ready
+    final_fifo_in_ready,
+    has_flying_messages
 );
 
 `include "parameters.sv"
@@ -78,6 +79,9 @@ assign final_fifo_out_valid = ! final_fifo_out_empty;
 
 wire final_fifo_in_full;
 assign final_fifo_in_ready = ! final_fifo_in_full;
+
+wire has_flying_messages;
+assign has_flying_messages = sc_fifo_out_valid || final_fifo_out_valid || (master_fifo_out_valid_vector != 0);
 
 fifo_fwft #(.DEPTH(16), .WIDTH(FINAL_FIFO_WIDTH)) out_fifo 
     (
