@@ -1,5 +1,5 @@
 module final_arbitration_unit #(
-    parameter CODE_DISTANCE = 5
+    parameter CODE_DISTANCE = 3
 )(
     clk,
     reset,
@@ -100,7 +100,7 @@ always@(*) begin
     sc_fifo_out_ready = 1'b0;
     master_fifo_out_ready_vector = 6'b0;
     final_fifo_out_data = {FINAL_FIFO_WIDTH{1'b0}};
-    final_fifo_out_data[MASTER_FIFO_WIDTH+ADDRESS_WIDTH - 1 : MASTER_FIFO_WIDTH] = 3'b110;
+    final_fifo_out_data[MASTER_FIFO_WIDTH+3 - 1 : MASTER_FIFO_WIDTH] = 3'b110;
     final_fifo_out_data[MASTER_FIFO_WIDTH-1:0] = sc_fifo_out_data;
     if(!final_fifo_out_is_full_internal) begin
         if(master_fifo_out_valid_vector[0]) begin

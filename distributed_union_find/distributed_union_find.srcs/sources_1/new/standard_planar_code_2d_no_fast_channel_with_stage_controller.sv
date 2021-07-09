@@ -23,7 +23,7 @@ module standard_planar_code_3d_no_fast_channel_with_stage_controller_left #(
     final_fifo_in_ready,
 
     has_message_flying_otherside,
-    has_odd_clusters_flying_other_side
+    has_odd_clusters_otherside
 
 );
 
@@ -48,7 +48,7 @@ output deadlock;
 output final_cardinality;
 
 input has_message_flying_otherside;
-input has_odd_clusters_flying_other_side;
+input has_odd_clusters_otherside;
 
 output [FINAL_FIFO_WIDTH - 1 :0] final_fifo_out_data;
 output final_fifo_out_valid;
@@ -125,18 +125,20 @@ decoder_stage_controller_left #(
     .sc_fifo_in_valid(sc_fifo_in_valid),
     .sc_fifo_in_ready(sc_fifo_in_ready),
     .has_message_flying_otherside(has_message_flying_otherside),
-    .has_odd_clusters_flying_other_side(has_odd_clusters_flying_other_side)
+    .has_odd_clusters_otherside(has_odd_clusters_otherside)
 );
 
-final_arbitration_unit u_final_arbitration_unit_left (
+final_arbitration_unit #(
+    .CODE_DISTANCE(CODE_DISTANCE)
+) u_final_arbitration_unit_left (
     .clk(clk),
     .reset(reset),
-    .master_fifo_out_data(master_fifo_out_data_vector),
-    .master_fifo_out_valid(master_fifo_out_valid_vector),
-    .master_fifo_out_ready(master_fifo_out_ready_vector),
-    .master_fifo_in_data(master_fifo_in_data_vector),
-    .master_fifo_in_valid(master_fifo_in_valid_vector),
-    .master_fifo_in_ready(master_fifo_in_ready_vector),
+    .master_fifo_out_data_vector(master_fifo_out_data_vector),
+    .master_fifo_out_valid_vector(master_fifo_out_valid_vector),
+    .master_fifo_out_ready_vector(master_fifo_out_ready_vector),
+    .master_fifo_in_data_vector(master_fifo_in_data_vector),
+    .master_fifo_in_valid_vector(master_fifo_in_valid_vector),
+    .master_fifo_in_ready_vector(master_fifo_in_ready_vector),
     .sc_fifo_out_data(sc_fifo_out_data),
     .sc_fifo_out_valid(sc_fifo_out_valid),
     .sc_fifo_out_ready(sc_fifo_out_ready),
@@ -154,7 +156,7 @@ final_arbitration_unit u_final_arbitration_unit_left (
 endmodule
 
 module standard_planar_code_3d_no_fast_channel_with_stage_controller_right #(
-    CODE_DISTANCE = 5
+    CODE_DISTANCE = 3
 ) (
     clk,
     reset,
@@ -281,12 +283,12 @@ decoder_stage_controller_right #(
 );
 
 final_arbitration_unit u_final_arbitration_unit_right (
-    .master_fifo_out_data(master_fifo_out_data_vector),
-    .master_fifo_out_valid(master_fifo_out_valid_vector),
-    .master_fifo_out_ready(master_fifo_out_ready_vector),
-    .master_fifo_in_data(master_fifo_in_data_vector),
-    .master_fifo_in_valid(master_fifo_in_valid_vector),
-    .master_fifo_in_ready(master_fifo_in_ready_vector),
+    .master_fifo_out_data_vector(master_fifo_out_data_vector),
+    .master_fifo_out_valid_vector(master_fifo_out_valid_vector),
+    .master_fifo_out_ready_vector(master_fifo_out_ready_vector),
+    .master_fifo_in_data_vector(master_fifo_in_data_vector),
+    .master_fifo_in_valid_vector(master_fifo_in_valid_vector),
+    .master_fifo_in_ready_vector(master_fifo_in_ready_vector),
     .sc_fifo_out_data(sc_fifo_out_data),
     .sc_fifo_out_valid(sc_fifo_out_valid),
     .sc_fifo_out_ready(sc_fifo_out_ready),
