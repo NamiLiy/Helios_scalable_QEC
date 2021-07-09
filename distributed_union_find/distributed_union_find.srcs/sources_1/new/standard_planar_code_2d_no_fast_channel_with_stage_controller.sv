@@ -142,7 +142,7 @@ final_arbitration_unit u_final_arbitration_unit_left (
     .sc_fifo_out_ready(sc_fifo_out_ready),
     .sc_fifo_in_data(sc_fifo_in_data),
     .sc_fifo_in_valid(sc_fifo_in_valid),
-    .sc_fifo_in_ready(sc_fifo_in_ready)
+    .sc_fifo_in_ready(sc_fifo_in_ready),
     .final_fifo_out_data(final_fifo_out_data),
     .final_fifo_out_valid(final_fifo_out_valid),
     .final_fifo_out_ready(final_fifo_out_ready),
@@ -286,13 +286,13 @@ final_arbitration_unit u_final_arbitration_unit_right (
     .master_fifo_out_ready(master_fifo_out_ready_vector),
     .master_fifo_in_data(master_fifo_in_data_vector),
     .master_fifo_in_valid(master_fifo_in_valid_vector),
-    .master_fifo_in_ready(master_fifo_in_ready_vector)
+    .master_fifo_in_ready(master_fifo_in_ready_vector),
     .sc_fifo_out_data(sc_fifo_out_data),
     .sc_fifo_out_valid(sc_fifo_out_valid),
     .sc_fifo_out_ready(sc_fifo_out_ready),
     .sc_fifo_in_data(sc_fifo_in_data),
     .sc_fifo_in_valid(sc_fifo_in_valid),
-    .sc_fifo_in_ready(sc_fifo_in_ready)
+    .sc_fifo_in_ready(sc_fifo_in_ready),
     .final_fifo_out_data(final_fifo_out_data),
     .final_fifo_out_valid(final_fifo_out_valid),
     .final_fifo_out_ready(final_fifo_out_ready),

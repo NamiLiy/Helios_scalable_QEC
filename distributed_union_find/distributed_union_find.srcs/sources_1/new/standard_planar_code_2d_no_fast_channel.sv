@@ -59,11 +59,15 @@ reg [PU_COUNT-1:0] has_message_flyings_reg;
 wire initialize_neighbors;
 reg [STAGE_WIDTH-1:0] stage_internal;
 
+wire [FIFO_COUNT - 1 :0] arbitration_has_flying_messages;
+reg [FIFO_COUNT - 1 :0] arbitration_has_flying_messages_reg;
 
-assign  has_message_flying = |has_message_flyings_reg;
+
+assign  has_message_flying = (|has_message_flyings_reg) | (|arbitration_has_flying_messages_reg);
 
 always@(posedge clk) begin
     has_message_flyings_reg <= has_message_flyings;
+    arbitration_has_flying_messages_reg <= arbitration_has_flying_messages;
 end
 
 
@@ -183,64 +187,64 @@ endgenerate
 // instantiate the pu_arbitration_units
 generate
     for (k=0; k < CODE_DISTANCE; k=k+1) begin: f_k
-            for (j=0; j < CODE_DISTANCE-1; j=j+1) begin: f_j
-                // instantiate processing unit
-                wire [ADDRESS_WIDTH:0] neighbor_fifo_out_data; //not -1 to support extra signal
-                wire neighbor_fifo_out_valid;
-                wire neighbor_fifo_out_ready;
-                wire [ADDRESS_WIDTH:0] neighbor_fifo_in_data;
-                wire neighbor_fifo_in_valid;
-                wire neighbor_fifo_in_ready;
-                wire [UNION_MESSAGE_WIDTH-1: 0] non_blocking_fifo_out_data;
-                wire non_blocking_fifo_out_valid;
-                wire non_blocking_fifo_out_ready;
-                wire [UNION_MESSAGE_WIDTH-1: 0] non_blocking_fifo_in_data;
-                wire non_blocking_fifo_in_valid;
-                wire non_blocking_fifo_in_ready;
-                wire [DIRECT_MESSAGE_WIDTH-1: 0] blocking_fifo_out_data;
-                wire blocking_fifo_out_valid;
-                wire blocking_fifo_out_ready;
-                wire [DIRECT_MESSAGE_WIDTH-1: 0] blocking_fifo_in_data;
-                wire blocking_fifo_in_valid;
-                wire blocking_fifo_in_ready;
-                wire blocking_fifo_in_full;
-                // wire [MASTER_FIFO_WIDTH-1: 0] master_fifo_out_data;
-                // wire master_fifo_out_valid;
-                // wire master_fifo_out_ready;
-                // wire [MASTER_FIFO_WIDTH-1: 0] master_fifo_in_data;
-                // wire master_fifo_in_valid;
-                // wire master_fifo_in_ready;
-                pu_arbitration_unit u_pu_arbitration_unit (
-                    .clk(clk),
-                    .reset(reset),
-                    .neighbor_fifo_out_data(neighbor_fifo_out_data),
-                    .neighbor_fifo_out_valid(neighbor_fifo_out_valid),
-                    .neighbor_fifo_out_ready(neighbor_fifo_out_ready),
-                    .neighbor_fifo_in_data(neighbor_fifo_in_data),
-                    .neighbor_fifo_in_valid(neighbor_fifo_in_valid),
-                    .neighbor_fifo_in_ready(neighbor_fifo_in_ready),
-                    .non_blocking_fifo_out_data(non_blocking_fifo_out_data),
-                    .non_blocking_fifo_out_valid(non_blocking_fifo_out_valid),
-                    .non_blocking_fifo_out_ready(non_blocking_fifo_out_ready),
-                    .non_blocking_fifo_in_data(non_blocking_fifo_in_data),
-                    .non_blocking_fifo_in_valid(non_blocking_fifo_in_valid),
-                    .non_blocking_fifo_in_ready(non_blocking_fifo_in_ready),
-                    .blocking_fifo_out_data(blocking_fifo_out_data),
-                    .blocking_fifo_out_valid(blocking_fifo_out_valid),
-                    .blocking_fifo_out_ready(blocking_fifo_out_ready),
-                    .blocking_fifo_in_data(blocking_fifo_in_data),
-                    .blocking_fifo_in_valid(blocking_fifo_in_valid),
-                    .blocking_fifo_in_ready(blocking_fifo_in_ready),
-                    .master_fifo_out_data(`MASTER_FIFO_VEC(master_fifo_out_data_vector, `FIFO_INDEX(j, k))),
-                    .master_fifo_out_valid(`MASTER_FIFO_SIGNAL_VEC(master_fifo_out_valid_vector, `FIFO_INDEX(j, k))),
-                    .master_fifo_out_ready(`MASTER_FIFO_SIGNAL_VEC(master_fifo_out_ready_vector, `FIFO_INDEX(j, k))),
-                    .master_fifo_in_data(`MASTER_FIFO_VEC(master_fifo_in_data_vector, `FIFO_INDEX(j, k))),
-                    .master_fifo_in_valid(`MASTER_FIFO_SIGNAL_VEC(master_fifo_in_valid_vector, `FIFO_INDEX(j, k))),
-                    .master_fifo_in_ready(`MASTER_FIFO_SIGNAL_VEC(master_fifo_in_ready_vector, `FIFO_INDEX(j, k))),
-                );
+        for (j=0; j < CODE_DISTANCE-1; j=j+1) begin: f_j
+            // instantiate processing unit
+            wire [ADDRESS_WIDTH:0] neighbor_fifo_out_data; //not -1 to support extra signal
+            wire neighbor_fifo_out_valid;
+            wire neighbor_fifo_out_ready;
+            wire [ADDRESS_WIDTH:0] neighbor_fifo_in_data;
+            wire neighbor_fifo_in_valid;
+            wire neighbor_fifo_in_ready;
+            wire [UNION_MESSAGE_WIDTH-1: 0] non_blocking_fifo_out_data;
+            wire non_blocking_fifo_out_valid;
+            wire non_blocking_fifo_out_ready;
+            wire [UNION_MESSAGE_WIDTH-1: 0] non_blocking_fifo_in_data;
+            wire non_blocking_fifo_in_valid;
+            wire non_blocking_fifo_in_ready;
+            wire [DIRECT_MESSAGE_WIDTH-1: 0] blocking_fifo_out_data;
+            wire blocking_fifo_out_valid;
+            wire blocking_fifo_out_ready;
+            wire [DIRECT_MESSAGE_WIDTH-1: 0] blocking_fifo_in_data;
+            wire blocking_fifo_in_valid;
+            wire blocking_fifo_in_ready;
+            wire blocking_fifo_in_full;
+            // wire [MASTER_FIFO_WIDTH-1: 0] master_fifo_out_data;
+            // wire master_fifo_out_valid;
+            // wire master_fifo_out_ready;
+            // wire [MASTER_FIFO_WIDTH-1: 0] master_fifo_in_data;
+            // wire master_fifo_in_valid;
+            // wire master_fifo_in_ready;
+            pu_arbitration_unit u_pu_arbitration_unit (
+                .clk(clk),
+                .reset(reset),
+                .neighbor_fifo_out_data(neighbor_fifo_out_data),
+                .neighbor_fifo_out_valid(neighbor_fifo_out_valid),
+                .neighbor_fifo_out_ready(neighbor_fifo_out_ready),
+                .neighbor_fifo_in_data(neighbor_fifo_in_data),
+                .neighbor_fifo_in_valid(neighbor_fifo_in_valid),
+                .neighbor_fifo_in_ready(neighbor_fifo_in_ready),
+                .non_blocking_fifo_out_data(non_blocking_fifo_out_data),
+                .non_blocking_fifo_out_valid(non_blocking_fifo_out_valid),
+                .non_blocking_fifo_out_ready(non_blocking_fifo_out_ready),
+                .non_blocking_fifo_in_data(non_blocking_fifo_in_data),
+                .non_blocking_fifo_in_valid(non_blocking_fifo_in_valid),
+                .non_blocking_fifo_in_ready(non_blocking_fifo_in_ready),
+                .blocking_fifo_out_data(blocking_fifo_out_data),
+                .blocking_fifo_out_valid(blocking_fifo_out_valid),
+                .blocking_fifo_out_ready(blocking_fifo_out_ready),
+                .blocking_fifo_in_data(blocking_fifo_in_data),
+                .blocking_fifo_in_valid(blocking_fifo_in_valid),
+                .blocking_fifo_in_ready(blocking_fifo_in_ready),
+                .master_fifo_out_data(`MASTER_FIFO_VEC(master_fifo_out_data_vector, `FIFO_INDEX(j, k))),
+                .master_fifo_out_valid(`MASTER_FIFO_SIGNAL_VEC(master_fifo_out_valid_vector, `FIFO_INDEX(j, k))),
+                .master_fifo_out_ready(`MASTER_FIFO_SIGNAL_VEC(master_fifo_out_ready_vector, `FIFO_INDEX(j, k))),
+                .master_fifo_in_data(`MASTER_FIFO_VEC(master_fifo_in_data_vector, `FIFO_INDEX(j, k))),
+                .master_fifo_in_valid(`MASTER_FIFO_SIGNAL_VEC(master_fifo_in_valid_vector, `FIFO_INDEX(j, k))),
+                .master_fifo_in_ready(`MASTER_FIFO_SIGNAL_VEC(master_fifo_in_ready_vector, `FIFO_INDEX(j, k))),
+                .has_flying_messages(`MASTER_FIFO_SIGNAL_VEC(arbitration_has_flying_messages, `FIFO_INDEX(j, k)))
+            );
 
-                assign blocking_fifo_in_full = ~blocking_fifo_in_ready;
-            end
+            assign blocking_fifo_in_full = ~blocking_fifo_in_ready;
         end
     end
 endgenerate
@@ -278,7 +282,7 @@ neighbor_link #(.LENGTH(NEIGHBOR_COST), .ADDRESS_WIDTH(ADDRESS_WIDTH)) neighbor_
 assign `PU(i+1, j, k).neighbor_is_fully_grown[`NEIGHBOR_IDX_TOP(i+1, j, k)] = `PU(i, j, k).neighbor_is_fully_grown[`NEIGHBOR_IDX_BOTTOM(i, j, k)];
 
 `define NEIGHBOR_VERTICAL_TO_FIFO_INSTANTIATE \
-neighbor_link_to_fifo #(.LENGTH(NEIGHBOR_COST), .ADDRESS_WIDTH(ADDRESS_WIDTH)) neighbor_vertical (\
+neighbor_link_to_fifo #(.LENGTH(NEIGHBOR_COST), .ADDRESS_WIDTH(ADDRESS_WIDTH)) neighbor_vertical_fifo (\
     .clk(clk), .reset(reset), .initialize(initialize_neighbors), .is_fully_grown(`PU(i, j, k).neighbor_is_fully_grown[`NEIGHBOR_IDX_BOTTOM(i, j, k)]),\
     .a_old_root_in(`PU(i, j, k).old_root), .a_increase(`PU(i, j, k).neighbor_increase),\
     .b_old_root_out(`SLICE_ADDRESS_VEC(`PU(i, j, k).neighbor_old_roots, `NEIGHBOR_IDX_BOTTOM(i, j, k))),\
@@ -286,7 +290,7 @@ neighbor_link_to_fifo #(.LENGTH(NEIGHBOR_COST), .ADDRESS_WIDTH(ADDRESS_WIDTH)) n
     // .a_old_root_out(`SLICE_ADDRESS_VEC(`PU(i+1, j, k).neighbor_old_roots, `NEIGHBOR_IDX_TOP(i+1, j, k)))\
     .neighbor_fifo_out_data(`PU_FIFO(j,k).neighbor_fifo_out_data), \
     .neighbor_fifo_out_valid(`PU_FIFO(j,k).neighbor_fifo_out_valid),\ 
-    .neighbor_fifo_out_ready(`PU_FIFO(j,k).neighbor_fifo_out_ready), \
+    .neighbor_fifo_out_ready(`PU_FIFO(j,k).neighbor_fifo_out_ready),\
     .neighbor_fifo_in_data(`PU_FIFO(j,k).neighbor_fifo_in_data), \
     .neighbor_fifo_in_valid(`PU_FIFO(j,k).neighbor_fifo_in_valid), \
     .neighbor_fifo_in_ready(`PU_FIFO(j,k).neighbor_fifo_in_ready) \
@@ -511,8 +515,8 @@ generate
                 
             end
         end
-        for (i= CODE_DISTANCE - 1; i < CODE_DISTANCE; i=i+1) begin: neighbor_i
-            for (j=0; j < CODE_DISTANCE-1; j=j+1) begin: neighbor_j
+        for (i= CODE_DISTANCE - 1; i < CODE_DISTANCE; i=i+1) begin: neighbor_i_extra
+            for (j=0; j < CODE_DISTANCE-1; j=j+1) begin: neighbor_j_extra
                 `DIRECT_CHANNEL_VERTICAL_WRAP_INSTANTIATE
             end
         end
@@ -581,12 +585,16 @@ wire initialize_neighbors;
 reg [STAGE_WIDTH-1:0] stage_internal;
 
 
-assign  has_message_flying = |has_message_flyings_reg;
+wire [FIFO_COUNT - 1 :0] arbitration_has_flying_messages;
+reg [FIFO_COUNT - 1 :0] arbitration_has_flying_messages_reg;
+
+
+assign  has_message_flying = (|has_message_flyings_reg) | (|arbitration_has_flying_messages_reg);
 
 always@(posedge clk) begin
     has_message_flyings_reg <= has_message_flyings;
+    arbitration_has_flying_messages_reg <= arbitration_has_flying_messages;
 end
-
 
 genvar i;
 genvar j;
@@ -704,63 +712,63 @@ endgenerate
 // instantiate the pu_arbitration_units
 generate
     for (k=0; k < CODE_DISTANCE; k=k+1) begin: f_k
-            for (j=0; j < CODE_DISTANCE-1; j=j+1) begin: f_j
-                // instantiate processing unit
-                wire [ADDRESS_WIDTH:0] neighbor_fifo_out_data; //not -1 to support extra signal
-                wire neighbor_fifo_out_valid;
-                wire neighbor_fifo_out_ready;
-                wire [ADDRESS_WIDTH:0] neighbor_fifo_in_data;
-                wire neighbor_fifo_in_valid;
-                wire neighbor_fifo_in_ready;
-                wire [UNION_MESSAGE_WIDTH-1: 0] non_blocking_fifo_out_data;
-                wire non_blocking_fifo_out_valid;
-                wire non_blocking_fifo_out_ready;
-                wire [UNION_MESSAGE_WIDTH-1: 0] non_blocking_fifo_in_data;
-                wire non_blocking_fifo_in_valid;
-                wire non_blocking_fifo_in_ready;
-                wire [DIRECT_MESSAGE_WIDTH-1: 0] blocking_fifo_out_data;
-                wire blocking_fifo_out_valid;
-                wire blocking_fifo_out_ready;
-                wire [DIRECT_MESSAGE_WIDTH-1: 0] blocking_fifo_in_data;
-                wire blocking_fifo_in_valid;
-                wire blocking_fifo_in_ready;
-                wire blocking_fifo_in_full;
-                // wire [MASTER_FIFO_WIDTH-1: 0] master_fifo_out_data;
-                // wire master_fifo_out_valid;
-                // wire master_fifo_out_ready;
-                // wire [MASTER_FIFO_WIDTH-1: 0] master_fifo_in_data;
-                // wire master_fifo_in_valid;
-                // wire master_fifo_in_ready;
-                pu_arbitration_unit u_pu_arbitration_unit (
-                    .clk(clk),
-                    .reset(reset),
-                    .neighbor_fifo_out_data(neighbor_fifo_out_data),
-                    .neighbor_fifo_out_valid(neighbor_fifo_out_valid),
-                    .neighbor_fifo_out_ready(neighbor_fifo_out_ready),
-                    .neighbor_fifo_in_data(neighbor_fifo_in_data),
-                    .neighbor_fifo_in_valid(neighbor_fifo_in_valid),
-                    .neighbor_fifo_in_ready(neighbor_fifo_in_ready),
-                    .non_blocking_fifo_out_data(non_blocking_fifo_out_data),
-                    .non_blocking_fifo_out_valid(non_blocking_fifo_out_valid),
-                    .non_blocking_fifo_out_ready(non_blocking_fifo_out_ready),
-                    .non_blocking_fifo_in_data(non_blocking_fifo_in_data),
-                    .non_blocking_fifo_in_valid(non_blocking_fifo_in_valid),
-                    .non_blocking_fifo_in_ready(non_blocking_fifo_in_ready),
-                    .blocking_fifo_out_data(blocking_fifo_out_data),
-                    .blocking_fifo_out_valid(blocking_fifo_out_valid),
-                    .blocking_fifo_out_ready(blocking_fifo_out_ready),
-                    .blocking_fifo_in_data(blocking_fifo_in_data),
-                    .blocking_fifo_in_valid(blocking_fifo_in_valid),
-                    .blocking_fifo_in_full(blocking_fifo_in_full)
-                    .master_fifo_out_data(`MASTER_FIFO_VEC(master_fifo_out_data_vector, `FIFO_INDEX(j, k))),
-                    .master_fifo_out_valid(`MASTER_FIFO_SIGNAL_VEC(master_fifo_out_valid_vector, `FIFO_INDEX(j, k))),
-                    .master_fifo_out_ready(`MASTER_FIFO_SIGNAL_VEC(master_fifo_out_ready_vector, `FIFO_INDEX(j, k))),
-                    .master_fifo_in_data(`MASTER_FIFO_VEC(master_fifo_in_data_vector, `FIFO_INDEX(j, k))),
-                    .master_fifo_in_valid(`MASTER_FIFO_SIGNAL_VEC(master_fifo_in_valid_vector, `FIFO_INDEX(j, k))),
-                    .master_fifo_in_ready(`MASTER_FIFO_SIGNAL_VEC(master_fifo_in_ready_vector, `FIFO_INDEX(j, k))),
-                );
-                assign blocking_fifo_in_full = ~blocking_fifo_in_ready;
-            end
+        for (j=0; j < CODE_DISTANCE-1; j=j+1) begin: f_j
+            // instantiate processing unit
+            wire [ADDRESS_WIDTH:0] neighbor_fifo_out_data; //not -1 to support extra signal
+            wire neighbor_fifo_out_valid;
+            wire neighbor_fifo_out_ready;
+            wire [ADDRESS_WIDTH:0] neighbor_fifo_in_data;
+            wire neighbor_fifo_in_valid;
+            wire neighbor_fifo_in_ready;
+            wire [UNION_MESSAGE_WIDTH-1: 0] non_blocking_fifo_out_data;
+            wire non_blocking_fifo_out_valid;
+            wire non_blocking_fifo_out_ready;
+            wire [UNION_MESSAGE_WIDTH-1: 0] non_blocking_fifo_in_data;
+            wire non_blocking_fifo_in_valid;
+            wire non_blocking_fifo_in_ready;
+            wire [DIRECT_MESSAGE_WIDTH-1: 0] blocking_fifo_out_data;
+            wire blocking_fifo_out_valid;
+            wire blocking_fifo_out_ready;
+            wire [DIRECT_MESSAGE_WIDTH-1: 0] blocking_fifo_in_data;
+            wire blocking_fifo_in_valid;
+            wire blocking_fifo_in_ready;
+            wire blocking_fifo_in_full;
+            // wire [MASTER_FIFO_WIDTH-1: 0] master_fifo_out_data;
+            // wire master_fifo_out_valid;
+            // wire master_fifo_out_ready;
+            // wire [MASTER_FIFO_WIDTH-1: 0] master_fifo_in_data;
+            // wire master_fifo_in_valid;
+            // wire master_fifo_in_ready;
+            pu_arbitration_unit u_pu_arbitration_unit (
+                .clk(clk),
+                .reset(reset),
+                .neighbor_fifo_out_data(neighbor_fifo_out_data),
+                .neighbor_fifo_out_valid(neighbor_fifo_out_valid),
+                .neighbor_fifo_out_ready(neighbor_fifo_out_ready),
+                .neighbor_fifo_in_data(neighbor_fifo_in_data),
+                .neighbor_fifo_in_valid(neighbor_fifo_in_valid),
+                .neighbor_fifo_in_ready(neighbor_fifo_in_ready),
+                .non_blocking_fifo_out_data(non_blocking_fifo_out_data),
+                .non_blocking_fifo_out_valid(non_blocking_fifo_out_valid),
+                .non_blocking_fifo_out_ready(non_blocking_fifo_out_ready),
+                .non_blocking_fifo_in_data(non_blocking_fifo_in_data),
+                .non_blocking_fifo_in_valid(non_blocking_fifo_in_valid),
+                .non_blocking_fifo_in_ready(non_blocking_fifo_in_ready),
+                .blocking_fifo_out_data(blocking_fifo_out_data),
+                .blocking_fifo_out_valid(blocking_fifo_out_valid),
+                .blocking_fifo_out_ready(blocking_fifo_out_ready),
+                .blocking_fifo_in_data(blocking_fifo_in_data),
+                .blocking_fifo_in_valid(blocking_fifo_in_valid),
+                .blocking_fifo_in_full(blocking_fifo_in_full),
+                .master_fifo_out_data(`MASTER_FIFO_VEC(master_fifo_out_data_vector, `FIFO_INDEX(j, k))),
+                .master_fifo_out_valid(`MASTER_FIFO_SIGNAL_VEC(master_fifo_out_valid_vector, `FIFO_INDEX(j, k))),
+                .master_fifo_out_ready(`MASTER_FIFO_SIGNAL_VEC(master_fifo_out_ready_vector, `FIFO_INDEX(j, k))),
+                .master_fifo_in_data(`MASTER_FIFO_VEC(master_fifo_in_data_vector, `FIFO_INDEX(j, k))),
+                .master_fifo_in_valid(`MASTER_FIFO_SIGNAL_VEC(master_fifo_in_valid_vector, `FIFO_INDEX(j, k))),
+                .master_fifo_in_ready(`MASTER_FIFO_SIGNAL_VEC(master_fifo_in_ready_vector, `FIFO_INDEX(j, k))),
+                .has_flying_messages(`MASTER_FIFO_SIGNAL_VEC(arbitration_has_flying_messages, `FIFO_INDEX(j, k)))
+            );
+            assign blocking_fifo_in_full = ~blocking_fifo_in_ready;
         end
     end
 endgenerate
@@ -1029,8 +1037,8 @@ generate
                 
             end
         end
-        for (i=(CODE_DISTANCE+1)/2 - 1; i < (CODE_DISTANCE+1)/2; i=i+1) begin: neighbor_i
-            for (j=0; j < CODE_DISTANCE-1; j=j+1) begin: neighbor_j
+        for (i=(CODE_DISTANCE+1)/2 - 1; i < (CODE_DISTANCE+1)/2; i=i+1) begin: neighbor_i_extra
+            for (j=0; j < CODE_DISTANCE-1; j=j+1) begin: neighbor_j_extra
                 `NEIGHBOR_VERTICAL_TO_FIFO_INSTANTIATE
                 `UNION_CHANNEL_VERTICAL_TO_FIFO_INSTANTIATE
                 `DIRECT_CHANNEL_VERTICAL_TO_FIFO_INSTANTIATE
