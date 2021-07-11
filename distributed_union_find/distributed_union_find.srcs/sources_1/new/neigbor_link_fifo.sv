@@ -85,6 +85,7 @@ assert property(@(posedge clk) (!(neighbor_fifo_out_valid_internal && neighbor_f
 else   $error("Wrote to a full FIFO in neighbor");
 
 always @(*) begin
+    neighbor_fifo_out_valid_internal = 0;
     if(a_old_root_in != a_old_root && !initialize) begin
         neighbor_fifo_out_valid_internal = 1;
     end else if (a_increase != a_increase_stored && !initialize) begin

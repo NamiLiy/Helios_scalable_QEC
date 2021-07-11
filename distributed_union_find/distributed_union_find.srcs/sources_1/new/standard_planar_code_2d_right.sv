@@ -167,7 +167,10 @@ generate
                     .is_odd_cluster(`is_odd_cluster(i, j, k)),
                     .is_odd_cardinality(`is_odd_cardinality(i, j, k)),
                     .is_touching_boundary(`is_touching_boundary(i, j, k)),
-                    .is_processing(`has_message_flying(i, j, k))
+                    .is_processing(`has_message_flying(i, j, k)),
+                    .is_error_syndrome(),
+                    .boundary_increased(),
+                    .pending_tell_new_root_touching_boundary()
                 );
                 // assign `has_message_flying(i, j) = union_out_channels_valid | (|union_in_channels_valid) | (|direct_out_channels_valid) | (|direct_in_channels_valid);
             end

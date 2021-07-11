@@ -74,9 +74,9 @@ standard_planar_code_3d_no_fast_channel_with_stage_controller_right #(.CODE_DIST
     .is_error_syndromes(is_error_syndromes),
     .roots(),
     .result_valid(),
-    .iteration_counter(iteration_counter),
-    .cycle_counter(cycle_counter),
-    .deadlock(deadlock),
+    .iteration_counter(),
+    .cycle_counter(),
+    .deadlock(),
     .final_cardinality(),
     .final_fifo_out_data(final_fifo_in_data),   // The in and out are mixed since we are in debugging stage
     .final_fifo_out_valid(final_fifo_in_valid),
