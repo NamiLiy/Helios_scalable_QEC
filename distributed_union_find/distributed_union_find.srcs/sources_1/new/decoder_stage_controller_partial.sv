@@ -435,7 +435,7 @@ module decoder_stage_controller_right #(
     input sc_fifo_in_valid,
     output sc_fifo_in_ready,
     output has_message_flying_otherside, // Temporary solution 
-    output has_odd_clusters_flying_other_side
+    output has_odd_clusters_otherside
 );
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
@@ -504,7 +504,7 @@ fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH+1)) in_fifo
 // end
 
 assign has_message_flying_otherside = has_message_flying;
-assign has_odd_clusters_flying_other_side = has_odd_clusters;
+assign has_odd_clusters_otherside = has_odd_clusters;
 
 // deadlock detection logic
 always @(posedge clk) begin
@@ -605,19 +605,34 @@ always @(posedge clk) begin
                 delay_counter <= 0;
                 result_valid <= 0; // for safety
             end
-            STAGE_RESULT_CALCULATING: begin
+              // Feel free to uncomment this when fixing the design
+//            STAGE_RESULT_CALCULATING: begin
+//                sc_fifo_out_valid_internal <= 1'b1;
+//                if( result_data_frame == 0 ) begin
+//                    sc_fifo_out_data_internal[PU_COUNT-1:0] <=  is_odd_cardinalities;
+//                end else if( result_data_frame == 1) begin
+//                    sc_fifo_out_data_internal[PU_COUNT-1:0] <=  is_touching_boundaries;
+//                end else if( result_data_frame < 5) begin
+//                    sc_fifo_out_data_internal[ADDRESS_WIDTH*2-1:0] <= roots;
+//                end else begin
+//                    stage <= STAGE_IDLE;
+//                end
+//                result_valid <= 0; // for safety
+//            end
+             // Not working but internal workaround
+             STAGE_RESULT_CALCULATING: begin
                 sc_fifo_out_valid_internal <= 1'b1;
                 if( result_data_frame == 0 ) begin
-                    sc_fifo_out_data_internal[PU_COUNT-1:0] <=  is_odd_cardinalities;
+                    sc_fifo_out_data_internal <=  is_odd_cardinalities;
                 end else if( result_data_frame == 1) begin
-                    sc_fifo_out_data_internal[PU_COUNT-1:0] <=  is_touching_boundaries;
+                    sc_fifo_out_data_internal <=  is_touching_boundaries;
                 end else if( result_data_frame < 5) begin
-                    sc_fifo_out_data_internal[ADDRESS_WIDTH*2-1:0] <= roots;
+                    sc_fifo_out_data_internal <= roots;
                 end else begin
                     stage <= STAGE_IDLE;
                 end
                 result_valid <= 0; // for safety
-            end
+             end
         endcase
     end
 end

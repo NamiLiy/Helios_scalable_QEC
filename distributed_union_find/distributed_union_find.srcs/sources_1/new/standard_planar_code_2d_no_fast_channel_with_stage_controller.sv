@@ -177,7 +177,7 @@ module standard_planar_code_3d_no_fast_channel_with_stage_controller_right #(
     final_fifo_in_ready,
 
     has_message_flying_otherside,
-    has_odd_clusters_flying_other_side
+    has_odd_clusters_otherside
 
 );
 
@@ -209,7 +209,7 @@ input final_fifo_in_valid;
 output final_fifo_in_ready;
 
 output has_message_flying_otherside;
-output has_odd_clusters_flying_other_side;
+output has_odd_clusters_otherside;
 
 wire [PU_COUNT-1:0] is_odd_cardinalities;
 wire [PU_COUNT-1:0] is_touching_boundaries;
@@ -279,7 +279,7 @@ decoder_stage_controller_right #(
     .sc_fifo_in_valid(sc_fifo_in_valid),
     .sc_fifo_in_ready(sc_fifo_in_ready),
     .has_message_flying_otherside(has_message_flying_otherside),
-    .has_odd_clusters_flying_other_side(has_odd_clusters_flying_other_side)
+    .has_odd_clusters_otherside(has_odd_clusters_otherside)
 );
 
 final_arbitration_unit u_final_arbitration_unit_right (
