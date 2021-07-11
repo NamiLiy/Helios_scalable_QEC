@@ -37,9 +37,10 @@ module decoder_stage_controller_left #(
     input has_message_flying_otherside,
     input has_odd_clusters_otherside
 );
-
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
 `define MAX3(a, b, c) (((a) > `MAX((b), (c))) ? (a) : `MAX((b), (c)))
+`define MIN(a, b) (((a) < (b))? (a) : (b))
+
 localparam MAXIMUM_DELAY = `MAX3(BOUNDARY_GROW_DELAY, SPREAD_CLUSTER_DELAY, SYNC_IS_ODD_CLUSTER_DELAY);
 localparam COUNTER_WIDTH = $clog2(MAXIMUM_DELAY + 1);
 reg [COUNTER_WIDTH-1:0] delay_counter;
@@ -168,11 +169,21 @@ always @(posedge clk) begin
     end
 end
 
+reg [2:0] result_data_frame;
+reg [(PU_COUNT*2)-1:0] net_is_touching_boundaries;
+reg [(PU_COUNT*2)-1:0] net_is_odd_cardinalities;
+reg [(ADDRESS_WIDTH*PU_COUNT*2)-1:0] net_roots;
+
 always @(posedge clk) begin
     if (reset) begin
         stage <= STAGE_IDLE;
         delay_counter <= 0;
         result_valid <= 0;
+        result_data_frame <= 0;
+        net_is_touching_boundaries <= 0;
+        net_is_odd_cardinalities <= 0;
+        net_roots <= 0;
+
     end else begin
         case (stage)
             STAGE_IDLE: begin
@@ -231,11 +242,32 @@ always @(posedge clk) begin
                 delay_counter <= 0;
                 result_valid <= 0; // for safety
             end
-            STAGE_RESULT_CALCULATING: begin
+            STAGE_RESULT_CALCULATING: begin         
+                integer i = 0;
                 if (sc_fifo_in_data_internal[2:0] == 32'd4 && !sc_fifo_in_empty_internal) begin
                     stage <= STAGE_IDLE;
                     go_to_result_calculator <= 1;
                     result_valid <= 0; // for safety
+                end else if(sc_fifo_in_valid == 1'b1) begin
+                    for(i = 0; i < 3; i = i + 1) begin
+                        net_is_odd_cardinalities[6*i+:4] <= is_odd_cardinalities[4*i+:4];
+                        net_is_touching_boundaries[6*i+:4] <= is_touching_boundaries[4*i+:4];
+                        net_roots[6*ADDRESS_WIDTH*i+:4*ADDRESS_WIDTH] <= roots[4*ADDRESS_WIDTH*i+:4*ADDRESS_WIDTH];
+                    end
+                    result_data_frame <= (result_data_frame+1)%5;
+                    sc_fifo_in_ready_internal <= 1'b1;
+
+                    if(result_data_frame == 0) begin
+                        for(i = 0; i < 3; i = i + 1) begin
+                            net_is_odd_cardinalities[3+5*i+:2] <= sc_fifo_in_data_internal[2*i+:2];
+                        end
+                    end else if(result_data_frame == 1 )begin
+                        for(i = 0; i < 3; i = i + 1) begin
+                            net_is_touching_boundaries[3+5*i+:2] <= sc_fifo_in_data_internal[2*i+:2];
+                        end
+                    end else begin
+                        net_roots[ADDRESS_WIDTH*3 + 5*(result_data_frame-2)*ADDRESS_WIDTH+:2*ADDRESS_WIDTH] <= sc_fifo_in_data_internal[2*ADDRESS_WIDTH:0];
+                    end
                 end
             end
         endcase
@@ -523,11 +555,14 @@ always @(posedge clk) begin
     end
 end
 
+reg [2: 0] result_data_frame;
+
 always @(posedge clk) begin
     if (reset) begin
         stage <= STAGE_IDLE;
         delay_counter <= 0;
         result_valid <= 0;
+        result_data_frame <= 0;
     end else begin
         case (stage)
             STAGE_IDLE: begin
@@ -571,8 +606,16 @@ always @(posedge clk) begin
                 result_valid <= 0; // for safety
             end
             STAGE_RESULT_CALCULATING: begin
-                stage <= STAGE_IDLE;
-                go_to_result_calculator <= 1;
+                sc_fifo_out_valid_internal <= 1'b1;
+                if( result_data_frame == 0 ) begin
+                    sc_fifo_out_data_internal[PU_COUNT-1:0] <=  is_odd_cardinalities;
+                end else if( result_data_frame == 1) begin
+                    sc_fifo_out_data_internal[PU_COUNT-1:0] <=  is_touching_boundaries;
+                end else if( result_data_frame < 5) begin
+                    sc_fifo_out_data_internal[ADDRESS_WIDTH*2-1:0] <= roots;
+                end else begin
+                    stage <= STAGE_IDLE;
+                end
                 result_valid <= 0; // for safety
             end
         endcase
