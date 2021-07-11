@@ -59,7 +59,9 @@ output final_fifo_in_ready;
 
 wire [PU_COUNT-1:0] is_odd_cardinalities;
 wire [PU_COUNT-1:0] is_touching_boundaries;
-wire has_message_flying;
+wire has_message_flying_sc;
+wire has_message_flying_grid;
+wire has_message_flying_interconnect;
 wire [STAGE_WIDTH-1:0] stage;
 wire [PU_COUNT-1:0] is_odd_clusters;
 reg has_odd_clusters;
@@ -67,6 +69,8 @@ reg has_odd_clusters;
 always@(posedge clk) begin
     has_odd_clusters <= |is_odd_clusters;
 end
+
+assign has_message_flying_sc = has_message_flying_grid | has_message_flying_interconnect;
 
 wire [MASTER_FIFO_WIDTH*FIFO_COUNT - 1 :0] master_fifo_out_data_vector;
 wire [FIFO_COUNT - 1 :0] master_fifo_out_valid_vector;
@@ -91,7 +95,7 @@ standard_planar_code_3d_no_fast_channel_left #(.CODE_DISTANCE(CODE_DISTANCE)) de
     .is_odd_cardinalities(is_odd_cardinalities),
     .is_touching_boundaries(is_touching_boundaries),
     .roots(roots),
-    .has_message_flying(has_message_flying),
+    .has_message_flying(has_message_flying_grid),
     .master_fifo_out_data_vector(master_fifo_out_data_vector),
     .master_fifo_out_valid_vector(master_fifo_out_valid_vector),
     .master_fifo_out_ready_vector(master_fifo_out_ready_vector),
@@ -106,7 +110,7 @@ decoder_stage_controller_left #(
 ) u_decoder_stage_controller_left (
     .clk(clk),
     .reset(reset),
-    .has_message_flying(has_message_flying),
+    .has_message_flying(has_message_flying_sc),
     .has_odd_clusters(has_odd_clusters),
     .is_touching_boundaries(is_touching_boundaries),
     .is_odd_cardinalities(is_odd_cardinalities),
@@ -150,7 +154,8 @@ final_arbitration_unit #(
     .final_fifo_out_ready(final_fifo_out_ready),
     .final_fifo_in_data(final_fifo_in_data),
     .final_fifo_in_valid(final_fifo_in_valid),
-    .final_fifo_in_ready(final_fifo_in_ready)
+    .final_fifo_in_ready(final_fifo_in_ready),
+    .has_flying_messages(has_message_flying_interconnect)
 );
 
 endmodule
@@ -187,8 +192,8 @@ localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
 localparam ITERATION_COUNTER_WIDTH = 8;  // counts up to CODE_DISTANCE iterations
 localparam UNION_MESSAGE_WIDTH = 2 * ADDRESS_WIDTH;  // [old_root, updated_root]
 localparam MASTER_FIFO_WIDTH = UNION_MESSAGE_WIDTH + 1 + 1;
-localparam FINAL_FIFO_WIDTH = MASTER_FIFO_WIDTH + ADDRESS_WIDTH;
 localparam FIFO_COUNT = CODE_DISTANCE * (CODE_DISTANCE - 1);
+localparam FINAL_FIFO_WIDTH = MASTER_FIFO_WIDTH + $clog2(FIFO_COUNT+1);
 
 input clk;
 input reset;
@@ -213,7 +218,9 @@ output has_odd_clusters_otherside;
 
 wire [PU_COUNT-1:0] is_odd_cardinalities;
 wire [PU_COUNT-1:0] is_touching_boundaries;
-wire has_message_flying;
+wire has_message_flying_sc;
+wire has_message_flying_grid;
+wire has_message_flying_interconnect;
 wire [STAGE_WIDTH-1:0] stage;
 wire [PU_COUNT-1:0] is_odd_clusters;
 reg has_odd_clusters;
@@ -221,6 +228,8 @@ reg has_odd_clusters;
 always@(posedge clk) begin
     has_odd_clusters <= |is_odd_clusters;
 end
+
+assign has_message_flying_sc = has_message_flying_grid | has_message_flying_interconnect;
 
 wire [MASTER_FIFO_WIDTH*FIFO_COUNT - 1 :0] master_fifo_out_data_vector;
 wire [FIFO_COUNT - 1 :0] master_fifo_out_valid_vector;
@@ -245,7 +254,7 @@ standard_planar_code_3d_no_fast_channel_right #(.CODE_DISTANCE(CODE_DISTANCE)) d
     .is_odd_cardinalities(is_odd_cardinalities),
     .is_touching_boundaries(is_touching_boundaries),
     .roots(roots),
-    .has_message_flying(has_message_flying),
+    .has_message_flying(has_message_flying_grid),
     .master_fifo_out_data_vector(master_fifo_out_data_vector),
     .master_fifo_out_valid_vector(master_fifo_out_valid_vector),
     .master_fifo_out_ready_vector(master_fifo_out_ready_vector),
@@ -260,7 +269,7 @@ decoder_stage_controller_right #(
 ) u_decoder_stage_controller_right (
     .clk(clk),
     .reset(reset),
-    .has_message_flying(has_message_flying),
+    .has_message_flying(has_message_flying_sc),
     .has_odd_clusters(has_odd_clusters),
     .is_touching_boundaries(is_touching_boundaries),
     .is_odd_cardinalities(is_odd_cardinalities),
@@ -283,6 +292,8 @@ decoder_stage_controller_right #(
 );
 
 final_arbitration_unit u_final_arbitration_unit_right (
+    .clk(clk),
+    .reset(reset),
     .master_fifo_out_data_vector(master_fifo_out_data_vector),
     .master_fifo_out_valid_vector(master_fifo_out_valid_vector),
     .master_fifo_out_ready_vector(master_fifo_out_ready_vector),
@@ -300,7 +311,8 @@ final_arbitration_unit u_final_arbitration_unit_right (
     .final_fifo_out_ready(final_fifo_out_ready),
     .final_fifo_in_data(final_fifo_in_data),
     .final_fifo_in_valid(final_fifo_in_valid),
-    .final_fifo_in_ready(final_fifo_in_ready)
+    .final_fifo_in_ready(final_fifo_in_ready),
+    .has_flying_messages(has_message_flying_interconnect)
     
 );
 

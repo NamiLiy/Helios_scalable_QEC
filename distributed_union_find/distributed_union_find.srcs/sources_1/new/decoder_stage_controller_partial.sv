@@ -3,7 +3,7 @@
 `include "parameters.sv"
 
 module decoder_stage_controller_left #(
-    parameter CODE_DISTANCE = 5,
+    parameter CODE_DISTANCE = 3,
     parameter ITERATION_COUNTER_WIDTH = 8,  // counts to 255 iterations
     parameter BOUNDARY_GROW_DELAY = 10,  // clock cycles
     parameter SPREAD_CLUSTER_DELAY = 10,  // clock cycles
@@ -63,9 +63,9 @@ wire sc_fifo_in_empty_internal;
 reg sc_fifo_in_ready_internal;
 
 wire sc_fifo_out_empty;
-assign sc_fifo_out_ready = !sc_fifo_out_empty;
+assign sc_fifo_out_valid = !sc_fifo_out_empty;
 
-fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH+1)) out_fifo 
+fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH)) out_fifo 
     (
     .clk(clk),
     .srst(reset),
@@ -80,7 +80,7 @@ fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH+1)) out_fifo
 wire sc_fifo_in_full;
 assign sc_fifo_in_ready = !sc_fifo_in_full;
 
-fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH+1)) in_fifo 
+fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH)) in_fifo 
     (
     .clk(clk),
     .srst(reset),
@@ -462,9 +462,9 @@ wire sc_fifo_in_empty_internal;
 reg sc_fifo_in_ready_internal;
 
 wire sc_fifo_out_empty;
-assign sc_fifo_out_ready = !sc_fifo_out_empty;
+assign sc_fifo_out_valid = !sc_fifo_out_empty;
 
-fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH+1)) out_fifo 
+fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH)) out_fifo 
     (
     .clk(clk),
     .srst(reset),
@@ -479,7 +479,7 @@ fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH+1)) out_fifo
 wire sc_fifo_in_full;
 assign sc_fifo_in_ready = !sc_fifo_in_full;
 
-fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH+1)) in_fifo 
+fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH)) in_fifo 
     (
     .clk(clk),
     .srst(reset),

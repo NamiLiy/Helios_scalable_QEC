@@ -82,7 +82,17 @@ assign final_fifo_out_valid = ! final_fifo_out_empty;
 wire final_fifo_in_full;
 assign final_fifo_in_ready = ! final_fifo_in_full;
 
-assign has_flying_messages = sc_fifo_out_valid || final_fifo_out_valid || (master_fifo_out_valid_vector != 0);
+reg has_flying_messages_reg;
+
+always@(posedge clk) begin
+    if (reset) begin
+        has_flying_messages_reg <= 0;
+    end else begin
+        has_flying_messages_reg <= sc_fifo_out_valid || final_fifo_out_valid || (master_fifo_out_valid_vector != 0);
+    end
+end
+
+assign has_flying_messages = has_flying_messages_reg;
 
 fifo_fwft #(.DEPTH(16), .WIDTH(FINAL_FIFO_WIDTH)) out_fifo 
     (
