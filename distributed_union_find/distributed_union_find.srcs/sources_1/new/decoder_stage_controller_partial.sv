@@ -248,6 +248,7 @@ always @(posedge clk) begin
                     stage <= STAGE_IDLE;
                     go_to_result_calculator <= 1;
                     result_valid <= 0; // for safety
+                    sc_fifo_in_ready_internal <= 1'b0;
                 end else if(sc_fifo_in_valid == 1'b1) begin
                     for(i = 0; i < 3; i = i + 1) begin
                         net_is_odd_cardinalities[6*i+:4] <= is_odd_cardinalities[4*i+:4];
@@ -268,6 +269,8 @@ always @(posedge clk) begin
                     end else begin
                         net_roots[ADDRESS_WIDTH*3 + 5*(result_data_frame-2)*ADDRESS_WIDTH+:2*ADDRESS_WIDTH] <= sc_fifo_in_data_internal[2*ADDRESS_WIDTH:0];
                     end
+                end else begin
+                    sc_fifo_in_ready_internal <= 1'b0;
                 end
             end
         endcase
@@ -606,15 +609,19 @@ always @(posedge clk) begin
                 result_valid <= 0; // for safety
             end
             STAGE_RESULT_CALCULATING: begin
-                sc_fifo_out_valid_internal <= 1'b1;
-                if( result_data_frame == 0 ) begin
-                    sc_fifo_out_data_internal[PU_COUNT-1:0] <=  is_odd_cardinalities;
-                end else if( result_data_frame == 1) begin
-                    sc_fifo_out_data_internal[PU_COUNT-1:0] <=  is_touching_boundaries;
-                end else if( result_data_frame < 5) begin
-                    sc_fifo_out_data_internal[ADDRESS_WIDTH*2-1:0] <= roots;
+                if(sc_fifo_out_full_internal != 1'b1) begin
+                    sc_fifo_out_valid_internal <= 1'b1;
+                    if( result_data_frame == 0 ) begin
+                        sc_fifo_out_data_internal[PU_COUNT-1:0] <=  is_odd_cardinalities;
+                    end else if( result_data_frame == 1) begin
+                        sc_fifo_out_data_internal[PU_COUNT-1:0] <=  is_touching_boundaries;
+                    end else if( result_data_frame < 5) begin
+                        sc_fifo_out_data_internal[ADDRESS_WIDTH*2-1:0] <= roots;
+                    end else begin
+                        stage <= STAGE_IDLE;
+                    end
                 end else begin
-                    stage <= STAGE_IDLE;
+                    sc_fifo_out_valid_internal <= 1'b0;
                 end
                 result_valid <= 0; // for safety
             end
