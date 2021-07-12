@@ -185,7 +185,7 @@ localparam DIRECT_CHANNEL_ALL_EXPAND_COUNT = 2 * DIRECT_CHANNEL_EXPAND_COUNT - 1
 wire [DIRECT_CHANNEL_COUNT-1:0] direct_in_channels_data_is_odd_cardinality;
 wire [DIRECT_CHANNEL_COUNT-1:0] direct_in_channels_data_is_touching_boundary;
 generate
-    for (i=0; i < DIRECT_CHANNEL_EXPAND_COUNT; i=i+1) begin: splitting_direct_in_channel_messages
+    for (i=0; i < DIRECT_CHANNEL_COUNT; i=i+1) begin: splitting_direct_in_channel_messages
         assign direct_in_channels_data_is_odd_cardinality[i] = `direct_in_data_is_odd_cardinality(i);
         assign direct_in_channels_data_is_touching_boundary[i] = `direct_in_data_is_touching_boundary(i);
     end

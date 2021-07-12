@@ -3,7 +3,7 @@
 `include "parameters.sv"
 
 module decoder_stage_controller_left #(
-    parameter CODE_DISTANCE = 5,
+    parameter CODE_DISTANCE = 3,
     parameter ITERATION_COUNTER_WIDTH = 8,  // counts to 255 iterations
     parameter BOUNDARY_GROW_DELAY = 10,  // clock cycles
     parameter SPREAD_CLUSTER_DELAY = 10,  // clock cycles
@@ -63,9 +63,9 @@ wire sc_fifo_in_empty_internal;
 reg sc_fifo_in_ready_internal;
 
 wire sc_fifo_out_empty;
-assign sc_fifo_out_ready = !sc_fifo_out_empty;
+assign sc_fifo_out_valid = !sc_fifo_out_empty;
 
-fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH+1)) out_fifo 
+fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH)) out_fifo 
     (
     .clk(clk),
     .srst(reset),
@@ -80,7 +80,7 @@ fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH+1)) out_fifo
 wire sc_fifo_in_full;
 assign sc_fifo_in_ready = !sc_fifo_in_full;
 
-fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH+1)) in_fifo 
+fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH)) in_fifo 
     (
     .clk(clk),
     .srst(reset),
@@ -248,7 +248,10 @@ always @(posedge clk) begin
                     stage <= STAGE_IDLE;
                     go_to_result_calculator <= 1;
                     result_valid <= 0; // for safety
+<<<<<<< HEAD
                     sc_fifo_in_ready_internal <= 1'b0;
+=======
+>>>>>>> 0472ad19f8776bbce7611244f5e477084316c19b
                 end else if(sc_fifo_in_valid == 1'b1) begin
                     for(i = 0; i < 3; i = i + 1) begin
                         net_is_odd_cardinalities[6*i+:4] <= is_odd_cardinalities[4*i+:4];
@@ -269,8 +272,11 @@ always @(posedge clk) begin
                     end else begin
                         net_roots[ADDRESS_WIDTH*3 + 5*(result_data_frame-2)*ADDRESS_WIDTH+:2*ADDRESS_WIDTH] <= sc_fifo_in_data_internal[2*ADDRESS_WIDTH:0];
                     end
+<<<<<<< HEAD
                 end else begin
                     sc_fifo_in_ready_internal <= 1'b0;
+=======
+>>>>>>> 0472ad19f8776bbce7611244f5e477084316c19b
                 end
             end
         endcase
@@ -438,7 +444,7 @@ module decoder_stage_controller_right #(
     input sc_fifo_in_valid,
     output sc_fifo_in_ready,
     output has_message_flying_otherside, // Temporary solution 
-    output has_odd_clusters_flying_other_side
+    output has_odd_clusters_otherside
 );
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
@@ -465,9 +471,9 @@ wire sc_fifo_in_empty_internal;
 reg sc_fifo_in_ready_internal;
 
 wire sc_fifo_out_empty;
-assign sc_fifo_out_ready = !sc_fifo_out_empty;
+assign sc_fifo_out_valid = !sc_fifo_out_empty;
 
-fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH+1)) out_fifo 
+fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH)) out_fifo 
     (
     .clk(clk),
     .srst(reset),
@@ -482,7 +488,7 @@ fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH+1)) out_fifo
 wire sc_fifo_in_full;
 assign sc_fifo_in_ready = !sc_fifo_in_full;
 
-fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH+1)) in_fifo 
+fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH)) in_fifo 
     (
     .clk(clk),
     .srst(reset),
@@ -507,7 +513,7 @@ fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH+1)) in_fifo
 // end
 
 assign has_message_flying_otherside = has_message_flying;
-assign has_odd_clusters_flying_other_side = has_odd_clusters;
+assign has_odd_clusters_otherside = has_odd_clusters;
 
 // deadlock detection logic
 always @(posedge clk) begin
@@ -608,6 +614,7 @@ always @(posedge clk) begin
                 delay_counter <= 0;
                 result_valid <= 0; // for safety
             end
+<<<<<<< HEAD
             STAGE_RESULT_CALCULATING: begin
                 if(sc_fifo_out_full_internal != 1'b1) begin
                     sc_fifo_out_valid_internal <= 1'b1;
@@ -622,9 +629,36 @@ always @(posedge clk) begin
                     end
                 end else begin
                     sc_fifo_out_valid_internal <= 1'b0;
+=======
+              // Feel free to uncomment this when fixing the design
+//            STAGE_RESULT_CALCULATING: begin
+//                sc_fifo_out_valid_internal <= 1'b1;
+//                if( result_data_frame == 0 ) begin
+//                    sc_fifo_out_data_internal[PU_COUNT-1:0] <=  is_odd_cardinalities;
+//                end else if( result_data_frame == 1) begin
+//                    sc_fifo_out_data_internal[PU_COUNT-1:0] <=  is_touching_boundaries;
+//                end else if( result_data_frame < 5) begin
+//                    sc_fifo_out_data_internal[ADDRESS_WIDTH*2-1:0] <= roots;
+//                end else begin
+//                    stage <= STAGE_IDLE;
+//                end
+//                result_valid <= 0; // for safety
+//            end
+             // Not working but internal workaround
+             STAGE_RESULT_CALCULATING: begin
+                sc_fifo_out_valid_internal <= 1'b1;
+                if( result_data_frame == 0 ) begin
+                    sc_fifo_out_data_internal <=  is_odd_cardinalities;
+                end else if( result_data_frame == 1) begin
+                    sc_fifo_out_data_internal <=  is_touching_boundaries;
+                end else if( result_data_frame < 5) begin
+                    sc_fifo_out_data_internal <= roots;
+                end else begin
+                    stage <= STAGE_IDLE;
+>>>>>>> 0472ad19f8776bbce7611244f5e477084316c19b
                 end
                 result_valid <= 0; // for safety
-            end
+             end
         endcase
     end
 end

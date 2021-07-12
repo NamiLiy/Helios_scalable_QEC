@@ -169,7 +169,10 @@ generate
                     .is_odd_cluster(`is_odd_cluster(i, j, k)),
                     .is_odd_cardinality(`is_odd_cardinality(i, j, k)),
                     .is_touching_boundary(`is_touching_boundary(i, j, k)),
-                    .is_processing(`has_message_flying(i, j, k))
+                    .is_processing(`has_message_flying(i, j, k)),
+                    .is_error_syndrome(),
+                    .boundary_increased(),
+                    .pending_tell_new_root_touching_boundary()
                 );
                 // assign `has_message_flying(i, j) = union_out_channels_valid | (|union_in_channels_valid) | (|direct_out_channels_valid) | (|direct_in_channels_valid);
             end
@@ -216,7 +219,9 @@ generate
             // wire [MASTER_FIFO_WIDTH-1: 0] master_fifo_in_data;
             // wire master_fifo_in_valid;
             // wire master_fifo_in_ready;
-            pu_arbitration_unit u_pu_arbitration_unit (
+            pu_arbitration_unit #(
+                .CODE_DISTANCE(CODE_DISTANCE)
+            ) u_pu_arbitration_unit (
                 .clk(clk),
                 .reset(reset),
                 .neighbor_fifo_out_data(neighbor_fifo_out_data),

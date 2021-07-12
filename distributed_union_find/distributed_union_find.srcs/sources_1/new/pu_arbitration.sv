@@ -92,7 +92,7 @@ assign master_fifo_in_ready = ! master_fifo_in_full;
 
 assign has_flying_messages = neighbor_fifo_out_valid || neighbor_fifo_in_valid || non_blocking_fifo_out_valid || non_blocking_fifo_in_valid || blocking_fifo_out_valid || blocking_fifo_in_valid || master_fifo_out_valid || master_fifo_in_valid;
 
-fifo_fwft #(.DEPTH(16), .WIDTH(ADDRESS_WIDTH+1)) out_fifo 
+fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH)) out_fifo 
     (
     .clk(clk),
     .srst(reset),
@@ -128,7 +128,7 @@ end
 
 assign master_fifo_out_valid_internal = neighbor_fifo_out_valid | non_blocking_fifo_out_valid | blocking_fifo_out_valid;
 
-fifo_fwft #(.DEPTH(16), .WIDTH(ADDRESS_WIDTH+1)) in_fifo 
+fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH)) in_fifo 
     (
     .clk(clk),
     .srst(reset),
