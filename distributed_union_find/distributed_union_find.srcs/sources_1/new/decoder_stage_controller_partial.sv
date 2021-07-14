@@ -185,7 +185,7 @@ always @(posedge clk) begin
         result_data_frame <= 0;
         net_is_touching_boundaries <= 0;
         net_is_odd_cardinalities <= 0;
-        net_roots = {ADDRESS_WIDTH*PU_COUNT-1{1'b0}};
+        net_roots <= {ADDRESS_WIDTH*PU_COUNT-1{1'b0}};
 
     end else begin
         case (stage)
@@ -230,6 +230,7 @@ always @(posedge clk) begin
                         end else begin
                             stage <= STAGE_RESULT_CALCULATING;
                             delay_counter <= 0;
+                            sc_fifo_in_ready_internal <= 1'b1;
                         end
                     end else if (cycles_in_stage > DEADLOCK_THRESHOLD)  begin
                         stage <= STAGE_IDLE;
@@ -251,15 +252,14 @@ always @(posedge clk) begin
                     go_to_result_calculator <= 1;
                     result_valid <= 0; // for safety
                     sc_fifo_in_ready_internal <= 1'b0;
-                end else if(sc_fifo_in_valid == 1'b1) begin
+                end else if(!sc_fifo_in_empty_internal) begin
                     result_data_frame <= (result_data_frame+1)%5;
-                    sc_fifo_in_ready_internal <= 1'b1;
-
+                    
                     if(result_data_frame == 0) begin
                         for(i = 0; i < 3; i = i + 1) begin
                             net_is_odd_cardinalities[6*i+:4] <= is_odd_cardinalities[4*i+:4];
                             net_is_touching_boundaries[6*i+:4] <= is_touching_boundaries[4*i+:4];
-                            net_roots[6*ADDRESS_WIDTH*i+:4*ADDRESS_WIDTH] <= roots[4*ADDRESS_WIDTH*i+:4*ADDRESS_WIDTH];
+                            net_roots[6*ADDRESS_WIDTH*i+:4*ADDRESS_WIDTH] <= roots[6*ADDRESS_WIDTH*i+:4*ADDRESS_WIDTH];
                         end
                         for(i = 0; i < 3; i = i + 1) begin
                             net_is_odd_cardinalities[3+5*i+:2] <= sc_fifo_in_data_internal[2*i+:2];
@@ -271,8 +271,6 @@ always @(posedge clk) begin
                     end else begin
                         net_roots[ADDRESS_WIDTH*3 + 5*(result_data_frame-2)*ADDRESS_WIDTH+:2*ADDRESS_WIDTH] <= sc_fifo_in_data_internal[2*ADDRESS_WIDTH:0];
                     end
-                end else begin
-                    sc_fifo_in_ready_internal <= 1'b0;
                 end
             end
         endcase
@@ -382,9 +380,9 @@ get_boundry_cardinality #(
 ) result_calculator(
     .clk(clk),
     .reset(reset),
-    .is_touching_boundaries(is_touching_boundaries),
-    .is_odd_cardinalities(is_odd_cardinalities),
-    .roots(roots),
+    .is_touching_boundaries(net_is_touching_boundaries),
+    .is_odd_cardinalities(net_is_odd_cardinalities),
+    .roots(net_roots),
     .final_cardinality(final_cardinality),
     .go(go_to_result_calculator),
     .done(done_from_calculator)

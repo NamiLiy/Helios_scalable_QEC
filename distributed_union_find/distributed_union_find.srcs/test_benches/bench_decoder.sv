@@ -108,6 +108,19 @@ decoder_stage_controller_right #(
     .has_odd_clusters_otherside(has_odd_clusters_otherside)
 );
 
+localparam EXPAND_WIDTH = 8;
+wire [(EXPAND_WIDTH * PU_COUNT)-1:0] net_roots_expanded;
+`define net_root_out(i) net_roots_out[((i+1) * ADDRESS_WIDTH) - 1 : (i * ADDRESS_WIDTH)]
+`define net_root_expanded(i) net_roots_expanded[((i+1) * EXPAND_WIDTH) - 1 : (i * EXPAND_WIDTH)]
+
+genvar j;
+generate
+    for (j=0; j < PU_COUNT; j=j+1) begin: expander
+        assign `net_root_expanded(j) = {2'b0, `net_root_out(j)};
+    end
+endgenerate
+
+
 integer i;
 always #5 clk = ~clk;
 
