@@ -144,7 +144,7 @@ initial begin
         left_roots[ADDRESS_WIDTH*i+:ADDRESS_WIDTH] = i;    
     end
     for(i = 0; i < 17; i = i + 1) begin
-        right_roots[ADDRESS_WIDTH*i+:ADDRESS_WIDTH] = i+12;    
+        right_roots[ADDRESS_WIDTH*i+:ADDRESS_WIDTH] = i;    
     end
     #107;
     reset = 1'b0;

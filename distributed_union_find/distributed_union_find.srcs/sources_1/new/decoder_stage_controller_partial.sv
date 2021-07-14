@@ -230,7 +230,7 @@ always @(posedge clk) begin
                         end else begin
                             stage <= STAGE_RESULT_CALCULATING;
                             delay_counter <= 0;
-                            sc_fifo_in_ready_internal <= 1'b1;
+                           sc_fifo_in_ready_internal <= 1'b1;
                         end
                     end else if (cycles_in_stage > DEADLOCK_THRESHOLD)  begin
                         stage <= STAGE_IDLE;
@@ -247,14 +247,13 @@ always @(posedge clk) begin
                 result_valid <= 0; // for safety
             end
             STAGE_RESULT_CALCULATING: begin         
-                if (sc_fifo_in_data_internal[2:0] == 32'd4 && !sc_fifo_in_empty_internal) begin
+                if (sc_fifo_in_data_internal[2:0] == 32'd4 && sc_fifo_in_data_internal[MASTER_FIFO_WIDTH - 1 : 3] == 32'd0 && !sc_fifo_in_empty_internal) begin
                     stage <= STAGE_IDLE;
                     go_to_result_calculator <= 1;
                     result_valid <= 0; // for safety
                     sc_fifo_in_ready_internal <= 1'b0;
                 end else if(!sc_fifo_in_empty_internal) begin
                     result_data_frame <= (result_data_frame+1)%5;
-                    
                     if(result_data_frame == 0) begin
                         for(i = 0; i < 3; i = i + 1) begin
                             net_is_odd_cardinalities[6*i+:4] <= is_odd_cardinalities[4*i+:4];
@@ -558,7 +557,7 @@ always @(posedge clk) begin
     end
 end
 
-reg [2: 0] result_data_frame;
+reg [3: 0] result_data_frame;
 
 always @(posedge clk) begin
     if (reset) begin
