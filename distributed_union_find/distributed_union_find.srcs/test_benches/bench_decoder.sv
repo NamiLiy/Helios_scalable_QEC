@@ -127,10 +127,10 @@ initial begin
     right_is_odd_cardinalities = 0;
     left_roots = 0;
     right_roots = 0;
-    for(i = 0; i < 12; i = i + 1) begin
+    for(i = 0; i < 17; i = i + 1) begin
         left_roots[ADDRESS_WIDTH*i+:ADDRESS_WIDTH] = i;    
     end
-    for(i = 0; i < 6; i = i + 1) begin
+    for(i = 0; i < 17; i = i + 1) begin
         right_roots[ADDRESS_WIDTH*i+:ADDRESS_WIDTH] = i+12;    
     end
     #107;
