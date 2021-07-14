@@ -613,15 +613,19 @@ always @(posedge clk) begin
             STAGE_RESULT_CALCULATING: begin
                 if(sc_fifo_out_full_internal != 1'b1) begin
                     sc_fifo_out_valid_internal <= 1'b1;
-                    sc_fifo_out_data_internal = {MASTER_FIFO_WIDTH{1'b0}};
+//                    sc_fifo_out_data_internal <= {MASTER_FIFO_WIDTH{1'b0}};
                     result_data_frame <= (result_data_frame+1) % 6;
                     if( result_data_frame == 0 ) begin
+                        sc_fifo_out_data_internal[MASTER_FIFO_WIDTH-1:6] <= 32'b0;
                         sc_fifo_out_data_internal[5:0] <=  is_odd_cardinalities;
                     end else if( result_data_frame == 1) begin
+                        sc_fifo_out_data_internal[MASTER_FIFO_WIDTH-1:6] <= 32'b0;
                         sc_fifo_out_data_internal[5:0] <=  is_touching_boundaries;
                     end else if( result_data_frame < 5) begin
+                        sc_fifo_out_data_internal[MASTER_FIFO_WIDTH-1:ADDRESS_WIDTH*2] <= 32'b0;
                         sc_fifo_out_data_internal[ADDRESS_WIDTH*2-1:0] <= roots;
                     end else begin
+                        sc_fifo_out_data_internal[MASTER_FIFO_WIDTH-1:3] <= 32'b0;
                         sc_fifo_out_data_internal[2:0] <= 32'd4;
                         stage <= STAGE_IDLE;
                     end
