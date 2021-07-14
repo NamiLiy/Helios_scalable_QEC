@@ -129,7 +129,8 @@ decoder_stage_controller_left #(
     .sc_fifo_in_valid(sc_fifo_in_valid),
     .sc_fifo_in_ready(sc_fifo_in_ready),
     .has_message_flying_otherside(has_message_flying_otherside),
-    .has_odd_clusters_otherside(has_odd_clusters_otherside)
+    .has_odd_clusters_otherside(has_odd_clusters_otherside),
+    .net_roots_out()
 );
 
 final_arbitration_unit #(
