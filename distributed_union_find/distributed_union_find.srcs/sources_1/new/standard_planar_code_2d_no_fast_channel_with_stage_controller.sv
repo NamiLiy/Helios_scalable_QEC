@@ -2,7 +2,8 @@
 /// Use this for the main test bench
 
 module standard_planar_code_3d_no_fast_channel_with_stage_controller #(
-    CODE_DISTANCE = 5
+    CODE_DISTANCE_X = 4,
+    CODE_DISTANCE_Z = 12
 ) (
     clk,
     reset,
@@ -17,8 +18,10 @@ module standard_planar_code_3d_no_fast_channel_with_stage_controller #(
 
 );
 
-localparam PU_COUNT = CODE_DISTANCE * CODE_DISTANCE * (CODE_DISTANCE - 1);
-localparam PER_DIMENSION_WIDTH = $clog2(CODE_DISTANCE);
+`define MAX(a, b) (((a) > (b)) ? (a) : (b))
+localparam MEASUREMENT_ROUNDS = MAX(CODE_DISTANCE_X, CODE_DISTANCE_Z);
+localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
+localparam PER_DIMENSION_WIDTH = $clog2(MEASUREMENT_ROUNDS);
 localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
 localparam ITERATION_COUNTER_WIDTH = 8;  // counts up to CODE_DISTANCE iterations
 
@@ -44,7 +47,10 @@ always@(posedge clk) begin
     has_odd_clusters <= |is_odd_clusters;
 end
 
-standard_planar_code_3d_no_fast_channel #(.CODE_DISTANCE(CODE_DISTANCE)) decoder (
+standard_planar_code_3d_no_fast_channel #(
+    .CODE_DISTANCE_X(CODE_DISTANCE_X),
+    .CODE_DISTANCE_Z(CODE_DISTANCE_Z)
+    ) decoder (
     .clk(clk),
     .reset(reset),
     .stage(stage),
@@ -57,7 +63,8 @@ standard_planar_code_3d_no_fast_channel #(.CODE_DISTANCE(CODE_DISTANCE)) decoder
 );
 
 decoder_stage_controller #(
-    .CODE_DISTANCE(CODE_DISTANCE), 
+    .CODE_DISTANCE_X(CODE_DISTANCE_X),
+    .CODE_DISTANCE_Z(CODE_DISTANCE_Z),
     .ITERATION_COUNTER_WIDTH(ITERATION_COUNTER_WIDTH)
 ) u_decoder_stage_controller (
     .clk(clk),

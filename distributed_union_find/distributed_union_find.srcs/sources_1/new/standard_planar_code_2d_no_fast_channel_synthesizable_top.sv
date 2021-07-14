@@ -2,7 +2,8 @@
 /// It just drops the debug lines from the top module used for simulation
 
 module standard_planar_code_3d_no_fast_channel_synthesizable_top #(
-    CODE_DISTANCE = 9
+    CODE_DISTANCE_X = 4,
+    CODE_DISTANCE_Z = 12
 ) (
     clk,
     reset,
@@ -15,9 +16,12 @@ module standard_planar_code_3d_no_fast_channel_synthesizable_top #(
     final_cardinality
 );
 
-localparam PU_COUNT = CODE_DISTANCE * CODE_DISTANCE * (CODE_DISTANCE - 1);
-localparam PER_DIMENSION_WIDTH = $clog2(CODE_DISTANCE);
+`define MAX(a, b) (((a) > (b)) ? (a) : (b))
+localparam MEASUREMENT_ROUNDS = MAX(CODE_DISTANCE_X, CODE_DISTANCE_Z);
+localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
+localparam PER_DIMENSION_WIDTH = $clog2(MEASUREMENT_ROUNDS);
 localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
+// TODO : Address width can be changed to further reduced
 // localparam ITERATION_COUNTER_WIDTH = 8;  // counts up to CODE_DISTANCE iterations
 
 input clk;
@@ -33,7 +37,10 @@ output final_cardinality;
 // output reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
 // output [31:0] cycle_counter;
 
-standard_planar_code_3d_no_fast_channel_with_stage_controller #(.CODE_DISTANCE(CODE_DISTANCE)) top_module (
+standard_planar_code_3d_no_fast_channel_with_stage_controller #(
+    .CODE_DISTANCE_X(CODE_DISTANCE_X),
+    .CODE_DISTANCE_Z(CODE_DISTANCE_Z)
+    ) top_module (
     .clk(clk),
     .reset(reset),
     .new_round_start(new_round_start), //pulse signal
