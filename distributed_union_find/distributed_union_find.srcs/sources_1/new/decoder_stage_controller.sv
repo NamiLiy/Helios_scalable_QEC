@@ -3,39 +3,60 @@
 `include "parameters.sv"
 
 module decoder_stage_controller #(
-    parameter CODE_DISTANCE = 5,
+    parameter CODE_DISTANCE_X = 4,
+    parameter CODE_DISTANCE_Z = 12,
     parameter ITERATION_COUNTER_WIDTH = 8,  // counts to 255 iterations
     parameter BOUNDARY_GROW_DELAY = 3,  // clock cycles
     parameter SPREAD_CLUSTER_DELAY = 2,  // clock cycles
-    parameter SYNC_IS_ODD_CLUSTER_DELAY = 2,  // clock cycles
-    parameter PER_DIMENSION_WIDTH = $clog2(CODE_DISTANCE),
-    parameter ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3,
-    parameter PU_COUNT = CODE_DISTANCE*CODE_DISTANCE*(CODE_DISTANCE-1)
+    parameter SYNC_IS_ODD_CLUSTER_DELAY = 2  // clock cycles
+    
 ) (
-    input clk,
-    input reset,
-    input new_round_start,
-    input has_message_flying,
-    input has_odd_clusters,
-    input [PU_COUNT-1:0] is_touching_boundaries,
-    input [PU_COUNT-1:0] is_odd_cardinalities,
-    output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots,
-    output reg [STAGE_WIDTH-1:0] stage,
-    output reg result_valid,
-    output reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter,
-    output reg [31:0] cycle_counter,
-    output reg deadlock,
-    output final_cardinality
+    clk,
+    reset,
+    new_round_start,
+    has_message_flying,
+    has_odd_clusters,
+    is_touching_boundaries,
+    is_odd_cardinalities,
+    roots,
+    stage,
+    result_valid,
+    iteration_counter,
+    cycle_counter,
+    deadlock,
+    final_cardinality
 );
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
 `define MAX3(a, b, c) (((a) > `MAX((b), (c))) ? (a) : `MAX((b), (c)))
+
+localparam MEASUREMENT_ROUNDS = MAX(CODE_DISTANCE_X, CODE_DISTANCE_Z);
+localparam PER_DIMENSION_WIDTH = $clog2(MEASUREMENT_ROUNDS);
+localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
+localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
+    
 localparam MAXIMUM_DELAY = `MAX3(BOUNDARY_GROW_DELAY, SPREAD_CLUSTER_DELAY, SYNC_IS_ODD_CLUSTER_DELAY);
 localparam COUNTER_WIDTH = $clog2(MAXIMUM_DELAY + 1);
+
+input clk;
+input reset;
+input new_round_start;
+input has_message_flying;
+input has_odd_clusters;
+input [PU_COUNT-1:0] is_touching_boundaries;
+input [PU_COUNT-1:0] is_odd_cardinalities;
+output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
+output reg [STAGE_WIDTH-1:0] stage;
+output reg result_valid;
+output reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
+output reg [31:0] cycle_counter;
+output reg deadlock;
+output final_cardinality;
+    
 reg [COUNTER_WIDTH-1:0] delay_counter;
 reg [31:0] cycles_in_stage;
 
-localparam DEADLOCK_THRESHOLD = CODE_DISTANCE*CODE_DISTANCE*CODE_DISTANCE*10;
+localparam DEADLOCK_THRESHOLD = PU_COUNT*10;
 
 reg go_to_result_calculator;
 wire done_from_calculator;
@@ -162,7 +183,8 @@ always @(posedge clk) begin
 end
 
 get_boundry_cardinality #(
-    .CODE_DISTANCE(CODE_DISTANCE)
+    .CODE_DISTANCE_X(CODE_DISTANCE_X),
+    .CODE_DISTANCE_Z(CODE_DISTANCE_Z)
 ) result_calculator(
     .clk(clk),
     .reset(reset),

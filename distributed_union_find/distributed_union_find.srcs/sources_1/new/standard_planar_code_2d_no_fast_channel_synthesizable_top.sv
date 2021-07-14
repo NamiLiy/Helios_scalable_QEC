@@ -2,8 +2,8 @@
 /// It just drops the debug lines from the top module used for simulation
 
 module standard_planar_code_3d_no_fast_channel_synthesizable_top #(
-    CODE_DISTANCE_X = 4,
-    CODE_DISTANCE_Z = 12
+    parameter CODE_DISTANCE_X = 4,
+    parameter CODE_DISTANCE_Z = 12
 ) (
     clk,
     reset,

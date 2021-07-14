@@ -1,7 +1,11 @@
 `timescale 1ns / 1ps
 
 module standard_planar_code_3d_no_fast_channel #(
-    CODE_DISTANCE = 5  // has CODE_DISTANCE �� (CODE_DISTANCE-1) processing units
+   parameter CODE_DISTANCE_X = 4,
+   parameter CODE_DISTANCE_Z = 12,
+   parameter WEIGHT_X = 3,
+   parameter WEIGHT_Z = 1,
+   parameter WEIGHT_UD = 1 // Weight up down
 ) (
     clk,
     reset,
@@ -16,14 +20,21 @@ module standard_planar_code_3d_no_fast_channel #(
 
 `include "parameters.sv"
 
-localparam PU_COUNT = CODE_DISTANCE * CODE_DISTANCE * (CODE_DISTANCE - 1);
-localparam PER_DIMENSION_WIDTH = $clog2(CODE_DISTANCE);
+`define MAX(a, b) (((a) > (b)) ? (a) : (b))
+localparam MEASUREMENT_ROUNDS = MAX(CODE_DISTANCE_X, CODE_DISTANCE_Z);
+localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
+localparam PER_DIMENSION_WIDTH = $clog2(MEASUREMENT_ROUNDS);
 localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
 localparam DISTANCE_WIDTH = 1 + PER_DIMENSION_WIDTH;
-localparam WEIGHT = 1;  // the weight in MWPM graph
-localparam BOUNDARY_COST = 2 * WEIGHT;
-localparam NEIGHBOR_COST = 2 * WEIGHT;
-localparam BOUNDARY_WIDTH = $clog2(BOUNDARY_COST + 1);
+//localparam WEIGHT = 1;  // the weight in MWPM graph
+localparam BOUNDARY_COST_X = 2 * WEIGHT_X;
+localparam BOUNDARY_COST_Z = 2 * WEIGHT_Z;
+localparam BOUNDARY_COST_UD = 2 * WEIGHT_UD;
+localparam NEIGHBOR_COST_X = 2 * WEIGHT_X;
+localparam NEIGHBOR_COST_Z = 2 * WEIGHT_Z;
+localparam NEIGHBOR_COST_UD = 2 * WEIGHT_UD;
+localparam MAX_BOUNDARY_COST = MAX(BOUNDARY_COST_X, BOUNDARY_COST_Z);
+localparam BOUNDARY_WIDTH = $clog2(MAX_BOUNDARY_COST + 1);
 localparam UNION_MESSAGE_WIDTH = 2 * ADDRESS_WIDTH;  // [old_root, updated_root]
 localparam DIRECT_MESSAGE_WIDTH = ADDRESS_WIDTH + 1 + 1;  // [receiver, is_odd_cardinality_root, is_touching_boundary]
 
@@ -67,14 +78,14 @@ end
 assign initialize_neighbors = (stage_internal == STAGE_MEASUREMENT_LOADING);
 
 // generate macros
-`define CHANNEL_COUNT_IJK(i, j, k) ((i>0?1:0) + (i<(CODE_DISTANCE-1)?1:0) + (j>0?1:0) + (j<(CODE_DISTANCE-2)?1:0) + (k>0?1:0) + (k<(CODE_DISTANCE-1)?1:0))
+`define CHANNEL_COUNT_IJK(i, j, k) ((i>0?1:0) + (i<(CODE_DISTANCE_X-1)?1:0) + (j>0?1:0) + (j<(CODE_DISTANCE_Z-1)?1:0) + (k>0?1:0) + (k<(MEASUREMENT_ROUNDS-1)?1:0))
 `define CHANNEL_COUNT (`CHANNEL_COUNT_IJK(i, j,k))
 `define CHANNEL_WIDTH ($clog2(`CHANNEL_COUNT))
 `define NEIGHBOR_COUNT `CHANNEL_COUNT
 localparam FAST_CHANNEL_COUNT = 0;
-`define INDEX(i, j, k) (i * (CODE_DISTANCE-1) + j + k * (CODE_DISTANCE-1)*CODE_DISTANCE)
+`define INDEX(i, j, k) (i * CODE_DISTANCE_Z + j + k * CODE_DISTANCE_Z*CODE_DISTANCE_X)
 `define init_is_error_syndrome(i, j, k) is_error_syndromes[`INDEX(i, j, k)]
-`define init_has_boundary(i, j, k) ((j==0) || (j==(CODE_DISTANCE-2)) || k==0)
+`define init_has_boundary(i, j, k) ((j==0) || (j==CODE_DISTANCE_Z) || k==0 || (i==0) || (i==CODE_DISTANCE_X))
 `define is_odd_cluster(i, j, k) is_odd_clusters[`INDEX(i, j, k)]
 `define is_odd_cardinality(i, j, k) is_odd_cardinalities[`INDEX(i, j, k)]
 `define is_touching_boundary(i, j, k) is_touching_boundaries[`INDEX(i, j, k)]
@@ -92,9 +103,9 @@ localparam FAST_CHANNEL_COUNT = 0;
 
 // instantiate processing units and their local solver
 generate
-    for (k=0; k < CODE_DISTANCE; k=k+1) begin: pu_k
-        for (i=0; i < CODE_DISTANCE; i=i+1) begin: pu_i
-            for (j=0; j < CODE_DISTANCE-1; j=j+1) begin: pu_j
+    for (k=0; k < MEASUREMENT_ROUNDS; k=k+1) begin: pu_k
+        for (i=0; i < CODE_DISTANCE_X; i=i+1) begin: pu_i
+            for (j=0; j < CODE_DISTANCE_Z; j=j+1) begin: pu_j
                 // instantiate processing unit
                 wire [`NEIGHBOR_COUNT-1:0] neighbor_is_fully_grown;
                 wire [(ADDRESS_WIDTH * `NEIGHBOR_COUNT)-1:0] neighbor_old_roots;
@@ -119,8 +130,12 @@ generate
                     .I(i),
                     .J(j),
                     .K(k),
-                    .CODE_DISTANCE(CODE_DISTANCE),
-                    .INIT_BOUNDARY_COST(BOUNDARY_COST),
+                    .CODE_DISTANCE_X(CODE_DISTANCE_Z),
+                    .CODE_DISTANCE_Z(CODE_DISTANCE_Z),
+                    .MEASUREMENT_ROUNDS(MEASUREMENT_ROUNDS),
+                    .INIT_BOUNDARY_COST_X(BOUNDARY_COST_X),
+                    .INIT_BOUNDARY_COST_Z(BOUNDARY_COST_Z),
+                    .INIT_BOUNDARY_COST_UD(BOUNDARY_COST_UD),
                     .DIRECT_CHANNEL_COUNT(`DIRECT_CHANNEL_COUNT)
                 ) u_processing_unit (
                     .clk(clk),
@@ -155,10 +170,10 @@ endgenerate
 
 `define NEIGHBOR_IDX_TOP(i, j, k) (0)
 `define NEIGHBOR_IDX_BOTTOM(i, j, k) (i>0?1:0)
-`define NEIGHBOR_IDX_LEFT(i, j, k) ((i>0?1:0) + (i<(CODE_DISTANCE-1)?1:0))
-`define NEIGHBOR_IDX_RIGHT(i, j, k) ((i>0?1:0) + (i<(CODE_DISTANCE-1)?1:0) + (j>0?1:0))
-`define NEIGHBOR_IDX_DOWN(i, j, k) ((i>0?1:0) + (i<(CODE_DISTANCE-1)?1:0) + (j>0?1:0) + (j<(CODE_DISTANCE-2)?1:0))
-`define NEIGHBOR_IDX_UP(i, j, k) ((i>0?1:0) + (i<(CODE_DISTANCE-1)?1:0) + (j>0?1:0) + (j<(CODE_DISTANCE-2)?1:0) + (k>0?1:0))
+`define NEIGHBOR_IDX_LEFT(i, j, k) ((i>0?1:0) + (i<(CODE_DISTANCE_X-1)?1:0))
+`define NEIGHBOR_IDX_RIGHT(i, j, k) ((i>0?1:0) + (i<(CODE_DISTANCE_X-1)?1:0) + (j>0?1:0))
+`define NEIGHBOR_IDX_DOWN(i, j, k) ((i>0?1:0) + (i<(CODE_DISTANCE_X-1)?1:0) + (j>0?1:0) + (j<(CODE_DISTANCE_Z-1)?1:0))
+`define NEIGHBOR_IDX_UP(i, j, k) ((i>0?1:0) + (i<(CODE_DISTANCE_X-1)?1:0) + (j>0?1:0) + (j<(CODE_DISTANCE_Z-1)?1:0) + (k>0?1:0))
 `define PU(i, j, k) pu_k[k].pu_i[i].pu_j[j]
 `define SLICE_ADDRESS_VEC(vec, idx) (vec[(((idx)+1)*ADDRESS_WIDTH)-1:(idx)*ADDRESS_WIDTH])
 `define SLICE_UNION_MESSAGE_VEC(vec, idx) (vec[(((idx)+1)*UNION_MESSAGE_WIDTH)-1:(idx)*UNION_MESSAGE_WIDTH])
@@ -166,7 +181,7 @@ endgenerate
 
 // instantiate vertical neighbor link and connect signals properly
 `define NEIGHBOR_VERTICAL_INSTANTIATE \
-neighbor_link #(.LENGTH(NEIGHBOR_COST), .ADDRESS_WIDTH(ADDRESS_WIDTH)) neighbor_vertical (\
+neighbor_link #(.LENGTH(NEIGHBOR_COST_X), .ADDRESS_WIDTH(ADDRESS_WIDTH)) neighbor_vertical (\
     .clk(clk), .reset(reset), .initialize(initialize_neighbors), .is_fully_grown(`PU(i, j, k).neighbor_is_fully_grown[`NEIGHBOR_IDX_BOTTOM(i, j, k)]),\
     .a_old_root_in(`PU(i, j, k).old_root), .a_increase(`PU(i, j, k).neighbor_increase),\
     .b_old_root_out(`SLICE_ADDRESS_VEC(`PU(i, j, k).neighbor_old_roots, `NEIGHBOR_IDX_BOTTOM(i, j, k))),\
@@ -177,7 +192,7 @@ assign `PU(i+1, j, k).neighbor_is_fully_grown[`NEIGHBOR_IDX_TOP(i+1, j, k)] = `P
 
 // instantiate horizontal neighbor link and connect signals properly
 `define NEIGHBOR_HORIZONTAL_INSTANTIATE \
-neighbor_link #(.LENGTH(NEIGHBOR_COST), .ADDRESS_WIDTH(ADDRESS_WIDTH)) neighbor_horizontal (\
+neighbor_link #(.LENGTH(NEIGHBOR_COST_Z), .ADDRESS_WIDTH(ADDRESS_WIDTH)) neighbor_horizontal (\
     .clk(clk), .reset(reset), .initialize(initialize_neighbors), .is_fully_grown(`PU(i, j, k).neighbor_is_fully_grown[`NEIGHBOR_IDX_RIGHT(i, j, k)]),\
     .a_old_root_in(`PU(i, j, k).old_root), .a_increase(`PU(i, j, k).neighbor_increase),\
     .b_old_root_out(`SLICE_ADDRESS_VEC(`PU(i, j, k).neighbor_old_roots, `NEIGHBOR_IDX_RIGHT(i, j, k))),\
@@ -188,7 +203,7 @@ assign `PU(i, j+1, k).neighbor_is_fully_grown[`NEIGHBOR_IDX_LEFT(i, j+1, k)] = `
 
 // instantiate updown neighbor link and connect signals properly
 `define NEIGHBOR_UPDOWN_INSTANTIATE \
-neighbor_link #(.LENGTH(NEIGHBOR_COST), .ADDRESS_WIDTH(ADDRESS_WIDTH)) neighbor_updown (\
+neighbor_link #(.LENGTH(NEIGHBOR_COST_UD), .ADDRESS_WIDTH(ADDRESS_WIDTH)) neighbor_updown (\
     .clk(clk), .reset(reset), .initialize(initialize_neighbors), .is_fully_grown(`PU(i, j, k).neighbor_is_fully_grown[`NEIGHBOR_IDX_UP(i, j, k)]),\
     .a_old_root_in(`PU(i, j, k).old_root), .a_increase(`PU(i, j, k).neighbor_increase),\
     .b_old_root_out(`SLICE_ADDRESS_VEC(`PU(i, j, k).neighbor_old_roots, `NEIGHBOR_IDX_UP(i, j, k))),\
@@ -332,24 +347,24 @@ blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH), .DEPTH(128)) blocking_channel_d
 
 // instantiate neighbor links and channels
 generate
-    for (k=0; k < CODE_DISTANCE; k=k+1) begin: neighbor_k
-        for (i=0; i < CODE_DISTANCE; i=i+1) begin: neighbor_i
-            for (j=0; j < CODE_DISTANCE-1; j=j+1) begin: neighbor_j
-                 if (i < (CODE_DISTANCE-1)) begin
+    for (k=0; k < MEASUREMENT_ROUNDS; k=k+1) begin: neighbor_k
+        for (i=0; i < CODE_DISTANCE_X; i=i+1) begin: neighbor_i
+            for (j=0; j < CODE_DISTANCE_Z; j=j+1) begin: neighbor_j
+                 if (i < (CODE_DISTANCE_X-1)) begin
                      `VERTICAL_INSTANTIATE
                      `DIRECT_CHANNEL_VERTICAL_INSTANTIATE
                  end else begin
                      `DIRECT_CHANNEL_VERTICAL_WRAP_INSTANTIATE
                  end
                  
-                 if (j < (CODE_DISTANCE-2)) begin
+                 if (j < (CODE_DISTANCE_Z-1)) begin
                      `HORIZONTAL_INSTANTIATE
                      `DIRECT_CHANNEL_HORIZONTAL_INSTANTIATE
                  end else begin
                      `DIRECT_CHANNEL_HORIZONTAL_WRAP_INSTANTIATE
                  end
                  
-                 if (k < (CODE_DISTANCE-1)) begin
+                 if (k < (MEASUREMENT_ROUNDS-1)) begin
                      `UPDOWN_INSTANTIATE
                      `DIRECT_CHANNEL_UPDOWN_INSTANTIATE
                  end else begin

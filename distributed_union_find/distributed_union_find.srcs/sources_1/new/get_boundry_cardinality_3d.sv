@@ -1,5 +1,9 @@
+// This module is tricky leave it to later
+
 module get_boundry_cardinality #(
-    CODE_DISTANCE = 5
+    parameter CODE_DISTANCE_X = 4,
+    parameter CODE_DISTANCE_Z = 12,
+    parameter BOUNDARY_TYPE = 0
 ) (
     clk,
     reset,
@@ -11,7 +15,14 @@ module get_boundry_cardinality #(
     done
 );
 
-localparam PU_COUNT = CODE_DISTANCE * CODE_DISTANCE * (CODE_DISTANCE - 1);
+`define MAX(a, b) (((a) > (b)) ? (a) : (b))
+
+localparam MEASUREMENT_ROUNDS = MAX(CODE_DISTANCE_X, CODE_DISTANCE_Z);
+localparam PER_DIMENSION_WIDTH = $clog2(MEASUREMENT_ROUNDS);
+localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
+localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
+    
+
 localparam BOUNDRY_PU_COUNT = CODE_DISTANCE * CODE_DISTANCE;
 localparam PER_DIMENSION_WIDTH = $clog2(CODE_DISTANCE);
 localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
