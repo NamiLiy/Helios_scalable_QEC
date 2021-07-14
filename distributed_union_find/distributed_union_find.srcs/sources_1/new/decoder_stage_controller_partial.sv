@@ -406,7 +406,7 @@ endmodule
 
 
 module decoder_stage_controller_right #(
-    parameter CODE_DISTANCE = 5,
+    parameter CODE_DISTANCE = 3,
     parameter ITERATION_COUNTER_WIDTH = 8,  // counts to 255 iterations
     parameter BOUNDARY_GROW_DELAY = 10,  // clock cycles
     parameter SPREAD_CLUSTER_DELAY = 10,  // clock cycles
