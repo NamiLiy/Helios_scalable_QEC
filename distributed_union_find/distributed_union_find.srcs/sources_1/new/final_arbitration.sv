@@ -129,9 +129,9 @@ localparam DIRECT_CHANNEL_ALL_EXPAND_COUNT = 2 * DIRECT_CHANNEL_EXPAND_COUNT - 1
 
 wire [DIRECT_CHANNEL_ALL_EXPAND_COUNT-1:0] tree_gathering_elected_direct_message_valid;
 wire [(MASTER_FIFO_WIDTH * DIRECT_CHANNEL_ALL_EXPAND_COUNT)-1:0] tree_gathering_elected_direct_message_data;
-`define expanded_elected_output_message_data(i) tree_gathering_elected_direct_message_data[((i+1) * MASTER_FIFO_WIDTH) - 1 : (i * MASTER_FIFO_WIDTH)]
+`define expanded_elected_direct_message_data(i) tree_gathering_elected_direct_message_data[((i+1) * MASTER_FIFO_WIDTH) - 1 : (i * MASTER_FIFO_WIDTH)]
 wire [(MASTER_FIFO_WIDTH * DIRECT_CHANNEL_ALL_EXPAND_COUNT)-1:0] tree_gathering_elected_direct_message_index;
-`define expanded_elected_output_message_index(i) tree_gathering_elected_direct_message_index[((i+1) * MASTER_FIFO_WIDTH) - 1 : (i * MASTER_FIFO_WIDTH)]
+`define expanded_elected_direct_message_index(i) tree_gathering_elected_direct_message_index[((i+1) * MASTER_FIFO_WIDTH) - 1 : (i * MASTER_FIFO_WIDTH)]
 
 `define DIRECT_CHANNEL_LAYER_WIDTH (2 ** (DIRECT_CHANNEL_DEPTH - 1 - i))
 `define DIRECT_CHANNEL_LAYERT_IDX (2 ** (DIRECT_CHANNEL_DEPTH + 1) - 2 ** (DIRECT_CHANNEL_DEPTH - i))
@@ -147,8 +147,8 @@ generate
     for (i=0; i < DIRECT_CHANNEL_EXPAND_COUNT; i=i+1) begin: direct_channel_gathering_initialization
         if (i < TRUE_FIFO_COUNT) begin
             assign tree_gathering_elected_direct_message_valid[i] = `master_coming_valid(i);
-            assign `expanded_elected_output_message_index(i) = i;
-            assign `expanded_elected_output_message_data(i) = `master_coming_data(i);
+            assign `expanded_elected_direct_message_index(i) = i;
+            assign `expanded_elected_direct_message_data(i) = `master_coming_data(i);
         end else begin
             assign tree_gathering_elected_direct_message_valid[i] = 0;
         end
@@ -157,23 +157,23 @@ generate
         genvar j;
         for (j=0; j < `DIRECT_CHANNEL_LAYER_WIDTH; j=j+1) begin: direct_channel_gathering_layer_election
             assign tree_gathering_elected_direct_message_valid[`DIRECT_CHANNEL_CURRENT_IDX] = tree_gathering_elected_direct_message_valid[`DIRECT_CHANNEL_CHILD_1_IDX] | tree_gathering_elected_direct_message_valid[`DIRECT_CHANNEL_CHILD_2_IDX];
-            assign `expanded_elected_output_message_index(`DIRECT_CHANNEL_CURRENT_IDX) = tree_gathering_elected_direct_message_valid[`DIRECT_CHANNEL_CHILD_1_IDX] ? (
-                `expanded_elected_output_message_index(`DIRECT_CHANNEL_CHILD_1_IDX)
+            assign `expanded_elected_direct_message_index(`DIRECT_CHANNEL_CURRENT_IDX) = tree_gathering_elected_direct_message_valid[`DIRECT_CHANNEL_CHILD_1_IDX] ? (
+                `expanded_elected_direct_message_index(`DIRECT_CHANNEL_CHILD_1_IDX)
             ) : (
-                `expanded_elected_output_message_index(`DIRECT_CHANNEL_CHILD_2_IDX)
+                `expanded_elected_direct_message_index(`DIRECT_CHANNEL_CHILD_2_IDX)
             );
-            assign `expanded_elected_output_message_data(`DIRECT_CHANNEL_CURRENT_IDX) = tree_gathering_elected_direct_message_valid[`DIRECT_CHANNEL_CHILD_1_IDX] ? (
-                `expanded_elected_output_message_data(`DIRECT_CHANNEL_CHILD_1_IDX)
+            assign `expanded_elected_direct_message_data(`DIRECT_CHANNEL_CURRENT_IDX) = tree_gathering_elected_direct_message_valid[`DIRECT_CHANNEL_CHILD_1_IDX] ? (
+                `expanded_elected_direct_message_data(`DIRECT_CHANNEL_CHILD_1_IDX)
             ) : (
-                `expanded_elected_output_message_data(`DIRECT_CHANNEL_CHILD_2_IDX)
+                `expanded_elected_direct_message_data(`DIRECT_CHANNEL_CHILD_2_IDX)
             );
         end
     end
 endgenerate
 
 `define gathered_elected_direct_message_valid (tree_gathering_elected_direct_message_valid[DIRECT_CHANNEL_ROOT_IDX])
-`define gathered_elected_direct_message_index (`expanded_elected_output_message_index(DIRECT_CHANNEL_ROOT_IDX))
-`define gathered_elected_direct_message_data (`expanded_elected_output_message_data(DIRECT_CHANNEL_ROOT_IDX))
+`define gathered_elected_direct_message_index (`expanded_elected_direct_message_index(DIRECT_CHANNEL_ROOT_IDX))
+`define gathered_elected_direct_message_data (`expanded_elected_direct_message_data(DIRECT_CHANNEL_ROOT_IDX))
 
 assign final_fifo_out_data_internal[MASTER_FIFO_WIDTH - 1:0] = `gathered_elected_direct_message_data;
 assign final_fifo_out_data_internal[FINAL_FIFO_WIDTH - 1: MASTER_FIFO_WIDTH] = `gathered_elected_direct_message_index;
