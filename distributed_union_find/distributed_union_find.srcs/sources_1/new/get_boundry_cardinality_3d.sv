@@ -63,7 +63,7 @@ always@(posedge clk) begin
                 state <= 2'b1;
             end
         end else if (state == 2'b1) begin
-            if (i_index == CODE_DISTANCE_X - 1 && k_index == MEASUREMENT_ROUNDS - 1) begin
+            if (i_index == CODE_DISTANCE_X - 2 && k_index == MEASUREMENT_ROUNDS - 1) begin
                 state <= 2'b11;
             end
             process_delay <= 2'b11;

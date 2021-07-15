@@ -118,7 +118,7 @@ assign init_address[PER_DIMENSION_WIDTH*2-1:PER_DIMENSION_WIDTH] = I;
 assign init_address[PER_DIMENSION_WIDTH-1:0] = J;
 
 `define init_has_boundary_x(i, j, k) (0)
-`define init_has_boundary_z(i, j, k) ((j==0) || (j==CODE_DISTANCE_Z))
+`define init_has_boundary_z(i, j, k) ((j==0) || (j==CODE_DISTANCE_Z - 1))
 `define init_has_boundary_ud(i, j, k) (k==0 )
 wire init_has_boundary_x;
 wire init_has_boundary_z;
