@@ -21,7 +21,7 @@ module standard_planar_code_3d_no_fast_channel #(
 `include "parameters.sv"
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
-localparam MEASUREMENT_ROUNDS = MAX(CODE_DISTANCE_X, CODE_DISTANCE_Z);
+localparam MEASUREMENT_ROUNDS = `MAX(CODE_DISTANCE_X, CODE_DISTANCE_Z);
 localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
 localparam PER_DIMENSION_WIDTH = $clog2(MEASUREMENT_ROUNDS);
 localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
@@ -33,7 +33,7 @@ localparam BOUNDARY_COST_UD = 2 * WEIGHT_UD;
 localparam NEIGHBOR_COST_X = 2 * WEIGHT_X;
 localparam NEIGHBOR_COST_Z = 2 * WEIGHT_Z;
 localparam NEIGHBOR_COST_UD = 2 * WEIGHT_UD;
-localparam MAX_BOUNDARY_COST = MAX(BOUNDARY_COST_X, BOUNDARY_COST_Z);
+localparam MAX_BOUNDARY_COST = `MAX(BOUNDARY_COST_X, BOUNDARY_COST_Z);
 localparam BOUNDARY_WIDTH = $clog2(MAX_BOUNDARY_COST + 1);
 localparam UNION_MESSAGE_WIDTH = 2 * ADDRESS_WIDTH;  // [old_root, updated_root]
 localparam DIRECT_MESSAGE_WIDTH = ADDRESS_WIDTH + 1 + 1;  // [receiver, is_odd_cardinality_root, is_touching_boundary]
@@ -85,13 +85,14 @@ assign initialize_neighbors = (stage_internal == STAGE_MEASUREMENT_LOADING);
 localparam FAST_CHANNEL_COUNT = 0;
 `define INDEX(i, j, k) (i * CODE_DISTANCE_Z + j + k * CODE_DISTANCE_Z*CODE_DISTANCE_X)
 `define init_is_error_syndrome(i, j, k) is_error_syndromes[`INDEX(i, j, k)]
-`define init_has_boundary(i, j, k) ((j==0) || (j==CODE_DISTANCE_Z) || k==0 || (i==0) || (i==CODE_DISTANCE_X))
 `define is_odd_cluster(i, j, k) is_odd_clusters[`INDEX(i, j, k)]
 `define is_odd_cardinality(i, j, k) is_odd_cardinalities[`INDEX(i, j, k)]
 `define is_touching_boundary(i, j, k) is_touching_boundaries[`INDEX(i, j, k)]
 `define roots(i, j, k) roots[ADDRESS_WIDTH*(`INDEX(i, j, k)+1)-1:ADDRESS_WIDTH*`INDEX(i, j, k)]
 `define has_message_flying(i, j, k) has_message_flyings[`INDEX(i, j, k)]
 `define DIRECT_CHANNEL_COUNT (3)
+
+//`define init_has_boundary(i, j, k) ((j==0) || (j==CODE_DISTANCE_Z-1) || k==0)
 
 
 // generate

@@ -1,5 +1,8 @@
 `timescale 1ns / 1ps
 
+// Right now this code is written targeting syndromes touching the X boundry
+// Therefore boundry cost Z , UD , has boundry z UD is the only used parameter
+
 module processing_unit #(
     parameter ADDRESS_WIDTH = 18,  // width of address, e.g. single measurement standard surface code under d <= 15 could be 4bit * 2 = 8bit
     parameter DISTANCE_WIDTH = 6,  // the maximum distance between two nodes should fit into DISTANCE_WIDTH bits
@@ -12,9 +15,9 @@ module processing_unit #(
     parameter CODE_DISTANCE_X = 4,
     parameter CODE_DISTANCE_Z = 12,
     parameter MEASUREMENT_ROUNDS = 12,
-    parameter INIT_BOUNDARY_COST_X = 4,
-    parameter INIT_BOUNDARY_COST_Z = 12,
-    parameter INIT_BOUNDARY_COST_UD = 12,
+    parameter INIT_BOUNDARY_COST_X = 6,
+    parameter INIT_BOUNDARY_COST_Z = 2,
+    parameter INIT_BOUNDARY_COST_UD = 2,
     parameter DIRECT_CHANNEL_COUNT = 3
 ) (
     clk,
@@ -44,7 +47,6 @@ module processing_unit #(
     old_root,
     updated_root,
     is_error_syndrome,
-    boundary_increased,
     is_odd_cluster,
     is_touching_boundary,
     is_odd_cardinality,
@@ -92,16 +94,21 @@ reg [STAGE_WIDTH-1:0] last_stage;
 reg [STAGE_WIDTH-1:0] stage;
 reg [STAGE_WIDTH-1:0] stage_delayed;
 output reg is_error_syndrome;
-reg has_boundary;
+reg has_boundary_x;
+reg has_boundary_z;
+reg has_boundary_ud;
 reg [BOUNDARY_WIDTH-1:0] boundary_cost_x;
 reg [BOUNDARY_WIDTH-1:0] boundary_cost_z;
 reg [BOUNDARY_WIDTH-1:0] boundary_cost_ud;
-output reg [BOUNDARY_WIDTH-1:0] boundary_increased;
 output reg is_odd_cluster;
 output reg is_touching_boundary;
 output reg is_odd_cardinality;
 output reg pending_tell_new_root_touching_boundary;
 output is_processing;
+
+reg [BOUNDARY_WIDTH-1:0] boundary_increased_x;
+reg [BOUNDARY_WIDTH-1:0] boundary_increased_z;
+reg [BOUNDARY_WIDTH-1:0] boundary_increased_ud;
 
 assign is_processing = union_out_channels_valid | (|union_in_channels_valid) | (|direct_out_channels_valid) | (|direct_in_channels_valid) | pending_direct_message_valid_delayed | my_stored_direct_message_valid;
 
@@ -110,9 +117,15 @@ assign init_address[ADDRESS_WIDTH-1:PER_DIMENSION_WIDTH*2] = K;
 assign init_address[PER_DIMENSION_WIDTH*2-1:PER_DIMENSION_WIDTH] = I;
 assign init_address[PER_DIMENSION_WIDTH-1:0] = J;
 
-`define init_has_boundary(i, j, k) ((j==0) || (j==CODE_DISTANCE_Z) || k==0 || (i==0) || (i==CODE_DISTANCE_X))
-wire init_has_boundary;
-assign init_has_boundary = `init_has_boundary(I, J, K);
+`define init_has_boundary_x(i, j, k) (0)
+`define init_has_boundary_z(i, j, k) ((j==0) || (j==CODE_DISTANCE_Z))
+`define init_has_boundary_ud(i, j, k) (k==0 )
+wire init_has_boundary_x;
+wire init_has_boundary_z;
+wire init_has_boundary_ud;
+assign init_has_boundary_x = `init_has_boundary_x(I, J, K);
+assign init_has_boundary_z = `init_has_boundary_z(I, J, K);
+assign init_has_boundary_ud = `init_has_boundary_ud(I, J, K);
 
 wire [BOUNDARY_WIDTH-1:0] init_boundary_cost_x;
 wire [BOUNDARY_WIDTH-1:0] init_boundary_cost_z;
@@ -349,7 +362,10 @@ endgenerate
 
 // compute `updated_is_touching_boundary`
 wire updated_is_touching_boundary;
-assign updated_is_touching_boundary = is_touching_boundary || (has_boundary && (boundary_increased == boundary_cost)) || `gathered_is_touching_boundary;
+assign updated_is_touching_boundary = is_touching_boundary 
+    || (has_boundary_z && (boundary_increased_z == boundary_cost_z)) 
+    || (has_boundary_ud && (boundary_increased_ud == boundary_cost_ud))
+    || `gathered_is_touching_boundary;
 
 // compute `updated_is_odd_cardinality`
 wire updated_is_odd_cardinality;
@@ -487,11 +503,15 @@ always @(posedge clk) begin
         updated_root <= init_address; // constant per PU
         last_stage <= STAGE_IDLE;
         is_error_syndrome <= 0;
-        has_boundary <= init_has_boundary; // constant per PU
+        has_boundary_x <= init_has_boundary_x; // constant per PU
+        has_boundary_z <= init_has_boundary_z; // constant per PU
+        has_boundary_ud <= init_has_boundary_ud; // constant per PU
         boundary_cost_x <= init_boundary_cost_x; // constant per PU
         boundary_cost_z <= init_boundary_cost_z; // constant per PU
         boundary_cost_ud <= init_boundary_cost_ud; // constant per PU
-        boundary_increased <= 0;
+        boundary_increased_x <= 0;
+        boundary_increased_z <= 0;
+        boundary_increased_ud <= 0;
         is_odd_cluster <= 0;
         is_touching_boundary <= 0;
         is_odd_cardinality <= 0;
@@ -508,8 +528,14 @@ always @(posedge clk) begin
             // see `assign neighbor_increase = !reset && is_odd_cluster && (stage == STAGE_GROW_BOUNDARY) && (last_stage != STAGE_GROW_BOUNDARY);`
             if (is_odd_cluster && last_stage != STAGE_GROW_BOUNDARY) begin
                 // only trigger once when set to STAGE_GROW_BOUNDARY
-                if (has_boundary && (boundary_increased < boundary_cost)) begin
-                    boundary_increased <= boundary_increased + 1;
+                if (has_boundary_x && (boundary_increased_x < boundary_cost_x)) begin
+                    boundary_increased_x <= boundary_increased_x + 1;
+                end
+                if (has_boundary_z && (boundary_increased_z < boundary_cost_z)) begin
+                    boundary_increased_z <= boundary_increased_z + 1;
+                end
+                if (has_boundary_ud && (boundary_increased_ud < boundary_cost_ud)) begin
+                    boundary_increased_ud <= boundary_increased_ud + 1;
                 end
             end
         end else if (stage == STAGE_SYNC_IS_ODD_CLUSTER) begin
@@ -526,11 +552,15 @@ always @(posedge clk) begin
             updated_root <= init_address;
             last_stage <= STAGE_IDLE;
             is_error_syndrome <= init_is_error_syndrome;
-            has_boundary <= init_has_boundary;
+            has_boundary_x <= init_has_boundary_x; // constant per PU
+            has_boundary_z <= init_has_boundary_z; // constant per PU
+            has_boundary_ud <= init_has_boundary_ud; // constant per PU
             boundary_cost_x <= init_boundary_cost_x; // constant per PU
             boundary_cost_z <= init_boundary_cost_z; // constant per PU
             boundary_cost_ud <= init_boundary_cost_ud; // constant per PU
-            boundary_increased <= 0;
+            boundary_increased_x <= 0;
+            boundary_increased_z <= 0;
+            boundary_increased_ud <= 0;
             is_odd_cluster <= init_is_error_syndrome;
             is_touching_boundary <= 0;
             is_odd_cardinality <= init_is_error_syndrome;

@@ -3,7 +3,10 @@
 
 module standard_planar_code_3d_no_fast_channel_synthesizable_top #(
     parameter CODE_DISTANCE_X = 4,
-    parameter CODE_DISTANCE_Z = 12
+    parameter CODE_DISTANCE_Z = 12,
+    parameter WEIGHT_X = 3,
+    parameter WEIGHT_Z = 1,
+    parameter WEIGHT_UD = 1 // Weight up down
 ) (
     clk,
     reset,
@@ -17,7 +20,7 @@ module standard_planar_code_3d_no_fast_channel_synthesizable_top #(
 );
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
-localparam MEASUREMENT_ROUNDS = MAX(CODE_DISTANCE_X, CODE_DISTANCE_Z);
+localparam MEASUREMENT_ROUNDS = `MAX(CODE_DISTANCE_X, CODE_DISTANCE_Z);
 localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
 localparam PER_DIMENSION_WIDTH = $clog2(MEASUREMENT_ROUNDS);
 localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
@@ -39,7 +42,10 @@ output final_cardinality;
 
 standard_planar_code_3d_no_fast_channel_with_stage_controller #(
     .CODE_DISTANCE_X(CODE_DISTANCE_X),
-    .CODE_DISTANCE_Z(CODE_DISTANCE_Z)
+    .CODE_DISTANCE_Z(CODE_DISTANCE_Z),
+    .WEIGHT_X(WEIGHT_X),
+    .WEIGHT_Z(WEIGHT_Z),
+    .WEIGHT_UD(WEIGHT_UD)
     ) top_module (
     .clk(clk),
     .reset(reset),

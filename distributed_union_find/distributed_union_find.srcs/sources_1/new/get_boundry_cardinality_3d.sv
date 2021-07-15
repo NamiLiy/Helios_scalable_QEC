@@ -3,7 +3,7 @@
 module get_boundry_cardinality #(
     parameter CODE_DISTANCE_X = 4,
     parameter CODE_DISTANCE_Z = 12,
-    parameter BOUNDARY_TYPE = 0
+    parameter BOUNDARY_TYPE = 0 // 0 for x boundary and 1 for z boundary
 ) (
     clk,
     reset,
@@ -23,11 +23,9 @@ localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
 localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
     
 
-localparam BOUNDRY_PU_COUNT = CODE_DISTANCE * CODE_DISTANCE;
-localparam PER_DIMENSION_WIDTH = $clog2(CODE_DISTANCE);
-localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
+localparam BOUNDRY_PU_COUNT = CODE_DISTANCE_X * MEASUREMENT_ROUNDS;
 
-`define INDEX(i, j, k) (i * (CODE_DISTANCE-1) + j + k * (CODE_DISTANCE-1)*CODE_DISTANCE)
+`define INDEX(i, j, k) (i * (CODE_DISTANCE_Z) + j + k * (CODE_DISTANCE_Z)*CODE_DISTANCE_X)
 // `define roots(i, j, k) roots[ADDRESS_WIDTH*(`INDEX(i, j, k)+1)-1:ADDRESS_WIDTH*`INDEX(i, j, k)]
 // `define k_index(value) (value / ((CODE_DISTANCE-1)*CODE_DISTANCE))
 // `define i_index(value) ((value % ((CODE_DISTANCE-1)*CODE_DISTANCE)) / (CODE_DISTANCE-1))
@@ -65,7 +63,7 @@ always@(posedge clk) begin
                 state <= 2'b1;
             end
         end else if (state == 2'b1) begin
-            if (i_index == CODE_DISTANCE - 2 && k_index == CODE_DISTANCE - 1) begin
+            if (i_index == CODE_DISTANCE_X - 1 && k_index == MEASUREMENT_ROUNDS - 1) begin
                 state <= 2'b11;
             end
             process_delay <= 2'b11;
@@ -81,13 +79,13 @@ always@(posedge clk) begin
 end
 
 always@(*) begin
-    if(i_index == CODE_DISTANCE - 1) begin
+    if(i_index == CODE_DISTANCE_X - 1) begin
         i_index_next = 0;
     end else begin
         i_index_next = i_index + 1;
     end
 
-    if(i_index == CODE_DISTANCE - 1) begin
+    if(i_index == CODE_DISTANCE_X - 1) begin
         k_index_next = k_index + 1;
     end else begin
         k_index_next = k_index;
