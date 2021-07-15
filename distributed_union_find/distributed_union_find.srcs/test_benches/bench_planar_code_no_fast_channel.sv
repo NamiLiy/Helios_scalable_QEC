@@ -17,10 +17,18 @@ module bench_planar_code_no_fast_channel;
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
 localparam CODE_DISTANCE = 3;
-localparam PU_COUNT = CODE_DISTANCE * CODE_DISTANCE * (CODE_DISTANCE - 1);
-localparam PER_DIMENSION_WIDTH = $clog2(CODE_DISTANCE);
+localparam CODE_DISTANCE_X = CODE_DISTANCE;
+localparam CODE_DISTANCE_Z = CODE_DISTANCE_X - 1;
+localparam WEIGHT_X = 1;
+localparam WEIGHT_Z = 1;
+localparam WEIGHT_UD = 1; // Weight up down
+
+
+`define MAX(a, b) (((a) > (b)) ? (a) : (b))
+localparam MEASUREMENT_ROUNDS = `MAX(CODE_DISTANCE_X, CODE_DISTANCE_Z);
+localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
+localparam PER_DIMENSION_WIDTH = $clog2(MEASUREMENT_ROUNDS);
 localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
-localparam DISTANCE_WIDTH = 1 + PER_DIMENSION_WIDTH;
 localparam ITERATION_COUNTER_WIDTH = 8;  // counts up to CODE_DISTANCE iterations
 
 reg clk;
@@ -31,7 +39,7 @@ reg [PU_COUNT-1:0] is_error_syndromes;
 wire [PU_COUNT-1:0] is_odd_cardinalities;
 wire [31:0] cycle_counter;
 wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
-`define INDEX(i, j, k) (i * (CODE_DISTANCE-1) + j + k * (CODE_DISTANCE-1)*CODE_DISTANCE)
+`define INDEX(i, j, k) (i * CODE_DISTANCE_Z + j + k * CODE_DISTANCE_Z*CODE_DISTANCE_X)
 `define is_error_syndrome(i, j, k) is_error_syndromes[`INDEX(i, j, k)]
 `define is_odd_cluster(i, j, k) decoder.is_odd_clusters[`INDEX(i, j, k)]
 `define root(i, j, k) roots[ADDRESS_WIDTH*`INDEX(i, j, k) +: ADDRESS_WIDTH]
@@ -45,7 +53,13 @@ wire [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
 wire deadlock;
 
 // instantiate
-standard_planar_code_3d_no_fast_channel_with_stage_controller #(.CODE_DISTANCE(CODE_DISTANCE)) decoder (
+standard_planar_code_3d_no_fast_channel_with_stage_controller #(
+    .CODE_DISTANCE_X(CODE_DISTANCE_X),
+    .CODE_DISTANCE_Z(CODE_DISTANCE_Z),
+    .WEIGHT_X(WEIGHT_X),
+    .WEIGHT_Z(WEIGHT_Z),
+    .WEIGHT_UD(WEIGHT_UD)
+ ) decoder (
     .clk(clk),
     .reset(reset),
     .new_round_start(new_round_start),
