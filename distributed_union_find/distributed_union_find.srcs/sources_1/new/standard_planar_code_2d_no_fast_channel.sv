@@ -268,9 +268,9 @@ nonblocking_channel #(.WIDTH(UNION_MESSAGE_WIDTH)) nonblocking_channel_down (\
 `define DIRECT_CHANNEL_VERTICAL_INSTANTIATE \
 blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_top (\
     .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
-    .in_data(`PU((i+1)%CODE_DISTANCE, j, k).direct_out_channels_data_single),\
-    .in_valid(`PU((i+1)%CODE_DISTANCE, j, k).direct_out_channels_valid[0]),\
-    .in_is_full(`PU((i+1)%CODE_DISTANCE, j, k).direct_out_channels_is_full[0]),\
+    .in_data(`PU((i+1)%CODE_DISTANCE_X, j, k).direct_out_channels_data_single),\
+    .in_valid(`PU((i+1)%CODE_DISTANCE_X, j, k).direct_out_channels_valid[0]),\
+    .in_is_full(`PU((i+1)%CODE_DISTANCE_X, j, k).direct_out_channels_is_full[0]),\
     .out_data(`SLICE_DIRECT_MESSAGE_VEC(`PU(i, j, k).direct_in_channels_data, 0)),\
     .out_valid(`PU(i, j, k).direct_in_channels_valid[0]),\
     .out_is_taken(`PU(i, j, k).direct_in_channels_is_taken[0])\
@@ -279,9 +279,9 @@ blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_top (\
 `define DIRECT_CHANNEL_VERTICAL_WRAP_INSTANTIATE \
 blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH), .DEPTH(128)) blocking_channel_top (\
     .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
-    .in_data(`PU((i+1)%CODE_DISTANCE, j, k).direct_out_channels_data_single),\
-    .in_valid(`PU((i+1)%CODE_DISTANCE, j, k).direct_out_channels_valid[0]),\
-    .in_is_full(`PU((i+1)%CODE_DISTANCE, j, k).direct_out_channels_is_full[0]),\
+    .in_data(`PU((i+1)%CODE_DISTANCE_X, j, k).direct_out_channels_data_single),\
+    .in_valid(`PU((i+1)%CODE_DISTANCE_X, j, k).direct_out_channels_valid[0]),\
+    .in_is_full(`PU((i+1)%CODE_DISTANCE_X, j, k).direct_out_channels_is_full[0]),\
     .out_data(`SLICE_DIRECT_MESSAGE_VEC(`PU(i, j, k).direct_in_channels_data, 0)),\
     .out_valid(`PU(i, j, k).direct_in_channels_valid[0]),\
     .out_is_taken(`PU(i, j, k).direct_in_channels_is_taken[0])\
@@ -291,9 +291,9 @@ blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH), .DEPTH(128)) blocking_channel_t
 `define DIRECT_CHANNEL_HORIZONTAL_INSTANTIATE \
 blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_left (\
     .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
-    .in_data(`PU(i, (j+1)%(CODE_DISTANCE-1), k).direct_out_channels_data_single),\
-    .in_valid(`PU(i, (j+1)%(CODE_DISTANCE-1), k).direct_out_channels_valid[1]),\
-    .in_is_full(`PU(i, (j+1)%(CODE_DISTANCE-1), k).direct_out_channels_is_full[1]),\
+    .in_data(`PU(i, (j+1)%(CODE_DISTANCE_Z), k).direct_out_channels_data_single),\
+    .in_valid(`PU(i, (j+1)%(CODE_DISTANCE_Z), k).direct_out_channels_valid[1]),\
+    .in_is_full(`PU(i, (j+1)%(CODE_DISTANCE_Z), k).direct_out_channels_is_full[1]),\
     .out_data(`SLICE_DIRECT_MESSAGE_VEC(`PU(i, j, k).direct_in_channels_data, 1)),\
     .out_valid(`PU(i, j, k).direct_in_channels_valid[1]),\
     .out_is_taken(`PU(i, j, k).direct_in_channels_is_taken[1])\
@@ -302,9 +302,9 @@ blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_left (\
 `define DIRECT_CHANNEL_HORIZONTAL_WRAP_INSTANTIATE \
 blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH), .DEPTH(128)) blocking_channel_left (\
     .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
-    .in_data(`PU(i, (j+1)%(CODE_DISTANCE-1), k).direct_out_channels_data_single),\
-    .in_valid(`PU(i, (j+1)%(CODE_DISTANCE-1), k).direct_out_channels_valid[1]),\
-    .in_is_full(`PU(i, (j+1)%(CODE_DISTANCE-1), k).direct_out_channels_is_full[1]),\
+    .in_data(`PU(i, (j+1)%(CODE_DISTANCE_Z), k).direct_out_channels_data_single),\
+    .in_valid(`PU(i, (j+1)%(CODE_DISTANCE_Z), k).direct_out_channels_valid[1]),\
+    .in_is_full(`PU(i, (j+1)%(CODE_DISTANCE_Z), k).direct_out_channels_is_full[1]),\
     .out_data(`SLICE_DIRECT_MESSAGE_VEC(`PU(i, j, k).direct_in_channels_data, 1)),\
     .out_valid(`PU(i, j, k).direct_in_channels_valid[1]),\
     .out_is_taken(`PU(i, j, k).direct_in_channels_is_taken[1])\
@@ -314,9 +314,9 @@ blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH), .DEPTH(128)) blocking_channel_l
 `define DIRECT_CHANNEL_UPDOWN_INSTANTIATE \
 blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_down (\
     .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
-    .in_data(`PU(i, j, (k+1)%CODE_DISTANCE).direct_out_channels_data_single),\
-    .in_valid(`PU(i, j, (k+1)%CODE_DISTANCE).direct_out_channels_valid[2]),\
-    .in_is_full(`PU(i, j, (k+1)%CODE_DISTANCE).direct_out_channels_is_full[2]),\
+    .in_data(`PU(i, j, (k+1)%MEASUREMENT_ROUNDS).direct_out_channels_data_single),\
+    .in_valid(`PU(i, j, (k+1)%MEASUREMENT_ROUNDS).direct_out_channels_valid[2]),\
+    .in_is_full(`PU(i, j, (k+1)%MEASUREMENT_ROUNDS).direct_out_channels_is_full[2]),\
     .out_data(`SLICE_DIRECT_MESSAGE_VEC(`PU(i, j, k).direct_in_channels_data, 2)),\
     .out_valid(`PU(i, j, k).direct_in_channels_valid[2]),\
     .out_is_taken(`PU(i, j, k).direct_in_channels_is_taken[2])\
@@ -325,9 +325,9 @@ blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_down (\
 `define DIRECT_CHANNEL_UPDOWN_WRAP_INSTANTIATE \
 blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH), .DEPTH(128)) blocking_channel_down (\
     .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
-    .in_data(`PU(i, j, (k+1)%CODE_DISTANCE).direct_out_channels_data_single),\
-    .in_valid(`PU(i, j, (k+1)%CODE_DISTANCE).direct_out_channels_valid[2]),\
-    .in_is_full(`PU(i, j, (k+1)%CODE_DISTANCE).direct_out_channels_is_full[2]),\
+    .in_data(`PU(i, j, (k+1)%MEASUREMENT_ROUNDS).direct_out_channels_data_single),\
+    .in_valid(`PU(i, j, (k+1)%MEASUREMENT_ROUNDS).direct_out_channels_valid[2]),\
+    .in_is_full(`PU(i, j, (k+1)%MEASUREMENT_ROUNDS).direct_out_channels_is_full[2]),\
     .out_data(`SLICE_DIRECT_MESSAGE_VEC(`PU(i, j, k).direct_in_channels_data, 2)),\
     .out_valid(`PU(i, j, k).direct_in_channels_valid[2]),\
     .out_is_taken(`PU(i, j, k).direct_in_channels_is_taken[2])\

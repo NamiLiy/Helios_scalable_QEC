@@ -30,7 +30,7 @@ module decoder_stage_controller #(
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
 `define MAX3(a, b, c) (((a) > `MAX((b), (c))) ? (a) : `MAX((b), (c)))
 
-localparam MEASUREMENT_ROUNDS = MAX(CODE_DISTANCE_X, CODE_DISTANCE_Z);
+localparam MEASUREMENT_ROUNDS = `MAX(CODE_DISTANCE_X, CODE_DISTANCE_Z);
 localparam PER_DIMENSION_WIDTH = $clog2(MEASUREMENT_ROUNDS);
 localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
 localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
