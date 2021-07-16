@@ -5,7 +5,7 @@ module bench_decoder;
 `include "../sources_1/new/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
-localparam CODE_DISTANCE = 3;
+localparam CODE_DISTANCE = 5;
 localparam PU_COUNT = CODE_DISTANCE * CODE_DISTANCE * (CODE_DISTANCE - 1);
 localparam PER_DIMENSION_WIDTH = $clog2(CODE_DISTANCE);
 localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
@@ -140,10 +140,10 @@ initial begin
     right_is_odd_cardinalities = 0;
     left_roots = 0;
     right_roots = 0;
-    for(i = 0; i < 17; i = i + 1) begin
+    for(i = 0; i < 100; i = i + 1) begin
         left_roots[ADDRESS_WIDTH*i+:ADDRESS_WIDTH] = i;    
     end
-    for(i = 0; i < 17; i = i + 1) begin
+    for(i = 0; i < 100; i = i + 1) begin
         right_roots[ADDRESS_WIDTH*i+:ADDRESS_WIDTH] = i;    
     end
     #107;

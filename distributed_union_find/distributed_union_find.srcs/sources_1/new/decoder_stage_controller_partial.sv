@@ -172,7 +172,7 @@ always @(posedge clk) begin
     end
 end
 
-reg [2:0] result_data_frame;
+reg [$clog2(CODE_DISTANCE*RIGHT_BLOCK+1) : 0] result_data_frame;
 reg [PU_COUNT-1:0] net_is_touching_boundaries;
 reg [PU_COUNT-1:0] net_is_odd_cardinalities;
 reg [ADDRESS_WIDTH*PU_COUNT-1:0] net_roots;
@@ -249,35 +249,26 @@ always @(posedge clk) begin
                 result_valid <= 0; // for safety
             end
             STAGE_RESULT_CALCULATING: begin     
-                for(i =0; i < CODE_DISTANCE; i = i + 1) begin
-                    net_roots[(RIGHT_BLOCK+LEFT_BLOCK)*ADDRESS_WIDTH*result_data_frame +: LEFT_BLOCK*ADDRESS_WIDTH] <=  roots[(RIGHT_BLOCK+LEFT_BLOCK)*ADDRESS_WIDTH +: LEFT_BLOCK*ADDRESS_WIDTH];
-                    net_is_odd_cardinalities[(RIGHT_BLOCK+LEFT_BLOCK)*result_data_frame+:LEFT_BLOCK] <= is_odd_cardinalities[(RIGHT_BLOCK+LEFT_BLOCK)*result_data_frame+:LEFT_BLOCK];
-                    net_is_touching_boundaries[(RIGHT_BLOCK+LEFT_BLOCK)*result_data_frame+:LEFT_BLOCK] <= is_touching_boundaries[(RIGHT_BLOCK+LEFT_BLOCK)*result_data_frame+:LEFT_BLOCK];
-
-                end    
                 if (sc_fifo_in_data_internal[2:0] == 32'd4 && sc_fifo_in_data_internal[MASTER_FIFO_WIDTH - 1 : 3] == 32'd0 && !sc_fifo_in_empty_internal) begin
                     stage <= STAGE_IDLE;
                     go_to_result_calculator <= 1;
                     result_valid <= 0; // for safety
                     sc_fifo_in_ready_internal <= 1'b0;
                 end else if(!sc_fifo_in_empty_internal) begin
-                    result_data_frame <= (result_data_frame+1) % (2*CODE_DISTANCE);
-                    if(result_data_frame%2 == 0) begin
-                        if(result_data_frame == 0) begin
-                            for(i = 0; i < 3; i = i + 1) begin
-                                net_is_odd_cardinalities[(LEFT_BLOCK+RIGHT_BLOCK)*i+:LEFT_BLOCK] <= is_odd_cardinalities[(LEFT_BLOCK+RIGHT_BLOCK)*i+:LEFT_BLOCK];
-                                net_is_touching_boundaries[(LEFT_BLOCK+RIGHT_BLOCK)*i+:LEFT_BLOCK] <= is_touching_boundaries[(LEFT_BLOCK+RIGHT_BLOCK)*i+:LEFT_BLOCK];
-                                net_roots[(LEFT_BLOCK+RIGHT_BLOCK)*ADDRESS_WIDTH*i+:LEFT_BLOCK*ADDRESS_WIDTH] <= roots[(LEFT_BLOCK+RIGHT_BLOCK)*ADDRESS_WIDTH*i+:LEFT_BLOCK*ADDRESS_WIDTH];
-                            end
+//                    sc_fifo_out_data_internal[ADDRESS_WIDTH-1:0] <= roots[(LEFT_BLOCK+(result_data_frame % RIGHT_BLOCK))*ADDRESS_WIDTH + (RIGHT_BLOCK+LEFT_BLOCK)*ADDRESS_WIDTH*result_data_frame +: ADDRESS_WIDTH]; 
+//                    sc_fifo_out_data_internal[ADDRESS_WIDTH:ADDRESS_WIDTH] <= is_odd_cardinalities[LEFT_BLOCK + (result_data_frame % RIGHT_BLOCK) + (RIGHT_BLOCK+LEFT_BLOCK)*result_data_frame+:1];                                  
+//                    sc_fifo_out_data_internal[ADDRESS_WIDTH+1:ADDRESS_WIDTH+1] <= is_touching_boundaries[LEFT_BLOCK + (result_data_frame % RIGHT_BLOCK) + (RIGHT_BLOCK+LEFT_BLOCK)*result_data_frame+:1];                            
+                    result_data_frame <= (result_data_frame+1) % (CODE_DISTANCE*RIGHT_BLOCK);
+                    if(result_data_frame == 0) begin
+                        for(i = 0; i < CODE_DISTANCE; i = i + 1) begin
+                            net_is_odd_cardinalities[(LEFT_BLOCK+RIGHT_BLOCK)*i+:LEFT_BLOCK] <= is_odd_cardinalities[(LEFT_BLOCK+RIGHT_BLOCK)*i+:LEFT_BLOCK];
+                            net_is_touching_boundaries[(LEFT_BLOCK+RIGHT_BLOCK)*i+:LEFT_BLOCK] <= is_touching_boundaries[(LEFT_BLOCK+RIGHT_BLOCK)*i+:LEFT_BLOCK];
+                            net_roots[(LEFT_BLOCK+RIGHT_BLOCK)*ADDRESS_WIDTH*i+:LEFT_BLOCK*ADDRESS_WIDTH] <= roots[(LEFT_BLOCK+RIGHT_BLOCK)*ADDRESS_WIDTH*i+:LEFT_BLOCK*ADDRESS_WIDTH];
                         end
-                        net_roots[LEFT_BLOCK*ADDRESS_WIDTH + (RIGHT_BLOCK+LEFT_BLOCK)*ADDRESS_WIDTH*result_data_frame +: RIGHT_BLOCK*ADDRESS_WIDTH] <= sc_fifo_out_data_internal[ADDRESS_WIDTH-1:0];
-                        net_is_odd_cardinalities[LEFT_BLOCK + (RIGHT_BLOCK+LEFT_BLOCK)*result_data_frame+:1] <= sc_fifo_out_data_internal[ADDRESS_WIDTH:ADDRESS_WIDTH];
-                        net_is_touching_boundaries[LEFT_BLOCK + (RIGHT_BLOCK+LEFT_BLOCK)*result_data_frame+:1] <= sc_fifo_out_data_internal[ADDRESS_WIDTH+1:ADDRESS_WIDTH+1];
-                    end else begin
-                        net_roots[(LEFT_BLOCK+1)*ADDRESS_WIDTH + (RIGHT_BLOCK+LEFT_BLOCK)*ADDRESS_WIDTH*result_data_frame +: RIGHT_BLOCK*ADDRESS_WIDTH] <= sc_fifo_out_data_internal[ADDRESS_WIDTH-1:0] ;
-                        net_is_odd_cardinalities[(LEFT_BLOCK + 1) + (RIGHT_BLOCK+LEFT_BLOCK)*result_data_frame+:1] <= sc_fifo_out_data_internal[ADDRESS_WIDTH+:1];
-                        net_is_touching_boundaries[(LEFT_BLOCK + 1)+ (RIGHT_BLOCK+LEFT_BLOCK)*result_data_frame+:1] <= sc_fifo_out_data_internal[ADDRESS_WIDTH+1+:1];
                     end
+                    net_roots[(LEFT_BLOCK+(result_data_frame % RIGHT_BLOCK))*ADDRESS_WIDTH + (RIGHT_BLOCK+LEFT_BLOCK)*ADDRESS_WIDTH*(result_data_frame-(result_data_frame % RIGHT_BLOCK))/RIGHT_BLOCK +: ADDRESS_WIDTH] <= sc_fifo_in_data_internal[ADDRESS_WIDTH-1:0];
+                    net_is_odd_cardinalities[LEFT_BLOCK + (result_data_frame % RIGHT_BLOCK) + (RIGHT_BLOCK+LEFT_BLOCK)*(result_data_frame-(result_data_frame % RIGHT_BLOCK))/RIGHT_BLOCK+:1] <= sc_fifo_in_data_internal[ADDRESS_WIDTH:ADDRESS_WIDTH];
+                    net_is_touching_boundaries[LEFT_BLOCK + (result_data_frame % RIGHT_BLOCK) + (RIGHT_BLOCK+LEFT_BLOCK)*(result_data_frame-(result_data_frame % RIGHT_BLOCK))/RIGHT_BLOCK+:1] <= sc_fifo_in_data_internal[ADDRESS_WIDTH+1:ADDRESS_WIDTH+1];
                 end
 //                if (sc_fifo_in_data_internal[2:0] == 32'd4 && sc_fifo_in_data_internal[MASTER_FIFO_WIDTH - 1 : 3] == 32'd0 && !sc_fifo_in_empty_internal) begin
 //                    stage <= STAGE_IDLE;
@@ -592,7 +583,7 @@ always @(posedge clk) begin
     end
 end
 
-reg [$clog2(ADDRESS_WIDTH+2) : 0] result_data_frame;
+reg [$clog2(CODE_DISTANCE*RIGHT_BLOCK+1) : 0] result_data_frame;
 
 always @(posedge clk) begin
     if (reset) begin
@@ -646,23 +637,17 @@ always @(posedge clk) begin
                 if(sc_fifo_out_full_internal != 1'b1) begin
                     sc_fifo_out_valid_internal <= 1'b1;
                     // Make sure there's enough space in result_data_frame
-                    result_data_frame <= (result_data_frame+1) % (CODE_DISTANCE*2 + 1);
-                    if(result_data_frame == CODE_DISTANCE*2) begin
+                    result_data_frame <= (result_data_frame+1) % (CODE_DISTANCE*RIGHT_BLOCK + 1);
+                    if(result_data_frame == CODE_DISTANCE*RIGHT_BLOCK) begin
                         sc_fifo_out_data_internal[MASTER_FIFO_WIDTH-1:3] <= 32'b0;
                         sc_fifo_out_data_internal[2:0] <= 32'd4;
                         stage <= STAGE_IDLE;
                     end else begin
-                        if(result_data_frame%2 == 0) begin
-                            sc_fifo_out_data_internal[ADDRESS_WIDTH-1:0] <= roots[LEFT_BLOCK*ADDRESS_WIDTH + (RIGHT_BLOCK+LEFT_BLOCK)*ADDRESS_WIDTH*result_data_frame +: RIGHT_BLOCK*ADDRESS_WIDTH];
-                            sc_fifo_out_data_internal[ADDRESS_WIDTH:ADDRESS_WIDTH] <= is_odd_cardinalities[LEFT_BLOCK + (RIGHT_BLOCK+LEFT_BLOCK)*result_data_frame+:1];
-                            sc_fifo_out_data_internal[ADDRESS_WIDTH+1:ADDRESS_WIDTH+1] <= is_touching_boundaries[LEFT_BLOCK + (RIGHT_BLOCK+LEFT_BLOCK)*result_data_frame+:1];
-                            sc_fifo_out_data_internal[MASTER_FIFO_WIDTH-1:ADDRESS_WIDTH+2] <= 32'b0;
-                        end else begin
-                            sc_fifo_out_data_internal[ADDRESS_WIDTH-1:0] <= roots[(LEFT_BLOCK+1)*ADDRESS_WIDTH + (RIGHT_BLOCK+LEFT_BLOCK)*ADDRESS_WIDTH*result_data_frame +: RIGHT_BLOCK*ADDRESS_WIDTH];
-                            sc_fifo_out_data_internal[ADDRESS_WIDTH+:1] <= is_odd_cardinalities[(LEFT_BLOCK + 1) + (RIGHT_BLOCK+LEFT_BLOCK)*result_data_frame+:1];
-                            sc_fifo_out_data_internal[ADDRESS_WIDTH+1+:1] <= is_touching_boundaries[(LEFT_BLOCK + 1)+ (RIGHT_BLOCK+LEFT_BLOCK)*result_data_frame+:1];
-                            sc_fifo_out_data_internal[MASTER_FIFO_WIDTH-1:ADDRESS_WIDTH+2] <= 32'b0;
-                        end
+                        sc_fifo_out_data_internal[ADDRESS_WIDTH-1:0] <= roots[(LEFT_BLOCK+(result_data_frame % RIGHT_BLOCK))*ADDRESS_WIDTH + (RIGHT_BLOCK+LEFT_BLOCK)*ADDRESS_WIDTH*(result_data_frame-(result_data_frame % RIGHT_BLOCK))/RIGHT_BLOCK +: ADDRESS_WIDTH]; 
+                        sc_fifo_out_data_internal[ADDRESS_WIDTH:ADDRESS_WIDTH] <= is_odd_cardinalities[LEFT_BLOCK + (result_data_frame % RIGHT_BLOCK) + (RIGHT_BLOCK+LEFT_BLOCK)*(result_data_frame-(result_data_frame % RIGHT_BLOCK))/RIGHT_BLOCK+:1];                                  
+                        sc_fifo_out_data_internal[ADDRESS_WIDTH+1:ADDRESS_WIDTH+1] <= is_touching_boundaries[LEFT_BLOCK + (result_data_frame % RIGHT_BLOCK) + (RIGHT_BLOCK+LEFT_BLOCK)*(result_data_frame-(result_data_frame % RIGHT_BLOCK))/RIGHT_BLOCK+:1];
+                        sc_fifo_out_data_internal[MASTER_FIFO_WIDTH-2:ADDRESS_WIDTH+2] <= 32'b0;
+                        sc_fifo_out_data_internal[MASTER_FIFO_WIDTH-1:MASTER_FIFO_WIDTH-1] <= 1'b1;                                                                          
                     end
 ////                    sc_fifo_out_data_internal <= {MASTER_FIFO_WIDTH{1'b0}};
 //                    result_data_frame <= (result_data_frame+1) % 6;
