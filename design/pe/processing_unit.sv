@@ -187,6 +187,13 @@ wire [ADDRESS_WIDTH-1:0] distance_solver_target;
 wire [DIRECT_CHANNEL_WIDTH-1:0] distance_solver_result_idx;
 wire [(ADDRESS_WIDTH * DIRECT_CHANNEL_COUNT)-1:0] channel_addresses;
 
+<<<<<<< HEAD:design/pe/processing_unit.sv
+=======
+<<<<<<< HEAD:distributed_union_find/distributed_union_find.srcs/sources_1/new/processing_unit.sv
+
+=======
+>>>>>>> single_fpga_version:design/pe/processing_unit.sv
+>>>>>>> multi_mergable:design/pe/processing_unit.sv
 tree_distance_3d_solver #(
     .PER_DIMENSION_WIDTH(PER_DIMENSION_WIDTH),
     .CHANNEL_COUNT(DIRECT_CHANNEL_COUNT),
@@ -209,7 +216,7 @@ localparam DIRECT_CHANNEL_ALL_EXPAND_COUNT = 2 * DIRECT_CHANNEL_EXPAND_COUNT - 1
 wire [DIRECT_CHANNEL_COUNT-1:0] direct_in_channels_data_is_odd_cardinality;
 wire [DIRECT_CHANNEL_COUNT-1:0] direct_in_channels_data_is_touching_boundary;
 generate
-    for (i=0; i < DIRECT_CHANNEL_EXPAND_COUNT; i=i+1) begin: splitting_direct_in_channel_messages
+    for (i=0; i < DIRECT_CHANNEL_COUNT; i=i+1) begin: splitting_direct_in_channel_messages
         assign direct_in_channels_data_is_odd_cardinality[i] = `direct_in_data_is_odd_cardinality(i);
         assign direct_in_channels_data_is_touching_boundary[i] = `direct_in_data_is_touching_boundary(i);
     end
@@ -410,6 +417,9 @@ blocking_channel #(
 
 reg my_stored_direct_message_valid;
 reg [DIRECT_MESSAGE_WIDTH-1:0] my_stored_direct_message;
+
+assign is_processing = union_out_channels_valid | (|union_in_channels_valid) | (|direct_out_channels_valid) | (|direct_in_channels_valid) | pending_direct_message_valid_delayed | my_stored_direct_message_valid;
+
 `define pending_direct_message_receiver (pending_direct_message_delayed[DIRECT_MESSAGE_WIDTH-1:2])
 wire generate_my_direct_message;
 assign generate_my_direct_message = intermediate_pending_tell_new_root_cardinality || intermediate_pending_tell_new_root_touching_boundary;
