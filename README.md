@@ -7,7 +7,7 @@
     .
     ├── design                  # RTL design files
     ├── test_benches            # Unit tests and other verification tests
-    ├── parameters              # Parameters dhared by both design file and test benches
+    ├── parameters              # Parameters shared by both design file and test benches
     ├── ip_repo                 # ips used in the project
     ├── old_files               # Previous versions of the design (No longer in use)
     └── scripts                 # Scripts to build the Vivado Project and run verification tests
