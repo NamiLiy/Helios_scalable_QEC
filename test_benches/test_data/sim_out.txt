@@ -1,0 +1,298 @@
+              360000	Test case          1 pass         23 cycles          4 syndromes
+              770000	Test case          2 pass         39 cycles          5 syndromes
+             1110000	Test case          3 pass         32 cycles          2 syndromes
+             1320000	Test case          4 pass         19 cycles          2 syndromes
+             1660000	Test case          5 pass         32 cycles          1 syndromes
+             1870000	Test case          6 pass         19 cycles          2 syndromes
+             2280000	Test case          7 pass         39 cycles          3 syndromes
+             2620000	Test case          9 pass         32 cycles          1 syndromes
+             2830000	Test case         10 pass         19 cycles          2 syndromes
+             3170000	Test case         12 pass         32 cycles          1 syndromes
+             3380000	Test case         13 pass         19 cycles          2 syndromes
+             3590000	Test case         14 pass         19 cycles          2 syndromes
+             3800000	Test case         16 pass         19 cycles          2 syndromes
+             4010000	Test case         17 pass         19 cycles          2 syndromes
+             4220000	Test case         18 pass         19 cycles          2 syndromes
+             4550000	Test case         19 pass         31 cycles          1 syndromes
+             4900000	Test case         20 pass         33 cycles          3 syndromes
+             5150000	Test case         21 pass         23 cycles          4 syndromes
+             5500000	Test case         22 pass         33 cycles          3 syndromes
+             5710000	Test case         23 pass         19 cycles          2 syndromes
+             5920000	Test case         24 pass         19 cycles          2 syndromes
+             6270000	Test case         25 pass         33 cycles          4 syndromes
+             6480000	Test case         26 pass         19 cycles          2 syndromes
+             6830000	Test case         28 pass         33 cycles          3 syndromes
+             7080000	Test case         31 pass         23 cycles          4 syndromes
+             7330000	Test case         32 pass         23 cycles          4 syndromes
+             7680000	Test case         33 pass         33 cycles          3 syndromes
+             7890000	Test case         35 pass         19 cycles          2 syndromes
+             8100000	Test case         37 pass         19 cycles          2 syndromes
+             8470000	Test case         38 pass         35 cycles          4 syndromes
+             8800000	Test case         39 pass         31 cycles          1 syndromes
+             9140000	Test case         40 pass         32 cycles          2 syndromes
+             9480000	Test case         42 pass         32 cycles          1 syndromes
+             9690000	Test case         44 pass         19 cycles          2 syndromes
+             9900000	Test case         45 pass         19 cycles          4 syndromes
+            10280000	Test case         46 pass         36 cycles          5 syndromes
+            10490000	Test case         48 pass         19 cycles          2 syndromes
+            10700000	Test case         50 pass         19 cycles          2 syndromes
+            10910000	Test case         52 pass         19 cycles          2 syndromes
+            11250000	Test case         54 pass         32 cycles          1 syndromes
+            11460000	Test case         55 pass         19 cycles          2 syndromes
+            11670000	Test case         56 pass         19 cycles          2 syndromes
+            11880000	Test case         57 pass         19 cycles          2 syndromes
+            12130000	Test case         58 pass         23 cycles          4 syndromes
+            12340000	Test case         59 pass         19 cycles          2 syndromes
+            12550000	Test case         60 pass         19 cycles          2 syndromes
+            12760000	Test case         61 pass         19 cycles          2 syndromes
+            12970000	Test case         62 pass         19 cycles          4 syndromes
+            13310000	Test case         63 pass         32 cycles          1 syndromes
+            13650000	Test case         65 pass         32 cycles          2 syndromes
+            13860000	Test case         66 pass         19 cycles          2 syndromes
+            14190000	Test case         67 pass         31 cycles          1 syndromes
+            14400000	Test case         69 pass         19 cycles          2 syndromes
+            14610000	Test case         70 pass         19 cycles          2 syndromes
+            14950000	Test case         71 pass         32 cycles          1 syndromes
+            15160000	Test case         72 pass         19 cycles          2 syndromes
+            15370000	Test case         74 pass         19 cycles          2 syndromes
+            15580000	Test case         75 pass         19 cycles          2 syndromes
+            15790000	Test case         78 pass         19 cycles          2 syndromes
+            16000000	Test case         79 pass         19 cycles          2 syndromes
+            16210000	Test case         80 pass         19 cycles          2 syndromes
+            16420000	Test case         81 pass         19 cycles          2 syndromes
+            16760000	Test case         83 pass         32 cycles          1 syndromes
+            16970000	Test case         84 pass         19 cycles          2 syndromes
+            17180000	Test case         86 pass         19 cycles          2 syndromes
+            17570000	Test case         87 pass         37 cycles          4 syndromes
+            17930000	Test case         88 pass         34 cycles          4 syndromes
+            18320000	Test case         89 pass         37 cycles          6 syndromes
+            18730000	Test case         90 pass         39 cycles          8 syndromes
+            19120000	Test case         91 pass         37 cycles          7 syndromes
+            19530000	 Root(0,3) = (0,0) : Expected (0,2)
+            19530000	 Root(1,2) = (0,0) : Expected (0,2)
+            19530000	 Root(2,0) = (0,0) : Expected (2,0)
+            19530000	 Root(2,2) = (0,0) : Expected (2,1)
+            19530000	 Root(3,1) = (0,0) : Expected (2,1)
+            19530000	Test case         92 fail         39 cycles          7 syndromes
+            19800000	Test case         93 pass         25 cycles         10 syndromes
+            20350000	Test case         94 pass         53 cycles          9 syndromes
+            20860000	 Root(1,2) = (0,3) : Expected (1,2)
+            20860000	 Root(1,3) = (0,3) : Expected (1,3)
+            20860000	 Root(2,1) = (0,3) : Expected (2,1)
+            20860000	 Root(2,2) = (0,3) : Expected (2,2)
+            20860000	 Root(2,3) = (0,3) : Expected (1,3)
+            20860000	 Root(3,0) = (0,3) : Expected (3,0)
+            20860000	 Root(3,1) = (0,3) : Expected (1,3)
+            20860000	 Root(3,2) = (0,3) : Expected (1,3)
+            20860000	 Root(3,3) = (0,3) : Expected (1,3)
+            20860000	 Root(4,1) = (0,3) : Expected (4,1)
+            20860000	 Root(4,2) = (0,3) : Expected (4,2)
+            20860000	 Root(4,3) = (0,3) : Expected (1,3)
+            20860000	Test case         95 fail         49 cycles          6 syndromes
+            21250000	Test case         96 pass         37 cycles          8 syndromes
+            21680000	Test case         97 pass         41 cycles          9 syndromes
+            21890000	Test case         98 pass         19 cycles          2 syndromes
+            22490000	 Root(0,1) = (0,0) : Expected (0,1)
+            22490000	 Root(0,2) = (0,0) : Expected (0,2)
+            22490000	 Root(0,3) = (0,0) : Expected (0,3)
+            22490000	 Root(1,0) = (0,0) : Expected (1,0)
+            22490000	 Root(1,1) = (0,0) : Expected (0,1)
+            22490000	 Root(1,2) = (0,0) : Expected (0,1)
+            22490000	 Root(1,3) = (0,0) : Expected (0,1)
+            22490000	 Root(2,0) = (0,0) : Expected (2,0)
+            22490000	 Root(2,1) = (0,0) : Expected (0,1)
+            22490000	 Root(2,2) = (0,0) : Expected (0,1)
+            22490000	 Root(2,3) = (0,0) : Expected (2,3)
+            22490000	 Root(3,0) = (0,0) : Expected (0,1)
+            22490000	 Root(3,1) = (0,0) : Expected (0,1)
+            22490000	 Root(3,2) = (0,0) : Expected (2,3)
+            22490000	 Root(3,3) = (0,0) : Expected (2,3)
+            22490000	 Root(4,0) = (0,0) : Expected (4,0)
+            22490000	 Root(4,1) = (0,0) : Expected (2,3)
+            22490000	 Root(4,2) = (0,0) : Expected (2,3)
+            22490000	 Root(4,3) = (0,0) : Expected (2,3)
+            22490000	Test case         99 fail         58 cycles         11 syndromes
+            23000000	Test case        100 pass         49 cycles          7 syndromes
+            23570000	Test case        101 pass         55 cycles          8 syndromes
+            23940000	Test case        102 pass         35 cycles          6 syndromes
+            24310000	Test case        103 pass         35 cycles          6 syndromes
+            24760000	Test case        104 pass         43 cycles          7 syndromes
+            25030000	Test case        105 pass         25 cycles         12 syndromes
+            25580000	Test case        106 pass         53 cycles         12 syndromes
+            25880000	 Root(0,3) = (0,3) : Expected (0,2)
+            25880000	 Root(1,1) = (1,1) : Expected (0,1)
+            25880000	 Root(1,3) = (1,3) : Expected (1,2)
+            25880000	 Root(2,3) = (2,3) : Expected (2,2)
+            25880000	 Root(3,3) = (3,3) : Expected (3,2)
+            25880000	 Root(4,0) = (4,0) : Expected (3,0)
+            25880000	 Root(4,1) = (4,1) : Expected (3,1)
+            25880000	 Root(4,2) = (4,2) : Expected (3,2)
+            25880000	Test case        107 fail         28 cycles         11 syndromes
+            26300000	Test case        108 pass         40 cycles          8 syndromes
+            26790000	Test case        109 pass         47 cycles          9 syndromes
+            27200000	Test case        110 pass         39 cycles          8 syndromes
+            27630000	Test case        111 pass         41 cycles          9 syndromes
+            28020000	Test case        112 pass         37 cycles          6 syndromes
+            28480000	Test case        113 pass         44 cycles         10 syndromes
+            29180000	 Root(1,1) = (0,0) : Expected (1,0)
+            29180000	 Root(2,1) = (0,0) : Expected (2,0)
+            29180000	 Root(3,0) = (0,0) : Expected (2,0)
+            29180000	Test case        114 fail         68 cycles          6 syndromes
+            29610000	 Root(0,2) = (0,0) : Expected (0,1)
+            29610000	 Root(0,3) = (0,0) : Expected (0,1)
+            29610000	 Root(1,2) = (0,0) : Expected (1,1)
+            29610000	 Root(1,3) = (0,0) : Expected (0,1)
+            29610000	 Root(2,1) = (0,0) : Expected (1,1)
+            29610000	 Root(3,0) = (0,0) : Expected (2,0)
+            29610000	Test case        115 fail         41 cycles         12 syndromes
+            30070000	Test case        116 pass         44 cycles          6 syndromes
+            30490000	Test case        117 pass         40 cycles         11 syndromes
+            30720000	Test case        118 pass         21 cycles          8 syndromes
+            31140000	Test case        119 pass         40 cycles          5 syndromes
+            31510000	Test case        120 pass         35 cycles          7 syndromes
+            32020000	 Root(0,2) = (0,0) : Expected (0,1)
+            32020000	 Root(1,2) = (0,0) : Expected (1,1)
+            32020000	 Root(2,3) = (0,0) : Expected (2,2)
+            32020000	 Root(3,1) = (0,0) : Expected (2,1)
+            32020000	 Root(3,2) = (0,0) : Expected (2,2)
+            32020000	 Root(4,0) = (0,0) : Expected (3,0)
+            32020000	Test case        121 fail         49 cycles          9 syndromes
+            32500000	Test case        122 pass         46 cycles          9 syndromes
+            33030000	Test case        123 pass         51 cycles         13 syndromes
+            33440000	Test case        124 pass         39 cycles          8 syndromes
+            33770000	Test case        125 pass         31 cycles         10 syndromes
+            34250000	Test case        126 pass         46 cycles          8 syndromes
+            35050000	 Root(2,1) = (0,0) : Expected (1,1)
+            35050000	 Root(2,2) = (0,0) : Expected (1,2)
+            35050000	 Root(3,0) = (0,0) : Expected (2,0)
+            35050000	 Root(3,3) = (0,0) : Expected (2,3)
+            35050000	 Root(4,0) = (0,0) : Expected (2,0)
+            35050000	 Root(4,1) = (0,0) : Expected (2,0)
+            35050000	Test case        127 fail         78 cycles         10 syndromes
+            35470000	Test case        128 pass         40 cycles          9 syndromes
+            36050000	 Root(1,2) = (0,0) : Expected (0,2)
+            36050000	 Root(2,1) = (0,0) : Expected (1,1)
+            36050000	 Root(2,2) = (0,0) : Expected (2,2)
+            36050000	 Root(3,0) = (0,0) : Expected (2,0)
+            36050000	 Root(3,1) = (0,0) : Expected (3,1)
+            36050000	 Root(4,2) = (0,0) : Expected (3,2)
+            36050000	 Root(4,3) = (0,0) : Expected (3,3)
+            36050000	Test case        129 fail         56 cycles         11 syndromes
+            36400000	Test case        130 pass         33 cycles          7 syndromes
+            36910000	 Root(0,3) = (0,0) : Expected (0,2)
+            36910000	 Root(1,1) = (0,0) : Expected (0,1)
+            36910000	 Root(1,2) = (0,0) : Expected (0,2)
+            36910000	 Root(1,3) = (0,0) : Expected (0,1)
+            36910000	 Root(2,0) = (0,0) : Expected (0,1)
+            36910000	 Root(2,1) = (0,0) : Expected (0,1)
+            36910000	 Root(2,2) = (0,0) : Expected (0,1)
+            36910000	 Root(2,3) = (0,0) : Expected (0,1)
+            36910000	 Root(3,0) = (0,0) : Expected (0,1)
+            36910000	 Root(3,1) = (0,0) : Expected (0,1)
+            36910000	 Root(3,2) = (0,0) : Expected (0,1)
+            36910000	 Root(3,3) = (0,0) : Expected (0,1)
+            36910000	 Root(4,0) = (0,0) : Expected (0,1)
+            36910000	 Root(4,1) = (0,0) : Expected (0,1)
+            36910000	 Root(4,2) = (0,0) : Expected (0,1)
+            36910000	 Root(4,3) = (0,0) : Expected (0,1)
+            36910000	Test case        131 fail         49 cycles          9 syndromes
+            37290000	Test case        132 pass         36 cycles          5 syndromes
+            38200000	 Root(0,1) = (0,0) : Expected (0,1)
+            38200000	 Root(0,2) = (0,0) : Expected (0,1)
+            38200000	 Root(0,3) = (0,0) : Expected (0,1)
+            38200000	 Root(1,2) = (0,0) : Expected (0,1)
+            38200000	 Root(1,3) = (0,0) : Expected (0,1)
+            38200000	 Root(2,1) = (0,0) : Expected (0,1)
+            38200000	 Root(2,2) = (0,0) : Expected (0,1)
+            38200000	 Root(2,3) = (0,0) : Expected (0,1)
+            38200000	 Root(3,0) = (0,0) : Expected (0,1)
+            38200000	 Root(3,1) = (0,0) : Expected (0,1)
+            38200000	 Root(3,2) = (0,0) : Expected (0,1)
+            38200000	 Root(3,3) = (0,0) : Expected (0,1)
+            38200000	 Root(4,0) = (0,0) : Expected (0,1)
+            38200000	 Root(4,1) = (0,0) : Expected (0,1)
+            38200000	 Root(4,2) = (0,0) : Expected (0,1)
+            38200000	 Root(4,3) = (0,0) : Expected (0,1)
+            38200000	Test case        133 fail         89 cycles          9 syndromes
+            38960000	 Root(4,2) = (0,1) : Expected (4,2)
+            38960000	 Root(4,3) = (0,1) : Expected (4,3)
+            38960000	Test case        134 fail         74 cycles          3 syndromes
+            39350000	Test case        135 pass         37 cycles          5 syndromes
+            39790000	Test case        136 pass         42 cycles          5 syndromes
+            40230000	Test case        137 pass         42 cycles         11 syndromes
+            40560000	Test case        138 pass         31 cycles          8 syndromes
+            41010000	Test case        139 pass         43 cycles          8 syndromes
+            41480000	 Root(0,3) = (0,0) : Expected (0,2)
+            41480000	 Root(1,1) = (0,0) : Expected (0,1)
+            41480000	 Root(2,2) = (0,0) : Expected (1,2)
+            41480000	 Root(2,3) = (0,0) : Expected (1,3)
+            41480000	Test case        140 fail         45 cycles         11 syndromes
+            41890000	Test case        141 pass         39 cycles          8 syndromes
+            42420000	Test case        142 pass         51 cycles          9 syndromes
+            42900000	Test case        143 pass         46 cycles          8 syndromes
+            43250000	Test case        137 pass         33 cycles          3 syndromes
+            43460000	Test case        138 pass         19 cycles          2 syndromes
+            43670000	Test case        139 pass         19 cycles          2 syndromes
+            43880000	Test case        140 pass         19 cycles          2 syndromes
+            44110000	Test case        141 pass         21 cycles          4 syndromes
+            44320000	Test case        142 pass         19 cycles          2 syndromes
+            44530000	Test case        144 pass         19 cycles          2 syndromes
+            44780000	Test case        146 pass         23 cycles          4 syndromes
+            44990000	Test case        147 pass         19 cycles          2 syndromes
+            45200000	Test case        149 pass         19 cycles          2 syndromes
+            45410000	Test case        151 pass         19 cycles          2 syndromes
+            45620000	Test case        152 pass         19 cycles          2 syndromes
+            45870000	Test case        153 pass         23 cycles          4 syndromes
+            46200000	Test case        154 pass         31 cycles          1 syndromes
+            46410000	Test case        155 pass         19 cycles          2 syndromes
+            46750000	Test case        157 pass         32 cycles          1 syndromes
+            46960000	Test case        158 pass         19 cycles          2 syndromes
+            47210000	Test case        159 pass         23 cycles          4 syndromes
+            47420000	Test case        160 pass         19 cycles          2 syndromes
+            47630000	Test case        161 pass         19 cycles          2 syndromes
+            48000000	Test case        162 pass         35 cycles          4 syndromes
+            48210000	Test case        163 pass         19 cycles          2 syndromes
+            48420000	Test case        164 pass         19 cycles          4 syndromes
+            48630000	Test case        166 pass         19 cycles          2 syndromes
+            48840000	Test case        167 pass         19 cycles          2 syndromes
+            49180000	Test case        168 pass         32 cycles          1 syndromes
+            49540000	Test case        169 pass         34 cycles          2 syndromes
+            49890000	Test case        170 pass         33 cycles          3 syndromes
+            50100000	Test case        171 pass         19 cycles          4 syndromes
+            50440000	Test case        172 pass         32 cycles          1 syndromes
+            50780000	Test case        173 pass         32 cycles          1 syndromes
+            51120000	Test case        174 pass         32 cycles          1 syndromes
+            51540000	Test case        175 pass         40 cycles          3 syndromes
+            51880000	Test case        176 pass         32 cycles          1 syndromes
+            52220000	Test case        177 pass         32 cycles          1 syndromes
+            52430000	Test case        178 pass         19 cycles          2 syndromes
+            52680000	Test case        179 pass         23 cycles          4 syndromes
+            52930000	Test case        180 pass         23 cycles          4 syndromes
+            53300000	Test case        182 pass         35 cycles          4 syndromes
+            53510000	Test case        184 pass         19 cycles          2 syndromes
+            53720000	Test case        185 pass         19 cycles          2 syndromes
+            53930000	Test case        186 pass         19 cycles          4 syndromes
+            54140000	Test case        188 pass         19 cycles          2 syndromes
+            54350000	Test case        189 pass         19 cycles          4 syndromes
+            54560000	Test case        192 pass         19 cycles          2 syndromes
+            54770000	Test case        193 pass         19 cycles          2 syndromes
+            55130000	Test case        194 pass         34 cycles          2 syndromes
+            55470000	Test case        195 pass         32 cycles          1 syndromes
+            55680000	Test case        196 pass         19 cycles          2 syndromes
+            55890000	Test case        197 pass         19 cycles          2 syndromes
+            56100000	Test case        198 pass         19 cycles          2 syndromes
+            56440000	Test case        199 pass         32 cycles          1 syndromes
+            56770000	Test case        200 pass         31 cycles          1 syndromes
+            57120000	Test case        201 pass         33 cycles          3 syndromes
+            57520000	Test case        202 pass         38 cycles          4 syndromes
+            57870000	Test case        203 pass         33 cycles          3 syndromes
+            58080000	Test case        204 pass         19 cycles          2 syndromes
+            58330000	Test case        205 pass         23 cycles          4 syndromes
+            58540000	Test case        206 pass         19 cycles          4 syndromes
+            58880000	Test case        207 pass         32 cycles          1 syndromes
+            59130000	Test case        208 pass         23 cycles          6 syndromes
+            59470000	Test case        209 pass         32 cycles          1 syndromes
+            59480000	 Done:
+Total :        184
+Passed :        171
+Failed :         13
