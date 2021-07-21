@@ -248,9 +248,20 @@ generate
                 .master_fifo_in_ready(`MASTER_FIFO_SIGNAL_VEC(master_fifo_in_ready_vector, `FIFO_INDEX(j, k))),
                 .has_flying_messages(`MASTER_FIFO_SIGNAL_VEC(arbitration_has_flying_messages, `FIFO_INDEX(j, k)))
             );
+
+
         end
     end
 endgenerate
+
+
+
+
+
+
+
+
+
 
 `define NEIGHBOR_IDX_TOP(i, j, k) (0)
 `define NEIGHBOR_IDX_BOTTOM(i, j, k) (i>0?1:0)
@@ -275,6 +286,20 @@ neighbor_link #(.LENGTH(NEIGHBOR_COST), .ADDRESS_WIDTH(ADDRESS_WIDTH)) neighbor_
 );\
 assign `PU(i+1, j, k).neighbor_is_fully_grown[`NEIGHBOR_IDX_TOP(i+1, j, k)] = `PU(i, j, k).neighbor_is_fully_grown[`NEIGHBOR_IDX_BOTTOM(i, j, k)];
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // Keep in mind a and b are interchanged 
 `define NEIGHBOR_VERTICAL_TO_FIFO_INSTANTIATE_RIGHT(i) \
 neighbor_link_to_fifo #(.LENGTH(NEIGHBOR_COST), .ADDRESS_WIDTH(ADDRESS_WIDTH)) neighbor_vertical_fifo (\
@@ -289,8 +314,6 @@ neighbor_link_to_fifo #(.LENGTH(NEIGHBOR_COST), .ADDRESS_WIDTH(ADDRESS_WIDTH)) n
     .neighbor_fifo_in_valid(`PU_FIFO(j,k).neighbor_fifo_in_valid), \
     .neighbor_fifo_in_ready(`PU_FIFO(j,k).neighbor_fifo_in_ready) \
 );
-
-
 // instantiate horizontal neighbor link and connect signals properly
 `define NEIGHBOR_HORIZONTAL_INSTANTIATE \
 neighbor_link #(.LENGTH(NEIGHBOR_COST), .ADDRESS_WIDTH(ADDRESS_WIDTH)) neighbor_horizontal (\
@@ -349,6 +372,28 @@ nonblocking_channel_to_fifo #(.WIDTH(UNION_MESSAGE_WIDTH)) nonblocking_channel_t
     .nonblocking_fifo_out_valid(`PU_FIFO(j,k).non_blocking_fifo_out_valid), \
     .nonblocking_fifo_out_ready(`PU_FIFO(j,k).non_blocking_fifo_out_ready) \
 );
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // instantiate horizontal union channels and connect signals properly
 `define UNION_CHANNEL_HORIZONTAL_INSTANTIATE \

@@ -74,8 +74,6 @@ end
 genvar i;
 genvar j;
 genvar k;
-genvar l;
-genvar m;
 
 wire [PU_COUNT-1:0] test;
 
@@ -191,8 +189,8 @@ endgenerate
 
 // instantiate the pu_arbitration_units
 generate
-    for (l=0; l < CODE_DISTANCE; l=l+1) begin: fifo_k
-        for (m=0; m < CODE_DISTANCE-1; m=m+1) begin: fifo_j
+    for (k=0; k < CODE_DISTANCE; k=k+1) begin: fifo_k
+        for (j=0; j < CODE_DISTANCE-1; j=j+1) begin: fifo_j
             // instantiate processing unit
             wire [ADDRESS_WIDTH:0] neighbor_fifo_out_data; //not -1 to support extra signal
             wire neighbor_fifo_out_valid;
@@ -242,13 +240,13 @@ generate
                 .blocking_fifo_in_data(blocking_fifo_in_data),
                 .blocking_fifo_in_valid(blocking_fifo_in_valid),
                 .blocking_fifo_in_ready(blocking_fifo_in_ready),
-                .master_fifo_out_data(`MASTER_FIFO_VEC(master_fifo_out_data_vector, `FIFO_INDEX(l, m))),
-                .master_fifo_out_valid(`MASTER_FIFO_SIGNAL_VEC(master_fifo_out_valid_vector, `FIFO_INDEX(l, m))),
-                .master_fifo_out_ready(`MASTER_FIFO_SIGNAL_VEC(master_fifo_out_ready_vector, `FIFO_INDEX(l, m))),
-                .master_fifo_in_data(`MASTER_FIFO_VEC(master_fifo_in_data_vector, `FIFO_INDEX(l, m))),
-                .master_fifo_in_valid(`MASTER_FIFO_SIGNAL_VEC(master_fifo_in_valid_vector, `FIFO_INDEX(l, m))),
-                .master_fifo_in_ready(`MASTER_FIFO_SIGNAL_VEC(master_fifo_in_ready_vector, `FIFO_INDEX(l, m))),
-                .has_flying_messages(`MASTER_FIFO_SIGNAL_VEC(arbitration_has_flying_messages, `FIFO_INDEX(l, m)))
+                .master_fifo_out_data(`MASTER_FIFO_VEC(master_fifo_out_data_vector, `FIFO_INDEX(j, k))),
+                .master_fifo_out_valid(`MASTER_FIFO_SIGNAL_VEC(master_fifo_out_valid_vector, `FIFO_INDEX(j, k))),
+                .master_fifo_out_ready(`MASTER_FIFO_SIGNAL_VEC(master_fifo_out_ready_vector, `FIFO_INDEX(j, k))),
+                .master_fifo_in_data(`MASTER_FIFO_VEC(master_fifo_in_data_vector, `FIFO_INDEX(j, k))),
+                .master_fifo_in_valid(`MASTER_FIFO_SIGNAL_VEC(master_fifo_in_valid_vector, `FIFO_INDEX(j, k))),
+                .master_fifo_in_ready(`MASTER_FIFO_SIGNAL_VEC(master_fifo_in_ready_vector, `FIFO_INDEX(j, k))),
+                .has_flying_messages(`MASTER_FIFO_SIGNAL_VEC(arbitration_has_flying_messages, `FIFO_INDEX(j, k)))
             );
 
             assign blocking_fifo_in_full = ~blocking_fifo_in_ready;
@@ -465,6 +463,7 @@ blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH), .DEPTH(128)) blocking_channel_t
     .out_is_taken(`PU_FIFO(j,k).blocking_fifo_out_ready)\
 );
 
+
 // instantiate horizontal direct channels and connect signals properly
 `define DIRECT_CHANNEL_HORIZONTAL_INSTANTIATE \
 blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_left (\
@@ -562,6 +561,9 @@ generate
     for (k=0; k < CODE_DISTANCE; k=k+1) begin: neighbor_k_extra
         for (j=0; j < CODE_DISTANCE-1; j=j+1) begin: neighbor_j_extra
             `DIRECT_CHANNEL_VERTICAL_WRAP_INSTANTIATE(CODE_DISTANCE - 1)
+
+
+
         end
     end
 endgenerate
