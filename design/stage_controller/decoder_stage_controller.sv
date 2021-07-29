@@ -1,6 +1,6 @@
 `timescale 1ns / 1ps
 
-`include "parameters.sv"
+`include "../../parameters/parameters.sv"
 
 module decoder_stage_controller #(
     parameter CODE_DISTANCE_X = 4,
