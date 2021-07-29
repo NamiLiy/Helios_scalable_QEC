@@ -18,7 +18,7 @@ module standard_planar_code_3d_no_fast_channel #(
     has_message_flying
 );
 
-`include "parameters.sv"
+`include "../../parameters/parameters.sv"
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
 localparam MEASUREMENT_ROUNDS = `MAX(CODE_DISTANCE_X, CODE_DISTANCE_Z);

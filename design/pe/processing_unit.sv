@@ -54,7 +54,7 @@ module processing_unit #(
     is_processing
 );
 
-`include "parameters.sv"
+`include "../../parameters/parameters.sv"
 
 localparam CHANNEL_COUNT = NEIGHBOR_COUNT + FAST_CHANNEL_COUNT;
 localparam CHANNEL_WIDTH = $clog2(CHANNEL_COUNT);  // the index of channel, both neighbor and direct ones
