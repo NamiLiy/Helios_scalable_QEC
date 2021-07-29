@@ -13,7 +13,7 @@
 
 module bench_planar_code_no_fast_channel;
 
-`include "../sources_1/new/parameters.sv"
+`include "../../parameters/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
 localparam CODE_DISTANCE = 3;
@@ -107,7 +107,7 @@ always @(negedge clk) begin
         is_error_syndromes = 0;
         if(input_open == 1) begin
             if (CODE_DISTANCE == 3) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/input_data_3.txt", "r");
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_3.txt", "r");
             end else if (CODE_DISTANCE == 5) begin
                 input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/input_data_5.txt", "r");
             end else if (CODE_DISTANCE == 7) begin
@@ -155,7 +155,7 @@ always @(posedge clk) begin
         processing = 0;
         if(open == 1) begin
             if (CODE_DISTANCE == 3) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/output_data_3.txt", "r");
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_3.txt", "r");
             end else if (CODE_DISTANCE == 5) begin
                 file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/output_data_5.txt", "r");
             end else if (CODE_DISTANCE == 7) begin
