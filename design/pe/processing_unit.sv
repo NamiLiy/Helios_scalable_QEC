@@ -28,14 +28,9 @@ module processing_unit #(
     stage_in,
     // neighbor links
     neighbor_is_fully_grown,
-        // `old_root` should connect to *_old_root_in
-    neighbor_old_roots,  // connect to *_old_root_out
+    neighbor_is_odd_cluster,
+    neighbor_roots,  // connect to *_old_root_out
     neighbor_increase,  // connect to *_increase
-    // union channels using `nonblocking_channel`
-    union_out_channels_data,
-    union_out_channels_valid,
-    union_in_channels_data,
-    union_in_channels_valid,
     // direct channels using `blocking_channel`
     direct_out_channels_data_single,
     direct_out_channels_valid,
@@ -71,13 +66,9 @@ input init_is_error_syndrome;
 input [STAGE_WIDTH-1:0] stage_in;
 // neighbor links using `neighbor_link` module
 input [NEIGHBOR_COUNT-1:0] neighbor_is_fully_grown;
-input [(ADDRESS_WIDTH * NEIGHBOR_COUNT)-1:0] neighbor_old_roots;  // connect to *_old_root_out
+input [NEIGHBOR_COUNT-1:0] neighbor_is_odd_cluster;
+input [(ADDRESS_WIDTH * NEIGHBOR_COUNT)-1:0] neighbor_roots;  // connect to *_old_root_out
 output neighbor_increase;  // connect to *_increase, shared by all neighbors
-// union channels using `nonblocking_channel`, each message is packed [old_root, updated_root]
-output [(UNION_MESSAGE_WIDTH * CHANNEL_COUNT)-1:0] union_out_channels_data;
-output union_out_channels_valid; // single wire connects to all union channels
-input [(UNION_MESSAGE_WIDTH * CHANNEL_COUNT)-1:0] union_in_channels_data;
-input [CHANNEL_COUNT-1:0] union_in_channels_valid;
 // direct channels using `blocking_channel`, each message is packed [receiver, is_odd_cardinality_root, is_touching_boundary]
 output [DIRECT_MESSAGE_WIDTH-1:0] direct_out_channels_data_single;
 output [DIRECT_CHANNEL_COUNT-1:0] direct_out_channels_valid;
@@ -110,7 +101,10 @@ reg [BOUNDARY_WIDTH-1:0] boundary_increased_x;
 reg [BOUNDARY_WIDTH-1:0] boundary_increased_z;
 reg [BOUNDARY_WIDTH-1:0] boundary_increased_ud;
 
-assign is_processing = union_out_channels_valid | (|union_in_channels_valid) | (|direct_out_channels_valid) | (|direct_in_channels_valid) | pending_direct_message_valid_delayed | my_stored_direct_message_valid;
+reg neighbor_changed;
+reg neighbor_changed_delayed;
+
+assign is_processing = neighbor_changed_delayed | neighbor_changed | (|direct_out_channels_valid) | (|direct_in_channels_valid) | pending_direct_message_valid_delayed | my_stored_direct_message_valid;
 
 wire [ADDRESS_WIDTH-1:0] init_address;
 assign init_address[ADDRESS_WIDTH-1:PER_DIMENSION_WIDTH*2] = K;
@@ -144,11 +138,6 @@ assign is_stage_spread_cluster_delayed = (stage_delayed == STAGE_SPREAD_CLUSTER)
 // i defined in range [0, CHANNEL_COUNT)
 `define compare_solver_addr(i) compare_solver_addrs[((i+1) * ADDRESS_WIDTH) - 1 : (i * ADDRESS_WIDTH)]
 `define compare_solver_valid(i) compare_solver_addrs_valid[i]
-`define union_out_data(i) union_out_channels_data[((i+1) * UNION_MESSAGE_WIDTH) - 1 : (i * UNION_MESSAGE_WIDTH)]
-`define union_in_data(i) union_in_channels_data[((i+1) * UNION_MESSAGE_WIDTH) - 1 : (i * UNION_MESSAGE_WIDTH)]
-`define union_in_data_old_root(i) union_in_channels_data[((i+1) * UNION_MESSAGE_WIDTH) - 1 : (i * UNION_MESSAGE_WIDTH) + ADDRESS_WIDTH]
-`define union_in_data_updated_root(i) union_in_channels_data[((i+1) * UNION_MESSAGE_WIDTH) - 1 - ADDRESS_WIDTH : (i * UNION_MESSAGE_WIDTH)]
-`define union_in_valid(i) union_in_channels_valid[i]
 `define direct_out_valid(i) direct_out_channels_valid[i]
 `define direct_out_is_full(i) direct_out_channels_is_full[i]
 `define direct_in_data(i) direct_in_channels_data[((i+1) * DIRECT_MESSAGE_WIDTH) - 1 : (i * DIRECT_MESSAGE_WIDTH)]
@@ -159,7 +148,8 @@ assign is_stage_spread_cluster_delayed = (stage_delayed == STAGE_SPREAD_CLUSTER)
 `define direct_in_is_taken(i) direct_in_channels_is_taken[i]
 // i defined in range [0, NEIGHBOR_COUNT)
 `define is_fully_grown(i) neighbor_is_fully_grown[i]
-`define neighbor_old_root(i) neighbor_old_roots[((i+1) * ADDRESS_WIDTH) - 1 : (i * ADDRESS_WIDTH)]
+`define neighbor_is_odd_cluster(i) neighbor_is_odd_cluster[i]
+`define neighbor_root(i) neighbor_roots[((i+1) * ADDRESS_WIDTH) - 1 : (i * ADDRESS_WIDTH)]
 `define channel_addresses_k(idx) channel_addresses[(idx+1)*ADDRESS_WIDTH-1 : idx*ADDRESS_WIDTH+2*PER_DIMENSION_WIDTH]
 `define channel_addresses_i(idx) channel_addresses[(idx+1)*ADDRESS_WIDTH-1-PER_DIMENSION_WIDTH : idx*ADDRESS_WIDTH+PER_DIMENSION_WIDTH]
 `define channel_addresses_j(idx) channel_addresses[(idx+1)*ADDRESS_WIDTH-1-2*PER_DIMENSION_WIDTH : idx*ADDRESS_WIDTH]
@@ -242,7 +232,7 @@ wire [CHANNEL_ALL_EXPAND_COUNT-1:0] tree_gathering_is_odd_cluster;
 generate
     for (i=0; i < CHANNEL_EXPAND_COUNT; i=i+1) begin: pending_is_odd_cluster_gathering_initialization
         if (i < CHANNEL_COUNT) begin
-            assign tree_gathering_is_odd_cluster[i] = `union_in_valid(i) && `union_in_data_old_root(i) == old_root;
+            assign tree_gathering_is_odd_cluster[i] = `neighbor_is_odd_cluster(i);
         end else begin
             assign tree_gathering_is_odd_cluster[i] = 0;
         end
@@ -255,8 +245,10 @@ generate
         end
     end
 endgenerate
-`define gathered_is_odd_cluster (tree_gathering_is_odd_cluster[CHANNEL_ROOT_IDX])
-assign updated_is_odd_cluster = is_odd_cluster | `gathered_is_odd_cluster;
+
+wire gathered_is_odd_cluster = (|neighbor_is_odd_cluster);
+// `define gathered_is_odd_cluster (tree_gathering_is_odd_cluster[CHANNEL_ROOT_IDX])
+assign updated_is_odd_cluster = is_odd_cluster | gathered_is_odd_cluster;
 
 // compute `should_broadcast_is_odd_cardinality`
 wire should_broadcast_is_odd_cardinality;
@@ -270,15 +262,12 @@ generate
     for (i=0; i < CHANNEL_COUNT; i=i+1) begin: compare_new_updated_root
         wire [ADDRESS_WIDTH-1:0] elected_updated_root;
         wire elected_valid;
-        wire union_in_accepted;
-        assign union_in_accepted = `union_in_valid(i) && `union_in_data_old_root(i) == old_root;
         if (i < NEIGHBOR_COUNT) begin  // first for neighbors
             // if has union message in the channel, use that one; otherwise use the old_root from neighbor link
-            assign elected_valid = union_in_accepted || `is_fully_grown(i);
-            assign elected_updated_root = union_in_accepted ? `union_in_data_updated_root(i) : `neighbor_old_root(i);
+            assign elected_valid = `is_fully_grown(i);
+            assign elected_updated_root = `neighbor_root(i);
         end else begin  // then for non-neighbors (fast channels only)
-            assign elected_valid = union_in_accepted;
-            assign elected_updated_root = `union_in_data_updated_root(i);
+            // Unsupported
         end
         assign `compare_solver_addr(i) = elected_updated_root;
         assign `compare_solver_valid(i) = elected_valid;
@@ -286,28 +275,15 @@ generate
 endgenerate
 assign new_updated_root = compare_solver_result;  // combinational logic that computes within a sinlge clock cycle
 
-// always @(posedge clk) begin
-//     if(reset) begin
-//         compare_solver_result <= init_address;
-//     end else begin
-//         compare_solver_result_stored <= compare_solver_result;
-//     end
-// end
-
-// send out union messages
-wire should_send_union_messages;
-assign union_out_channels_valid = (is_stage_spread_cluster && (new_updated_root != updated_root)) || should_broadcast_is_odd_cardinality;
-generate
-    for (i=0; i < CHANNEL_COUNT; i=i+1) begin: sending_union_messages
-        assign `union_out_data(i) = should_broadcast_is_odd_cardinality ? (
-            // STAGE_SYNC_IS_ODD_CLUSTER
-            { updated_root, updated_root }
-        ) : (
-            // STAGE_SPREAD_CLUSTER
-            { ((i < NEIGHBOR_COUNT && `is_fully_grown(i)) ? (`neighbor_old_root(i)) : (old_root)), new_updated_root }
-        );
+// Check whether the neighbor data is processing. And hold that singal for one extra cycle
+assign neighbor_changed = (is_stage_spread_cluster && (new_updated_root != updated_root)) || should_broadcast_is_odd_cardinality;
+always @(posedge clk) begin
+    if (reset) begin
+        neighbor_changed_delayed <= 0;
+    end else begin
+        neighbor_changed_delayed <= neighbor_changed;
     end
-endgenerate
+end
 
 // direct channel local handling
 wire [DIRECT_CHANNEL_COUNT-1:0] direct_in_channels_local_handled;
@@ -523,6 +499,7 @@ always @(posedge clk) begin
             is_touching_boundary <= updated_is_touching_boundary;
             is_odd_cardinality <= updated_is_odd_cardinality;
             updated_root <= new_updated_root;
+            is_odd_cluster <= 0;
         end else if (stage == STAGE_GROW_BOUNDARY) begin
             // only gives a trigger to neighbor links
             // see `assign neighbor_increase = !reset && is_odd_cluster && (stage == STAGE_GROW_BOUNDARY) && (last_stage != STAGE_GROW_BOUNDARY);`
