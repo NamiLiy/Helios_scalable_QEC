@@ -16,7 +16,7 @@ module bench_planar_code_no_fast_channel;
 `include "../../parameters/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
-localparam CODE_DISTANCE = 3;
+localparam CODE_DISTANCE = 5;
 localparam CODE_DISTANCE_X = CODE_DISTANCE;
 localparam CODE_DISTANCE_Z = CODE_DISTANCE_X - 1;
 localparam WEIGHT_X = 1;
@@ -109,9 +109,9 @@ always @(negedge clk) begin
             if (CODE_DISTANCE == 3) begin
                 input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_3.txt", "r");
             end else if (CODE_DISTANCE == 5) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/input_data_5.txt", "r");
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_5.txt", "r");
             end else if (CODE_DISTANCE == 7) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/input_data_7.txt", "r");
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_7.txt", "r");
             end else if (CODE_DISTANCE == 9) begin
                 input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/input_data_9.txt", "r");
             end else if (CODE_DISTANCE == 11) begin
@@ -157,9 +157,9 @@ always @(posedge clk) begin
             if (CODE_DISTANCE == 3) begin
                 file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_3.txt", "r");
             end else if (CODE_DISTANCE == 5) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/output_data_5.txt", "r");
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_5.txt", "r");
             end else if (CODE_DISTANCE == 7) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/output_data_7.txt", "r");
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_7.txt", "r");
             end else if (CODE_DISTANCE == 9) begin
                 file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/output_data_9.txt", "r");
             end else if (CODE_DISTANCE == 11) begin

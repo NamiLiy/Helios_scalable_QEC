@@ -8,14 +8,17 @@ module neighbor_link #(
     input reset,
     input initialize,
     output is_fully_grown,
+    output reg is_odd_cluster,
     // used by node a
     input [ADDRESS_WIDTH-1:0] a_old_root_in,
     output [ADDRESS_WIDTH-1:0] b_old_root_out,
     input a_increase,  // should be triggered only once in the stage of STAGE_GROW_BOUNDARY
+    input a_is_odd_cluster,
     // used by node b
     input [ADDRESS_WIDTH-1:0] b_old_root_in,
     output [ADDRESS_WIDTH-1:0] a_old_root_out,
-    input b_increase  // should be triggered only once in the stage of STAGE_GROW_BOUNDARY
+    input b_increase,  // should be triggered only once in the stage of STAGE_GROW_BOUNDARY
+    input b_is_odd_cluster
 );
 
 localparam COUNTER_WIDTH = $clog2(LENGTH + 2);  // in the worse case, counter would have a value of LENGTH + 1
@@ -33,16 +36,23 @@ always @(posedge clk) begin
         increased <= 0;
         a_old_root <= 0;
         b_old_root <= 0;
+        is_odd_cluster <= 0;
     end else if (initialize) begin
         increased <= 0;
         a_old_root <= 0;
         b_old_root <= 0;
+        is_odd_cluster <= 0;
     end else begin
         a_old_root <= a_old_root_in;
         b_old_root <= b_old_root_in;
         // only increase when it's not fully grown, to reduce bits needed
         if (increased < LENGTH) begin
             increased <= increased + a_increase + b_increase;
+        end
+        if (increased == LENGTH) begin
+            is_odd_cluster <= a_is_odd_cluster | b_is_odd_cluster;
+        end else begin
+            is_odd_cluster <= 0;
         end
     end
 end
