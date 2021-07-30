@@ -21,6 +21,8 @@ module standard_planar_code_3d_no_fast_channel_with_stage_controller #(
 
 );
 
+`include "../../parameters/parameters.sv"
+
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
 localparam MEASUREMENT_ROUNDS = `MAX(CODE_DISTANCE_X, CODE_DISTANCE_Z);
 localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;

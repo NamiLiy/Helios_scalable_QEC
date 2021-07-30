@@ -2,9 +2,9 @@
 /// It just drops the debug lines from the top module used for simulation
 
 module standard_planar_code_3d_no_fast_channel_synthesizable_top #(
-    parameter CODE_DISTANCE_X = 4,
-    parameter CODE_DISTANCE_Z = 12,
-    parameter WEIGHT_X = 3,
+    parameter CODE_DISTANCE_X = 5,
+    parameter CODE_DISTANCE_Z = 4,
+    parameter WEIGHT_X = 1,
     parameter WEIGHT_Z = 1,
     parameter WEIGHT_UD = 1 // Weight up down
 ) (
