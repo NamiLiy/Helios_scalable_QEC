@@ -5,7 +5,7 @@ numSplit = 2
 codeDistance = 3
 binWidth = math.ceil(math.log(codeDistance, 2))
 vOut = []
-splitBoard = partition.findOptBoard(codeDistance, codeDistance, numSplit, math.ceil((codeDistance**2)/numSplit))
+splitBoard = partition.findOptBoard(codeDistance, codeDistance, numSplit)
 partition.printGrid(splitBoard)
 
 templateSV = ""

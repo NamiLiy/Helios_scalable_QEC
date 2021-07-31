@@ -1,3 +1,6 @@
+import numpy as np
+import math
+import pymetis
 from copy import deepcopy
 
 def bordering(i, j, board, p):
@@ -25,10 +28,10 @@ def dirPU(board, i, j):
 
     for x in range(4):
         if i+offset[x][1]<w and  i+offset[x][1]>=0 and j+offset[x][0]<h and j+offset[x][0]>=0:
-            print(board[i+offset[x][1]][j+offset[x][0]])
+#            print(board[i+offset[x][1]][j+offset[x][0]])
             if board[i+offset[x][1]][j+offset[x][0]] != p:
                 ret = ret + (2**x)
-                print(ret)
+#                print(ret)
                 if board[i+offset[x][1]][j+offset[x][0]] > p:
                     ret = ret + 2**4
     return ret
@@ -71,7 +74,24 @@ def score(depth, board, maxP, maxN):
     if(not move and countP(board,-1) != 0):
         suggest[0] = -100
     return suggest
-
+def adjacentGraph(x,y):
+    z=0
+    ret = []
+    for j in range(y):
+        for i in range(x):
+            arr = []
+            if i != 0:
+                arr = arr + [z-1]
+            if i != x-1:
+                arr = arr + [z+1]
+            if j != 0:
+                arr = arr + [z-x]
+            if j != y-1:
+                arr = arr + [z+x]
+#            print(str(z) + ", " + str(arr))
+            z=z+1
+            ret.append(np.array(arr))
+    return ret
 def direction(i, j, board):
     board[i][j]
 def printGrid(grid):
@@ -81,12 +101,17 @@ def printGrid(grid):
             string = string + (str(el) if el == -1 else " " + str(el))
         print(string)
 
-def findOptBoard(x,y, maxP, maxN, depth=3):
+def findOptBoard(x,y, maxP, maxN=-1, depth=3):
     board = [[-1]*x for _ in range(y)]
-    board[0][0] = 0
-    for i in range(maxP*maxN):
-        suggestion = score(depth, board, maxP, maxN)
-        board[suggestion[2]][suggestion[3]]=suggestion[1]
-#        print(chr(27) + "[2J")
-#        printGrid(board)
+    if maxN != -1:
+        board[0][0] = 0
+        for i in range(maxP*maxN):
+            suggestion = score(depth, board, maxP, maxN)
+            board[suggestion[2]][suggestion[3]]=suggestion[1]
+    #        print(chr(27) + "[2J")
+    #        printGrid(board)
+    else:
+        n_cuts, membership = pymetis.part_graph(maxP, adjacency=adjacentGraph(x,y))
+        for i in range(len(membership)):
+            board[math.floor(i/x)][i % y] = membership[i]
     return board
