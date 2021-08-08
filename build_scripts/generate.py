@@ -17,15 +17,48 @@ def xToY(grid, p):
     y = 0
     for i in range(len(grid)):
         for j in range(len(grid[0])):
-            ySet = False
-            for off in offset:
-                if i+off[0]<len(grid) and  i+off[0]>=0 and j+off[1]<len(grid[0]) and j+off[1]>=0:
-                    if(grid[i+off[0]][j+off[1]] != grid[i][j]):
-                        if(not ySet):
-                            ret.append((index,y))
-                            y = y + 1
-                            ySet = True
-            index = index + 1
+            if(grid[i][j] == p):
+                ySet = False
+                for off in offset:
+                    if i+off[0]<len(grid) and  i+off[0]>=0 and j+off[1]<len(grid[0]) and j+off[1]>=0:
+                        if(grid[i+off[0]][j+off[1]] != grid[i][j]):
+                            if(not ySet):
+                                ret.append((index,y))
+                                y = y + 1
+                                ySet = True
+                index = index + 1
+    return ret
+def isHor(grid, p):
+    offset=[(0,-1),(0,1)]
+    ret = []
+    index = 0
+    for i in range(len(grid)):
+        for j in range(len(grid[0])):
+            if(grid[i][j] == p):
+                addRet = False
+                for off in offset:
+                    if i+off[0]<len(grid) and  i+off[0]>=0 and j+off[1]<len(grid[0]) and j+off[1]>=0:
+                        if(grid[i+off[0]][j+off[1]] != grid[i][j]):
+                            if(not addRet):
+                                addRet = True
+                                ret.append((index,1))
+                index = index + 1
+    return ret
+def isVert(grid, p):
+    offset=[(-1,0),(1,0)]
+    ret = []
+    index = 0
+    for i in range(len(grid)):
+        for j in range(len(grid[0])):
+            if(grid[i][j] == p):
+                addRet = False
+                for off in offset:
+                    if i+off[0]<len(grid) and  i+off[0]>=0 and j+off[1]<len(grid[0]) and j+off[1]>=0:
+                        if(grid[i+off[0]][j+off[1]] != grid[i][j]):
+                            if(not addRet):
+                                addRet = True
+                                ret.append((index,1))
+                index = index + 1
     return ret
 codeDistance, numSplit, maxPU = user_configuration.retConfig()
 binWidth = math.ceil(math.log(codeDistance, 2))
@@ -71,6 +104,8 @@ for i in range(numSplit):
     vOut[i] = vOut[i].replace("$$BIN_WIDTH", str(binWidth))
     vOut[i] = vOut[i].replace("$$PU_INST", str(len(puCoords)))
     vOut[i] = vOut[i].replace("$$X_TO_Y", inlineCase("x", xToY(splitBoard,i), 0))
+    vOut[i] = vOut[i].replace("$$IS_HOR_TO_FIFO", inlineCase("x", isHor(splitBoard,i), 0))
+    vOut[i] = vOut[i].replace("$$IS_VERT_TO_FIFO", inlineCase("x", isVert(splitBoard,i), 0))
     #vOut[i] = vOut[i].replace("$$GEN0_K", "k=0; k < CODE_DISTANCE; k = k+1")
     #vOut[i] = vOut[i].replace("$$GEN0_J", "j=0; k < CODE_DISTANCE-1; k = k+1")
     #if(i==1):
