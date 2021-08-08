@@ -103,6 +103,7 @@ def printGrid(grid):
 
 def findOptBoard(x,y, maxP, maxN=-1, depth=3):
     board = [[-1]*x for _ in range(y)]
+    edgeCount = 0
     if maxN != -1:
         board[0][0] = 0
         for i in range(maxP*maxN):
@@ -111,7 +112,7 @@ def findOptBoard(x,y, maxP, maxN=-1, depth=3):
     #        print(chr(27) + "[2J")
     #        printGrid(board)
     else:
-        n_cuts, membership = pymetis.part_graph(maxP, adjacency=adjacentGraph(x,y))
+        edgeCount, membership = pymetis.part_graph(maxP, adjacency=adjacentGraph(x,y))
         for i in range(len(membership)):
             board[math.floor(i/x)][i % y] = membership[i]
-    return board
+    return edgeCount, board
