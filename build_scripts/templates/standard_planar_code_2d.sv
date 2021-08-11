@@ -38,6 +38,10 @@ localparam FIFO_COUNT = $$EDGE_COUNT * (CODE_DISTANCE - 1);
 localparam PU_COORDS [$$PU_COORD_WIDTH-1:0] = '{$$PU_COORDS};
 localparam EDGE_DIRS [$$EDGE_DIRS_WIDTH-1:0] = '{$$EDGE_DIRS};
 
+// Generated params
+localparam PU_INST = $$PU_INST;
+localparam EDGE_COUNT = $$EDGE_COUNT;
+
 input clk;
 input reset;
 input [STAGE_WIDTH-1:0] stage;
@@ -103,9 +107,23 @@ localparam FAST_CHANNEL_COUNT = 0;
 `define roots(i, j, k) roots[ADDRESS_WIDTH*(`INDEX(i, j, k)+1)-1:ADDRESS_WIDTH*`INDEX(i, j, k)]
 `define has_message_flying(i, j, k) has_message_flyings[`INDEX(i, j, k)]
 `define DIRECT_CHANNEL_COUNT (3)
-`define pu_coords_i(x) PU_COORDS[2*$$BIN_WIDTH*x+:$$BIN_WIDTH]
-`define pu_coords_j(x) PU_COORDS[2*$$BIN_WIDTH*x + $$BIN_WIDTH+:$$BIN_WIDTH]
-`define fifo_x_to_y(x) $$X_TO_Y
+
+// Generated Functions
+`define pu_coords_i(x) \
+    PU_COORDS[2*$$BIN_WIDTH*x+:$$BIN_WIDTH]
+`define pu_coords_j(x) \
+    PU_COORDS[2*$$BIN_WIDTH*x + $$BIN_WIDTH+:$$BIN_WIDTH]
+`define fifo_x_to_y(x, dir) \
+    $$X_TO_Y
+`define is_hor_to_fifo(x) \
+    $$IS_HOR_TO_FIFO
+`define is_vert_to_fifo(x) \
+    $$IS_VERT_TO_FIFO
+`define is_fifo_input(x) \
+    $$IS_INPUT
+
+
+
 
 // generate
 //     for (i=0; i < 20; i=i+1) begin
