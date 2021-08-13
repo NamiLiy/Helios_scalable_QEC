@@ -46,7 +46,7 @@ def fifosHere(ioList, xDir):
         x = x+1
     return ret
 def xToY(grid, p):
-    offset=[(0,1),(1,0),(0,-1),(-1,0)]
+    offset=[(1,0),(0,1),(-1,0),(-1,0)]
     ret = []
     index = 0
     y = 0
@@ -65,7 +65,7 @@ def xToY(grid, p):
                 index = index + 1
     return ret
 def getEdgeCount(grid, p):
-    offset=[(0,-1),(0,1),(-1,0),(1,0)]
+    offset=[(1,0),(0,1),(-1,0),(-1,0)]
     ret = 0
     for i in range(len(grid)):
         for j in range(len(grid[0])):
