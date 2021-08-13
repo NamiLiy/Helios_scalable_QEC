@@ -3,53 +3,82 @@
 `include "parameters.sv"
 
 module decoder_stage_controller_left #(
-    parameter CODE_DISTANCE = 3,
+    parameter CODE_DISTANCE_X = 4,
+    parameter CODE_DISTANCE_Z = 12,
     parameter ITERATION_COUNTER_WIDTH = 8,  // counts to 255 iterations
-    parameter BOUNDARY_GROW_DELAY = 10,  // clock cycles
-    parameter SPREAD_CLUSTER_DELAY = 10,  // clock cycles
-    parameter SYNC_IS_ODD_CLUSTER_DELAY = 10,  // clock cycles
-    parameter PER_DIMENSION_WIDTH = $clog2(CODE_DISTANCE),
-    parameter ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3,
-    parameter PU_COUNT = CODE_DISTANCE*CODE_DISTANCE*(CODE_DISTANCE-1),
-    parameter UNION_MESSAGE_WIDTH = 2 * ADDRESS_WIDTH,  // [old_root, updated_root]
-    parameter MASTER_FIFO_WIDTH = UNION_MESSAGE_WIDTH + 1 + 1,
-    parameter LEFT_BLOCK = ((CODE_DISTANCE**2)-1)/2,
-    parameter RIGHT_BLOCK = ((CODE_DISTANCE-1)**2)/2
+    parameter BOUNDARY_GROW_DELAY = 3,  // clock cycles
+    parameter SPREAD_CLUSTER_DELAY = 2,  // clock cycles
+    parameter SYNC_IS_ODD_CLUSTER_DELAY = 2  // clock cycles
 ) (
-    input clk,
-    input reset,
-    input new_round_start,
-    input has_message_flying,
-    input has_odd_clusters,
-    input [PU_COUNT-1:0] is_touching_boundaries,
-    input [PU_COUNT-1:0] is_odd_cardinalities,
-    input [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots,
-    output reg [STAGE_WIDTH-1:0] stage,
-    output reg result_valid,
-    output reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter,
-    output reg [31:0] cycle_counter,
-    output reg deadlock,
-    output final_cardinality,
-    output [MASTER_FIFO_WIDTH - 1 :0] sc_fifo_out_data,
-    output sc_fifo_out_valid,
-    input sc_fifo_out_ready,
-    input [MASTER_FIFO_WIDTH - 1 :0] sc_fifo_in_data,
-    input sc_fifo_in_valid,
-    output sc_fifo_in_ready,
-    input has_message_flying_otherside,
-    input has_odd_clusters_otherside,
-    output [(ADDRESS_WIDTH * PU_COUNT)-1:0] net_roots_out
+    clk,
+    reset,
+    new_round_start,
+    has_message_flying,
+    has_odd_clusters,
+    is_touching_boundaries,
+    is_odd_cardinalities,
+    roots,
+    stage,
+    result_valid,
+    iteration_counter,
+    cycle_counter,
+    deadlock,
+    final_cardinality,
+    sc_fifo_out_data,
+    sc_fifo_out_valid,
+    sc_fifo_out_ready,
+    sc_fifo_in_data,
+    sc_fifo_in_valid,
+    sc_fifo_in_ready,
+    has_message_flying_otherside,
+    has_odd_clusters_otherside,
+    net_roots_out
 );
+
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
 `define MAX3(a, b, c) (((a) > `MAX((b), (c))) ? (a) : `MAX((b), (c)))
 `define MIN(a, b) (((a) < (b))? (a) : (b))
 
+localparam MEASUREMENT_ROUNDS = `MAX(CODE_DISTANCE_X, CODE_DISTANCE_Z);
+localparam PER_DIMENSION_WIDTH = $clog2(MEASUREMENT_ROUNDS);
+localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
+localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
+localparam UNION_MESSAGE_WIDTH = 2 * ADDRESS_WIDTH;  // [old_root, updated_root]
+localparam MASTER_FIFO_WIDTH = UNION_MESSAGE_WIDTH + 1 + 1;
+localparam LEFT_BLOCK = ((CODE_DISTANCE_X**2)-1)/2;
+localparam RIGHT_BLOCK = ((CODE_DISTANCE_X-1)**2)/2;
+
 localparam MAXIMUM_DELAY = `MAX3(BOUNDARY_GROW_DELAY, SPREAD_CLUSTER_DELAY, SYNC_IS_ODD_CLUSTER_DELAY);
 localparam COUNTER_WIDTH = $clog2(MAXIMUM_DELAY + 1);
+
+input clk;
+input reset;
+input new_round_start;
+input has_message_flying;
+input has_odd_clusters;
+input [PU_COUNT-1:0] is_touching_boundaries;
+input [PU_COUNT-1:0] is_odd_cardinalities;
+output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
+output reg [STAGE_WIDTH-1:0] stage;
+output reg result_valid;
+output reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
+output reg [31:0] cycle_counter;
+output reg deadlock;
+output final_cardinality;
+output [MASTER_FIFO_WIDTH - 1 :0] sc_fifo_out_data;
+output sc_fifo_out_valid;
+input sc_fifo_out_ready;
+input [MASTER_FIFO_WIDTH - 1 :0] sc_fifo_in_data;
+input sc_fifo_in_valid;
+output sc_fifo_in_ready;
+input has_message_flying_otherside;
+input has_odd_clusters_otherside;
+output [(ADDRESS_WIDTH * PU_COUNT)-1:0] net_roots_out;
+
 reg [COUNTER_WIDTH-1:0] delay_counter;
 reg [31:0] cycles_in_stage;
 
-localparam DEADLOCK_THRESHOLD = CODE_DISTANCE*CODE_DISTANCE*CODE_DISTANCE*10;
+localparam DEADLOCK_THRESHOLD = CODE_DISTANCE_X*CODE_DISTANCE_Z*MEASUREMENT_ROUNDS*10;
 
 reg go_to_result_calculator;
 wire done_from_calculator;
@@ -172,7 +201,7 @@ always @(posedge clk) begin
     end
 end
 
-reg [$clog2(CODE_DISTANCE*RIGHT_BLOCK+1) : 0] result_data_frame;
+reg [$clog2(CODE_DISTANCE_X*RIGHT_BLOCK+1) : 0] result_data_frame;
 reg [PU_COUNT-1:0] net_is_touching_boundaries;
 reg [PU_COUNT-1:0] net_is_odd_cardinalities;
 reg [ADDRESS_WIDTH*PU_COUNT-1:0] net_roots;
@@ -258,9 +287,9 @@ always @(posedge clk) begin
 //                    sc_fifo_out_data_internal[ADDRESS_WIDTH-1:0] <= roots[(LEFT_BLOCK+(result_data_frame % RIGHT_BLOCK))*ADDRESS_WIDTH + (RIGHT_BLOCK+LEFT_BLOCK)*ADDRESS_WIDTH*result_data_frame +: ADDRESS_WIDTH]; 
 //                    sc_fifo_out_data_internal[ADDRESS_WIDTH:ADDRESS_WIDTH] <= is_odd_cardinalities[LEFT_BLOCK + (result_data_frame % RIGHT_BLOCK) + (RIGHT_BLOCK+LEFT_BLOCK)*result_data_frame+:1];                                  
 //                    sc_fifo_out_data_internal[ADDRESS_WIDTH+1:ADDRESS_WIDTH+1] <= is_touching_boundaries[LEFT_BLOCK + (result_data_frame % RIGHT_BLOCK) + (RIGHT_BLOCK+LEFT_BLOCK)*result_data_frame+:1];                            
-                    result_data_frame <= (result_data_frame+1) % (CODE_DISTANCE*RIGHT_BLOCK);
+                    result_data_frame <= (result_data_frame+1) % (CODE_DISTANCE_X*RIGHT_BLOCK);
                     if(result_data_frame == 0) begin
-                        for(i = 0; i < CODE_DISTANCE; i = i + 1) begin
+                        for(i = 0; i < CODE_DISTANCE_X; i = i + 1) begin
                             net_is_odd_cardinalities[(LEFT_BLOCK+RIGHT_BLOCK)*i+:LEFT_BLOCK] <= is_odd_cardinalities[(LEFT_BLOCK+RIGHT_BLOCK)*i+:LEFT_BLOCK];
                             net_is_touching_boundaries[(LEFT_BLOCK+RIGHT_BLOCK)*i+:LEFT_BLOCK] <= is_touching_boundaries[(LEFT_BLOCK+RIGHT_BLOCK)*i+:LEFT_BLOCK];
                             net_roots[(LEFT_BLOCK+RIGHT_BLOCK)*ADDRESS_WIDTH*i+:LEFT_BLOCK*ADDRESS_WIDTH] <= roots[(LEFT_BLOCK+RIGHT_BLOCK)*ADDRESS_WIDTH*i+:LEFT_BLOCK*ADDRESS_WIDTH];
@@ -398,7 +427,8 @@ always @(*) begin
 end
 
 get_boundry_cardinality #(
-    .CODE_DISTANCE(CODE_DISTANCE)
+    .CODE_DISTANCE_X(CODE_DISTANCE_X),
+    .CODE_DISTANCE_Z(CODE_DISTANCE_Z)
 ) result_calculator(
     .clk(clk),
     .reset(reset),
@@ -428,52 +458,81 @@ endmodule
 
 
 module decoder_stage_controller_right #(
-    parameter CODE_DISTANCE = 3,
+    parameter CODE_DISTANCE_X = 4,
+    parameter CODE_DISTANCE_Z = 12,
     parameter ITERATION_COUNTER_WIDTH = 8,  // counts to 255 iterations
-    parameter BOUNDARY_GROW_DELAY = 10,  // clock cycles
-    parameter SPREAD_CLUSTER_DELAY = 10,  // clock cycles
-    parameter SYNC_IS_ODD_CLUSTER_DELAY = 10,  // clock cycles
-    parameter PER_DIMENSION_WIDTH = $clog2(CODE_DISTANCE),
-    parameter ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3,
-    parameter PU_COUNT = CODE_DISTANCE*CODE_DISTANCE*(CODE_DISTANCE-1),
-    parameter UNION_MESSAGE_WIDTH = 2 * ADDRESS_WIDTH,  // [old_root, updated_root]
-    parameter MASTER_FIFO_WIDTH = UNION_MESSAGE_WIDTH + 1 + 1,
-    parameter LEFT_BLOCK = ((CODE_DISTANCE**2)-1)/2,
-    parameter RIGHT_BLOCK = ((CODE_DISTANCE-1)**2)/2
+    parameter BOUNDARY_GROW_DELAY = 3,  // clock cycles
+    parameter SPREAD_CLUSTER_DELAY = 2,  // clock cycles
+    parameter SYNC_IS_ODD_CLUSTER_DELAY = 2  // clock cycles
 
 ) (
-    input clk,
-    input reset,
-    input new_round_start,
-    input has_message_flying,
-    input has_odd_clusters,
-    input [PU_COUNT-1:0] is_touching_boundaries,
-    input [PU_COUNT-1:0] is_odd_cardinalities,
-    input [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots,
-    output reg [STAGE_WIDTH-1:0] stage,
-    output reg result_valid,
-    output reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter,
-    output reg [31:0] cycle_counter,
-    output reg deadlock,
-    output final_cardinality,
-    output [MASTER_FIFO_WIDTH - 1 :0] sc_fifo_out_data,
-    output sc_fifo_out_valid,
-    input sc_fifo_out_ready,
-    input [MASTER_FIFO_WIDTH - 1 :0] sc_fifo_in_data,
-    input sc_fifo_in_valid,
-    output sc_fifo_in_ready,
-    output has_message_flying_otherside, // Temporary solution 
-    output has_odd_clusters_otherside
+    clk,
+    reset,
+    new_round_start,
+    has_message_flying,
+    has_odd_clusters,
+    is_touching_boundaries,
+    is_odd_cardinalities,
+    roots,
+    stage,
+    result_valid,
+    iteration_counter,
+    cycle_counter,
+    deadlock,
+    final_cardinality,
+    sc_fifo_out_data,
+    sc_fifo_out_valid,
+    sc_fifo_out_ready,
+    sc_fifo_in_data,
+    sc_fifo_in_valid,
+    sc_fifo_in_ready,
+    has_message_flying_otherside,
+    has_odd_clusters_otherside
 );
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
 `define MAX3(a, b, c) (((a) > `MAX((b), (c))) ? (a) : `MAX((b), (c)))
+`define MIN(a, b) (((a) < (b))? (a) : (b))
+
+localparam MEASUREMENT_ROUNDS = `MAX(CODE_DISTANCE_X, CODE_DISTANCE_Z);
+localparam PER_DIMENSION_WIDTH = $clog2(MEASUREMENT_ROUNDS);
+localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
+localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
+localparam UNION_MESSAGE_WIDTH = 2 * ADDRESS_WIDTH;  // [old_root, updated_root]
+localparam MASTER_FIFO_WIDTH = UNION_MESSAGE_WIDTH + 1 + 1;
+localparam LEFT_BLOCK = ((CODE_DISTANCE_X**2)-1)/2;
+localparam RIGHT_BLOCK = ((CODE_DISTANCE_X-1)**2)/2;
+
 localparam MAXIMUM_DELAY = `MAX3(BOUNDARY_GROW_DELAY, SPREAD_CLUSTER_DELAY, SYNC_IS_ODD_CLUSTER_DELAY);
 localparam COUNTER_WIDTH = $clog2(MAXIMUM_DELAY + 1);
+
+input clk;
+input reset;
+input new_round_start;
+input has_message_flying;
+input has_odd_clusters;
+input [PU_COUNT-1:0] is_touching_boundaries;
+input [PU_COUNT-1:0] is_odd_cardinalities;
+output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
+output reg [STAGE_WIDTH-1:0] stage;
+output reg result_valid;
+output reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
+output reg [31:0] cycle_counter;
+output reg deadlock;
+output final_cardinality;
+output [MASTER_FIFO_WIDTH - 1 :0] sc_fifo_out_data;
+output sc_fifo_out_valid;
+input sc_fifo_out_ready;
+input [MASTER_FIFO_WIDTH - 1 :0] sc_fifo_in_data;
+input sc_fifo_in_valid;
+output sc_fifo_in_ready;
+output has_message_flying_otherside;
+output has_odd_clusters_otherside;
+
 reg [COUNTER_WIDTH-1:0] delay_counter;
 reg [31:0] cycles_in_stage;
 
-localparam DEADLOCK_THRESHOLD = CODE_DISTANCE*CODE_DISTANCE*CODE_DISTANCE*10;
+localparam DEADLOCK_THRESHOLD = CODE_DISTANCE_X*CODE_DISTANCE_Z*MEASUREMENT_ROUNDS*10;
 
 reg go_to_result_calculator;
 wire done_from_calculator;
@@ -583,7 +642,7 @@ always @(posedge clk) begin
     end
 end
 
-reg [$clog2(CODE_DISTANCE*RIGHT_BLOCK+1) : 0] result_data_frame;
+reg [$clog2(CODE_DISTANCE_X*RIGHT_BLOCK+1) : 0] result_data_frame;
 
 always @(posedge clk) begin
     if (reset) begin
@@ -597,6 +656,7 @@ always @(posedge clk) begin
                 if(sc_fifo_in_empty_internal == 0 && sc_fifo_in_data_internal[2:0] == 3'b1) begin
                     stage <= STAGE_MEASUREMENT_LOADING;
                     sc_fifo_in_ready_internal <= 1'b1;
+                    sc_fifo_out_valid_internal <= 1'b0;
                 end
             end
             STAGE_SPREAD_CLUSTER:   begin
@@ -637,8 +697,8 @@ always @(posedge clk) begin
                 if(sc_fifo_out_full_internal != 1'b1) begin
                     sc_fifo_out_valid_internal <= 1'b1;
                     // Make sure there's enough space in result_data_frame
-                    result_data_frame <= (result_data_frame+1) % (CODE_DISTANCE*RIGHT_BLOCK + 1);
-                    if(result_data_frame == CODE_DISTANCE*RIGHT_BLOCK) begin
+                    result_data_frame <= (result_data_frame+1) % (CODE_DISTANCE_X*RIGHT_BLOCK + 1);
+                    if(result_data_frame == CODE_DISTANCE_X*RIGHT_BLOCK) begin
                         sc_fifo_out_data_internal[MASTER_FIFO_WIDTH-1:3] <= 32'b0;
                         sc_fifo_out_data_internal[2:0] <= 32'd4;
                         stage <= STAGE_IDLE;

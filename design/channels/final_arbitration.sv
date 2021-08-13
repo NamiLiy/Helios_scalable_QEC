@@ -1,5 +1,6 @@
 module final_arbitration_unit #(
-    parameter CODE_DISTANCE = 3
+    parameter CODE_DISTANCE_X = 5,
+    parameter CODE_DISTANCE_Z = 4
 )(
     clk,
     reset,
@@ -28,8 +29,10 @@ module final_arbitration_unit #(
 
 // WARNING : THIS CODE IS HARDCODED TO FIFO_COUNT = 6
 
-localparam PU_COUNT = CODE_DISTANCE * CODE_DISTANCE * (CODE_DISTANCE - 1);
-localparam PER_DIMENSION_WIDTH = $clog2(CODE_DISTANCE);
+`define MAX(a, b) (((a) > (b)) ? (a) : (b))
+localparam MEASUREMENT_ROUNDS = `MAX(CODE_DISTANCE_X, CODE_DISTANCE_Z);
+localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
+localparam PER_DIMENSION_WIDTH = $clog2(MEASUREMENT_ROUNDS);
 localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
 localparam DISTANCE_WIDTH = 1 + PER_DIMENSION_WIDTH;
 localparam WEIGHT = 1;  // the weight in MWPM graph
@@ -39,7 +42,7 @@ localparam BOUNDARY_WIDTH = $clog2(BOUNDARY_COST + 1);
 localparam UNION_MESSAGE_WIDTH = 2 * ADDRESS_WIDTH;  // [old_root, updated_root]
 localparam DIRECT_MESSAGE_WIDTH = ADDRESS_WIDTH + 1 + 1;  // [receiver, is_odd_cardinality_root, is_touching_boundary]
 localparam MASTER_FIFO_WIDTH = UNION_MESSAGE_WIDTH + 1 + 1;
-localparam FIFO_COUNT = CODE_DISTANCE * (CODE_DISTANCE - 1);
+localparam FIFO_COUNT = MEASUREMENT_ROUNDS * (CODE_DISTANCE_Z);
 localparam FINAL_FIFO_WIDTH = MASTER_FIFO_WIDTH + $clog2(FIFO_COUNT+1);
 
 input clk;
@@ -252,8 +255,8 @@ assign combined_fifo_in_ready_vector[FIFO_COUNT - 1 : 0] = master_fifo_in_ready_
 assign combined_fifo_in_ready_vector[FIFO_COUNT] = sc_fifo_in_ready;
 
 `define master_fifo_in_data(i) combined_fifo_in_data_vector[((i+1) * MASTER_FIFO_WIDTH) - 1 : (i * MASTER_FIFO_WIDTH)]
-`define master_fifo_in_valid(i) combined_fifo_in_valid_vector[TRUE_FIFO_COUNT - 1 : 0]
-`define master_fifo_in_ready(i) combined_fifo_in_ready_vector[TRUE_FIFO_COUNT - 1 : 0]
+`define master_fifo_in_valid(i) combined_fifo_in_valid_vector[i]
+`define master_fifo_in_ready(i) combined_fifo_in_ready_vector[i]
 `define destination_index final_fifo_in_data_internal[FINAL_FIFO_WIDTH - 1: MASTER_FIFO_WIDTH]
 
 generate

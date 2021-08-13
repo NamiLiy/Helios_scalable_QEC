@@ -11,12 +11,12 @@
 // root_of_0,1
 // .......
 
-module bench_planar_code_no_fast_channel;
+module bench_multi_fpga;
 
 `include "../../parameters/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
-localparam CODE_DISTANCE = 5;                ;
+localparam CODE_DISTANCE = 5;
 localparam CODE_DISTANCE_X = CODE_DISTANCE;
 localparam CODE_DISTANCE_Z = CODE_DISTANCE_X - 1;
 localparam WEIGHT_X = 1;
@@ -30,6 +30,11 @@ localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
 localparam PER_DIMENSION_WIDTH = $clog2(MEASUREMENT_ROUNDS);
 localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
 localparam ITERATION_COUNTER_WIDTH = 8;  // counts up to CODE_DISTANCE iterations
+
+localparam UNION_MESSAGE_WIDTH = 2 * ADDRESS_WIDTH;  // [old_root, updated_root]
+localparam MASTER_FIFO_WIDTH = UNION_MESSAGE_WIDTH + 1 + 1;
+localparam FIFO_COUNT = MEASUREMENT_ROUNDS * (CODE_DISTANCE_Z);
+localparam FINAL_FIFO_WIDTH = MASTER_FIFO_WIDTH + $clog2(FIFO_COUNT);
 
 reg clk;
 reg reset;
@@ -52,14 +57,25 @@ wire result_valid;
 wire [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
 wire deadlock;
 
+wire [FINAL_FIFO_WIDTH-1:0] left_fifo_out_data;
+wire left_fifo_out_valid;
+wire left_fifo_out_ready;
+
+wire [FINAL_FIFO_WIDTH-1:0] right_fifo_out_data;
+wire right_fifo_out_valid;
+wire right_fifo_out_ready;
+
+wire has_message_flying;
+wire has_odd_clusters;
+
 // instantiate
-standard_planar_code_3d_no_fast_channel_with_stage_controller #(
+left_with_stage_controller #(
     .CODE_DISTANCE_X(CODE_DISTANCE_X),
     .CODE_DISTANCE_Z(CODE_DISTANCE_Z),
     .WEIGHT_X(WEIGHT_X),
     .WEIGHT_Z(WEIGHT_Z),
     .WEIGHT_UD(WEIGHT_UD)
- ) decoder (
+) decoder_left (
     .clk(clk),
     .reset(reset),
     .new_round_start(new_round_start),
@@ -69,8 +85,55 @@ standard_planar_code_3d_no_fast_channel_with_stage_controller #(
     .iteration_counter(iteration_counter),
     .cycle_counter(cycle_counter),
     .deadlock(deadlock),
-    .final_cardinality(final_cardinality)
+    .final_cardinality(final_cardinality),
+    .final_fifo_out_data(left_fifo_out_data),
+    .final_fifo_out_valid(left_fifo_out_valid),
+    .final_fifo_out_ready(left_fifo_out_ready),
+    .final_fifo_in_data(right_fifo_out_data),
+    .final_fifo_in_valid(right_fifo_out_valid),
+    .final_fifo_in_ready(right_fifo_out_ready),
+    .has_message_flying_otherside(has_message_flying),
+    .has_odd_clusters_otherside(has_odd_clusters)
 );
+
+right_with_stage_controller #(
+    .CODE_DISTANCE_X(CODE_DISTANCE_X),
+    .CODE_DISTANCE_Z(CODE_DISTANCE_Z),
+    .WEIGHT_X(WEIGHT_X),
+    .WEIGHT_Z(WEIGHT_Z),
+    .WEIGHT_UD(WEIGHT_UD)
+) decoder_right (
+    .clk(clk),
+    .reset(reset),
+    .new_round_start(),
+    .is_error_syndromes(is_error_syndromes),
+    .roots(),
+    .result_valid(),
+    .iteration_counter(),
+    .cycle_counter(),
+    .deadlock(),
+    .final_cardinality(),
+    .final_fifo_out_data(right_fifo_out_data),
+    .final_fifo_out_valid(right_fifo_out_valid),
+    .final_fifo_out_ready(right_fifo_out_ready),
+    .final_fifo_in_data(left_fifo_out_data),
+    .final_fifo_in_valid(left_fifo_out_valid),
+    .final_fifo_in_ready(left_fifo_out_ready),
+    .has_message_flying_otherside(has_message_flying),
+    .has_odd_clusters_otherside(has_odd_clusters)
+);
+
+localparam EXPAND_WIDTH = 8;
+wire [(EXPAND_WIDTH * PU_COUNT)-1:0] roots_expanded;
+`define net_root_out(i) roots[((i+1) * ADDRESS_WIDTH) - 1 : (i * ADDRESS_WIDTH)]
+`define net_root_expanded(i) roots_expanded[((i+1) * EXPAND_WIDTH) - 1 : (i * EXPAND_WIDTH)]
+
+genvar j_temp;
+generate
+    for (j_temp=0; j_temp < PU_COUNT; j_temp=j_temp+1) begin: expander
+        assign `net_root_expanded(j_temp) = {2'b0, `net_root_out(j_temp)};
+    end
+endgenerate
 
 function [ADDRESS_WIDTH-1:0] make_address;
 input [PER_DIMENSION_WIDTH-1:0] i;
@@ -220,7 +283,7 @@ always@(posedge clk) begin
 end
 
 initial begin
-    clk = 1'b1;
+    clk = 1'b0;
     reset = 1'b1;
     // is_error_syndromes = 0;
     // Rust distributed_uf_decoder.rs: distributed_union_find_decoder_test_case_2()
@@ -228,7 +291,7 @@ initial begin
     // `is_error_syndrome(1, 1) = 1;
     // `is_error_syndrome(1, 2) = 1;
     // `is_error_syndrome(1, 3) = 1;
-    #107;
+    #102;
     reset = 1'b0;
     #100;
     // new_round_start = 1;
