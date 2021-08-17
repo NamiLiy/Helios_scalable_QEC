@@ -3,6 +3,105 @@ import math
 import pymetis
 from copy import deepcopy
 
+def incI(grid, p):
+    x = 0
+    ret = []
+    for j in range(len(grid)):
+        for i in range(len(grid[0])):
+            if(grid[j][i] == p):
+                if(i+1 < len(grid[0]) and grid[j][i+1] == p):
+                    ret.append([x,x+1])
+                else:
+                    m = 0
+                    for z in range(i+1):
+                        if(grid[j][i-z] == p):
+                            m = m + 1
+                    # m counts itself so add 1
+                    ret.append([x,x-m+1])
+                x = x + 1
+    return ret
+def incJ(grid, p):
+    x = 0
+    ret = []
+    for j in range(len(grid)):
+        for i in range(len(grid[0])):
+            if(grid[j][i] == p):
+                if(j+1 < len(grid) and grid[j+1][i] == p):
+                    m = 0
+                    for z in range(len(grid[0])-i):
+                        if(grid[j][i+z]==p):
+                            m = m + 1
+                    for z in range(i+1):
+                        if(grid[j+1][z] == p):
+                            m = m + 1
+                    # m counts itself so subtract 1
+                    ret.append([x,x+m-1])
+                else:
+                    m = 0
+                    search = True
+                    for z in range(len(grid)):
+                        if(not search):
+                            break
+                        for v in range(len(grid[0])):
+                            if(grid[z][v] == p):
+                                if(v == i):
+                                    ret.append([x,m])
+                                    search = False
+                                    break
+                                m = m + 1
+                x = x + 1
+    return ret
+def gridIO(grid, p):
+    offset=[(1,0,0),(0,1,1),(-1,0,2),(-1,0,3)]
+    ret = []
+    for i in range(len(grid)):
+        for j in range(len(grid[0])):
+            if(grid[i][j] == p):
+                apVal = [0,0,0,0,1 if i==0 or i == len(grid)-1 else 0, 1 if j==0 or j == len(grid[0])-1 else 0]
+                for off in offset:
+                    if i+off[0]<len(grid) and  i+off[0]>=0 and j+off[1]<len(grid[0]) and j+off[1]>=0:
+                        if(grid[i+off[0]][j+off[1]] != grid[i][j]):
+                            apVal[off[2]] = 1
+                
+                ret.append(apVal)
+    return ret
+def fifosHere(ioList, xDir):
+    ret = []
+    x=0
+    for v in ioList:
+        ret.append([[1] if v[xDir] == 1 else [0],x])
+        x = x+1
+    return ret
+def xToY(grid, p):
+    offset=[(1,0),(0,1),(-1,0),(-1,0)]
+    ret = []
+    index = 0
+    y = 0
+    for i in range(len(grid)):
+        for j in range(len(grid[0])):
+            if(grid[i][j] == p):
+                ySet = False
+                offC = 0
+                for off in offset:
+                    if i+off[0]<len(grid) and  i+off[0]>=0 and j+off[1]<len(grid[0]) and j+off[1]>=0:
+                        if(grid[i+off[0]][j+off[1]] != grid[i][j]):
+                            ret.append([index, offC, y])
+                            y = y + 1
+                            ySet = True
+                    offC = offC + 1
+                index = index + 1
+    return ret
+def getEdgeCount(grid, p):
+    offset=[(1,0),(0,1),(-1,0),(-1,0)]
+    ret = 0
+    for i in range(len(grid)):
+        for j in range(len(grid[0])):
+            if(grid[i][j] == p):
+                for off in offset:
+                    if i+off[0]<len(grid) and  i+off[0]>=0 and j+off[1]<len(grid[0]) and j+off[1]>=0:
+                        if(grid[i+off[0]][j+off[1]] != grid[i][j]):
+                            ret = ret + 1
+    return ret
 def bordering(i, j, board, p):
     offset=[(1,0),(0,-1),(-1,0),(0,1)]
     x = len(board)
