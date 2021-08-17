@@ -41,12 +41,11 @@ localparam NEIGHBOR_COST_Z = 2 * WEIGHT_Z;
 localparam NEIGHBOR_COST_UD = 2 * WEIGHT_UD;
 localparam MAX_BOUNDARY_COST = `MAX(BOUNDARY_COST_X, BOUNDARY_COST_Z);
 localparam BOUNDARY_WIDTH = $clog2(MAX_BOUNDARY_COST + 1);
-localparam UNION_MESSAGE_WIDTH = 2 * ADDRESS_WIDTH;  // [old_root, updated_root]
 localparam DIRECT_MESSAGE_WIDTH = ADDRESS_WIDTH + 1 + 1;  // [receiver, is_odd_cardinality_root, is_touching_boundary]
 
-localparam MASTER_FIFO_WIDTH = UNION_MESSAGE_WIDTH + 1 + 1;
-localparam FINAL_FIFO_WIDTH = MASTER_FIFO_WIDTH + ADDRESS_WIDTH;
+localparam MASTER_FIFO_WIDTH = DIRECT_MESSAGE_WIDTH + 1;
 localparam FIFO_COUNT = MEASUREMENT_ROUNDS * (CODE_DISTANCE_Z);
+localparam FINAL_FIFO_WIDTH = MASTER_FIFO_WIDTH + $clog2(FIFO_COUNT+1);
 
 input clk;
 input reset;
@@ -237,7 +236,7 @@ generate
             // wire master_fifo_in_ready;
             pu_arbitration_unit #(
                 .CODE_DISTANCE_X(CODE_DISTANCE_X),
-                .CODE_DISTANCE_X(CODE_DISTANCE_Z)
+                .CODE_DISTANCE_Z(CODE_DISTANCE_Z)
             ) u_pu_arbitration_unit (
                 .clk(clk),
                 .reset(reset),
@@ -262,7 +261,7 @@ generate
                 .has_flying_messages(`MASTER_FIFO_SIGNAL_VEC(arbitration_has_flying_messages, `FIFO_INDEX(l, m)))
             );
 
-            assign blocking_fifo_in_full = ~blocking_fifo_in_ready;
+            // assign blocking_fifo_in_full = ~blocking_fifo_in_ready;
         end
     end
 endgenerate
@@ -275,7 +274,6 @@ endgenerate
 `define NEIGHBOR_IDX_UP(i, j, k) ((i>0?1:0) + (i<(CODE_DISTANCE_X-1)?1:0) + (j>0?1:0) + (j<(CODE_DISTANCE_Z-1)?1:0) + (k>0?1:0))
 `define PU(i, j, k) pu_k[k].pu_i[i].pu_j[j]
 `define SLICE_ADDRESS_VEC(vec, idx) (vec[(((idx)+1)*ADDRESS_WIDTH)-1:(idx)*ADDRESS_WIDTH])
-`define SLICE_UNION_MESSAGE_VEC(vec, idx) (vec[(((idx)+1)*UNION_MESSAGE_WIDTH)-1:(idx)*UNION_MESSAGE_WIDTH])
 `define SLICE_DIRECT_MESSAGE_VEC(vec, idx) (vec[(((idx)+1)*DIRECT_MESSAGE_WIDTH)-1:(idx)*DIRECT_MESSAGE_WIDTH])
 `define PU_FIFO(j, k) fifo_k[k].fifo_j[j]
 
@@ -415,20 +413,6 @@ blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH), .DEPTH(128)) blocking_channel_d
     .out_valid(`PU(i, j, k).direct_in_channels_valid[2]),\
     .out_is_taken(`PU(i, j, k).direct_in_channels_is_taken[2])\
 );
-
-// instantiate vertical and horizontal links and channels
-`define VERTICAL_INSTANTIATE \
-`NEIGHBOR_VERTICAL_INSTANTIATE \
-`UNION_CHANNEL_VERTICAL_INSTANTIATE \
-`DIRECT_CHANNEL_VERTICAL_INSTANTIATE
-
-`define HORIZONTAL_INSTANTIATE \
-`NEIGHBOR_HORIZONTAL_INSTANTIATE \
-`UNION_CHANNEL_HORIZONTAL_INSTANTIATE
-
-`define UPDOWN_INSTANTIATE \
-`NEIGHBOR_UPDOWN_INSTANTIATE \
-`UNION_CHANNEL_UPDOWN_INSTANTIATE
 
 // instantiate neighbor links and channels
 generate

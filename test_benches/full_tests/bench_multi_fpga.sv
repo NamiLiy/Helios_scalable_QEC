@@ -31,10 +31,11 @@ localparam PER_DIMENSION_WIDTH = $clog2(MEASUREMENT_ROUNDS);
 localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
 localparam ITERATION_COUNTER_WIDTH = 8;  // counts up to CODE_DISTANCE iterations
 
-localparam UNION_MESSAGE_WIDTH = 2 * ADDRESS_WIDTH;  // [old_root, updated_root]
-localparam MASTER_FIFO_WIDTH = UNION_MESSAGE_WIDTH + 1 + 1;
+localparam DIRECT_MESSAGE_WIDTH = ADDRESS_WIDTH + 1 + 1;  // [receiver, is_odd_cardinality_root, is_touching_boundary]
+
+localparam MASTER_FIFO_WIDTH = DIRECT_MESSAGE_WIDTH + 1;
 localparam FIFO_COUNT = MEASUREMENT_ROUNDS * (CODE_DISTANCE_Z);
-localparam FINAL_FIFO_WIDTH = MASTER_FIFO_WIDTH + $clog2(FIFO_COUNT);
+localparam FINAL_FIFO_WIDTH = MASTER_FIFO_WIDTH + $clog2(FIFO_COUNT+1);
 
 reg clk;
 reg reset;
@@ -261,11 +262,12 @@ always @(posedge clk) begin
             test_fail = 1;
         end
         if (!test_fail) begin
-            $display("%t\tTest case %d pass %d cycles %d syndromes", $time, test_case, cycle_counter, syndrome_count);
+            $display("%t\tTest case %d pass %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
             pass_count = pass_count + 1;
         end else begin
-            $display("%t\tTest case %d fail %d cycles %d syndromes", $time, test_case, cycle_counter, syndrome_count);
+            $display("%t\tTest case %d fail %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
             fail_count = fail_count + 1;
+            $finish;
         end
     end
     if (input_eof == 1)begin

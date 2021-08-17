@@ -6,9 +6,10 @@ module decoder_stage_controller_left #(
     parameter CODE_DISTANCE_X = 4,
     parameter CODE_DISTANCE_Z = 12,
     parameter ITERATION_COUNTER_WIDTH = 8,  // counts to 255 iterations
-    parameter BOUNDARY_GROW_DELAY = 3,  // clock cycles
-    parameter SPREAD_CLUSTER_DELAY = 2,  // clock cycles
-    parameter SYNC_IS_ODD_CLUSTER_DELAY = 2  // clock cycles
+    parameter BOUNDARY_GROW_DELAY = 3 + 4,  // clock cycles
+    parameter SPREAD_CLUSTER_DELAY = 2 + 4,  // clock cycles
+    parameter SYNC_IS_ODD_CLUSTER_DELAY = 2 + 4  // clock cycles
+    // The 4 comes from the cost to cross the boundary
 ) (
     clk,
     reset,
@@ -43,8 +44,9 @@ localparam MEASUREMENT_ROUNDS = `MAX(CODE_DISTANCE_X, CODE_DISTANCE_Z);
 localparam PER_DIMENSION_WIDTH = $clog2(MEASUREMENT_ROUNDS);
 localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
 localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
-localparam UNION_MESSAGE_WIDTH = 2 * ADDRESS_WIDTH;  // [old_root, updated_root]
-localparam MASTER_FIFO_WIDTH = UNION_MESSAGE_WIDTH + 1 + 1;
+localparam DIRECT_MESSAGE_WIDTH = ADDRESS_WIDTH + 1 + 1;
+
+localparam MASTER_FIFO_WIDTH = DIRECT_MESSAGE_WIDTH + 1;
 localparam LEFT_BLOCK = ((CODE_DISTANCE_X**2)-1)/2;
 localparam RIGHT_BLOCK = ((CODE_DISTANCE_X-1)**2)/2;
 
@@ -245,7 +247,7 @@ always @(posedge clk) begin
                 end
             end
             STAGE_GROW_BOUNDARY: begin
-                if (delay_counter >= BOUNDARY_GROW_DELAY) begin
+                if (delay_counter >= BOUNDARY_GROW_DELAY && !has_messages_flying_both_sides) begin
                     stage <= STAGE_SPREAD_CLUSTER;
                     delay_counter <= 0;
                 end else begin
@@ -374,7 +376,7 @@ always @(*) begin
                 end
             end
             STAGE_GROW_BOUNDARY: begin
-                if (delay_counter >= BOUNDARY_GROW_DELAY) begin
+                if (delay_counter >= BOUNDARY_GROW_DELAY && !has_messages_flying_both_sides) begin
                     // stage <= STAGE_SPREAD_CLUSTER;
                     // delay_counter <= 0;
                     sc_fifo_out_data_internal[2:0] = 3'b1;
@@ -653,10 +655,10 @@ always @(posedge clk) begin
     end else begin
         case (stage)
             STAGE_IDLE: begin
+                sc_fifo_out_valid_internal <= 1'b0;
                 if(sc_fifo_in_empty_internal == 0 && sc_fifo_in_data_internal[2:0] == 3'b1) begin
                     stage <= STAGE_MEASUREMENT_LOADING;
                     sc_fifo_in_ready_internal <= 1'b1;
-                    sc_fifo_out_valid_internal <= 1'b0;
                 end
             end
             STAGE_SPREAD_CLUSTER:   begin

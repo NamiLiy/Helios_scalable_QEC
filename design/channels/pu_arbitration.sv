@@ -37,19 +37,17 @@ localparam WEIGHT = 1;  // the weight in MWPM graph
 localparam BOUNDARY_COST = 2 * WEIGHT;
 localparam NEIGHBOR_COST = 2 * WEIGHT;
 localparam BOUNDARY_WIDTH = $clog2(BOUNDARY_COST + 1);
-localparam UNION_MESSAGE_WIDTH = 2 * ADDRESS_WIDTH;  // [old_root, updated_root]
 localparam DIRECT_MESSAGE_WIDTH = ADDRESS_WIDTH + 1 + 1;  // [receiver, is_odd_cardinality_root, is_touching_boundary]
-localparam MASTER_FIFO_WIDTH = UNION_MESSAGE_WIDTH + 1 + 1;
-localparam FINAL_FIFO_WIDTH = MASTER_FIFO_WIDTH + ADDRESS_WIDTH;
+localparam MASTER_FIFO_WIDTH = DIRECT_MESSAGE_WIDTH + 1;
 localparam FIFO_COUNT = MEASUREMENT_ROUNDS * (CODE_DISTANCE_Z);
 
 input clk;
 input reset;
 
-input [ADDRESS_WIDTH:0] neighbor_fifo_out_data; //not -1 to support extra signal
+input [DIRECT_MESSAGE_WIDTH-1:0] neighbor_fifo_out_data; //not -1 to support extra signal
 input neighbor_fifo_out_valid;
 output reg neighbor_fifo_out_ready;
-output [ADDRESS_WIDTH:0] neighbor_fifo_in_data;
+output [DIRECT_MESSAGE_WIDTH-1:0] neighbor_fifo_in_data;
 output reg neighbor_fifo_in_valid;
 input neighbor_fifo_in_ready;
 input [DIRECT_MESSAGE_WIDTH-1: 0] blocking_fifo_out_data;
@@ -98,14 +96,13 @@ fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH)) out_fifo
 always@(*) begin
     neighbor_fifo_out_ready = 1'b0;
     blocking_fifo_out_ready = 1'b0;
-    master_fifo_out_data_internal = {(UNION_MESSAGE_WIDTH + 2){1'b0}};
-    master_fifo_out_data_internal[UNION_MESSAGE_WIDTH+1 : UNION_MESSAGE_WIDTH] = 2'b11;
+    master_fifo_out_data_internal[DIRECT_MESSAGE_WIDTH] = 1'b1;
     master_fifo_out_data_internal[DIRECT_MESSAGE_WIDTH-1:0] = blocking_fifo_out_data;
     if(!master_fifo_out_is_full_internal) begin
         if(neighbor_fifo_out_valid) begin
             neighbor_fifo_out_ready = 1'b1;
-            master_fifo_out_data_internal[ADDRESS_WIDTH:0] = neighbor_fifo_out_data;
-            master_fifo_out_data_internal[UNION_MESSAGE_WIDTH+1 : UNION_MESSAGE_WIDTH] = 2'b00;
+            master_fifo_out_data_internal[DIRECT_MESSAGE_WIDTH-1:0] = neighbor_fifo_out_data;
+            master_fifo_out_data_internal[DIRECT_MESSAGE_WIDTH] = 1'b0;
         end else begin
             blocking_fifo_out_ready = 1'b1;
         end
@@ -134,7 +131,7 @@ always@(*) begin
     neighbor_fifo_in_valid = 1'b0;
     blocking_fifo_in_valid = 1'b0;
     if(!master_fifo_in_empty_internal) begin
-        if(master_fifo_in_data_internal[UNION_MESSAGE_WIDTH+1 : UNION_MESSAGE_WIDTH] == 2'b00) begin
+        if(master_fifo_in_data_internal[DIRECT_MESSAGE_WIDTH] == 1'b0) begin
             master_fifo_in_ready_internal = neighbor_fifo_in_ready;
             neighbor_fifo_in_valid = 1'b1;
         end else begin

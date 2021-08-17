@@ -27,8 +27,6 @@ module final_arbitration_unit #(
 
 `include "parameters.sv"
 
-// WARNING : THIS CODE IS HARDCODED TO FIFO_COUNT = 6
-
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
 localparam MEASUREMENT_ROUNDS = `MAX(CODE_DISTANCE_X, CODE_DISTANCE_Z);
 localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
@@ -39,9 +37,8 @@ localparam WEIGHT = 1;  // the weight in MWPM graph
 localparam BOUNDARY_COST = 2 * WEIGHT;
 localparam NEIGHBOR_COST = 2 * WEIGHT;
 localparam BOUNDARY_WIDTH = $clog2(BOUNDARY_COST + 1);
-localparam UNION_MESSAGE_WIDTH = 2 * ADDRESS_WIDTH;  // [old_root, updated_root]
 localparam DIRECT_MESSAGE_WIDTH = ADDRESS_WIDTH + 1 + 1;  // [receiver, is_odd_cardinality_root, is_touching_boundary]
-localparam MASTER_FIFO_WIDTH = UNION_MESSAGE_WIDTH + 1 + 1;
+localparam MASTER_FIFO_WIDTH = DIRECT_MESSAGE_WIDTH + 1;
 localparam FIFO_COUNT = MEASUREMENT_ROUNDS * (CODE_DISTANCE_Z);
 localparam FINAL_FIFO_WIDTH = MASTER_FIFO_WIDTH + $clog2(FIFO_COUNT+1);
 
@@ -91,7 +88,7 @@ always@(posedge clk) begin
     if (reset) begin
         has_flying_messages_reg <= 0;
     end else begin
-        has_flying_messages_reg <= sc_fifo_out_valid || final_fifo_out_valid || (master_fifo_out_valid_vector != 0);
+        has_flying_messages_reg <= sc_fifo_out_valid || final_fifo_out_valid || (master_fifo_out_valid_vector != 0) || final_fifo_in_valid || sc_fifo_in_valid || (master_fifo_in_valid_vector != 0);
     end
 end
 

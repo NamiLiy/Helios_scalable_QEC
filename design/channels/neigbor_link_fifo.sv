@@ -78,9 +78,10 @@ always@(*) begin
             b_increase  = 0;
             b_is_odd_cluster = 0;
         end else if(neighbor_fifo_in_valid) begin
-            if(neighbor_fifo_in_data[ADDRESS_WIDTH] == 1'b1) begin
-                b_increase = 1'b1;
+            if(neighbor_fifo_in_data[ADDRESS_WIDTH+1] == 1'b1) begin
                 b_is_odd_cluster = 1'b1;
+            end else if(neighbor_fifo_in_data[ADDRESS_WIDTH] == 1'b1) begin
+                b_increase = 1'b1;
             end
         end
     end
@@ -144,7 +145,7 @@ end
 wire out_empty;
 assign neighbor_fifo_out_valid = !out_empty;
 
-fifo_fwft #(.DEPTH(16), .WIDTH(ADDRESS_WIDTH+1)) temp_fifo 
+fifo_fwft #(.DEPTH(16), .WIDTH(ADDRESS_WIDTH+2)) temp_fifo 
     (
     .clk(clk),
     .srst(initialize | reset),

@@ -198,10 +198,10 @@ always @(posedge clk) begin
             test_fail = 1;
         end
         if (!test_fail) begin
-            $display("%t\tTest case %d pass %d cycles %d syndromes", $time, test_case, cycle_counter, syndrome_count);
+            $display("%t\tTest case %d pass %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
             pass_count = pass_count + 1;
         end else begin
-            $display("%t\tTest case %d fail %d cycles %d syndromes", $time, test_case, cycle_counter, syndrome_count);
+            $display("%t\tTest case %d fail %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
             fail_count = fail_count + 1;
         end
     end
