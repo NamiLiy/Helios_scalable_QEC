@@ -3,6 +3,26 @@ import math
 import pymetis
 from copy import deepcopy
 
+def vertWrap(grid, p):
+    x = 0
+    ret = []
+    for j in range(len(grid)):
+        for i in range(len(grid[0])):
+            if(grid[j][i] == p):
+                if((i == 0 or i == len(grid[0]) - 1) and (grid[j][0] != grid[j][len(grid[0])-1])):
+                    ret.append([x, 1])
+            x = x + 1
+    return ret
+def horWrap(grid, p):
+    x = 0
+    ret = []
+    for j in range(len(grid)):
+        for i in range(len(grid[0])):
+            if(grid[j][i] == p):
+                if((j == 0 or j == len(grid) - 1) and (grid[0][i] != grid[len(grid)-1][i])):
+                    ret.append([x, 1])
+            x = x + 1
+    return ret
 def incI(grid, p):
     x = 0
     ret = []

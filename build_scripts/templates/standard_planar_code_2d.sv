@@ -1,8 +1,8 @@
 `timescale 1ns / 1ps
 
 module standard_planar_code_3d_no_fast_channel_/*$$ID*/ #(
-    parameter CODE_DISTANCE_X = 5,
-    parameter CODE_DISTANCE_Z = 4,
+    parameter CODE_DISTANCE_X = /*$$CODE_DISTANCE_X*/,
+    parameter CODE_DISTANCE_Z = /*$$CODE_DISTANCE_Z*/,
     parameter WEIGHT_X = 3,
     parameter WEIGHT_Z = 1,
     parameter WEIGHT_UD = 1 // Weight up down
@@ -41,12 +41,11 @@ localparam NEIGHBOR_COST_Z = 2 * WEIGHT_Z;
 localparam NEIGHBOR_COST_UD = 2 * WEIGHT_UD;
 localparam MAX_BOUNDARY_COST = `MAX(BOUNDARY_COST_X, BOUNDARY_COST_Z);
 localparam BOUNDARY_WIDTH = $clog2(MAX_BOUNDARY_COST + 1);
-localparam UNION_MESSAGE_WIDTH = 2 * ADDRESS_WIDTH;  // [old_root, updated_root]
 localparam DIRECT_MESSAGE_WIDTH = ADDRESS_WIDTH + 1 + 1;  // [receiver, is_odd_cardinality_root, is_touching_boundary]
 
-localparam MASTER_FIFO_WIDTH = UNION_MESSAGE_WIDTH + 1 + 1;
-localparam FINAL_FIFO_WIDTH = MASTER_FIFO_WIDTH + ADDRESS_WIDTH;
+localparam MASTER_FIFO_WIDTH = DIRECT_MESSAGE_WIDTH + 1;
 localparam FIFO_COUNT = MEASUREMENT_ROUNDS * (CODE_DISTANCE_Z);
+localparam FINAL_FIFO_WIDTH = MASTER_FIFO_WIDTH + $clog2(FIFO_COUNT+1);
 
 // Generated params
 localparam FIFO_COUNT = /*$$EDGE_COUNT*/ * (CODE_DISTANCE - 1);
@@ -136,10 +135,10 @@ localparam FAST_CHANNEL_COUNT = 0;
     /*$$IS_FIFO_VERT_OUTPUT*/
 `define is_fifo_hor_output(x) \
     /*$$IS_FIFO_VERT_OUTPUT*/
-`define is_wrap_vert(x) \
-    /*$$IS_WRAP_VERT*/
-`define is_wrap_hor(x) \
-    /*$$IS_WRAP_HOR*/
+`define is_fifo_wrap_vert(x) \
+    /*$$IS_FIFO_WRAP_VERT*/
+`define is_fifo_wrap_hor(x) \
+    /*$$IS_FIFO_WRAP_HOR*/
 `define inc_i(x) \
     /*$$INC_I*/
 `define inc_j(x) \
@@ -247,7 +246,7 @@ generate
             // wire master_fifo_in_ready;
             pu_arbitration_unit #(
                 .CODE_DISTANCE_X(CODE_DISTANCE_X),
-                .CODE_DISTANCE_X(CODE_DISTANCE_Z)
+                .CODE_DISTANCE_Z(CODE_DISTANCE_Z)
             ) u_pu_arbitration_unit (
                 .clk(clk),
                 .reset(reset),
@@ -272,7 +271,7 @@ generate
                 .has_flying_messages(`MASTER_FIFO_SIGNAL_VEC(arbitration_has_flying_messages, `FIFO_INDEX(y, k)))
             );
 
-            assign blocking_fifo_in_full = ~blocking_fifo_in_ready;
+            assign blocking_fifo_in_ready = ~blocking_fifo_in_full;
         end
     end
 endgenerate
@@ -285,7 +284,6 @@ endgenerate
 `define NEIGHBOR_IDX_UP(i, j, k) ((i>0?1:0) + (i<(CODE_DISTANCE_X-1)?1:0) + (j>0?1:0) + (j<(CODE_DISTANCE_Z-1)?1:0) + (k>0?1:0))
 `define PU(x, k) pu_k[k].pu_arr[x]
 `define SLICE_ADDRESS_VEC(vec, idx) (vec[(((idx)+1)*ADDRESS_WIDTH)-1:(idx)*ADDRESS_WIDTH])
-`define SLICE_UNION_MESSAGE_VEC(vec, idx) (vec[(((idx)+1)*UNION_MESSAGE_WIDTH)-1:(idx)*UNION_MESSAGE_WIDTH])
 `define SLICE_DIRECT_MESSAGE_VEC(vec, idx) (vec[(((idx)+1)*DIRECT_MESSAGE_WIDTH)-1:(idx)*DIRECT_MESSAGE_WIDTH])
 `define PU_FIFO(y, k) fifo_k[k].fifo_arr[y]
 
@@ -309,12 +307,12 @@ neighbor_link_to_fifo #(.LENGTH(NEIGHBOR_COST_X), .PER_DIMENSION_WIDTH(PER_DIMEN
     .is_odd_cluster(`PU(x, k).neighbor_is_odd_cluster[`NEIGHBOR_IDX_BOTTOM(`pu_coords_i(x), `pu_coords_j(x), k)]), \
     .a_old_root_in(`PU(x, k).updated_root), .a_increase(`PU(x, k).neighbor_increase), .a_is_odd_cluster(`PU(x, k).is_odd_cluster),\
     .b_old_root_out(`SLICE_ADDRESS_VEC(`PU(x, k).neighbor_roots, `NEIGHBOR_IDX_BOTTOM(`pu_coords_i(x), `pu_coords_j(x), k))),\
-    .neighbor_fifo_out_data(`PU_FIFO(`fifo_x_to_y(x),k).neighbor_fifo_out_data),  \
-    .neighbor_fifo_out_valid(`PU_FIFO(`fifo_x_to_y(x),k).neighbor_fifo_out_valid), \
-    .neighbor_fifo_out_ready(`PU_FIFO(`fifo_x_to_y(x),k).neighbor_fifo_out_ready), \
-    .neighbor_fifo_in_data(`PU_FIFO(`fifo_x_to_y(x),k).neighbor_fifo_in_data), \
-    .neighbor_fifo_in_valid(`PU_FIFO(`fifo_x_to_y(x),k).neighbor_fifo_in_valid), \
-    .neighbor_fifo_in_ready(`PU_FIFO(`fifo_x_to_y(x),k).neighbor_fifo_in_ready) \
+    .neighbor_fifo_out_data(`PU_FIFO(`fifo_x_to_y(x,0),k).neighbor_fifo_out_data),  \
+    .neighbor_fifo_out_valid(`PU_FIFO(`fifo_x_to_y(x,0),k).neighbor_fifo_out_valid), \
+    .neighbor_fifo_out_ready(`PU_FIFO(`fifo_x_to_y(x,0),k).neighbor_fifo_out_ready), \
+    .neighbor_fifo_in_data(`PU_FIFO(`fifo_x_to_y(x,0),k).neighbor_fifo_in_data), \
+    .neighbor_fifo_in_valid(`PU_FIFO(`fifo_x_to_y(x,0),k).neighbor_fifo_in_valid), \
+    .neighbor_fifo_in_ready(`PU_FIFO(`fifo_x_to_y(x,0),k).neighbor_fifo_in_ready) \
 );
 
 `define NEIGHBOR_VERTICAL_TO_FIFO_INSTANTIATE_OUTPUT(i, n_i, n_j, n_k) \
@@ -324,14 +322,42 @@ neighbor_link_to_fifo #(.LENGTH(NEIGHBOR_COST_X), .PER_DIMENSION_WIDTH(PER_DIMEN
     .is_odd_cluster(`PU(x, k).neighbor_is_odd_cluster[`NEIGHBOR_IDX_TOP(`pu_coords_i(x), `pu_coords_j(x), k)]), \
     .a_old_root_in(`PU(x, k).updated_root), .a_increase(`PU(x, k).neighbor_increase), .a_is_odd_cluster(`PU(x, k).is_odd_cluster),\
     .b_old_root_out(`SLICE_ADDRESS_VEC(`PU(x, k).neighbor_roots, `NEIGHBOR_IDX_TOP(`pu_coords_i(x), `pu_coords_j(x), k))), \
-    .neighbor_fifo_out_data(`PU_FIFO(`fifo_x_to_y(x),k).neighbor_fifo_out_data), \
-    .neighbor_fifo_out_valid(`PU_FIFO(`fifo_x_to_y(x),k).neighbor_fifo_out_valid), \
-    .neighbor_fifo_out_ready(`PU_FIFO(`fifo_x_to_y(x),k).neighbor_fifo_out_ready), \
-    .neighbor_fifo_in_data(`PU_FIFO(`fifo_x_to_y(x),k).neighbor_fifo_in_data), \
-    .neighbor_fifo_in_valid(`PU_FIFO(`fifo_x_to_y(x),k).neighbor_fifo_in_valid), \
-    .neighbor_fifo_in_ready(`PU_FIFO(`fifo_x_to_y(x),k).neighbor_fifo_in_ready) \
+    .neighbor_fifo_out_data(`PU_FIFO(`fifo_x_to_y(x,2),k).neighbor_fifo_out_data), \
+    .neighbor_fifo_out_valid(`PU_FIFO(`fifo_x_to_y(x,2),k).neighbor_fifo_out_valid), \
+    .neighbor_fifo_out_ready(`PU_FIFO(`fifo_x_to_y(x,2),k).neighbor_fifo_out_ready), \
+    .neighbor_fifo_in_data(`PU_FIFO(`fifo_x_to_y(x,2),k).neighbor_fifo_in_data), \
+    .neighbor_fifo_in_valid(`PU_FIFO(`fifo_x_to_y(x,2),k).neighbor_fifo_in_valid), \
+    .neighbor_fifo_in_ready(`PU_FIFO(`fifo_x_to_y(x,2),k).neighbor_fifo_in_ready) \
 );
 
+`define NEIGHBOR_HORIZONTAL_TO_FIFO_INSTANTIATE_INPUT(n_i, n_j, n_k) \
+neighbor_link_to_fifo #(.LENGTH(NEIGHBOR_COST_X), .PER_DIMENSION_WIDTH(PER_DIMENSION_WIDTH), .N_I(n_i), .N_J(n_j), .N_K(n_k)) neighbor_vertical_fifo (\
+    .clk(clk), .reset(reset), .initialize(initialize_neighbors), .is_fully_grown(`PU(x, k).neighbor_is_fully_grown[`NEIGHBOR_IDX_BOTTOM(`pu_coords_i(x), `pu_coords_j(x), k)]),\
+    .is_odd_cluster(`PU(x, k).neighbor_is_odd_cluster[`NEIGHBOR_IDX_BOTTOM(`pu_coords_i(x), `pu_coords_j(x), k)]), \
+    .a_old_root_in(`PU(x, k).updated_root), .a_increase(`PU(x, k).neighbor_increase), .a_is_odd_cluster(`PU(x, k).is_odd_cluster),\
+    .b_old_root_out(`SLICE_ADDRESS_VEC(`PU(x, k).neighbor_roots, `NEIGHBOR_IDX_BOTTOM(`pu_coords_i(x), `pu_coords_j(x), k))),\
+    .neighbor_fifo_out_data(`PU_FIFO(`fifo_x_to_y(x,1),k).neighbor_fifo_out_data),  \
+    .neighbor_fifo_out_valid(`PU_FIFO(`fifo_x_to_y(x,1),k).neighbor_fifo_out_valid), \
+    .neighbor_fifo_out_ready(`PU_FIFO(`fifo_x_to_y(x,1),k).neighbor_fifo_out_ready), \
+    .neighbor_fifo_in_data(`PU_FIFO(`fifo_x_to_y(x,1),k).neighbor_fifo_in_data), \
+    .neighbor_fifo_in_valid(`PU_FIFO(`fifo_x_to_y(x,1),k).neighbor_fifo_in_valid), \
+    .neighbor_fifo_in_ready(`PU_FIFO(`fifo_x_to_y(x,1),k).neighbor_fifo_in_ready) \
+);
+
+`define NEIGHBOR_HORIZONTAL_TO_FIFO_INSTANTIATE_OUTPUT(j, n_i, n_j, n_k) \
+neighbor_link_to_fifo #(.LENGTH(NEIGHBOR_COST_X), .PER_DIMENSION_WIDTH(PER_DIMENSION_WIDTH), .N_I(n_i), .N_J(n_j), .N_K(n_k)) neighbor_vertical_fifo (\
+    .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
+    .is_fully_grown(`PU(x, k).neighbor_is_fully_grown[`NEIGHBOR_IDX_TOP(`pu_coords_i(x), `pu_coords_j(x), k)]), \
+    .is_odd_cluster(`PU(x, k).neighbor_is_odd_cluster[`NEIGHBOR_IDX_TOP(`pu_coords_i(x), `pu_coords_j(x), k)]), \
+    .a_old_root_in(`PU(x, k).updated_root), .a_increase(`PU(x, k).neighbor_increase), .a_is_odd_cluster(`PU(x, k).is_odd_cluster),\
+    .b_old_root_out(`SLICE_ADDRESS_VEC(`PU(x, k).neighbor_roots, `NEIGHBOR_IDX_TOP(`pu_coords_i(x), `pu_coords_j(x), k))), \
+    .neighbor_fifo_out_data(`PU_FIFO(`fifo_x_to_y(x,3),k).neighbor_fifo_out_data), \
+    .neighbor_fifo_out_valid(`PU_FIFO(`fifo_x_to_y(x,3),k).neighbor_fifo_out_valid), \
+    .neighbor_fifo_out_ready(`PU_FIFO(`fifo_x_to_y(x,3),k).neighbor_fifo_out_ready), \
+    .neighbor_fifo_in_data(`PU_FIFO(`fifo_x_to_y(x,3),k).neighbor_fifo_in_data), \
+    .neighbor_fifo_in_valid(`PU_FIFO(`fifo_x_to_y(x,3),k).neighbor_fifo_in_valid), \
+    .neighbor_fifo_in_ready(`PU_FIFO(`fifo_x_to_y(x,3),k).neighbor_fifo_in_ready) \
+);
 // instantiate horizontal neighbor link and connect signals properly
 `define NEIGHBOR_HORIZONTAL_INSTANTIATE \
 neighbor_link #(.LENGTH(NEIGHBOR_COST_Z), .ADDRESS_WIDTH(ADDRESS_WIDTH)) neighbor_horizontal (\
@@ -362,9 +388,9 @@ assign `PU(x, k+1).neighbor_is_odd_cluster[`NEIGHBOR_IDX_DOWN(`pu_coords_i(x), `
 `define DIRECT_CHANNEL_VERTICAL_TO_FIFO_INSTANTIATE_INPUT \
 blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_top (\
     .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
-    .in_data(`PU_FIFO(`fifo_x_to_y(x),k).blocking_fifo_in_data),\
-    .in_valid(`PU_FIFO(`fifo_x_to_y(x),k).blocking_fifo_in_valid),\
-    .in_is_full(`PU_FIFO(`fifo_x_to_y(x),k).blocking_fifo_in_full),\
+    .in_data(`PU_FIFO(`fifo_x_to_y(x,0),k).blocking_fifo_in_data),\
+    .in_valid(`PU_FIFO(`fifo_x_to_y(x,0),k).blocking_fifo_in_valid),\
+    .in_is_full(`PU_FIFO(`fifo_x_to_y(x,0),k).blocking_fifo_in_full),\
     .out_data(`SLICE_DIRECT_MESSAGE_VEC(`PU(x, k).direct_in_channels_data, 0)),\
     .out_valid(`PU(x, k).direct_in_channels_valid[0]),\
     .out_is_taken(`PU(x, k).direct_in_channels_is_taken[0])\
@@ -373,12 +399,34 @@ blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_top (\
 `define DIRECT_CHANNEL_VERTICAL_TO_FIFO_INSTANTIATE_OUTPUT(i) \
 blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_top_to_fifo (\
     .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
-    .in_data(`PU((i)%CODE_DISTANCE_X, j, k).direct_out_channels_data_single),\
-    .in_valid(`PU((i)%CODE_DISTANCE_X, j, k).direct_out_channels_valid[0]),\
-    .in_is_full(`PU((i)%CODE_DISTANCE_X, j, k).direct_out_channels_is_full[0]),\
-    .out_data(`PU_FIFO(`fifo_x_to_y(x),k).blocking_fifo_out_data),\
-    .out_valid(`PU_FIFO(`fifo_x_to_y(x),k).blocking_fifo_out_valid),\
-    .out_is_taken(`PU_FIFO(`fifo_x_to_y(x),k).blocking_fifo_out_ready)\
+    .in_data(`PU((i)%CODE_DISTANCE_X, `pu_coords_j(x), k).direct_out_channels_data_single),\
+    .in_valid(`PU((i)%CODE_DISTANCE_X, `pu_coords_j(x), k).direct_out_channels_valid[0]),\
+    .in_is_full(`PU((i)%CODE_DISTANCE_X, `pu_coords_j(x), k).direct_out_channels_is_full[0]),\
+    .out_data(`PU_FIFO(`fifo_x_to_y(x,1),k).blocking_fifo_out_data),\
+    .out_valid(`PU_FIFO(`fifo_x_to_y(x,1),k).blocking_fifo_out_valid),\
+    .out_is_taken(`PU_FIFO(`fifo_x_to_y(x,1),k).blocking_fifo_out_ready)\
+);
+
+`define DIRECT_CHANNEL_HORIZONTAL_TO_FIFO_INSTANTIATE_INPUT \
+blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_top (\
+    .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
+    .in_data(`PU_FIFO(`fifo_x_to_y(x,0),k).blocking_fifo_in_data),\
+    .in_valid(`PU_FIFO(`fifo_x_to_y(x,0),k).blocking_fifo_in_valid),\
+    .in_is_full(`PU_FIFO(`fifo_x_to_y(x,0),k).blocking_fifo_in_full),\
+    .out_data(`SLICE_DIRECT_MESSAGE_VEC(`PU(x, k).direct_in_channels_data, 0)),\
+    .out_valid(`PU(x, k).direct_in_channels_valid[0]),\
+    .out_is_taken(`PU(x, k).direct_in_channels_is_taken[0])\
+);
+
+`define DIRECT_CHANNEL_HORIZONTAL_TO_FIFO_INSTANTIATE_OUTPUT(j) \
+blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_top_to_fifo (\
+    .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
+    .in_data(`PU(`pu_coords_i(x), (j)%CODE_DISTANCE_Z, k).direct_out_channels_data_single),\
+    .in_valid(`PU(`pu_coords_i(x), (j)%CODE_DISTANCE_Z, k).direct_out_channels_valid[0]),\
+    .in_is_full(`PU(`pu_coords_i(x), (j)%CODE_DISTANCE_Z, k).direct_out_channels_is_full[0]),\
+    .out_data(`PU_FIFO(`fifo_x_to_y(x,1),k).blocking_fifo_out_data),\
+    .out_valid(`PU_FIFO(`fifo_x_to_y(x,1),k).blocking_fifo_out_valid),\
+    .out_is_taken(`PU_FIFO(`fifo_x_to_y(x,1),k).blocking_fifo_out_ready)\
 );
 
 `define DIRECT_CHANNEL_VERTICAL_INSTANTIATE \
@@ -395,33 +443,68 @@ blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_top (\
 `define DIRECT_CHANNEL_VERTICAL_WRAP_INSTANTIATE_INPUT(i) \
 blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH), .DEPTH(128)) blocking_channel_top (\
     .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
-    .in_data(`PU(`inc_i(x),, k).direct_out_channels_data_single),\
-    .in_valid(`PU(`inc_i(x),, k).direct_out_channels_valid[0]),\
-    .in_is_full(`PU(`inc_i(x),, k).direct_out_channels_is_full[0]),\
-    .out_data(`PU_FIFO(`fifo_x_to_y(x),k).blocking_fifo_out_data),\
-    .out_valid(`PU_FIFO(`fifo_x_to_y(x),k).blocking_fifo_out_valid),\
-    .out_is_taken(`PU_FIFO(`fifo_x_to_y(x),k).blocking_fifo_out_ready)\
+    .in_data(`PU(`inc_j(x), k).direct_out_channels_data_single),\
+    .in_valid(`PU(`inc_j(x), k).direct_out_channels_valid[0]),\
+    .in_is_full(`PU(`inc_j(x), k).direct_out_channels_is_full[0]),\
+    .out_data(`PU_FIFO(`fifo_x_to_y(x,0),k).blocking_fifo_out_data),\
+    .out_valid(`PU_FIFO(`fifo_x_to_y(x,0),k).blocking_fifo_out_valid),\
+    .out_is_taken(`PU_FIFO(`fifo_x_to_y(x,0),k).blocking_fifo_out_ready)\
 );
 
 `define DIRECT_CHANNEL_VERTICAL_WRAP_INSTANTIATE_OUTPUT(i) \
 blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH), .DEPTH(128)) blocking_channel_top_wrap_fifo (\
     .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
-    .in_data(`PU_FIFO(`fifo_x_to_y(x),k).blocking_fifo_in_data),\
-    .in_valid(`PU_FIFO(`fifo_x_to_y(x),k).blocking_fifo_in_valid),\
-    .in_is_full(`PU_FIFO(`fifo_x_to_y(x),k).blocking_fifo_in_full),\
+    .in_data(`PU_FIFO(`fifo_x_to_y(x,2),k).blocking_fifo_in_data),\
+    .in_valid(`PU_FIFO(`fifo_x_to_y(x,2),k).blocking_fifo_in_valid),\
+    .in_is_full(`PU_FIFO(`fifo_x_to_y(x,2),k).blocking_fifo_in_full),\
     .out_data(`SLICE_DIRECT_MESSAGE_VEC(`PU(x, k).direct_in_channels_data, 0)),\
     .out_valid(`PU(x, k).direct_in_channels_valid[0]),\
     .out_is_taken(`PU(x, k).direct_in_channels_is_taken[0])\
 );\
-assign `PU_FIFO(`fifo_x_to_y(x),k).blocking_fifo_in_ready = !(`PU_FIFO(`fifo_x_to_y(x),k).blocking_fifo_in_full); 
+assign `PU_FIFO(`fifo_x_to_y(x,2),k).blocking_fifo_in_ready = !(`PU_FIFO(`fifo_x_to_y(x,2),k).blocking_fifo_in_full); 
+
+`define DIRECT_CHANNEL_HORIZONTAL_WRAP_INSTANTIATE_INPUT(i) \
+blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH), .DEPTH(128)) blocking_channel_top (\
+    .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
+    .in_data(`PU(`inc_i(x), k).direct_out_channels_data_single),\
+    .in_valid(`PU(`inc_i(x), k).direct_out_channels_valid[0]),\
+    .in_is_full(`PU(`inc_i(x), k).direct_out_channels_is_full[0]),\
+    .out_data(`PU_FIFO(`fifo_x_to_y(x,1),k).blocking_fifo_out_data),\
+    .out_valid(`PU_FIFO(`fifo_x_to_y(x,1),k).blocking_fifo_out_valid),\
+    .out_is_taken(`PU_FIFO(`fifo_x_to_y(x,1),k).blocking_fifo_out_ready)\
+);
+
+`define DIRECT_CHANNEL_HORIZONTAL_WRAP_INSTANTIATE_OUTPUT(i) \
+blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH), .DEPTH(128)) blocking_channel_top_wrap_fifo (\
+    .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
+    .in_data(`PU_FIFO(`fifo_x_to_y(x,3),k).blocking_fifo_in_data),\
+    .in_valid(`PU_FIFO(`fifo_x_to_y(x,3),k).blocking_fifo_in_valid),\
+    .in_is_full(`PU_FIFO(`fifo_x_to_y(x,3),k).blocking_fifo_in_full),\
+    .out_data(`SLICE_DIRECT_MESSAGE_VEC(`PU(x, k).direct_in_channels_data, 0)),\
+    .out_valid(`PU(x, k).direct_in_channels_valid[0]),\
+    .out_is_taken(`PU(x, k).direct_in_channels_is_taken[0])\
+);\
+assign `PU_FIFO(`fifo_x_to_y(x,3),k).blocking_fifo_in_ready = !(`PU_FIFO(`fifo_x_to_y(x,3),k).blocking_fifo_in_full); 
 
 // instantiate horizontal direct channels and connect signals properly
+
 `define DIRECT_CHANNEL_HORIZONTAL_INSTANTIATE \
 blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_left (\
     .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
-    .in_data(`PU(i, (j+1)%(CODE_DISTANCE_Z), k).direct_out_channels_data_single),\
-    .in_valid(`PU(i, (j+1)%(CODE_DISTANCE_Z), k).direct_out_channels_valid[1]),\
-    .in_is_full(`PU(i, (j+1)%(CODE_DISTANCE_Z), k).direct_out_channels_is_full[1]),\
+    .in_data(`PU(`inc_j(x), k).direct_out_channels_data_single),\
+    .in_valid(`PU(`inc_j(x), k).direct_out_channels_valid[1]),\
+    .in_is_full(`PU(`inc_j(x), k).direct_out_channels_is_full[1]),\
+    .out_data(`SLICE_DIRECT_MESSAGE_VEC(`PU(x, k).direct_in_channels_data, 1)),\
+    .out_valid(`PU(x, k).direct_in_channels_valid[1]),\
+    .out_is_taken(`PU(x, k).direct_in_channels_is_taken[1])\
+);
+
+`define DIRECT_CHANNEL_VERTICAL_WRAP_INSTANTIATE \
+blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH), .DEPTH(128)) blocking_channel_left (\
+    .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
+    .in_data(`PU(`inc_i(x), k).direct_out_channels_data_single),\
+    .in_valid(`PU(`inc_i(x), k).direct_out_channels_valid[1]),\
+    .in_is_full(`PU(`inc_i(x), k).direct_out_channels_is_full[1]),\
     .out_data(`SLICE_DIRECT_MESSAGE_VEC(`PU(x, k).direct_in_channels_data, 1)),\
     .out_valid(`PU(x, k).direct_in_channels_valid[1]),\
     .out_is_taken(`PU(x, k).direct_in_channels_is_taken[1])\
@@ -430,9 +513,9 @@ blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_left (\
 `define DIRECT_CHANNEL_HORIZONTAL_WRAP_INSTANTIATE \
 blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH), .DEPTH(128)) blocking_channel_left (\
     .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
-    .in_data(`PU(i, (j+1)%(CODE_DISTANCE_Z), k).direct_out_channels_data_single),\
-    .in_valid(`PU(i, (j+1)%(CODE_DISTANCE_Z), k).direct_out_channels_valid[1]),\
-    .in_is_full(`PU(i, (j+1)%(CODE_DISTANCE_Z), k).direct_out_channels_is_full[1]),\
+    .in_data(`PU(`inc_j(x), k).direct_out_channels_data_single),\
+    .in_valid(`PU(`inc_j(x), k).direct_out_channels_valid[1]),\
+    .in_is_full(`PU(`inc_j(x), k).direct_out_channels_is_full[1]),\
     .out_data(`SLICE_DIRECT_MESSAGE_VEC(`PU(x, k).direct_in_channels_data, 1)),\
     .out_valid(`PU(x, k).direct_in_channels_valid[1]),\
     .out_is_taken(`PU(x, k).direct_in_channels_is_taken[1])\
@@ -465,45 +548,52 @@ blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH), .DEPTH(128)) blocking_channel_d
 generate
     for (k=0; k < CODE_DISTANCE; k=k+1) begin: neighbor_k
         for (x=0; x < PU_INST; x=x+1) begin: neighbor_x
-            if(is_fifo_vert_input(x)) begin
-                if(is_wrap_vert(x)) begin
-
-                end
-            end else begin
-                if(is_wrap_vert(x)) begin
-
-                end
+            if(`is_fifo_vert_input(x)) begin
+                // Connect to fifo?
+                `NEIGHBOR_VERTICAL_TO_FIFO_INSTANTIATE_INPUT(`pu_coords_i(x)+1, `pu_coords_j(x), k)
+                `DIRECT_CHANNEL_VERTICAL_TO_FIFO_INSTANTIATE_INPUT
+            end else if(`pu_coords_i(x) > 0) begin
+                // Connect to nearby PE?
+                `NEIGHBOR_VERTICAL_INSTANTIATE_INPUT
+                `DIRECT_CHANNEL_VERTICAL_INSTANTIATE_INPUT
+            end else if(`is_fifo_wrap_vert(x)) begin
+                // Connect to wrap FIFO?
+                `DIRECT_CHANNEL_VERTICAL_WRAP_INSTANTIATE_INPUT(CODE_DISTANCE_X - 1)
             end
 
-            if(is_fifo_vert_output(x)) begin
-                if(is_wrap_vert(x)) begin
-
-                end
+            if(`is_fifo_vert_output(x)) begin
+                `NEIGHBOR_VERTICAL_TO_FIFO_INSTANTIATE_OUTPUT(`pu_coords_i(x), `pu_coords_i(x)-1, `pu_coords_j(x), k)
+                `DIRECT_CHANNEL_VERTICAL_TO_FIFO_INSTANTIATE_OUTPUT(`pu_coords_i(x))
+            end else if(`pu_coords_i(x) < CODE_DISTANCE_X-1) begin
+                `NEIGHBOR_VERTICAL_INSTANTIATE
+                `DIRECT_CHANNEL_VERTICAL_INSTANTIATE
+            end else if(`is_fifo_wrap_vert(x)) begin
+                `DIRECT_CHANNEL_VERTICAL_WRAP_INSTANTIATE_OUTPUT(CODE_DISTANCE_X - 1)
             end else begin
-                if(is_wrap_vert(x)) begin
-
-                end
+                `DIRECT_CHANNEL_VERTICAL_INSTANTIATE
             end
 
-            if(is_fifo_hor_input(x)) begin
-                if(is_wrap_hor(x)) begin
-
-                end
-            end else begin
-                if(is_wrap_hor(x)) begin
-
-                end
-
+            if(`is_fifo_hor_input(x)) begin
+                // check input
+                `NEIGHBOR_HORIZONTAL_TO_FIFO_INSTANTIATE_INPUT(`pu_coords_i(x), `pu_coords_j(x)+1, k)
+                `DIRECT_CHANNEL_HORIZONTAL_TO_FIFO_INSTANTIATE_INPUT
+            end else if(`pu_coords_j(x) > 0) begin
+                `NEIGHBOR_HORIZONTAL_INSTANTIATE_INPUT
+                `DIRECT_CHANNEL_HORIZONTAL_INSTANTIATE_INPUT
+            end else if(`is_fifo_wrap_hor(x)) begin
+                `DIRECT_CHANNEL_VERTICAL_WRAP_INSTANTIATE_INPUT(CODE_DISTANCE_Z - 1)
             end
 
-            if(is_fifo_hor_output(x)) begin
-                if(is_wrap_hor(x)) begin
-
-                end
+            if(`is_fifo_hor_output(x)) begin
+                `NEIGHBOR_HORIZONTAL_TO_FIFO_INSTANTIATE_OUTPUT(`pu_coords_j(x), `pu_coords_i(x), `pu_coords_j(x)-1, k)
+                `DIRECT_CHANNEL_HORIZONTAL_TO_FIFO_INSTANTIATE_OUTPUT(`pu_coords_j(x))
+            end else if(`pu_coords_j(x) < CODE_DISTANCE_Z-1) begin
+                `NEIGHBOR_HORIZONTAL_INSTANTIATE
+                `DIRECT_CHANNEL_HORIZONTAL_INSTANTIATE
+            end else if(`is_fifo_wrap_hor(x)) begin
+                `DIRECT_CHANNEL_HORIZONTAL_WRAP_INSTANTIATE_OUTPUT(CODE_DISTANCE_Z - 1)
             end else begin
-                if(is_wrap_hor(x)) begin
-
-                end
+                `DIRECT_CHANNEL_HORIZONTAL_WRAP_INSTANTIATE
             end
 
             if (k < (MEASUREMENT_ROUNDS-1)) begin

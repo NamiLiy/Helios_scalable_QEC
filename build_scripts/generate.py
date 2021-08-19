@@ -8,7 +8,7 @@ class hdlTemplate:
     def __init__(self, out):
         self.out = out
     def r(self, keyword, repl):
-        self.out = self.out.replace("/*$$" + keyword + "*/", repl)
+        self.out = self.out.replace("/*$$" + str(keyword) + "*/", str(repl))
 def inlineCase(var, pairs, otw):
     ret = ""
     for p in pairs:
@@ -25,10 +25,10 @@ def inlineCase(var, pairs, otw):
         ret = ret + str(otw)
     return ret
 
-codeDistanceX, codeDistanceY, numSplit, maxPU = user_configuration.retConfig()
-binWidth = math.ceil(math.log(max(codeDistanceX, codeDistanceY), 2))
+codeDistanceZ, codeDistanceX, numSplit, maxPU = user_configuration.retConfig()
+binWidth = math.ceil(math.log(max(codeDistanceZ, codeDistanceX), 2))
 vOut = []
-totalFIFOs, splitBoard = pt.findOptBoard(codeDistanceX, codeDistanceY, numSplit)
+totalFIFOs, splitBoard = pt.findOptBoard(codeDistanceZ, codeDistanceX, numSplit)
 print("FIFOs: " + str(totalFIFOs))
 pt.printGrid(splitBoard)
 
@@ -55,8 +55,10 @@ for i in range(numSplit):
     gridFifos = pt.gridIO(splitBoard,i)
     OF = hdlTemplate(templateSV)
     OF.r("ID", str(i))
-    OF.r("EDGE_COUNT", str(edgeCount))
-    OF.r("PU_COORD_WIDTH", str(2*binWidth*2*sum(splitBoard,[]).count(i)))
+    OF.r("CODE_DISTANCE_X", codeDistanceX)
+    OF.r("CODE_DISTANCE_Z", codeDistanceZ)
+    OF.r("EDGE_COUNT", edgeCount)
+    OF.r("PU_COORD_WIDTH", 2*binWidth*2*sum(splitBoard,[]).count(i))
     OF.r("PU_COORDS", puCoords)
     OF.r("PU_CONT", puCont)
     OF.r("EDGE_DIRS_WIDTH", str(5*sum(splitBoard,[]).count(i)))
@@ -69,8 +71,8 @@ for i in range(numSplit):
     OF.r("IS_FIFO_HOR_INPUT", inlineCase(["x"], pt.fifosHere(gridFifos,1),0))
     OF.r("IS_FIFO_VERT_OUTPUT", inlineCase(["x"], pt.fifosHere(gridFifos,2),0))
     OF.r("IS_FIFO_HOR_OUTPUT", inlineCase(["x"], pt.fifosHere(gridFifos,3),0))
-    OF.r("IS_WRAP_HOR", inlineCase(["x"], pt.fifosHere(gridFifos,4),0))
-    OF.r("IS_WRAP_VERT", inlineCase(["x"], pt.fifosHere(gridFifos,5),0))
+    OF.r("IS_FIFO_WRAP_VERT", inlineCase(["x"], pt.vertWrap(splitBoard, i),0))
+    OF.r("IS_FIFO_WRAP_HOR", inlineCase(["x"], pt.horWrap(splitBoard, i),0))
     OF.r("INC_I", inlineCase(["x"], pt.incI(splitBoard, i), 0))
     OF.r("INC_J", inlineCase(["x"], pt.incJ(splitBoard, i), 0))
 

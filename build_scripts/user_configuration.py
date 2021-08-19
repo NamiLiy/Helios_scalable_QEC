@@ -1,6 +1,6 @@
 # Code distance to handle
 codeDistanceX = 13
-codeDistanceY = 13
+codeDistanceZ = 13
 
 # Number of FPGAs to split between
 numSplit = 4
@@ -9,4 +9,4 @@ numSplit = 4
 maxPU = 0
 
 def retConfig():
-    return (codeDistanceX, codeDistanceY, numSplit, maxPU)
+    return (codeDistanceX, codeDistanceZ, numSplit, maxPU)
