@@ -72,15 +72,16 @@ def incJ(grid, p):
                 x = x + 1
     return ret
 def gridIO(grid, p):
-    offset=[(1,0,0),(0,1,1),(-1,0,2),(-1,0,3)]
+    offset=[(0,1,0),(1,0,1),(0,-1,2),(-1,0,3)]
     ret = []
-    for i in range(len(grid)):
-        for j in range(len(grid[0])):
-            if(grid[i][j] == p):
-                apVal = [0,0,0,0,1 if i==0 or i == len(grid)-1 else 0, 1 if j==0 or j == len(grid[0])-1 else 0]
+    for j in range(len(grid)):
+        for i in range(len(grid[0])):
+            if(grid[j][i] == p):
+                apVal = [0,0,0,0]
                 for off in offset:
-                    if i+off[0]<len(grid) and  i+off[0]>=0 and j+off[1]<len(grid[0]) and j+off[1]>=0:
-                        if(grid[i+off[0]][j+off[1]] != grid[i][j]):
+                    if i+off[0]<len(grid[0]) and  i+off[0]>=0 and j+off[1]<len(grid[1]) and j+off[1]>=0:
+                        #print(off[2])
+                        if(grid[j+off[1]][i+off[0]] != grid[j][i]):
                             apVal[off[2]] = 1
                 
                 ret.append(apVal)
@@ -89,7 +90,7 @@ def fifosHere(ioList, xDir):
     ret = []
     x=0
     for v in ioList:
-        ret.append([[1] if v[xDir] == 1 else [0],x])
+        ret.append([x,1 if v[xDir] == 1 else 0])
         x = x+1
     return ret
 def xToY(grid, p):
@@ -112,14 +113,14 @@ def xToY(grid, p):
                 index = index + 1
     return ret
 def getEdgeCount(grid, p):
-    offset=[(1,0),(0,1),(-1,0),(-1,0)]
+    offset=[(0,1),(1,0),(0,-1),(-1,0)]
     ret = 0
-    for i in range(len(grid)):
-        for j in range(len(grid[0])):
-            if(grid[i][j] == p):
+    for j in range(len(grid)):
+        for i in range(len(grid[0])):
+            if(grid[j][i] == p):
                 for off in offset:
-                    if i+off[0]<len(grid) and  i+off[0]>=0 and j+off[1]<len(grid[0]) and j+off[1]>=0:
-                        if(grid[i+off[0]][j+off[1]] != grid[i][j]):
+                    if j+off[1] >= 0 and j+off[1]<len(grid) and  i+off[0]>=0 and i+off[0]<len(grid[0]):
+                        if(grid[j+off[1]][i+off[0]] != grid[j][i]):
                             ret = ret + 1
     return ret
 def bordering(i, j, board, p):
@@ -220,8 +221,8 @@ def printGrid(grid):
             string = string + (str(el) if el == -1 else " " + str(el))
         print(string)
 
-def findOptBoard(x,y, maxP, maxN=-1, depth=3):
-    board = [[-1]*x for _ in range(y)]
+def findOptBoard(x,z, maxP, maxN=-1, depth=3):
+    board = [[-1]*x for _ in range(z)]
     edgeCount = 0
     if maxN != -1:
         board[0][0] = 0
@@ -231,7 +232,8 @@ def findOptBoard(x,y, maxP, maxN=-1, depth=3):
     #        print(chr(27) + "[2J")
     #        printGrid(board)
     else:
-        edgeCount, membership = pymetis.part_graph(maxP, adjacency=adjacentGraph(x,y))
+        edgeCount, membership = pymetis.part_graph(maxP, adjacency=adjacentGraph(x,z))
         for i in range(len(membership)):
-            board[math.floor(i/x)][i % y] = membership[i]
+            #print(str(math.floor(i / x)) + "," + str(i % x))
+            board[math.floor(i/x)][i % x] = membership[i]
     return edgeCount, board

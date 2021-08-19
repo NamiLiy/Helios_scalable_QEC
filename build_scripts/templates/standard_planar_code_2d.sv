@@ -44,15 +44,16 @@ localparam BOUNDARY_WIDTH = $clog2(MAX_BOUNDARY_COST + 1);
 localparam DIRECT_MESSAGE_WIDTH = ADDRESS_WIDTH + 1 + 1;  // [receiver, is_odd_cardinality_root, is_touching_boundary]
 
 localparam MASTER_FIFO_WIDTH = DIRECT_MESSAGE_WIDTH + 1;
-localparam FIFO_COUNT = MEASUREMENT_ROUNDS * (CODE_DISTANCE_Z);
-localparam FINAL_FIFO_WIDTH = MASTER_FIFO_WIDTH + $clog2(FIFO_COUNT+1);
+//localparam FIFO_COUNT = MEASUREMENT_ROUNDS * (CODE_DISTANCE_Z);
 
 // Generated params
-localparam FIFO_COUNT = /*$$EDGE_COUNT*/ * (CODE_DISTANCE - 1);
-localparam PU_COORDS [/*$$PU_COORD_WIDTH*/-1:0] = '{/*$$PU_COORDS*/};
-localparam EDGE_DIRS [/*$$EDGE_DIRS_WIDTH*/-1:0] = '{/*$$EDGE_DIRS*/};
-localparam PU_INST =/*$$PU_INST*/
+localparam FIFO_COUNT = /*$$EDGE_COUNT*/ * MEASUREMENT_ROUNDS;
+localparam [/*$$PU_COORDS_WIDTH*/-1:0] PU_COORDS = '{/*$$PU_COORDS*/};
+localparam PU_INST =/*$$PU_INST*/;
 localparam EDGE_COUNT = /*$$EDGE_COUNT*/;
+//
+
+localparam FINAL_FIFO_WIDTH = MASTER_FIFO_WIDTH + $clog2(FIFO_COUNT+1);
 
 input clk;
 input reset;
@@ -91,6 +92,8 @@ genvar j;
 genvar k;
 genvar l;
 genvar m;
+genvar x;
+genvar y;
 
 wire [PU_COUNT-1:0] test;
 
@@ -216,7 +219,7 @@ generate
     end
 endgenerate
 
-`define FIFO_INDEX(y, k) (y + k * (CODE_DISTANCE-1))
+`define FIFO_INDEX(y, k) (y + k * (MEASUREMENT_ROUNDS-1))
 `define MASTER_FIFO_VEC(vec, idx) (vec[(((idx)+1)*MASTER_FIFO_WIDTH)-1:(idx)*MASTER_FIFO_WIDTH])
 `define MASTER_FIFO_SIGNAL_VEC(vec, idx) (vec[(idx)])
 
@@ -396,15 +399,15 @@ blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_top (\
     .out_is_taken(`PU(x, k).direct_in_channels_is_taken[0])\
 );
 
-`define DIRECT_CHANNEL_VERTICAL_TO_FIFO_INSTANTIATE_OUTPUT(i) \
+`define DIRECT_CHANNEL_VERTICAL_TO_FIFO_INSTANTIATE_OUTPUT \
 blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_top_to_fifo (\
     .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
-    .in_data(`PU((i)%CODE_DISTANCE_X, `pu_coords_j(x), k).direct_out_channels_data_single),\
-    .in_valid(`PU((i)%CODE_DISTANCE_X, `pu_coords_j(x), k).direct_out_channels_valid[0]),\
-    .in_is_full(`PU((i)%CODE_DISTANCE_X, `pu_coords_j(x), k).direct_out_channels_is_full[0]),\
-    .out_data(`PU_FIFO(`fifo_x_to_y(x,1),k).blocking_fifo_out_data),\
-    .out_valid(`PU_FIFO(`fifo_x_to_y(x,1),k).blocking_fifo_out_valid),\
-    .out_is_taken(`PU_FIFO(`fifo_x_to_y(x,1),k).blocking_fifo_out_ready)\
+    .in_data(`PU(x, k).direct_out_channels_data_single),\
+    .in_valid(`PU(x, k).direct_out_channels_valid[0]),\
+    .in_is_full(`PU(x, k).direct_out_channels_is_full[0]),\
+    .out_data(`PU_FIFO(`fifo_x_to_y(x,2),k).blocking_fifo_out_data),\
+    .out_valid(`PU_FIFO(`fifo_x_to_y(x,2),k).blocking_fifo_out_valid),\
+    .out_is_taken(`PU_FIFO(`fifo_x_to_y(x,2),k).blocking_fifo_out_ready)\
 );
 
 `define DIRECT_CHANNEL_HORIZONTAL_TO_FIFO_INSTANTIATE_INPUT \
@@ -418,12 +421,12 @@ blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_top (\
     .out_is_taken(`PU(x, k).direct_in_channels_is_taken[0])\
 );
 
-`define DIRECT_CHANNEL_HORIZONTAL_TO_FIFO_INSTANTIATE_OUTPUT(j) \
+`define DIRECT_CHANNEL_HORIZONTAL_TO_FIFO_INSTANTIATE_OUTPUT \
 blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_top_to_fifo (\
     .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
-    .in_data(`PU(`pu_coords_i(x), (j)%CODE_DISTANCE_Z, k).direct_out_channels_data_single),\
-    .in_valid(`PU(`pu_coords_i(x), (j)%CODE_DISTANCE_Z, k).direct_out_channels_valid[0]),\
-    .in_is_full(`PU(`pu_coords_i(x), (j)%CODE_DISTANCE_Z, k).direct_out_channels_is_full[0]),\
+    .in_data(`PU(x, k).direct_out_channels_data_single),\
+    .in_valid(`PU(x, k).direct_out_channels_valid[0]),\
+    .in_is_full(`PU(x, k).direct_out_channels_is_full[0]),\
     .out_data(`PU_FIFO(`fifo_x_to_y(x,1),k).blocking_fifo_out_data),\
     .out_valid(`PU_FIFO(`fifo_x_to_y(x,1),k).blocking_fifo_out_valid),\
     .out_is_taken(`PU_FIFO(`fifo_x_to_y(x,1),k).blocking_fifo_out_ready)\
@@ -432,9 +435,9 @@ blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_top_to_fifo (\
 `define DIRECT_CHANNEL_VERTICAL_INSTANTIATE \
 blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_top (\
     .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
-    .in_data(`PU(`inc_i(x),, k).direct_out_channels_data_single),\
-    .in_valid(`PU(`inc_i(x),, k).direct_out_channels_valid[0]),\
-    .in_is_full(`PU(`inc_i(x),, k).direct_out_channels_is_full[0]),\
+    .in_data(`PU(`inc_i(x), k).direct_out_channels_data_single),\
+    .in_valid(`PU(`inc_i(x), k).direct_out_channels_valid[0]),\
+    .in_is_full(`PU(`inc_i(x), k).direct_out_channels_is_full[0]),\
     .out_data(`SLICE_DIRECT_MESSAGE_VEC(`PU(x, k).direct_in_channels_data, 0)),\
     .out_valid(`PU(x, k).direct_in_channels_valid[0]),\
     .out_is_taken(`PU(x, k).direct_in_channels_is_taken[0])\
@@ -546,7 +549,7 @@ blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH), .DEPTH(128)) blocking_channel_d
 
 // instantiate neighbor links and channels
 generate
-    for (k=0; k < CODE_DISTANCE; k=k+1) begin: neighbor_k
+    for (k=0; k < MEASUREMENT_ROUNDS; k=k+1) begin: neighbor_k
         for (x=0; x < PU_INST; x=x+1) begin: neighbor_x
             if(`is_fifo_vert_input(x)) begin
                 // Connect to fifo?
@@ -554,8 +557,8 @@ generate
                 `DIRECT_CHANNEL_VERTICAL_TO_FIFO_INSTANTIATE_INPUT
             end else if(`pu_coords_i(x) > 0) begin
                 // Connect to nearby PE?
-                `NEIGHBOR_VERTICAL_INSTANTIATE_INPUT
-                `DIRECT_CHANNEL_VERTICAL_INSTANTIATE_INPUT
+                `NEIGHBOR_VERTICAL_INSTANTIATE
+                `DIRECT_CHANNEL_VERTICAL_INSTANTIATE
             end else if(`is_fifo_wrap_vert(x)) begin
                 // Connect to wrap FIFO?
                 `DIRECT_CHANNEL_VERTICAL_WRAP_INSTANTIATE_INPUT(CODE_DISTANCE_X - 1)
@@ -563,10 +566,7 @@ generate
 
             if(`is_fifo_vert_output(x)) begin
                 `NEIGHBOR_VERTICAL_TO_FIFO_INSTANTIATE_OUTPUT(`pu_coords_i(x), `pu_coords_i(x)-1, `pu_coords_j(x), k)
-                `DIRECT_CHANNEL_VERTICAL_TO_FIFO_INSTANTIATE_OUTPUT(`pu_coords_i(x))
-            end else if(`pu_coords_i(x) < CODE_DISTANCE_X-1) begin
-                `NEIGHBOR_VERTICAL_INSTANTIATE
-                `DIRECT_CHANNEL_VERTICAL_INSTANTIATE
+                `DIRECT_CHANNEL_VERTICAL_TO_FIFO_INSTANTIATE_OUTPUT
             end else if(`is_fifo_wrap_vert(x)) begin
                 `DIRECT_CHANNEL_VERTICAL_WRAP_INSTANTIATE_OUTPUT(CODE_DISTANCE_X - 1)
             end else begin
@@ -578,18 +578,15 @@ generate
                 `NEIGHBOR_HORIZONTAL_TO_FIFO_INSTANTIATE_INPUT(`pu_coords_i(x), `pu_coords_j(x)+1, k)
                 `DIRECT_CHANNEL_HORIZONTAL_TO_FIFO_INSTANTIATE_INPUT
             end else if(`pu_coords_j(x) > 0) begin
-                `NEIGHBOR_HORIZONTAL_INSTANTIATE_INPUT
-                `DIRECT_CHANNEL_HORIZONTAL_INSTANTIATE_INPUT
+                `NEIGHBOR_HORIZONTAL_INSTANTIATE
+                `DIRECT_CHANNEL_HORIZONTAL_INSTANTIATE
             end else if(`is_fifo_wrap_hor(x)) begin
                 `DIRECT_CHANNEL_VERTICAL_WRAP_INSTANTIATE_INPUT(CODE_DISTANCE_Z - 1)
             end
 
             if(`is_fifo_hor_output(x)) begin
                 `NEIGHBOR_HORIZONTAL_TO_FIFO_INSTANTIATE_OUTPUT(`pu_coords_j(x), `pu_coords_i(x), `pu_coords_j(x)-1, k)
-                `DIRECT_CHANNEL_HORIZONTAL_TO_FIFO_INSTANTIATE_OUTPUT(`pu_coords_j(x))
-            end else if(`pu_coords_j(x) < CODE_DISTANCE_Z-1) begin
-                `NEIGHBOR_HORIZONTAL_INSTANTIATE
-                `DIRECT_CHANNEL_HORIZONTAL_INSTANTIATE
+                `DIRECT_CHANNEL_HORIZONTAL_TO_FIFO_INSTANTIATE_OUTPUT
             end else if(`is_fifo_wrap_hor(x)) begin
                 `DIRECT_CHANNEL_HORIZONTAL_WRAP_INSTANTIATE_OUTPUT(CODE_DISTANCE_Z - 1)
             end else begin
@@ -605,3 +602,5 @@ generate
         end
     end
 endgenerate
+
+endmodule

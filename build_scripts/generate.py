@@ -25,11 +25,14 @@ def inlineCase(var, pairs, otw):
         ret = ret + str(otw)
     return ret
 
-codeDistanceZ, codeDistanceX, numSplit, maxPU = user_configuration.retConfig()
+codeDistanceX, codeDistanceZ, numSplit, presetArrange = user_configuration.retConfig()
 binWidth = math.ceil(math.log(max(codeDistanceZ, codeDistanceX), 2))
 vOut = []
-totalFIFOs, splitBoard = pt.findOptBoard(codeDistanceZ, codeDistanceX, numSplit)
-print("FIFOs: " + str(totalFIFOs))
+if presetArrange == [[]]:
+    totalFIFOs, splitBoard = pt.findOptBoard(codeDistanceX, codeDistanceZ, numSplit)
+    print("FIFOs: " + str(totalFIFOs))
+else:
+    splitBoard = presetArrange
 pt.printGrid(splitBoard)
 
 templateSV = ""
@@ -48,7 +51,7 @@ for i in range(numSplit):
                 else:
                     puCoords = puCoords + ", "
                     puCont = puCont + " || "
-                puCoords= puCoords + str(binWidth) + "d'" + str(x) + ", " + str(binWidth) + "d'" + str(y)
+                puCoords= puCoords + str(binWidth) + "'d" + str(x) + ", " + str(binWidth) + "'d" + str(y)
                 puCont = puCont + "i == " + str(x) + " && " + "j == " + str(y)
                 puInst = puInst + 1
     edgeCount = pt.getEdgeCount(splitBoard, i)
@@ -58,7 +61,7 @@ for i in range(numSplit):
     OF.r("CODE_DISTANCE_X", codeDistanceX)
     OF.r("CODE_DISTANCE_Z", codeDistanceZ)
     OF.r("EDGE_COUNT", edgeCount)
-    OF.r("PU_COORD_WIDTH", 2*binWidth*2*sum(splitBoard,[]).count(i))
+    OF.r("PU_COORDS_WIDTH", 2*binWidth*2*sum(splitBoard,[]).count(i))
     OF.r("PU_COORDS", puCoords)
     OF.r("PU_CONT", puCont)
     OF.r("EDGE_DIRS_WIDTH", str(5*sum(splitBoard,[]).count(i)))
