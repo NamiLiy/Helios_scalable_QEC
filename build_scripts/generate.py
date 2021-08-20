@@ -61,7 +61,7 @@ for i in range(numSplit):
     OF.r("CODE_DISTANCE_X", codeDistanceX)
     OF.r("CODE_DISTANCE_Z", codeDistanceZ)
     OF.r("EDGE_COUNT", edgeCount)
-    OF.r("PU_COORDS_WIDTH", 2*binWidth*2*sum(splitBoard,[]).count(i))
+    OF.r("PU_COORDS_WIDTH", 2*binWidth*sum(splitBoard,[]).count(i))
     OF.r("PU_COORDS", puCoords)
     OF.r("PU_CONT", puCont)
     OF.r("EDGE_DIRS_WIDTH", str(5*sum(splitBoard,[]).count(i)))
@@ -80,6 +80,6 @@ for i in range(numSplit):
     OF.r("INC_J", inlineCase(["x"], pt.incJ(splitBoard, i), 0))
 
     # Write to file
-    f = open("standard_planar_code_2d_" + str(i) + ".sv", "w")
+    f = open("../design/generated/standard_planar_code_2d_" + str(i) + ".sv", "w")
     f.write(OF.out)
     f.close()

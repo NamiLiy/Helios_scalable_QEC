@@ -1,8 +1,8 @@
 `timescale 1ns / 1ps
 
-module standard_planar_code_3d_no_fast_channel_/*$$ID*/ #(
-    parameter CODE_DISTANCE_X = /*$$CODE_DISTANCE_X*/,
-    parameter CODE_DISTANCE_Z = /*$$CODE_DISTANCE_Z*/,
+module standard_planar_code_3d_no_fast_channel_0 #(
+    parameter CODE_DISTANCE_X = 3,
+    parameter CODE_DISTANCE_Z = 3,
     parameter WEIGHT_X = 3,
     parameter WEIGHT_Z = 1,
     parameter WEIGHT_UD = 1 // Weight up down
@@ -47,10 +47,10 @@ localparam MASTER_FIFO_WIDTH = DIRECT_MESSAGE_WIDTH + 1;
 //localparam FIFO_COUNT = MEASUREMENT_ROUNDS * (CODE_DISTANCE_Z);
 
 // Generated params
-localparam FIFO_COUNT = /*$$EDGE_COUNT*/ * MEASUREMENT_ROUNDS;
-localparam [/*$$PU_COORDS_WIDTH*/-1:0] PU_COORDS = '{/*$$PU_COORDS*/};
-localparam PU_INST =/*$$PU_INST*/;
-localparam EDGE_COUNT = /*$$EDGE_COUNT*/;
+localparam FIFO_COUNT = 4 * MEASUREMENT_ROUNDS;
+localparam [16-1:0] PU_COORDS = {2'd1, 2'd0, 2'd2, 2'd0, 2'd2, 2'd1, 2'd2, 2'd2};
+localparam PU_INST =4;
+localparam EDGE_COUNT = 4;
 //
 
 localparam FINAL_FIFO_WIDTH = MASTER_FIFO_WIDTH + $clog2(FIFO_COUNT+1);
@@ -110,7 +110,7 @@ assign initialize_neighbors = (stage_internal == STAGE_MEASUREMENT_LOADING);
 
 // generate macros
 `define CHANNEL_COUNT_IJK(i, j, k) ((i>0?1:0) + (i<(CODE_DISTANCE_X-1)?1:0) + (j>0?1:0) + (j<(CODE_DISTANCE_Z-1)?1:0) + (k>0?1:0) + (k<(MEASUREMENT_ROUNDS-1)?1:0))
-`define CHANNEL_COUNT (`CHANNEL_COUNT_IJK(i, j,k))
+`define CHANNEL_COUNT (`CHANNEL_COUNT_IJK(`pu_coords_i(x), `pu_coords_j(x), k))
 `define CHANNEL_WIDTH ($clog2(`CHANNEL_COUNT))
 `define NEIGHBOR_COUNT `CHANNEL_COUNT
 localparam FAST_CHANNEL_COUNT = 0;
@@ -125,27 +125,27 @@ localparam FAST_CHANNEL_COUNT = 0;
 
 // Generated Functions
 `define pu_coords_i(x) \
-    PU_COORDS[2*/*$$BIN_WIDTH*/*x+:/*$$BIN_WIDTH*/]
+    PU_COORDS[2*2*x+:2]
 `define pu_coords_j(x) \
-    PU_COORDS[2*/*$$BIN_WIDTH*/*x + /*$$BIN_WIDTH*/+:/*$$BIN_WIDTH*/]
+    PU_COORDS[2*2*x + 2+:2]
 `define fifo_x_to_y(x, dir) \
-    /*$$X_TO_Y*/
+    x==0&&dir==1?0:x==0&&dir==2?1:x==0&&dir==3?2:x==2&&dir==2?3:x==2&&dir==3?4:x==3&&dir==2?5:x==3&&dir==3?6:0
 `define is_fifo_vert_input(x) \
-    /*$$IS_FIFO_VERT_INPUT*/
+    x==0?0:x==1?0:x==2?0:x==3?0:0
 `define is_fifo_hor_input(x) \
-    /*$$IS_FIFO_HOR_INPUT*/
+    x==0?1:x==1?0:x==2?0:x==3?0:0
 `define is_fifo_vert_output(x) \
-    /*$$IS_FIFO_VERT_OUTPUT*/
+    x==0?1:x==1?0:x==2?1:x==3?1:0
 `define is_fifo_hor_output(x) \
-    /*$$IS_FIFO_VERT_OUTPUT*/
+    x==0?1:x==1?0:x==2?1:x==3?1:0
 `define is_fifo_wrap_vert(x) \
-    /*$$IS_FIFO_WRAP_VERT*/
+    x==3?1:0
 `define is_fifo_wrap_hor(x) \
-    /*$$IS_FIFO_WRAP_HOR*/
+    x==6?1:x==7?1:x==8?1:0
 `define inc_i(x) \
-    /*$$INC_I*/
+    x==0?0:x==1?2:x==2?3:x==3?1:0
 `define inc_j(x) \
-    /*$$INC_J*/
+    x==0?1:x==1?0:x==2?2:x==3?3:0
 
 
 
