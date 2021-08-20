@@ -90,7 +90,8 @@ def fifosHere(ioList, xDir):
     ret = []
     x=0
     for v in ioList:
-        ret.append([x,1 if v[xDir] == 1 else 0])
+        if(v[xDir] == 1):
+            ret.append([x,1])
         x = x+1
     return ret
 def xToY(grid, p):
@@ -112,6 +113,7 @@ def xToY(grid, p):
                     offC = offC + 1
                 index = index + 1
     return ret
+
 def getEdgeCount(grid, p):
     offset=[(0,1),(1,0),(0,-1),(-1,0)]
     ret = 0
@@ -122,6 +124,8 @@ def getEdgeCount(grid, p):
                     if j+off[1] >= 0 and j+off[1]<len(grid) and  i+off[0]>=0 and i+off[0]<len(grid[0]):
                         if(grid[j+off[1]][i+off[0]] != grid[j][i]):
                             ret = ret + 1
+                    else:
+                        ret = ret + 1
     return ret
 def bordering(i, j, board, p):
     offset=[(1,0),(0,-1),(-1,0),(0,1)]

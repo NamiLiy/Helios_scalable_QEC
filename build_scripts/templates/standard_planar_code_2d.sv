@@ -48,7 +48,7 @@ localparam MASTER_FIFO_WIDTH = DIRECT_MESSAGE_WIDTH + 1;
 
 // Generated params
 localparam FIFO_COUNT = /*$$EDGE_COUNT*/ * MEASUREMENT_ROUNDS;
-localparam [/*$$PU_COORDS_WIDTH*/-1:0] PU_COORDS = '{/*$$PU_COORDS*/};
+localparam [/*$$PU_COORDS_WIDTH*/-1:0] PU_COORDS = {/*$$PU_COORDS*/};
 localparam PU_INST =/*$$PU_INST*/;
 localparam EDGE_COUNT = /*$$EDGE_COUNT*/;
 //
@@ -110,7 +110,8 @@ assign initialize_neighbors = (stage_internal == STAGE_MEASUREMENT_LOADING);
 
 // generate macros
 `define CHANNEL_COUNT_IJK(i, j, k) ((i>0?1:0) + (i<(CODE_DISTANCE_X-1)?1:0) + (j>0?1:0) + (j<(CODE_DISTANCE_Z-1)?1:0) + (k>0?1:0) + (k<(MEASUREMENT_ROUNDS-1)?1:0))
-`define CHANNEL_COUNT (`CHANNEL_COUNT_IJK(i, j,k))
+//CHECK THIS
+`define CHANNEL_COUNT (`CHANNEL_COUNT_IJK(`pu_coords_i(x), `pu_coords_j(x),k))
 `define CHANNEL_WIDTH ($clog2(`CHANNEL_COUNT))
 `define NEIGHBOR_COUNT `CHANNEL_COUNT
 localparam FAST_CHANNEL_COUNT = 0;

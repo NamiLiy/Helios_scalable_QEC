@@ -21,7 +21,7 @@ def inlineCase(var, pairs, otw):
                 conditions = conditions + "&&"
             conditions = conditions + var[i] + "==" + str(p[i])
         ret = ret + conditions + "?" + str(p[-1]) + ":"
-    if(ret[-1]==":"):
+    if(ret == "" or ret[-1]==":"):
         ret = ret + str(otw)
     return ret
 
