@@ -3,7 +3,7 @@ import math
 import pymetis
 from copy import deepcopy
 
-def vertWrap(grid, p):
+def horWrap(grid, p):
     x = 0
     ret = []
     for j in range(len(grid)):
@@ -11,9 +11,9 @@ def vertWrap(grid, p):
             if(grid[j][i] == p):
                 if((i == 0 or i == len(grid[0]) - 1) and (grid[j][0] != grid[j][len(grid[0])-1])):
                     ret.append([x, 1])
-            x = x + 1
+                x = x + 1
     return ret
-def horWrap(grid, p):
+def vertWrap(grid, p):
     x = 0
     ret = []
     for j in range(len(grid)):
@@ -21,7 +21,7 @@ def horWrap(grid, p):
             if(grid[j][i] == p):
                 if((j == 0 or j == len(grid) - 1) and (grid[0][i] != grid[len(grid)-1][i])):
                     ret.append([x, 1])
-            x = x + 1
+                x = x + 1
     return ret
 def incI(grid, p):
     x = 0
@@ -79,7 +79,7 @@ def gridIO(grid, p):
             if(grid[j][i] == p):
                 apVal = [0,0,0,0]
                 for off in offset:
-                    if i+off[0]<len(grid[0]) and  i+off[0]>=0 and j+off[1]<len(grid[1]) and j+off[1]>=0:
+                    if i+off[0]<len(grid[0]) and  i+off[0]>=0 and j+off[1]<len(grid) and j+off[1]>=0:
                         #print(off[2])
                         if(grid[j+off[1]][i+off[0]] != grid[j][i]):
                             apVal[off[2]] = 1
@@ -125,7 +125,13 @@ def getEdgeCount(grid, p):
                         if(grid[j+off[1]][i+off[0]] != grid[j][i]):
                             ret = ret + 1
                     else:
-                        ret = ret + 1
+                        # Check for wrap fifos
+                        if j+off[1] < 0 or j+off[1]>=len(grid):
+                            if grid[0][i] != grid[len(grid)-1][i]:
+                                ret = ret + 1
+                        if i+off[0] < 0 or i+off[0]>=len(grid[0]):
+                            if grid[j][0] != grid[j][len(grid[0])-1]:
+                                ret = ret + 1
     return ret
 def bordering(i, j, board, p):
     offset=[(1,0),(0,-1),(-1,0),(0,1)]

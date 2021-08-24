@@ -2,9 +2,9 @@
 /// Use this for the main test bench
 
 module right_with_stage_controller #(
-    parameter CODE_DISTANCE_X = 5,
-    parameter CODE_DISTANCE_Z = 4,
-    parameter WEIGHT_X = 3,
+    parameter CODE_DISTANCE_X = 3,
+    parameter CODE_DISTANCE_Z = 3,
+    parameter WEIGHT_X = 1,
     parameter WEIGHT_Z = 1,
     parameter WEIGHT_UD = 1 // Weight up down
 ) (
@@ -42,9 +42,11 @@ localparam ITERATION_COUNTER_WIDTH = 8;  // counts up to CODE_DISTANCE iteration
 localparam DIRECT_MESSAGE_WIDTH = ADDRESS_WIDTH + 1 + 1;  // [receiver, is_odd_cardinality_root, is_touching_boundary]
 
 localparam MASTER_FIFO_WIDTH = DIRECT_MESSAGE_WIDTH + 1;
-localparam FIFO_COUNT = MEASUREMENT_ROUNDS * (CODE_DISTANCE_Z);
+//localparam FIFO_COUNT = MEASUREMENT_ROUNDS * (CODE_DISTANCE_Z);
+localparam FIFO_COUNT = 4*MEASUREMENT_ROUNDS;
 localparam FINAL_FIFO_WIDTH = MASTER_FIFO_WIDTH + $clog2(FIFO_COUNT+1);
 
+localparam PU_INST = 2; // GENERATE THIS
 
 input clk;
 input reset;
@@ -81,11 +83,11 @@ wire [MASTER_FIFO_WIDTH - 1 :0] sc_fifo_in_data;
 wire sc_fifo_in_valid;
 wire sc_fifo_in_ready;
 
-wire [PU_COUNT-1:0] is_odd_cardinalities;
-wire [PU_COUNT-1:0] is_touching_boundaries;
+wire [PU_INST*MEASUREMENT_ROUNDS-1:0] is_odd_cardinalities;
+wire [PU_INST*MEASUREMENT_ROUNDS-1:0] is_touching_boundaries;
 wire has_message_flying;
 wire [STAGE_WIDTH-1:0] stage;
-wire [PU_COUNT-1:0] is_odd_clusters;
+wire [PU_INST*MEASUREMENT_ROUNDS-1:0] is_odd_clusters;
 reg has_odd_clusters;
 wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] left_roots;
 wire has_message_flying_sc;
@@ -98,7 +100,7 @@ always@(posedge clk) begin
     has_odd_clusters <= |is_odd_clusters;
 end
 
-standard_planar_code_3d_no_fast_channel_right #(
+standard_planar_code_3d_no_fast_channel_1 #(
     .CODE_DISTANCE_X(CODE_DISTANCE_X),
     .CODE_DISTANCE_Z(CODE_DISTANCE_Z),
     .WEIGHT_X(WEIGHT_X),

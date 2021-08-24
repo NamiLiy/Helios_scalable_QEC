@@ -42,18 +42,27 @@ for i in range(numSplit):
     puInst = 0
     puCoords = ""
     puCont = ""
-    initComma = True
+    initLoop = True
+    puCoordList = []
     for x in range(len(splitBoard)):
         for y in range(len(splitBoard[0])):
             if(splitBoard[x][y] == i):
-                if(initComma):
-                    initComma=False
+                if(initLoop):
+                    initLoop=False
                 else:
-                    puCoords = puCoords + ", "
                     puCont = puCont + " || "
-                puCoords= puCoords + str(binWidth) + "'d" + str(x) + ", " + str(binWidth) + "'d" + str(y)
+                puCoordList.append(str(binWidth)+"\'d" + str(x))
+                puCoordList.append(str(binWidth)+"\'d" + str(y))
                 puCont = puCont + "i == " + str(x) + " && " + "j == " + str(y)
                 puInst = puInst + 1
+    puCoordList.reverse()
+    initLoop = True
+    for pc in puCoordList:
+        if(initLoop):
+            initLoop = False
+        else:
+            puCoords = puCoords + ", "
+        puCoords = puCoords + pc
     edgeCount = pt.getEdgeCount(splitBoard, i)
     gridFifos = pt.gridIO(splitBoard,i)
     OF = hdlTemplate(templateSV)

@@ -28,7 +28,6 @@ module standard_planar_code_3d_no_fast_channel_/*$$ID*/ #(
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
 localparam MEASUREMENT_ROUNDS = `MAX(CODE_DISTANCE_X, CODE_DISTANCE_Z);
-localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
 localparam PER_DIMENSION_WIDTH = $clog2(MEASUREMENT_ROUNDS);
 localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
 localparam DISTANCE_WIDTH = 1 + PER_DIMENSION_WIDTH;
@@ -52,6 +51,7 @@ localparam [/*$$PU_COORDS_WIDTH*/-1:0] PU_COORDS = {/*$$PU_COORDS*/};
 localparam PU_INST =/*$$PU_INST*/;
 localparam EDGE_COUNT = /*$$EDGE_COUNT*/;
 //
+localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
 
 localparam FINAL_FIFO_WIDTH = MASTER_FIFO_WIDTH + $clog2(FIFO_COUNT+1);
 
@@ -59,13 +59,13 @@ input clk;
 input reset;
 input [STAGE_WIDTH-1:0] stage;
 input [PU_COUNT-1:0] is_error_syndromes;
-output [PU_COUNT-1:0] is_odd_clusters;
-output [PU_COUNT-1:0] is_odd_cardinalities;
-output [PU_COUNT-1:0] is_touching_boundaries;
+output [PU_INST * MEASUREMENT_ROUNDS-1:0] is_odd_clusters;
+output [PU_INST*MEASUREMENT_ROUNDS-1:0] is_odd_cardinalities;
+output [PU_INST*MEASUREMENT_ROUNDS-1:0] is_touching_boundaries;
 output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 output has_message_flying;
-wire [PU_COUNT-1:0] has_message_flyings;
-reg [PU_COUNT-1:0] has_message_flyings_reg;
+wire [PU_INST*MEASUREMENT_ROUNDS-1:0] has_message_flyings;
+reg [PU_INST*MEASUREMENT_ROUNDS-1:0] has_message_flyings_reg;
 wire initialize_neighbors;
 reg [STAGE_WIDTH-1:0] stage_internal;
 
@@ -117,11 +117,11 @@ assign initialize_neighbors = (stage_internal == STAGE_MEASUREMENT_LOADING);
 localparam FAST_CHANNEL_COUNT = 0;
 `define INDEX(i, j, k) (i * CODE_DISTANCE_Z + j + k * CODE_DISTANCE_Z*CODE_DISTANCE_X)
 `define init_is_error_syndrome(i, j, k) is_error_syndromes[`INDEX(i, j, k)]
-`define is_odd_cluster(i, j, k) is_odd_clusters[`INDEX(i, j, k)]
-`define is_odd_cardinality(i, j, k) is_odd_cardinalities[`INDEX(i, j, k)]
-`define is_touching_boundary(i, j, k) is_touching_boundaries[`INDEX(i, j, k)]
+`define is_odd_cluster(x, k) is_odd_clusters[x + k*PU_INST]
+`define is_odd_cardinality(x, k) is_odd_cardinalities[x + k*PU_INST]
+`define is_touching_boundary(x, k) is_touching_boundaries[x + k*PU_INST]
+`define has_message_flying(x, k) has_message_flyings[x + k*PU_INST]
 `define roots(i, j, k) roots[ADDRESS_WIDTH*(`INDEX(i, j, k)+1)-1:ADDRESS_WIDTH*`INDEX(i, j, k)]
-`define has_message_flying(i, j, k) has_message_flyings[`INDEX(i, j, k)]
 `define DIRECT_CHANNEL_COUNT (3)
 
 // Generated Functions
@@ -209,12 +209,12 @@ generate
                 .old_root(old_root),
                 .updated_root(updated_root),
                 .is_odd_cluster(is_odd_cluster),
-                .is_odd_cardinality(`is_odd_cardinality(`pu_coords_i(x), `pu_coords_j(x), k)),
-                .is_touching_boundary(`is_touching_boundary(`pu_coords_i(x), `pu_coords_j(x), k)),
-                .is_processing(`has_message_flying(`pu_coords_i(x), `pu_coords_j(x), k))
+                .is_odd_cardinality(`is_odd_cardinality(x, k)),
+                .is_touching_boundary(`is_touching_boundary(x, k)),
+                .is_processing(`has_message_flying(x, k))
             );
             assign `roots(`pu_coords_i(x), `pu_coords_j(x), k) = updated_root;
-            assign `is_odd_cluster(`pu_coords_i(x), `pu_coords_j(x), k) = is_odd_cluster;
+            assign `is_odd_cluster(x, k) = is_odd_cluster;
             // assign `has_message_flying(i, j) = union_out_channels_valid | (|union_in_channels_valid) | (|direct_out_channels_valid) | (|direct_in_channels_valid);
         end
     end
@@ -556,7 +556,7 @@ generate
                 // Connect to fifo?
                 `NEIGHBOR_VERTICAL_TO_FIFO_INSTANTIATE_INPUT(`pu_coords_i(x)+1, `pu_coords_j(x), k)
                 `DIRECT_CHANNEL_VERTICAL_TO_FIFO_INSTANTIATE_INPUT
-            end else if(`pu_coords_i(x) > 0) begin
+            end else if(`pu_coords_i(x) < CODE_DISTANCE_X - 1) begin
                 // Connect to nearby PE?
                 `NEIGHBOR_VERTICAL_INSTANTIATE
                 `DIRECT_CHANNEL_VERTICAL_INSTANTIATE
@@ -568,17 +568,21 @@ generate
             if(`is_fifo_vert_output(x)) begin
                 `NEIGHBOR_VERTICAL_TO_FIFO_INSTANTIATE_OUTPUT(`pu_coords_i(x), `pu_coords_i(x)-1, `pu_coords_j(x), k)
                 `DIRECT_CHANNEL_VERTICAL_TO_FIFO_INSTANTIATE_OUTPUT
-            end else if(`is_fifo_wrap_vert(x)) begin
-                `DIRECT_CHANNEL_VERTICAL_WRAP_INSTANTIATE_OUTPUT(CODE_DISTANCE_X - 1)
-            end else begin
-                `DIRECT_CHANNEL_VERTICAL_INSTANTIATE
+            end 
+
+            if(`pu_coords_i(x) == CODE_DISTANCE_X - 1) begin
+                if(`is_fifo_wrap_vert(x)) begin
+                    `DIRECT_CHANNEL_VERTICAL_WRAP_INSTANTIATE_OUTPUT(CODE_DISTANCE_X - 1)
+                end else begin
+                    `DIRECT_CHANNEL_VERTICAL_WRAP_INSTANTIATE
+                end
             end
 
             if(`is_fifo_hor_input(x)) begin
                 // check input
                 `NEIGHBOR_HORIZONTAL_TO_FIFO_INSTANTIATE_INPUT(`pu_coords_i(x), `pu_coords_j(x)+1, k)
                 `DIRECT_CHANNEL_HORIZONTAL_TO_FIFO_INSTANTIATE_INPUT
-            end else if(`pu_coords_j(x) > 0) begin
+            end else if(`pu_coords_j(x) < CODE_DISTANCE_Z - 1) begin
                 `NEIGHBOR_HORIZONTAL_INSTANTIATE
                 `DIRECT_CHANNEL_HORIZONTAL_INSTANTIATE
             end else if(`is_fifo_wrap_hor(x)) begin
@@ -588,10 +592,14 @@ generate
             if(`is_fifo_hor_output(x)) begin
                 `NEIGHBOR_HORIZONTAL_TO_FIFO_INSTANTIATE_OUTPUT(`pu_coords_j(x), `pu_coords_i(x), `pu_coords_j(x)-1, k)
                 `DIRECT_CHANNEL_HORIZONTAL_TO_FIFO_INSTANTIATE_OUTPUT
-            end else if(`is_fifo_wrap_hor(x)) begin
-                `DIRECT_CHANNEL_HORIZONTAL_WRAP_INSTANTIATE_OUTPUT(CODE_DISTANCE_Z - 1)
-            end else begin
-                `DIRECT_CHANNEL_HORIZONTAL_WRAP_INSTANTIATE
+            end 
+
+            if(`pu_coords_j(x) == CODE_DISTANCE_Z - 1) begin
+                if(`is_fifo_wrap_hor(x)) begin
+                    `DIRECT_CHANNEL_HORIZONTAL_WRAP_INSTANTIATE_OUTPUT(CODE_DISTANCE_Z - 1)
+                end else begin
+                    `DIRECT_CHANNEL_HORIZONTAL_WRAP_INSTANTIATE
+                end
             end
 
             if (k < (MEASUREMENT_ROUNDS-1)) begin
