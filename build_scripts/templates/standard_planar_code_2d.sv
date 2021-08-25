@@ -138,7 +138,7 @@ localparam FAST_CHANNEL_COUNT = 0;
 `define is_fifo_vert_output(x) \
     /*$$IS_FIFO_VERT_OUTPUT*/
 `define is_fifo_hor_output(x) \
-    /*$$IS_FIFO_VERT_OUTPUT*/
+    /*$$IS_FIFO_HOR_OUTPUT*/
 `define is_fifo_wrap_vert(x) \
     /*$$IS_FIFO_WRAP_VERT*/
 `define is_fifo_wrap_hor(x) \

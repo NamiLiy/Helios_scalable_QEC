@@ -6,24 +6,24 @@ from copy import deepcopy
 def horWrap(grid, p):
     x = 0
     ret = []
-    for j in range(len(grid)):
-        for i in range(len(grid[0])):
-            if(grid[j][i] == p):
-                if((i == 0 or i == len(grid[0]) - 1) and (grid[j][0] != grid[j][len(grid[0])-1])):
+    for i in range(len(grid)):
+        for j in range(len(grid[0])):
+            if(grid[i][j] == p):
+                if((j == 0 or j == len(grid[0]) - 1) and (grid[i][0] != grid[i][len(grid[0])-1])):
                     ret.append([x, 1])
                 x = x + 1
     return ret
 def vertWrap(grid, p):
     x = 0
     ret = []
-    for j in range(len(grid)):
-        for i in range(len(grid[0])):
-            if(grid[j][i] == p):
-                if((j == 0 or j == len(grid) - 1) and (grid[0][i] != grid[len(grid)-1][i])):
+    for i in range(len(grid)):
+        for j in range(len(grid[0])):
+            if(grid[i][j] == p):
+                if((i == 0 or i == len(grid) - 1) and (grid[0][j] != grid[len(grid)-1][j])):
                     ret.append([x, 1])
                 x = x + 1
     return ret
-def incI(grid, p):
+def incJ(grid, p):
     x = 0
     ret = []
     for j in range(len(grid)):
@@ -40,7 +40,7 @@ def incI(grid, p):
                     ret.append([x,x-m+1])
                 x = x + 1
     return ret
-def incJ(grid, p):
+def incI(grid, p):
     x = 0
     ret = []
     for j in range(len(grid)):
@@ -95,21 +95,28 @@ def fifosHere(ioList, xDir):
         x = x+1
     return ret
 def xToY(grid, p):
-    offset=[(1,0),(0,1),(-1,0),(-1,0)]
+    offset=[(1,0),(0,1),(-1,0),(0,-1)]
     ret = []
     index = 0
     y = 0
     for i in range(len(grid)):
         for j in range(len(grid[0])):
             if(grid[i][j] == p):
-                ySet = False
                 offC = 0
                 for off in offset:
                     if i+off[0]<len(grid) and  i+off[0]>=0 and j+off[1]<len(grid[0]) and j+off[1]>=0:
                         if(grid[i+off[0]][j+off[1]] != grid[i][j]):
                             ret.append([index, offC, y])
                             y = y + 1
-                            ySet = True
+                    else:
+                        if(off[0] != 0):
+                            if((i == 0 or i == len(grid) - 1) and (grid[0][j] != grid[len(grid)-1][j])):
+                                ret.append([index, offC, y])
+                                y = y + 1
+                        if(off[1] != 1):
+                            if((j == 0 or j == len(grid[0]) - 1) and (grid[i][0] != grid[i][len(grid[0])-1])):
+                                ret.append([index, offC, y])
+                                y = y + 1
                     offC = offC + 1
                 index = index + 1
     return ret
