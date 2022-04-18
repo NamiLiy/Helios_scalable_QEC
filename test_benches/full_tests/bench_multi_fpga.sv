@@ -171,17 +171,17 @@ always @(negedge clk) begin
         is_error_syndromes = 0;
         if(input_open == 1) begin
             if (CODE_DISTANCE == 3) begin
-                input_file = $fopen ("/home/alex/Documents/Yale/Research/qec_fpga/test_benches/test_data/input_data_3.txt", "r");
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_3.txt", "r");
             end else if (CODE_DISTANCE == 5) begin
-                input_file = $fopen ("/home/alex/Documents/Yale/Research/qec_fpga/test_benches/test_data/input_data_5.txt", "r");
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_5.txt", "r");
             end else if (CODE_DISTANCE == 7) begin
-                input_file = $fopen ("/home/alex/Documents/Yale/Research/qec_fpga/test_benches/test_data/input_data_7.txt", "r");
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_7.txt", "r");
             end else if (CODE_DISTANCE == 9) begin
-                input_file = $fopen ("/home/alex/Documents/Yale/Research/qec_fpga/test_benches/test_data/input_data_9.txt", "r");
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_9.txt", "r");
             end else if (CODE_DISTANCE == 11) begin
-                input_file = $fopen ("/home/alex/Documents/Yale/Research/qec_fpga/test_benches/test_data/input_data_11.txt", "r");
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_11.txt", "r");
             end else if (CODE_DISTANCE == 13) begin
-                input_file = $fopen ("/home/alex/Documents/Yale/Research/qec_fpga/test_benches/test_data/input_data_13.txt", "r");
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_13.txt", "r");
             end
             input_open = 0;
         end
@@ -219,17 +219,17 @@ always @(posedge clk) begin
         processing = 0;
         if(open == 1) begin
             if (CODE_DISTANCE == 3) begin
-                file = $fopen ("/home/alex/Documents/Yale/Research/qec_fpga/test_benches/test_data/output_data_3.txt", "r");
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_3.txt", "r");
             end else if (CODE_DISTANCE == 5) begin
-                file = $fopen ("/home/alex/Documents/Yale/Research/qec_fpga/test_benches/test_data/output_data_5.txt", "r");
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_5.txt", "r");
             end else if (CODE_DISTANCE == 7) begin
-                file = $fopen ("/home/alex/Documents/Yale/Research/qec_fpga/test_benches/test_data/output_data_7.txt", "r");
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_7.txt", "r");
             end else if (CODE_DISTANCE == 9) begin
-                file = $fopen ("/home/alex/Documents/Yale/Research/qec_fpga/test_benches/test_data/output_data_9.txt", "r");
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_9.txt", "r");
             end else if (CODE_DISTANCE == 11) begin
-                file = $fopen ("/home/alex/Documents/Yale/Research/qec_fpga/test_benches/test_data/output_data_11.txt", "r");
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_11.txt", "r");
             end else if (CODE_DISTANCE == 13) begin
-                file = $fopen ("/home/alex/Documents/Yale/Research/qec_fpga/test_benches/test_data/output_data_13.txt", "r");
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_13.txt", "r");
             end 
             open = 0;
         end

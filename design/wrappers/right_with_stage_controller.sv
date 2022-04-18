@@ -3,7 +3,7 @@
 
 module right_with_stage_controller #(
     parameter CODE_DISTANCE_X = 3,
-    parameter CODE_DISTANCE_Z = 3,
+    parameter CODE_DISTANCE_Z = 2,
     parameter WEIGHT_X = 1,
     parameter WEIGHT_Z = 1,
     parameter WEIGHT_UD = 1 // Weight up down

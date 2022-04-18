@@ -121,6 +121,7 @@ def xToY(grid, p):
                 index = index + 1
     return ret
 
+# Contains the wrapped around edges as well
 def getEdgeCount(grid, p):
     offset=[(0,1),(1,0),(0,-1),(-1,0)]
     ret = 0
@@ -131,14 +132,14 @@ def getEdgeCount(grid, p):
                     if j+off[1] >= 0 and j+off[1]<len(grid) and  i+off[0]>=0 and i+off[0]<len(grid[0]):
                         if(grid[j+off[1]][i+off[0]] != grid[j][i]):
                             ret = ret + 1
-                    else:
-                        # Check for wrap fifos
-                        if j+off[1] < 0 or j+off[1]>=len(grid):
-                            if grid[0][i] != grid[len(grid)-1][i]:
-                                ret = ret + 1
-                        if i+off[0] < 0 or i+off[0]>=len(grid[0]):
-                            if grid[j][0] != grid[j][len(grid[0])-1]:
-                                ret = ret + 1
+                    # else:
+                    #     # Check for wrap fifos
+                    #     if j+off[1] < 0 or j+off[1]>=len(grid):
+                    #         if grid[0][i] != grid[len(grid)-1][i]:
+                    #             ret = ret + 1
+                    #     if i+off[0] < 0 or i+off[0]>=len(grid[0]):
+                    #         if grid[j][0] != grid[j][len(grid[0])-1]:
+                    #             ret = ret + 1
     return ret
 def bordering(i, j, board, p):
     offset=[(1,0),(0,-1),(-1,0),(0,1)]
