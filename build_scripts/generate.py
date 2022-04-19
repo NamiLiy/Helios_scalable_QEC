@@ -104,15 +104,14 @@ codeDistanceZ = 2
 numSplit = 2
 edgeCount = 2
 templateSV = ""
+
 with open("./templates/standard_planar_code_2d.sv","r") as f:
     templateSV = f.read()
 for i in range(numSplit):
-    if (i==0) :
-        x_start = 0
-        x_end = codeDistanceX // 2
-    if (i ==1):
-        x_start = codeDistanceX // 2 + 1
-        x_end = codeDistanceX - 1
+    x_start = math.ceil(codeDistanceX *i / numSplit)
+    x_end = math.ceil(codeDistanceX *(i+1) / numSplit) - 1
+    print(x_start)
+    print(x_end)
     OF = hdlTemplate(templateSV)
     OF.r("ID", str(i))
     OF.r("CODE_DISTANCE_X", codeDistanceX)
@@ -125,3 +124,41 @@ for i in range(numSplit):
     f = open("../design/generated/standard_planar_code_2d_" + str(i) + ".sv", "w")
     f.write(OF.out)
     f.close()
+
+with open("./templates/decoder_stage_controller_dummy.sv","r") as f:
+    templateSV = f.read()
+for i in range(numSplit):
+    x_start = math.ceil(codeDistanceX *i / numSplit)
+    x_end = math.ceil(codeDistanceX *(i+1) / numSplit) - 1
+    OF = hdlTemplate(templateSV)
+    OF.r("ID", str(i))
+    OF.r("CODE_DISTANCE_X", codeDistanceX)
+    OF.r("CODE_DISTANCE_Z", codeDistanceZ)
+    OF.r("EDGE_COUNT", edgeCount) # This is split edges per measurement round
+    OF.r("X_START", x_start) # This is split edges per measurement round
+    OF.r("X_END", x_end) # This is split edges per measurement round
+
+    # Write to file
+    f = open("../design/generated/decoder_stage_controller_dummy_" + str(i) + ".sv", "w")
+    f.write(OF.out)
+    f.close()
+
+with open("./templates/top_module_for_leaf.sv","r") as f:
+    templateSV = f.read()
+for i in range(numSplit):
+    x_start = math.ceil(codeDistanceX *i / numSplit)
+    x_end = math.ceil(codeDistanceX *(i+1) / numSplit) - 1
+    OF = hdlTemplate(templateSV)
+    OF.r("ID", str(i))
+    OF.r("CODE_DISTANCE_X", codeDistanceX)
+    OF.r("CODE_DISTANCE_Z", codeDistanceZ)
+    OF.r("EDGE_COUNT", edgeCount) # This is split edges per measurement round
+    OF.r("X_START", x_start) # This is split edges per measurement round
+    OF.r("X_END", x_end) # This is split edges per measurement round
+
+    # Write to file
+    f = open("../design/generated/top_module_for_leaf_" + str(i) + ".sv", "w")
+    f.write(OF.out)
+    f.close()
+
+
