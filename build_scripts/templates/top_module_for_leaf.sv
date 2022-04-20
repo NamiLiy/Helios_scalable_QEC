@@ -46,6 +46,7 @@ localparam MASTER_FIFO_WIDTH = DIRECT_MESSAGE_WIDTH + 1;
 localparam EDGE_COUNT = /*$$EDGE_COUNT*/;
 localparam FIFO_COUNT = /*$$EDGE_COUNT*/ * MEASUREMENT_ROUNDS;
 localparam FINAL_FIFO_WIDTH = MASTER_FIFO_WIDTH + $clog2(FIFO_COUNT+1);
+localparam HUB_FIFO_WIDTH = /*$$HUB_FIFO_WIDTH*/;
 
 localparam X_START = /*$$X_START*/;
 localparam X_END = /*$$X_END*/;
@@ -65,10 +66,10 @@ output final_cardinality;
 output has_message_flying_otherside;
 output has_odd_clusters_otherside;
 
-output [FINAL_FIFO_WIDTH - 1 :0] final_fifo_out_data;
+output [HUB_FIFO_WIDTH - 1 :0] final_fifo_out_data;
 output final_fifo_out_valid;
 input final_fifo_out_ready;
-input [FINAL_FIFO_WIDTH - 1 :0] final_fifo_in_data;
+input [HUB_FIFO_WIDTH - 1 :0] final_fifo_in_data;
 input final_fifo_in_valid;
 output final_fifo_in_ready;
 
@@ -174,13 +175,15 @@ final_arbitration_unit #(
     .sc_fifo_in_data(sc_fifo_in_data),
     .sc_fifo_in_valid(sc_fifo_in_valid),
     .sc_fifo_in_ready(sc_fifo_in_ready),
-    .final_fifo_out_data(final_fifo_out_data),
+    .final_fifo_out_data(final_fifo_out_data[FINAL_FIFO_WIDTH-1:0]),
     .final_fifo_out_valid(final_fifo_out_valid),
     .final_fifo_out_ready(final_fifo_out_ready),
-    .final_fifo_in_data(final_fifo_in_data),
+    .final_fifo_in_data(final_fifo_in_data[FINAL_FIFO_WIDTH-1:0]),
     .final_fifo_in_valid(final_fifo_in_valid),
     .final_fifo_in_ready(final_fifo_in_ready),
     .has_flying_messages(has_message_flying_interconnect)
 );
+
+assign final_fifo_out_data[HUB_FIFO_WIDTH -1 :FINAL_FIFO_WIDTH] = 0;
 
 endmodule

@@ -688,7 +688,7 @@ always @(posedge clk) begin
                     sc_fifo_in_ready_internal <= 1'b1;
                 end
             end
-        STAGE_MEASUREMENT_LOADING: begin
+            STAGE_MEASUREMENT_LOADING: begin
                 // Currently this is single cycle as only from external buffer happens.
                 // In future might need multiple
                 stage <= STAGE_SPREAD_CLUSTER;

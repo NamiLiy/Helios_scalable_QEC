@@ -103,6 +103,7 @@ codeDistanceX = 3
 codeDistanceZ = 2
 numSplit = 2
 edgeCount = 2
+leaf_to_hub_fifo_width = 32 #Pick a proper number
 templateSV = ""
 
 with open("./templates/standard_planar_code_2d.sv","r") as f:
@@ -110,6 +111,10 @@ with open("./templates/standard_planar_code_2d.sv","r") as f:
 for i in range(numSplit):
     x_start = math.ceil(codeDistanceX *i / numSplit)
     x_end = math.ceil(codeDistanceX *(i+1) / numSplit) - 1
+    if(i == 0 or i == numSplit - 1):
+        edgeCount = codeDistanceZ
+    else:
+        edgeCount = codeDistanceZ*2
     print(x_start)
     print(x_end)
     OF = hdlTemplate(templateSV)
@@ -155,6 +160,7 @@ for i in range(numSplit):
     OF.r("EDGE_COUNT", edgeCount) # This is split edges per measurement round
     OF.r("X_START", x_start) # This is split edges per measurement round
     OF.r("X_END", x_end) # This is split edges per measurement round
+    OF.r("HUB_FIFO_WIDTH", leaf_to_hub_fifo_width)
 
     # Write to file
     f = open("../design/generated/top_module_for_leaf_" + str(i) + ".sv", "w")

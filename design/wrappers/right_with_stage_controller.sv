@@ -2,8 +2,8 @@
 /// Use this for the main test bench
 
 module right_with_stage_controller #(
-    parameter CODE_DISTANCE_X = 3,
-    parameter CODE_DISTANCE_Z = 2,
+    parameter CODE_DISTANCE_X = /*$$CODE_DISTANCE_X*/,
+    parameter CODE_DISTANCE_Z = /*$$CODE_DISTANCE_Z*/,
     parameter WEIGHT_X = 1,
     parameter WEIGHT_Z = 1,
     parameter WEIGHT_UD = 1 // Weight up down
@@ -124,7 +124,7 @@ standard_planar_code_3d_no_fast_channel_1 #(
     .master_fifo_in_ready_vector(master_fifo_in_ready_vector)
 );
 
-decoder_stage_controller_right #(
+decoder_stage_controller_dummy_1 #(
     .CODE_DISTANCE_X(CODE_DISTANCE_X),
     .CODE_DISTANCE_Z(CODE_DISTANCE_Z),
     .ITERATION_COUNTER_WIDTH(ITERATION_COUNTER_WIDTH)
