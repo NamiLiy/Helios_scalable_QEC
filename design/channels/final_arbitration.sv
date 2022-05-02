@@ -1,6 +1,13 @@
 module final_arbitration_unit #(
     parameter CODE_DISTANCE_X = 5,
-    parameter CODE_DISTANCE_Z = 4
+    parameter CODE_DISTANCE_Z = 4,
+    parameter HUB_FIFO_WIDTH = 32,
+    parameter FPGAID_WIDTH = 4,
+    parameter MY_ID = 0 ,
+    parameter X_START = 0,
+    parameter X_END = 0,
+    parameter FIFO_IDWIDTH = 8,
+    parameter FIFO_COUNT = 8
 )(
     clk,
     reset,
@@ -39,8 +46,11 @@ localparam NEIGHBOR_COST = 2 * WEIGHT;
 localparam BOUNDARY_WIDTH = $clog2(BOUNDARY_COST + 1);
 localparam DIRECT_MESSAGE_WIDTH = ADDRESS_WIDTH + 1 + 1;  // [receiver, is_odd_cardinality_root, is_touching_boundary]
 localparam MASTER_FIFO_WIDTH = DIRECT_MESSAGE_WIDTH + 1;
-localparam FIFO_COUNT = MEASUREMENT_ROUNDS * (CODE_DISTANCE_Z);
+// localparam FIFO_COUNT = MEASUREMENT_ROUNDS * (CODE_DISTANCE_Z);
 localparam FINAL_FIFO_WIDTH = MASTER_FIFO_WIDTH + $clog2(FIFO_COUNT+1);
+
+localparam TOP_FPGA_ID = MY_ID - 1;
+localparam BOTTOM_FPGA_ID = MY_ID + 1;
 
 input clk;
 input reset;
@@ -59,7 +69,7 @@ output [MASTER_FIFO_WIDTH - 1 :0] sc_fifo_in_data;
 output sc_fifo_in_valid;
 input sc_fifo_in_ready;
 
-output reg [FINAL_FIFO_WIDTH - 1 :0] final_fifo_out_data;
+output reg [HUB_FIFO_WIDTH - 1 :0] final_fifo_out_data;
 output final_fifo_out_valid;
 input final_fifo_out_ready;
 input [FINAL_FIFO_WIDTH - 1 :0] final_fifo_in_data;
@@ -68,7 +78,7 @@ output final_fifo_in_ready;
 
 output has_flying_messages;
 
-reg [FINAL_FIFO_WIDTH-1: 0] final_fifo_out_data_internal;
+reg [HUB_FIFO_WIDTH-1: 0] final_fifo_out_data_internal;
 wire final_fifo_out_valid_internal;
 wire final_fifo_out_is_full_internal;
 
@@ -94,7 +104,7 @@ end
 
 assign has_flying_messages = has_flying_messages_reg;
 
-fifo_fwft #(.DEPTH(16), .WIDTH(FINAL_FIFO_WIDTH)) out_fifo 
+fifo_fwft #(.DEPTH(16), .WIDTH(HUB_FIFO_WIDTH)) out_fifo 
     (
     .clk(clk),
     .srst(reset),
@@ -175,8 +185,40 @@ endgenerate
 `define gathered_elected_output_message_index (`expanded_elected_output_message_index(DIRECT_CHANNEL_ROOT_IDX))
 `define gathered_elected_output_message_data (`expanded_elected_output_message_data(DIRECT_CHANNEL_ROOT_IDX))
 
+wire [MASTER_FIFO_WIDTH - 1:0] temporal_final_message;
+assign temporal_final_message = `gathered_elected_output_message_data;
+
+reg [FIFO_IDWIDTH - 1 : 0] destination_fifo;
+reg [FPGAID_WIDTH - 1 : 0] destination_id;
+
+`define message_from_stage_controller (`gathered_elected_output_message_index != FIFO_COUNT ) ? 1 : 0
+`define direct_message (temporal_final_message[DIRECT_MESSAGE_WIDTH])
+
+always@(*) begin
+    destination_fifo = 32'b0;
+    destination_id = 32'b0;
+    if(`message_from_stage_controller) begin
+        destination_fifo = 32'hffffffff;
+        destination_id = MY_ID;
+    end else if (`direct_message) begin
+        destination_fifo = `gathered_elected_output_message_index;
+        destination_id = MY_ID;
+    end else if (X_START == 0) begin
+        destination_fifo = `gathered_elected_output_message_index;
+        destination_id = BOTTOM_FPGA_ID;
+    end else begin
+        destination_fifo = /*$$DEST_LOGIC_1*/;
+        destination_id = /*$$DEST_LOGIC_2*/;
+    end
+end
+
 assign final_fifo_out_data_internal[MASTER_FIFO_WIDTH - 1:0] = `gathered_elected_output_message_data;
-assign final_fifo_out_data_internal[FINAL_FIFO_WIDTH - 1: MASTER_FIFO_WIDTH] = `gathered_elected_output_message_index;
+assign final_fifo_out_data_internal[FINAL_FIFO_WIDTH - 1: MASTER_FIFO_WIDTH] = destination_fifo;
+assign final_fifo_out_data_internal[FINAL_FIFO_WIDTH + FIFO_IDWIDTH - 1: FINAL_FIFO_WIDTH] = 
+    (`gathered_elected_output_message_index != FIFO_COUNT) ? 8'b0 : 8'b11111111;
+assign final_fifo_out_data_internal[HUB_FIFO_WIDTH - 1: FINAL_FIFO_WIDTH + FIFO_IDWIDTH] = destination_id
+
+MY_ID;
 assign final_fifo_out_valid_internal = `gathered_elected_output_message_valid;
 
 // take the direct message from channel

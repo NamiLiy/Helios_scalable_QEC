@@ -51,6 +51,11 @@ localparam HUB_FIFO_WIDTH = /*$$HUB_FIFO_WIDTH*/;
 localparam X_START = /*$$X_START*/;
 localparam X_END = /*$$X_END*/;
 localparam PU_INST = (X_END - X_START + 1); // GENERATE THIS
+localparam MY_ID = /*$$ID*/;
+// localparam TOP_FPGA_ID = /*$$ID*/ - 1;
+// localparam BOTTOM_FPGA_ID = /*$$ID*/ + 1;
+localparam FPGAID_WIDTH = /*$$FPGAID_WIDTH*/;
+localparam FIFO_IDWIDTH = /*$$FIFO_IDWIDTH*/;
 
 input clk;
 input reset;
@@ -159,7 +164,14 @@ decoder_stage_controller_dummy_/*$$ID*/ #(
 
 final_arbitration_unit #(
     .CODE_DISTANCE_X(CODE_DISTANCE_X),
-    .CODE_DISTANCE_Z(CODE_DISTANCE_Z)
+    .CODE_DISTANCE_Z(CODE_DISTANCE_Z),
+    .FPGAID_WIDTH(FPGAID_WIDTH),
+    .HUB_FIFO_WIDTH(HUB_FIFO_WIDTH),
+    .MY_ID(MY_ID),
+    .X_START(X_START),
+    .X_END(X_END),
+    .FIFO_IDWIDTH(FIFO_IDWIDTH),
+    .FIFO_COUNT(FIFO_COUNT)
 ) u_final_arbitration_unit (
     .clk(clk),
     .reset(reset),
@@ -175,7 +187,7 @@ final_arbitration_unit #(
     .sc_fifo_in_data(sc_fifo_in_data),
     .sc_fifo_in_valid(sc_fifo_in_valid),
     .sc_fifo_in_ready(sc_fifo_in_ready),
-    .final_fifo_out_data(final_fifo_out_data[FINAL_FIFO_WIDTH-1:0]),
+    .final_fifo_out_data(final_fifo_out_data),
     .final_fifo_out_valid(final_fifo_out_valid),
     .final_fifo_out_ready(final_fifo_out_ready),
     .final_fifo_in_data(final_fifo_in_data[FINAL_FIFO_WIDTH-1:0]),
@@ -184,6 +196,6 @@ final_arbitration_unit #(
     .has_flying_messages(has_message_flying_interconnect)
 );
 
-assign final_fifo_out_data[HUB_FIFO_WIDTH -1 :FINAL_FIFO_WIDTH] = 0;
+// assign final_fifo_out_data[HUB_FIFO_WIDTH -1 :FINAL_FIFO_WIDTH] = 0;
 
 endmodule

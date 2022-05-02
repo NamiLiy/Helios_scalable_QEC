@@ -106,6 +106,10 @@ edgeCount = 2
 leaf_to_hub_fifo_width = 32 #Pick a proper number
 templateSV = ""
 
+# Now let's calculate dimensions for l2 and above hub cards
+tree_height = math.ceil(math.log2(numSplit))
+
+
 with open("./templates/standard_planar_code_2d.sv","r") as f:
     templateSV = f.read()
 for i in range(numSplit):
@@ -166,5 +170,7 @@ for i in range(numSplit):
     f = open("../design/generated/top_module_for_leaf_" + str(i) + ".sv", "w")
     f.write(OF.out)
     f.close()
+
+
 
 

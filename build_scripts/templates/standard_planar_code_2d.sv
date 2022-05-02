@@ -486,11 +486,11 @@ generate
                 `DIRECT_CHANNEL_VERTICAL_TO_FIFO_INSTANTIATE_OUTPUT(X_START, j)
             end else begin // This is the hard one as it is a split in the middle
                 for(s=0; s <2; s++) begin : s_value
-                if(s==0) begin
-                    `NEIGHBOR_VERTICAL_TO_FIFO_INSTANTIATE(X_START-1, j, k, X_START, j)
-                end else begin
-                    `NEIGHBOR_VERTICAL_TO_FIFO_INSTANTIATE(X_END+1, j, k, X_END, j + CODE_DISTANCE_X)
-                end
+                    if(s==0) begin
+                        `NEIGHBOR_VERTICAL_TO_FIFO_INSTANTIATE(X_START-1, j, k, X_START, j)
+                    end else begin
+                        `NEIGHBOR_VERTICAL_TO_FIFO_INSTANTIATE(X_END+1, j, k, X_END, j + CODE_DISTANCE_X)
+                    end
                 end
                 `DIRECT_CHANNEL_VERTICAL_TO_FIFO_INSTANTIATE_INPUT(X_END , j)
                 `DIRECT_CHANNEL_VERTICAL_TO_FIFO_INSTANTIATE_OUTPUT(X_START, j)
