@@ -3,6 +3,9 @@ import partitionScheme as pt
 import math
 import copy
 
+codeDistanceX = 3
+codeDistanceZ = 2
+
 class hdlTemplate:
     out = ""
     def __init__(self, out):
@@ -98,78 +101,198 @@ def inlineCase(var, pairs, otw):
 #     f.write(OF.out)
 #     f.close()
 
+def add_hub(node):
+    print("Hub " + str(node.id))
+    with open("./templates/hub_wrapper.sv","r") as f:
+        templateSV = f.read()
+        OF = hdlTemplate(templateSV)
+        OF.r("ID", node.id)
+        OF.r("CODE_DISTANCE_X", codeDistanceX)
+        OF.r("CODE_DISTANCE_Z", codeDistanceZ)
+        OF.r("ID", node.id)
+        OF.r("LEVEL", node.level)
+        OF.r("PARENT", node.parent)
+        OF.r("CHILD_ID", node.child_id)
+        OF.r("NUM_CHILDREN", node.num_children)
+
+        # Write to file
+        f = open("../design/generated/top_level_test_bench.sv", "a")
+        f.write(OF.out)
+        f.close()
+    return
+
+def add_leaf(node):
+    print("Leaf " + str(node.id))
+    with open("./templates/leaf_wrapper.sv","r") as f:
+        templateSV = f.read()
+        OF = hdlTemplate(templateSV)
+        OF.r("ID", node.id)
+        OF.r("CODE_DISTANCE_X", codeDistanceX)
+        OF.r("CODE_DISTANCE_Z", codeDistanceZ)
+        OF.r("ID", node.id)
+        OF.r("PARENT", node.parent)
+        OF.r("CHILD_ID", node.child_id)
+
+        # Write to file
+        f = open("../design/generated/top_level_test_bench.sv", "a")
+        f.write(OF.out)
+        f.close()
+    return
+
+def add_root_hub(node):
+    print("Root hub " + str(node.id))
+    with open("./templates/root_hub_wrapper.sv","r") as f:
+        templateSV = f.read()
+        OF = hdlTemplate(templateSV)
+        OF.r("ID", node.id)
+        OF.r("CODE_DISTANCE_X", codeDistanceX)
+        OF.r("CODE_DISTANCE_Z", codeDistanceZ)
+        OF.r("ID", node.id)
+        OF.r("LEVEL", node.level)
+        OF.r("CHILD_ID", node.child_id)
+        OF.r("NUM_CHILDREN", node.num_children)
+
+        # Write to file
+        f = open("../design/generated/top_level_test_bench.sv", "w")
+        f.write(OF.out)
+        f.close()
+    return
+
+def add_interconnection(node):
+    print("interconnection " + str(node.id))
+    with open("./templates/interconnection_model_wrapper.sv","r") as f:
+        templateSV = f.read()
+        OF = hdlTemplate(templateSV)
+        OF.r("ID", node.id)
+        # Write to file
+        f = open("../design/generated/top_level_test_bench.sv", "a")
+        f.write(OF.out)
+        f.close()
+    return
+
+def tree_iterate(node):
+    print(node.id)
+    if node.children:
+        if node.id == 0:
+            add_root_hub(node)
+        else:
+            add_hub(node)
+        add_interconnection(node)
+    else:
+        add_leaf(node)
+    for child in node.children:
+        # add_interconnection(node.id, child.id)
+        tree_iterate(child)
+
+    if node.id == 0:
+        f = open("../design/generated/top_level_test_bench.sv", "a")
+        f.write("\n\nendmodule")
+    return
+
 # This is a very temporary workaround
-codeDistanceX = 3
-codeDistanceZ = 2
+
 numSplit = 2
-edgeCount = 2
 leaf_to_hub_fifo_width = 32 #Pick a proper number
+treeStructure = user_configuration.treeConfig()
+# edgeCount = 2
 templateSV = ""
 
+tree_iterate(treeStructure)
+
 # Now let's calculate dimensions for l2 and above hub cards
-tree_height = math.ceil(math.log2(numSplit))
 
 
-with open("./templates/standard_planar_code_2d.sv","r") as f:
-    templateSV = f.read()
-for i in range(numSplit):
-    x_start = math.ceil(codeDistanceX *i / numSplit)
-    x_end = math.ceil(codeDistanceX *(i+1) / numSplit) - 1
-    if(i == 0 or i == numSplit - 1):
-        edgeCount = codeDistanceZ
-    else:
-        edgeCount = codeDistanceZ*2
-    print(x_start)
-    print(x_end)
-    OF = hdlTemplate(templateSV)
-    OF.r("ID", str(i))
-    OF.r("CODE_DISTANCE_X", codeDistanceX)
-    OF.r("CODE_DISTANCE_Z", codeDistanceZ)
-    OF.r("EDGE_COUNT", edgeCount) # This is split edges per measurement round
-    OF.r("X_START", x_start) # This is split edges per measurement round
-    OF.r("X_END", x_end) # This is split edges per measurement round
+# with open("./templates/standard_planar_code_2d.sv","r") as f:
+#     templateSV = f.read()
+# for i in range(numSplit):
+#     x_start = math.ceil(codeDistanceX *i / numSplit)
+#     x_end = math.ceil(codeDistanceX *(i+1) / numSplit) - 1
+#     if(i == 0 or i == numSplit - 1):
+#         edgeCount = codeDistanceZ
+#     else:
+#         edgeCount = codeDistanceZ*2
+#     print(x_start)
+#     print(x_end)
+#     OF = hdlTemplate(templateSV)
+#     OF.r("ID", str(i))
+#     OF.r("CODE_DISTANCE_X", codeDistanceX)
+#     OF.r("CODE_DISTANCE_Z", codeDistanceZ)
+#     OF.r("EDGE_COUNT", edgeCount) # This is split edges per measurement round
+#     OF.r("X_START", x_start) # This is split edges per measurement round
+#     OF.r("X_END", x_end) # This is split edges per measurement round
 
-    # Write to file
-    f = open("../design/generated/standard_planar_code_2d_" + str(i) + ".sv", "w")
-    f.write(OF.out)
-    f.close()
+#     # Write to file
+#     f = open("../design/generated/standard_planar_code_2d_" + str(i) + ".sv", "w")
+#     f.write(OF.out)
+#     f.close()
 
-with open("./templates/decoder_stage_controller_dummy.sv","r") as f:
-    templateSV = f.read()
-for i in range(numSplit):
-    x_start = math.ceil(codeDistanceX *i / numSplit)
-    x_end = math.ceil(codeDistanceX *(i+1) / numSplit) - 1
-    OF = hdlTemplate(templateSV)
-    OF.r("ID", str(i))
-    OF.r("CODE_DISTANCE_X", codeDistanceX)
-    OF.r("CODE_DISTANCE_Z", codeDistanceZ)
-    OF.r("EDGE_COUNT", edgeCount) # This is split edges per measurement round
-    OF.r("X_START", x_start) # This is split edges per measurement round
-    OF.r("X_END", x_end) # This is split edges per measurement round
+# with open("./templates/decoder_stage_controller_dummy.sv","r") as f:
+#     templateSV = f.read()
+# for i in range(numSplit):
+#     x_start = math.ceil(codeDistanceX *i / numSplit)
+#     x_end = math.ceil(codeDistanceX *(i+1) / numSplit) - 1
+#     OF = hdlTemplate(templateSV)
+#     OF.r("ID", str(i))
+#     OF.r("CODE_DISTANCE_X", codeDistanceX)
+#     OF.r("CODE_DISTANCE_Z", codeDistanceZ)
+#     OF.r("EDGE_COUNT", edgeCount) # This is split edges per measurement round
+#     OF.r("X_START", x_start) # This is split edges per measurement round
+#     OF.r("X_END", x_end) # This is split edges per measurement round
 
-    # Write to file
-    f = open("../design/generated/decoder_stage_controller_dummy_" + str(i) + ".sv", "w")
-    f.write(OF.out)
-    f.close()
+#     # Write to file
+#     f = open("../design/generated/decoder_stage_controller_dummy_" + str(i) + ".sv", "w")
+#     f.write(OF.out)
+#     f.close()
 
-with open("./templates/top_module_for_leaf.sv","r") as f:
-    templateSV = f.read()
-for i in range(numSplit):
-    x_start = math.ceil(codeDistanceX *i / numSplit)
-    x_end = math.ceil(codeDistanceX *(i+1) / numSplit) - 1
-    OF = hdlTemplate(templateSV)
-    OF.r("ID", str(i))
-    OF.r("CODE_DISTANCE_X", codeDistanceX)
-    OF.r("CODE_DISTANCE_Z", codeDistanceZ)
-    OF.r("EDGE_COUNT", edgeCount) # This is split edges per measurement round
-    OF.r("X_START", x_start) # This is split edges per measurement round
-    OF.r("X_END", x_end) # This is split edges per measurement round
-    OF.r("HUB_FIFO_WIDTH", leaf_to_hub_fifo_width)
+# with open("./templates/top_module_for_leaf.sv","r") as f:
+#     templateSV = f.read()
+# for i in range(numSplit):
+#     x_start = math.ceil(codeDistanceX *i / numSplit)
+#     x_end = math.ceil(codeDistanceX *(i+1) / numSplit) - 1
+#     OF = hdlTemplate(templateSV)
+#     OF.r("ID", str(i))
+#     OF.r("CODE_DISTANCE_X", codeDistanceX)
+#     OF.r("CODE_DISTANCE_Z", codeDistanceZ)
+#     OF.r("EDGE_COUNT", edgeCount) # This is split edges per measurement round
+#     OF.r("X_START", x_start) # This is split edges per measurement round
+#     OF.r("X_END", x_end) # This is split edges per measurement round
+#     OF.r("HUB_FIFO_WIDTH", leaf_to_hub_fifo_width)
 
-    # Write to file
-    f = open("../design/generated/top_module_for_leaf_" + str(i) + ".sv", "w")
-    f.write(OF.out)
-    f.close()
+#     # Write to file
+#     f = open("../design/generated/top_module_for_leaf_" + str(i) + ".sv", "w")
+#     f.write(OF.out)
+#     f.close()
+
+# with open("./templates/final_arbitration.sv","r") as f:
+#     templateSV = f.read()
+# for i in range(numSplit):
+#     x_start = math.ceil(codeDistanceX *i / numSplit)
+#     x_end = math.ceil(codeDistanceX *(i+1) / numSplit) - 1
+#     OF = hdlTemplate(templateSV)
+#     OF.r("ID", str(i))
+#     # write dest logic 1 and 2
+#     OF.r("DEST_LOGIC_1", dest_logic_1)
+#     OF.r("DEST_LOGIC_2", dest_logic_2)
+
+#     f = open("../design/generated/final_arbitration_" + str(i) + ".sv", "w")
+#     f.write(OF.out)
+#     f.close()
+
+# with open("./templates/top_module_hub_.sv","r") as f:
+#     templateSV = f.read()
+# for i in range(numHubs):
+#     x_start = math.ceil(codeDistanceX *i / numSplit)
+#     x_end = math.ceil(codeDistanceX *(i+1) / numSplit) - 1
+#     OF = hdlTemplate(templateSV)
+#     OF.r("ID", str(i))
+#     # write dest logic 1 and 2
+#     OF.r("DEST_LOGIC_1", dest_logic_1)
+#     OF.r("DEST_LOGIC_2", dest_logic_2)
+
+#     f = open("../design/generated/top_module_hub_" + str(i) + ".sv", "w")
+#     f.write(OF.out)
+#     f.close()
+
 
 
 

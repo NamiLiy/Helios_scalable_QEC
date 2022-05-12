@@ -162,7 +162,7 @@ decoder_stage_controller_dummy_/*$$ID*/ #(
     .has_odd_clusters_otherside(has_odd_clusters_otherside)
 );
 
-final_arbitration_unit #(
+final_arbitration_unit/*$$ID*/ #(
     .CODE_DISTANCE_X(CODE_DISTANCE_X),
     .CODE_DISTANCE_Z(CODE_DISTANCE_Z),
     .FPGAID_WIDTH(FPGAID_WIDTH),

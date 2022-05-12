@@ -9,14 +9,14 @@ module top_module_hub_/*$$LEVEL*/_/*$$ID*/ #(
     reset,
 
     // Temporary ports for debug
-    new_round_start,
-    is_error_syndromes,
-    roots,
-    result_valid,
-    iteration_counter,
-    cycle_counter,
-    deadlock,
-    final_cardinality,
+    // new_round_start,
+    // is_error_syndromes,
+    // roots,
+    // result_valid,
+    // iteration_counter,
+    // cycle_counter,
+    // deadlock,
+    // final_cardinality,
 
     upstream_fifo_out_data,
     upstream_fifo_out_valid,
@@ -60,17 +60,17 @@ localparam FIFO_IDWIDTH = /*$$FIFO_IDWIDTH*/;
 
 input clk;
 input reset;
-input new_round_start;
-input [PU_COUNT-1:0] is_error_syndromes;
-output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
-output reg result_valid;
-output reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
-output [31:0] cycle_counter;
-output deadlock;
-output final_cardinality;
+// input new_round_start;
+// input [PU_COUNT-1:0] is_error_syndromes;
+// output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
+// output reg result_valid;
+// output reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
+// output [31:0] cycle_counter;
+// output deadlock;
+// output final_cardinality;
 
-output has_message_flying_otherside;
-output has_odd_clusters_otherside;
+// output has_message_flying_otherside;
+// output has_odd_clusters_otherside;
 
 output [HUB_FIFO_WIDTH - 1 :0] upstream_fifo_out_data;
 output upstream_fifo_out_valid;
