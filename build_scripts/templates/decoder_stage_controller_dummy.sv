@@ -245,28 +245,31 @@ always @(posedge clk) begin
                 delay_counter <= 0;
                 result_valid <= 0; // for safety
             end
+            // Todo : Temporary disabling result calculating logic for debugging
             STAGE_RESULT_CALCULATING: begin
-                if(sc_fifo_out_full_internal != 1'b1) begin
-                    sc_fifo_out_valid_internal <= 1'b1;
-                    if(pu_local_index == ROOTS_PER_ROUND - 1) begin
-                        pu_local_index <= 0;
-                        measurement_local_index <= measurement_local_index + 1;
-                    end else begin
-                        pu_local_index <= pu_local_index + 1;
-                    end
-                    if (measurement_local_index < MEASUREMENT_ROUNDS) begin
-                        sc_fifo_out_data_internal[ADDRESS_WIDTH-1:0] <= roots[ADDRESS_WIDTH*ROOT_OFFSET + ADDRESS_WIDTH*PU_COUNT_PER_ROUND*measurement_local_index + pu_local_index*ADDRESS_WIDTH+:ADDRESS_WIDTH-1];
-                        sc_fifo_out_data_internal[ADDRESS_WIDTH] <= is_odd_cardinalities[ROOT_OFFSET + PU_COUNT_PER_ROUND*measurement_local_index + pu_local_index];
-                        sc_fifo_out_data_internal[ADDRESS_WIDTH+1] <= is_touching_boundaries[ROOT_OFFSET + PU_COUNT_PER_ROUND*measurement_local_index + pu_local_index];
-                    end else begin
-                        sc_fifo_out_data_internal[MASTER_FIFO_WIDTH-1:3] <= 32'b0;
-                        sc_fifo_out_data_internal[2:0] <= 32'd4;
-                        stage <= STAGE_IDLE;
-                    end
-               end else begin
-                   sc_fifo_out_valid_internal <= 1'b0;
-               end
-               result_valid <= 0; // for safety
+                stage <= STAGE_IDLE;
+
+            //     if(sc_fifo_out_full_internal != 1'b1) begin
+            //         sc_fifo_out_valid_internal <= 1'b1;
+            //         if(pu_local_index == ROOTS_PER_ROUND - 1) begin
+            //             pu_local_index <= 0;
+            //             measurement_local_index <= measurement_local_index + 1;
+            //         end else begin
+            //             pu_local_index <= pu_local_index + 1;
+            //         end
+            //         if (measurement_local_index < MEASUREMENT_ROUNDS) begin
+            //             sc_fifo_out_data_internal[ADDRESS_WIDTH-1:0] <= roots[ADDRESS_WIDTH*ROOT_OFFSET + ADDRESS_WIDTH*PU_COUNT_PER_ROUND*measurement_local_index + pu_local_index*ADDRESS_WIDTH+:ADDRESS_WIDTH-1];
+            //             sc_fifo_out_data_internal[ADDRESS_WIDTH] <= is_odd_cardinalities[ROOT_OFFSET + PU_COUNT_PER_ROUND*measurement_local_index + pu_local_index];
+            //             sc_fifo_out_data_internal[ADDRESS_WIDTH+1] <= is_touching_boundaries[ROOT_OFFSET + PU_COUNT_PER_ROUND*measurement_local_index + pu_local_index];
+            //         end else begin
+            //             sc_fifo_out_data_internal[MASTER_FIFO_WIDTH-1:3] <= 32'b0;
+            //             sc_fifo_out_data_internal[2:0] <= 32'd4;
+            //             stage <= STAGE_IDLE;
+            //         end
+            //    end else begin
+            //        sc_fifo_out_valid_internal <= 1'b0;
+            //    end
+            //    result_valid <= 0; // for safety
             end
         endcase
     end

@@ -5,6 +5,9 @@ import copy
 
 codeDistanceX = 3
 codeDistanceZ = 2
+hub_fifo_width = 16
+fpga_id_width = 4
+fifo_id_width = 4
 
 class hdlTemplate:
     out = ""
@@ -101,6 +104,50 @@ def inlineCase(var, pairs, otw):
 #     f.write(OF.out)
 #     f.close()
 
+def add_routing_table(node):
+    with open("./templates/routing_table.sv","r") as f:
+        templateSV = f.read()
+        OF = hdlTemplate(templateSV)
+        OF.r("ID", node.id)
+        OF.r("FPGAID_WIDTH", fpga_id_width)
+        OF.r("FIFO_IDWIDTH", fifo_id_width)
+
+        # Write to file
+        f = open("../design/generated/routing_table_." + str(node.id) + ".sv", "w")
+        f.write(OF.out)
+        f.close()
+
+        f = open("../design/generated/routing_table_." + str(node.id) + ".sv", "a")
+
+        # Routing logic
+        for idx, child in enumerate(node.children):
+            l1 = get_child_list(child)
+            for fpga in l1:
+                f.write("\n" + str(fpga_id_width)+"'d"+str(fpga)+" : destination_index = "+ str(idx)+";")
+
+        f.write("\ndefault : destination_index = {" + str(fifo_id_width) + "{1'b1}};") #{128{1'b1}};
+        f.write("\nendcase")
+        f.write("\nend")
+        f.write("\n\nendmodule")
+        f.close()
+    return
+
+# Not the top module of the root hub though
+def add_hub_top_module(node):
+    with open("./templates/top_module_hub.sv","r") as f:
+        templateSV = f.read()
+        OF = hdlTemplate(templateSV)
+        OF.r("ID", node.id)
+        OF.r("FPGAID_WIDTH", fpga_id_width)
+        OF.r("FIFO_IDWIDTH", fifo_id_width)
+        OF.r("DOWNSTREAM_FIFO_COUNT", node.num_children)
+        OF.r("HUB_FIFO_WIDTH", hub_fifo_width)
+
+        # Write to file
+        f = open("../design/generated/top_module_hub_" + str(node.id) + ".sv", "w")
+        f.write(OF.out)
+        f.close()
+
 def add_hub(node):
     print("Hub " + str(node.id))
     with open("./templates/hub_wrapper.sv","r") as f:
@@ -119,10 +166,18 @@ def add_hub(node):
         f = open("../design/generated/top_level_test_bench.sv", "a")
         f.write(OF.out)
         f.close()
+
+    # Add hub top module
+    add_hub_top_module(node)
+
+    # Add routing table
+    add_routing_table(node)
     return
 
 def add_leaf(node):
     print("Leaf " + str(node.id))
+
+    # Add test bench
     with open("./templates/leaf_wrapper.sv","r") as f:
         templateSV = f.read()
         OF = hdlTemplate(templateSV)
@@ -156,6 +211,43 @@ def add_root_hub(node):
         f = open("../design/generated/top_level_test_bench.sv", "w")
         f.write(OF.out)
         f.close()
+
+    # Add root hub module
+    with open("./templates/root_hub.sv","r") as f:
+        templateSV = f.read()
+        OF = hdlTemplate(templateSV)
+        OF.r("ID", node.id)
+        OF.r("CODE_DISTANCE_X", codeDistanceX)
+        OF.r("CODE_DISTANCE_Z", codeDistanceZ)
+        OF.r("FPGAID_WIDTH", fpga_id_width)
+        OF.r("FIFO_IDWIDTH", fifo_id_width)
+        OF.r("DOWNSTREAM_FIFO_COUNT", node.num_children)
+        OF.r("HUB_FIFO_WIDTH", hub_fifo_width)
+
+        # Write to file
+        f = open("../design/generated/root_hub_" + str(node.id) + ".sv", "w")
+        f.write(OF.out)
+        f.close()
+
+    # Add hub top module
+    add_hub_top_module(node)
+
+    # Add routing table
+    add_routing_table(node)
+
+    # Add stage controller master
+    with open("./templates/decoder_stage_controller_master.sv","r") as f:
+        templateSV = f.read()
+        OF = hdlTemplate(templateSV)
+        OF.r("ID", str(node.id))
+        OF.r("CODE_DISTANCE_X", codeDistanceX)
+        OF.r("CODE_DISTANCE_Z", codeDistanceZ)
+
+        # Write to file
+        f = open("../design/generated/decoder_stage_controller_master_" + str(node.id) + ".sv", "w")
+        f.write(OF.out)
+        f.close()
+
     return
 
 def add_interconnection(node):
@@ -170,7 +262,7 @@ def add_interconnection(node):
         f.close()
     return
 
-def tree_iterate(node):
+def write_verilog_files(node):
     print(node.id)
     if node.children:
         if node.id == 0:
@@ -182,22 +274,104 @@ def tree_iterate(node):
         add_leaf(node)
     for child in node.children:
         # add_interconnection(node.id, child.id)
-        tree_iterate(child)
+        write_verilog_files(child)
 
     if node.id == 0:
         f = open("../design/generated/top_level_test_bench.sv", "a")
         f.write("\n\nendmodule")
+        f.close()
     return
 
-# This is a very temporary workaround
+def num_FPGAs(node):
+    # print(node.id)
+    total_dependents = 0
+    for child in node.children:
+        total_dependents = total_dependents + num_FPGAs(child)
+    return total_dependents + 1
+
+def num_leafs(node, current_leaf_id):
+    # print(node.id)
+    for child in node.children:
+        current_leaf_id = num_leafs(child, current_leaf_id)
+    if node.children ==[]:
+        node.leaf_id = current_leaf_id
+        current_leaf_id = current_leaf_id + 1
+    if node.id == 0:
+        #root node also has a max leaf id for convenince
+        node.leaf_id = current_leaf_id
+    return current_leaf_id
+
+def populate_grid_of_each_fpga(node, numSplit):
+    if node.children == []:
+        x_start = math.ceil(codeDistanceX *node.leaf_id / numSplit)
+        x_end = math.ceil(codeDistanceX *(node.leaf_id+1) / numSplit) - 1
+        z_start = 0
+        z_end = codeDistanceZ - 1
+        node.grid = {x_start, x_end, z_start, z_end}
+        print(str(node.leaf_id) + " : " + str(x_start)+" " + str(x_end))
+        edgeCount = 0
+        if(node.leaf_id == 0 or node.leaf_id == numSplit - 1):
+            edgeCount = codeDistanceZ
+        else:
+            edgeCount = codeDistanceZ*2
+        node.edge_count = edgeCount
+    for child in node.children:
+        populate_grid_of_each_fpga(child, numSplit)
+    return
+
+def get_max_edge_count(node):
+    max_edge_count = 0
+    if node.children == []:
+        max_edge_count = node.edge_count 
+    for child in node.children:
+        max_edge_count = max(max_edge_count, get_max_edge_count(child))
+    return max_edge_count
+
+def get_child_list(node):
+    list = []
+    if node.children == []:
+        list.append(node.leaf_id)
+    for child in node.children:
+        list = list + get_child_list(child)
+    return list
+
+def calculate_fpga_id_width(node):
+    # FPGA ID is based on total number of FPGAs on the tree + rootFPGA
+    num_leaf_fpgas = num_leafs(node, 0)
+    print("NUM leaf FPGAs = " + str(num_leaf_fpgas)) # +1 for root FPGA and +1 for broadcast message
+    return math.ceil(math.log2(num_leaf_fpgas + 2))
+
+def calculate_fifo_id_width(node):
+    # FPGA ID is based on total number of FPGAs on the tree + rootFPGA
+    numSplit = num_leafs(node, 0)
+    populate_grid_of_each_fpga(node, numSplit)
+    max_edges = get_max_edge_count(node)
+    print("max_edges = " + str(max_edges * codeDistanceX))
+    return math.ceil(math.log2(max_edges*codeDistanceX + 1)) #+1 for stage controller
+
+def calculate_hub_fifo_width():
+    per_dimesnion_width = math.ceil(math.log2(codeDistanceX))
+    direct_message_width = per_dimesnion_width*3 + 2
+    total_width = fpga_id_width + fifo_id_width + 1 + direct_message_width
+    print("total_width = " + str(total_width))
+    return total_width
+
 
 numSplit = 2
 leaf_to_hub_fifo_width = 32 #Pick a proper number
-treeStructure = user_configuration.treeConfig()
+treeStructure, global_details = user_configuration.treeConfig()
+codeDistanceX = global_details.codeDistanceX
+codeDistanceZ = global_details.codeDistanceZ
+hub_fifo_width = global_details.interconnectWidth
+fpga_id_width = calculate_fpga_id_width(treeStructure)
+print("FPGA ID WIDTH = " + str(fpga_id_width))
+fifo_id_width = calculate_fifo_id_width(treeStructure)
+print("FIFO ID WIDTH = " + str(fifo_id_width))
+hub_fifo_width = calculate_hub_fifo_width()
 # edgeCount = 2
 templateSV = ""
 
-tree_iterate(treeStructure)
+write_verilog_files(treeStructure)
 
 # Now let's calculate dimensions for l2 and above hub cards
 

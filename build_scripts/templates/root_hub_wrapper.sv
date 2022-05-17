@@ -37,6 +37,8 @@ localparam MASTER_FIFO_WIDTH = DIRECT_MESSAGE_WIDTH + 1;
 localparam FIFO_COUNT = MEASUREMENT_ROUNDS * (CODE_DISTANCE_Z);
 localparam FINAL_FIFO_WIDTH = MASTER_FIFO_WIDTH + $clog2(FIFO_COUNT+1);
 
+localparam INTERCONNECT_WIDTH = /*$$HUB_FIFO_WIDTH*/;
+
 reg clk;
 reg reset;
 reg new_round_start = 0;
@@ -235,7 +237,7 @@ end
 
 
 
-top_module_hub_/*$$ID*/ #(
+root_hub_/*$$ID*/ #(
     .CODE_DISTANCE_X(/*$$CODE_DISTANCE_X*/),
     .CODE_DISTANCE_Z(/*$$CODE_DISTANCE_Z*/)
     .WEIGHT_X(WEIGHT_X)
@@ -246,22 +248,22 @@ top_module_hub_/*$$ID*/ #(
     .reset(reset),
 
     // Temporary ports for debug
-    // .new_round_start(new_round_start),
+    .new_round_start(new_round_start),
     // .is_error_syndromes(is_error_syndromes),
     // .roots(roots),
-    // .result_valid(result_valid),
-    // .iteration_counter(iteration_counter),
-    // .cycle_counter(cycle_counter),
-    // .deadlock(deadlock),
-    // .final_cardinality(final_cardinality)
+    .result_valid(result_valid),
+    .iteration_counter(iteration_counter),
+    .cycle_counter(cycle_counter),
+    .deadlock(deadlock),
+    .final_cardinality(final_cardinality)
 
 
-    .upstream_fifo_out_data(),
-    .upstream_fifo_out_valid(),
-    .upstream_fifo_out_ready(1'b1),
-    .upstream_fifo_in_data(),
-    .upstream_fifo_in_valid(1'b0),
-    .upstream_fifo_in_ready(),
+    // .upstream_fifo_out_data(),
+    // .upstream_fifo_out_valid(),
+    // .upstream_fifo_out_ready(1'b1),
+    // .upstream_fifo_in_data(),
+    // .upstream_fifo_in_valid(1'b0),
+    // .upstream_fifo_in_ready(),
 
     .downstream_fifo_out_data(downstream_fifo_out_data_/*$$ID*/),
     .downstream_fifo_out_valid(downstream_fifo_out_valid_/*$$ID*/),

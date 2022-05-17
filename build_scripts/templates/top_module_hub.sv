@@ -1,4 +1,4 @@
-module top_module_hub_/*$$LEVEL*/_/*$$ID*/ #(
+module top_module_hub_/*$$ID*/ #(
     parameter CODE_DISTANCE_X = 3,
     parameter CODE_DISTANCE_Z = 2,
     parameter WEIGHT_X = 1,
@@ -254,7 +254,7 @@ reg [DOWNSTREAM_FIFO_COUNT : 0] output_valid_register;
 `define message_from_stage_controller (output_message_register[HUB_FIFO_WIDTH-FPGAID_WIDTH-1:HUB_FIFO_WIDTH-FPGAID_WIDTH-FIFO_IDWIDTH] == 8'b11111111 ? 1 : 0)
 `define direct_message (output_message_register[DIRECT_MESSAGE_WIDTH])
 
-reg [DOWNSTREAM_FIFO_COUNT : 0] destination_index;
+wire [DOWNSTREAM_FIFO_COUNT : 0] destination_index;
 wire [ADDRESS_WIDTH-1 : 0] direct_address; 
 
 assign direct_address = output_message_register [DIRECT_MESSAGE_WIDTH - 1 : 2];
@@ -269,19 +269,24 @@ assign dest_fpga_id = output_message_register[HUB_FIFO_WIDTH - 1: HUB_FIFO_WIDTH
 
 genvar k;
 
-generate
-    for (k=0; i < DOWNSTREAM_FIFO_COUNT; k=k+1) begin: downstream_fifo_selectio`default_nettype 
-        if(`direct_message) begin
-            if(direct_address >= lower_bounds[k] && `direct_address <= upper_bounds[k]) begin
-                destination_index[k] = 1'b1;
-            end
-        end else begin
-            if(dest_fpga_id >= lower_bounds_fpga[k] && `direct_address <= upper_bounds_fpga[k]) begin
-                destination_index[k] = 1'b1;
-            end
-        end
-    end
-end
+// generate
+//     for (k=0; i < DOWNSTREAM_FIFO_COUNT; k=k+1) begin: downstream_fifo_selectio`default_nettype 
+//         if(`direct_message) begin
+//             if(direct_address >= lower_bounds[k] && `direct_address <= upper_bounds[k]) begin
+//                 destination_index[k] = 1'b1;
+//             end
+//         end else begin
+//             if(dest_fpga_id >= lower_bounds_fpga[k] && `direct_address <= upper_bounds_fpga[k]) begin
+//                 destination_index[k] = 1'b1;
+//             end
+//         end
+//     end
+// end
+
+  routing_table_/*$$ID*/ ru (
+      .dest_fpga_id(dest_fpga_id),
+      .destination_index(destination_index)
+  );
 
 
 
@@ -293,18 +298,18 @@ always@(posedge clk)
                     output_valid_register[DOWNSTREAM_FIFO_COUNT-1 :0] <= {DOWNSTREAM_FIFO_COUNT{1'b1}};
                     output_valid_register[DOWNSTREAM_FIFO_COUNT] <= 1'b0;
                 end else if(`direct_message) begin
-                    output_valid_register[DOWNSTREAM_FIFO_COUNT-1 :0] <= destination_index;
+                    output_valid_register[DOWNSTREAM_FIFO_COUNT :0] <= destination_index;
                 end else begin
-                    output_valid_register[DOWNSTREAM_FIFO_COUNT-1 :0] <= destination_index;
+                    output_valid_register[DOWNSTREAM_FIFO_COUNT :0] <= destination_index;
                 end
             end else begin
                 if(`message_from_stage_controller) begin
                     output_valid_register[DOWNSTREAM_FIFO_COUNT-1 :0] <= {DOWNSTREAM_FIFO_COUNT{1'b0}};
                     output_valid_register[DOWNSTREAM_FIFO_COUNT] <= 1'b1;
                 end else if(`direct_message) begin
-                    output_valid_register[DOWNSTREAM_FIFO_COUNT-1 :0] <= destination_index;
+                    output_valid_register[DOWNSTREAM_FIFO_COUNT :0] <= destination_index;
                 end else begin
-                    output_valid_register[DOWNSTREAM_FIFO_COUNT-1 :0] <= destination_index;
+                    output_valid_register[DOWNSTREAM_FIFO_COUNT :0] <= destination_index;
                 end        
             end
         end else begin
@@ -313,10 +318,25 @@ always@(posedge clk)
     end
 end
 
+assign upstream_fifo_out_data = output_message_register;
+assign upstream_fifo_out_valid = output_valid_register[DOWNSTREAM_FIFO_COUNT];
+
+`define downstream_fifo_out_data(i) downstream_fifo_out_data[((i+1) * HUB_FIFO_WIDTH) - 1 : (i * HUB_FIFO_WIDTH)]
+
+generate
+    for (i=0; i < DOWNSTREAM_FIFO_COUNT; i=i+1) begin: writing_incoming_data
+        assign `downstream_fifo_out_data(i) = output_message_register;
+    end
+endgenerate
+
+assign  downstream_fifo_out_valid = output_valid_register[DOWNSTREAM_FIFO_COUNT - 1 :0];
+
 // upstream messages from the stage controller has to be broadcasted down
 // upstream messages for neighboring or blocking FIFOs need to be send to the correct downstream port
 // downstream messages from stage controller has to be send to upstream (unless this is the root)
 // upstream messages for neighboring or blocking FIFOs need to be send to the correct downstream port
+
+endmodule
 
 
 
