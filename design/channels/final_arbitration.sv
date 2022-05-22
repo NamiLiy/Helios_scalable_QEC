@@ -7,8 +7,7 @@ module final_arbitration_unit#(
     // parameter X_START = 0,
     // parameter X_END = 0,
     parameter FIFO_IDWIDTH = 8,
-    parameter FIFO_COUNT = 8,
-    parameter FPGA_ID_WIDTH
+    parameter FIFO_COUNT = 8
 )(
     clk,
     reset,
@@ -296,7 +295,7 @@ assign combined_fifo_in_ready_vector[FIFO_COUNT] = sc_fifo_in_ready;
 `define master_fifo_in_data(i) combined_fifo_in_data_vector[((i+1) * HUB_FIFO_WIDTH) - 1 : (i * HUB_FIFO_WIDTH)]
 `define master_fifo_in_valid(i) combined_fifo_in_valid_vector[i]
 `define master_fifo_in_ready(i) combined_fifo_in_ready_vector[i]
-`define destination_index final_fifo_in_data_internal[HUB_FIFO_WIDTH - FPGA_ID_WIDTH - 1 : HUB_FIFO_WIDTH - FPGA_ID_WIDTH - FIFO_IDWIDTH]
+`define destination_index final_fifo_in_data_internal[HUB_FIFO_WIDTH - FPGAID_WIDTH - 1 : HUB_FIFO_WIDTH - FPGAID_WIDTH - FIFO_IDWIDTH]
 
 generate
     for (i=0; i < TRUE_FIFO_COUNT; i=i+1) begin: writing_incoming_data
@@ -312,6 +311,7 @@ generate
         end else begin:
             assign `master_fifo_in_valid(i) = 
                 ((`destination_index == {FIFO_IDWIDTH{1'b1}}) && !final_fifo_in_empty_internal);
+        end
     end
 endgenerate
 

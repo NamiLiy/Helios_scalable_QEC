@@ -11,6 +11,13 @@ class Route_Entry:
         self.fpga=fpga
         self.fifo=fifo
 
+class Node_Grid:
+    def __init__(self, x_start, x_end, z_start, z_end):
+        self.x_start=x_start
+        self.x_end=x_end
+        self.z_start=z_end
+        self.z_start=z_end
+
 class Node:
     def __init__(self, id):
         self.children = []
@@ -20,7 +27,7 @@ class Node:
         self.child_id = 0
         self.num_children = 0
         self.leaf_id = 0
-        self.grid = {0,0,0,0}  #x_start x_end z_start z_end
+        self.grid = Node_Grid(0,0,0,0)
         self.edge_count = 0 #This is edges per measurement round
         self.route_directions_neighbour = []
         self.route_directions_direct = []

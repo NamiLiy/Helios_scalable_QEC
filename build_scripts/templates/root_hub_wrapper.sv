@@ -80,6 +80,8 @@ wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_out_ready_d_/*$$ID*/;
 wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_has_message_flying_d_/*$$ID*/;
 wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_has_odd_clusters_d_/*$$ID*/;
 
+genvar i,j,k;
+
 function [ADDRESS_WIDTH-1:0] make_address;
 input [PER_DIMENSION_WIDTH-1:0] i;
 input [PER_DIMENSION_WIDTH-1:0] j;

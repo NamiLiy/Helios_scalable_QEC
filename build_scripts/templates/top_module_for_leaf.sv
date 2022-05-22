@@ -163,13 +163,8 @@ decoder_stage_controller_dummy_/*$$ID*/ #(
 );
 
 final_arbitration_unit/*$$ID*/ #(
-    .CODE_DISTANCE_X(CODE_DISTANCE_X),
-    .CODE_DISTANCE_Z(CODE_DISTANCE_Z),
     .FPGAID_WIDTH(FPGAID_WIDTH),
     .HUB_FIFO_WIDTH(HUB_FIFO_WIDTH),
-    .MY_ID(MY_ID),
-    .X_START(X_START),
-    .X_END(X_END),
     .FIFO_IDWIDTH(FIFO_IDWIDTH),
     .FIFO_COUNT(FIFO_COUNT)
 ) u_final_arbitration_unit (

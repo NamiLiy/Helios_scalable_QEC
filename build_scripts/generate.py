@@ -3,7 +3,8 @@ import user_configuration
 import partitionScheme as pt
 import math
 import copy
-from  user_configuration import Route_Entry 
+from  user_configuration import Route_Entry
+from  user_configuration import Node_Grid  
 
 codeDistanceX = 3
 codeDistanceZ = 2
@@ -190,6 +191,10 @@ def add_leaf(node):
         OF.r("ID", node.id)
         OF.r("PARENT", node.parent)
         OF.r("CHILD_ID", node.child_id)
+        x_start = node.grid.x_start
+        x_end = node.grid.x_end
+        OF.r("X_START", x_start) # This is split edges per measurement round
+        OF.r("X_END", x_end) # This is split edges per measurement round
 
         # Write to file
         f = open("../design/generated/top_level_test_bench.sv", "a")
@@ -199,8 +204,8 @@ def add_leaf(node):
     # Add leaf top module
     with open("./templates/top_module_for_leaf.sv","r") as f:
         templateSV = f.read()
-        x_start = list(node.grid)[0]
-        x_end = list(node.grid)[1]
+        x_start = node.grid.x_start
+        x_end = node.grid.x_end
         OF = hdlTemplate(templateSV)
         OF.r("ID", node.id)
         OF.r("CODE_DISTANCE_X", codeDistanceX)
@@ -217,8 +222,8 @@ def add_leaf(node):
 
     with open("./templates/standard_planar_code_2d.sv","r") as f:
         templateSV = f.read()
-        x_start = list(node.grid)[0]
-        x_end = list(node.grid)[1]
+        x_start = node.grid.x_start
+        x_end = node.grid.x_end
 
         OF = hdlTemplate(templateSV)
         OF.r("ID", node.id)
@@ -246,8 +251,8 @@ def add_leaf(node):
         OF.r("CODE_DISTANCE_X", codeDistanceX)
         OF.r("CODE_DISTANCE_Z", codeDistanceZ)
         OF.r("HUB_FIFO_WIDTH", hub_fifo_width)
-        x_start = list(node.grid)[0]
-        x_end = list(node.grid)[1]
+        x_start = node.grid.x_start
+        x_end = node.grid.x_end
         OF.r("X_START", x_start) # This is split edges per measurement round
         OF.r("X_END", x_end) # This is split edges per measurement round
 
@@ -255,9 +260,6 @@ def add_leaf(node):
         f = open("../design/generated/decoder_stage_controller_dummy_" + str(node.id) + ".sv", "w")
         f.write(OF.out)
         f.close()
-
-    
-
     return
 
 
@@ -374,7 +376,7 @@ def populate_grid_of_each_fpga(node, numSplit):
         x_end = math.ceil(codeDistanceX *(node.leaf_id+1) / numSplit) - 1
         z_start = 0
         z_end = codeDistanceZ - 1
-        node.grid = {x_start, x_end, z_start, z_end}
+        node.grid = Node_Grid(x_start, x_end, z_start, z_end)
         print(str(node.leaf_id) + " : " + str(x_start)+" " + str(x_end))
         edgeCount = 0
         if(node.leaf_id == 0 or node.leaf_id == numSplit - 1):
@@ -405,8 +407,8 @@ def find_node_from_leaf_id(leaf_id):
 def create_routing_destinations(node, numSplit):
     print(str(node.leaf_id) + str(node.grid))
     if node.children == []:
-        x_start = list(node.grid)[0]
-        x_end = list(node.grid)[1]
+        x_start = node.grid.x_start
+        x_end = node.grid.x_end
         predecessor = find_node_from_leaf_id(node.leaf_id - 1)
         successor = find_node_from_leaf_id(node.leaf_id + 1)
         last_leaf = find_node_from_leaf_id(numSplit - 1)

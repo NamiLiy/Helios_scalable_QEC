@@ -27,3 +27,14 @@ top_module_for_leaf_/*$$ID*/ #(
     .has_message_flying_otherside(downstream_has_message_flying_d_/*$$PARENT*/[/*$$CHILD_ID*/]),
     .has_odd_clusters_otherside(downstream_has_odd_cluster_d_/*$$PARENT*/[/*$$CHILD_ID*/])
 );
+
+generate
+    for (k=0; k < MEASUREMENT_ROUNDS; k=k+1) begin: assign_k
+        for (i=/*$$X_START*/; i <= /*$$X_END*/; i=i+1) begin: assign_i
+            for (j=0; j < CODE_DISTANCE_Z; j=j+1) begin: assign_j
+                `root(i, j, k) = roots_/*$$ID*/[ADDRESS_WIDTH*`INDEX(i, j, k) +: ADDRESS_WIDTH];
+            end
+        end
+    end
+endgenerate
+
