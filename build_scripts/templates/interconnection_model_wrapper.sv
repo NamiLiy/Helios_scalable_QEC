@@ -1,6 +1,7 @@
 interonncetion_model_wrapper #(
-    .WIDTH(WIDTH),
-    .LATENCY(LATENCY)
+    .WIDTH(INTERCONNECT_WIDTH),
+    .LATENCY(1),
+    .CHANNELS(/*$$NUM_CHILDREN*/)
 ) u_interconnection_model_/*$$ID*/(
     .clk(clk),
     .reset(reset),

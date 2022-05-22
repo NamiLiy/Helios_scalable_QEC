@@ -78,17 +78,17 @@ input [HUB_FIFO_WIDTH - 1 :0] final_fifo_in_data;
 input final_fifo_in_valid;
 output final_fifo_in_ready;
 
-wire [MASTER_FIFO_WIDTH*FIFO_COUNT - 1 :0] master_fifo_out_data_vector;
+wire [HUB_FIFO_WIDTH*FIFO_COUNT - 1 :0] master_fifo_out_data_vector;
 wire [FIFO_COUNT - 1 :0] master_fifo_out_valid_vector;
 wire [FIFO_COUNT - 1 :0] master_fifo_out_ready_vector;
-wire [MASTER_FIFO_WIDTH*FIFO_COUNT - 1 :0] master_fifo_in_data_vector;
+wire [HUB_FIFO_WIDTH*FIFO_COUNT - 1 :0] master_fifo_in_data_vector;
 wire [FIFO_COUNT - 1 :0] master_fifo_in_valid_vector;
 wire [FIFO_COUNT - 1 :0] master_fifo_in_ready_vector;
 
-wire [MASTER_FIFO_WIDTH - 1 :0] sc_fifo_out_data;
+wire [HUB_FIFO_WIDTH - 1 :0] sc_fifo_out_data;
 wire sc_fifo_out_valid;
 wire sc_fifo_out_ready;
-wire [MASTER_FIFO_WIDTH - 1 :0] sc_fifo_in_data;
+wire [HUB_FIFO_WIDTH - 1 :0] sc_fifo_in_data;
 wire sc_fifo_in_valid;
 wire sc_fifo_in_ready;
 

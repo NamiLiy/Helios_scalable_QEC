@@ -43,10 +43,11 @@ localparam MEASUREMENT_ROUNDS = `MAX(CODE_DISTANCE_X, CODE_DISTANCE_Z);
 localparam PER_DIMENSION_WIDTH = $clog2(MEASUREMENT_ROUNDS);
 localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
 localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
-localparam UNION_MESSAGE_WIDTH = 2 * ADDRESS_WIDTH;  // [old_root, updated_root]
-localparam MASTER_FIFO_WIDTH = UNION_MESSAGE_WIDTH + 1 + 1;
+localparam DIRECT_MESSAGE_WIDTH = ADDRESS_WIDTH + 1 + 1;  // [receiver, is_odd_cardinality_root, is_touching_boundary]
+localparam MASTER_FIFO_WIDTH = DIRECT_MESSAGE_WIDTH + 1;
 localparam X_START = /*$$X_START*/;
 localparam X_END = /*$$X_END*/;
+localparam HUB_FIFO_WIDTH = /*$$HUB_FIFO_WIDTH*/;
 
 localparam MAXIMUM_DELAY = `MAX3(BOUNDARY_GROW_DELAY, SPREAD_CLUSTER_DELAY, SYNC_IS_ODD_CLUSTER_DELAY);
 localparam COUNTER_WIDTH = $clog2(MAXIMUM_DELAY + 1);
@@ -68,10 +69,10 @@ output reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
 output reg [31:0] cycle_counter;
 output reg deadlock;
 output final_cardinality;
-output [MASTER_FIFO_WIDTH - 1 :0] sc_fifo_out_data;
+output [HUB_FIFO_WIDTH - 1 :0] sc_fifo_out_data;
 output sc_fifo_out_valid;
 input sc_fifo_out_ready;
-input [MASTER_FIFO_WIDTH - 1 :0] sc_fifo_in_data;
+input [HUB_FIFO_WIDTH - 1 :0] sc_fifo_in_data;
 input sc_fifo_in_valid;
 output sc_fifo_in_ready;
 output has_message_flying_otherside;
@@ -88,18 +89,18 @@ wire done_from_calculator;
 reg has_messages_flying_both_sides;
 reg has_odd_clusters_both_sides;
 
-reg [MASTER_FIFO_WIDTH - 1 :0] sc_fifo_out_data_internal;
+reg [HUB_FIFO_WIDTH - 1 :0] sc_fifo_out_data_internal;
 reg sc_fifo_out_valid_internal;
 wire sc_fifo_out_full_internal;
 
-wire [MASTER_FIFO_WIDTH - 1 :0] sc_fifo_in_data_internal;
+wire [HUB_FIFO_WIDTH - 1 :0] sc_fifo_in_data_internal;
 wire sc_fifo_in_empty_internal;
 reg sc_fifo_in_ready_internal;
 
 wire sc_fifo_out_empty;
 assign sc_fifo_out_valid = !sc_fifo_out_empty;
 
-fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH)) out_fifo 
+fifo_fwft #(.DEPTH(16), .WIDTH(HUB_FIFO_WIDTH)) out_fifo 
     (
     .clk(clk),
     .srst(reset),
@@ -114,7 +115,7 @@ fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH)) out_fifo
 wire sc_fifo_in_full;
 assign sc_fifo_in_ready = !sc_fifo_in_full;
 
-fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH)) in_fifo 
+fifo_fwft #(.DEPTH(16), .WIDTH(HUB_FIFO_WIDTH)) in_fifo 
     (
     .clk(clk),
     .srst(reset),

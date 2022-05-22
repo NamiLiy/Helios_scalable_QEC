@@ -1,13 +1,14 @@
-module final_arbitration_unit_/*$$ID*/ #(
-    parameter CODE_DISTANCE_X = 5,
-    parameter CODE_DISTANCE_Z = 4,
+module final_arbitration_unit#(
+    // parameter CODE_DISTANCE_X = 5,
+    // parameter CODE_DISTANCE_Z = 4,
     parameter HUB_FIFO_WIDTH = 32,
     parameter FPGAID_WIDTH = 4,
-    parameter MY_ID = 0 ,
-    parameter X_START = 0,
-    parameter X_END = 0,
+    // parameter MY_ID = 0 ,
+    // parameter X_START = 0,
+    // parameter X_END = 0,
     parameter FIFO_IDWIDTH = 8,
-    parameter FIFO_COUNT = 8
+    parameter FIFO_COUNT = 8,
+    parameter FPGA_ID_WIDTH
 )(
     clk,
     reset,
@@ -35,44 +36,44 @@ module final_arbitration_unit_/*$$ID*/ #(
 `include "parameters.sv"
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
-localparam MEASUREMENT_ROUNDS = `MAX(CODE_DISTANCE_X, CODE_DISTANCE_Z);
-localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
-localparam PER_DIMENSION_WIDTH = $clog2(MEASUREMENT_ROUNDS);
-localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
-localparam DISTANCE_WIDTH = 1 + PER_DIMENSION_WIDTH;
-localparam WEIGHT = 1;  // the weight in MWPM graph
-localparam BOUNDARY_COST = 2 * WEIGHT;
-localparam NEIGHBOR_COST = 2 * WEIGHT;
-localparam BOUNDARY_WIDTH = $clog2(BOUNDARY_COST + 1);
-localparam DIRECT_MESSAGE_WIDTH = ADDRESS_WIDTH + 1 + 1;  // [receiver, is_odd_cardinality_root, is_touching_boundary]
-localparam MASTER_FIFO_WIDTH = DIRECT_MESSAGE_WIDTH + 1;
-// localparam FIFO_COUNT = MEASUREMENT_ROUNDS * (CODE_DISTANCE_Z);
-localparam FINAL_FIFO_WIDTH = MASTER_FIFO_WIDTH + $clog2(FIFO_COUNT+1);
+// localparam MEASUREMENT_ROUNDS = `MAX(CODE_DISTANCE_X, CODE_DISTANCE_Z);
+// localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
+// localparam PER_DIMENSION_WIDTH = $clog2(MEASUREMENT_ROUNDS);
+// localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
+// localparam DISTANCE_WIDTH = 1 + PER_DIMENSION_WIDTH;
+// localparam WEIGHT = 1;  // the weight in MWPM graph
+// localparam BOUNDARY_COST = 2 * WEIGHT;
+// localparam NEIGHBOR_COST = 2 * WEIGHT;
+// localparam BOUNDARY_WIDTH = $clog2(BOUNDARY_COST + 1);
+// localparam DIRECT_MESSAGE_WIDTH = ADDRESS_WIDTH + 1 + 1;  // [receiver, is_odd_cardinality_root, is_touching_boundary]
+// localparam MASTER_FIFO_WIDTH = DIRECT_MESSAGE_WIDTH + 1;
+// // localparam FIFO_COUNT = MEASUREMENT_ROUNDS * (CODE_DISTANCE_Z);
+// localparam FINAL_FIFO_WIDTH = MASTER_FIFO_WIDTH + $clog2(FIFO_COUNT+1);
 
-localparam TOP_FPGA_ID = MY_ID - 1;
-localparam BOTTOM_FPGA_ID = MY_ID + 1;
+// localparam TOP_FPGA_ID = MY_ID - 1;
+// localparam BOTTOM_FPGA_ID = MY_ID + 1;
 
 input clk;
 input reset;
 
-input [MASTER_FIFO_WIDTH*FIFO_COUNT - 1 :0] master_fifo_out_data_vector;
+input [HUB_FIFO_WIDTH*FIFO_COUNT - 1 :0] master_fifo_out_data_vector;
 input [FIFO_COUNT - 1 :0] master_fifo_out_valid_vector;
 output [FIFO_COUNT - 1 :0] master_fifo_out_ready_vector;
-output [MASTER_FIFO_WIDTH*FIFO_COUNT - 1 :0] master_fifo_in_data_vector;
+output [HUB_FIFO_WIDTH*FIFO_COUNT - 1 :0] master_fifo_in_data_vector;
 output [FIFO_COUNT - 1 :0] master_fifo_in_valid_vector;
 input [FIFO_COUNT - 1 :0] master_fifo_in_ready_vector;
 
-input [MASTER_FIFO_WIDTH - 1 :0] sc_fifo_out_data;
+input [HUB_FIFO_WIDTH - 1 :0] sc_fifo_out_data;
 input sc_fifo_out_valid;
 output sc_fifo_out_ready;
-output [MASTER_FIFO_WIDTH - 1 :0] sc_fifo_in_data;
+output [HUB_FIFO_WIDTH - 1 :0] sc_fifo_in_data;
 output sc_fifo_in_valid;
 input sc_fifo_in_ready;
 
 output reg [HUB_FIFO_WIDTH - 1 :0] final_fifo_out_data;
 output final_fifo_out_valid;
 input final_fifo_out_ready;
-input [FINAL_FIFO_WIDTH - 1 :0] final_fifo_in_data;
+input [HUB_FIFO_WIDTH - 1 :0] final_fifo_in_data;
 input final_fifo_in_valid;
 output final_fifo_in_ready;
 
@@ -82,7 +83,7 @@ reg [HUB_FIFO_WIDTH-1: 0] final_fifo_out_data_internal;
 wire final_fifo_out_valid_internal;
 wire final_fifo_out_is_full_internal;
 
-wire [FINAL_FIFO_WIDTH-1: 0] final_fifo_in_data_internal;
+wire [HUB_FIFO_WIDTH-1: 0] final_fifo_in_data_internal;
 reg final_fifo_in_ready_internal;
 wire final_fifo_in_empty_inernal;
 
@@ -116,20 +117,20 @@ fifo_fwft #(.DEPTH(16), .WIDTH(HUB_FIFO_WIDTH)) out_fifo
     .rd_en(final_fifo_out_ready)
 );
 
-localparam TRUE_FIFO_COUNT = FIFO_COUNT + 1; //2
+localparam TRUE_FIFO_COUNT = FIFO_COUNT + 1; //+1 for the stage controller
 
-wire [TRUE_FIFO_COUNT*MASTER_FIFO_WIDTH - 1 : 0] combined_fifo_out_data_vector;
+wire [TRUE_FIFO_COUNT*HUB_FIFO_WIDTH - 1 : 0] combined_fifo_out_data_vector;
 wire [TRUE_FIFO_COUNT - 1 : 0] combined_fifo_out_valid_vector;
 wire [TRUE_FIFO_COUNT - 1 : 0] combined_fifo_out_ready_vector;
 
-assign combined_fifo_out_data_vector [FIFO_COUNT*MASTER_FIFO_WIDTH - 1 : 0] = master_fifo_out_data_vector;
-assign combined_fifo_out_data_vector [TRUE_FIFO_COUNT*MASTER_FIFO_WIDTH - 1 : FIFO_COUNT*MASTER_FIFO_WIDTH] = sc_fifo_out_data;
+assign combined_fifo_out_data_vector [FIFO_COUNT*HUB_FIFO_WIDTH - 1 : 0] = master_fifo_out_data_vector;
+assign combined_fifo_out_data_vector [TRUE_FIFO_COUNT*HUB_FIFO_WIDTH - 1 : FIFO_COUNT*HUB_FIFO_WIDTH] = sc_fifo_out_data;
 assign combined_fifo_out_valid_vector[FIFO_COUNT - 1 : 0]  = master_fifo_out_valid_vector;
 assign combined_fifo_out_valid_vector[FIFO_COUNT]  = sc_fifo_out_valid;
 assign master_fifo_out_ready_vector = combined_fifo_out_ready_vector[FIFO_COUNT - 1 : 0];
 assign sc_fifo_out_ready = combined_fifo_out_ready_vector[FIFO_COUNT];
 
-`define master_coming_data(i) combined_fifo_out_data_vector[((i+1) * MASTER_FIFO_WIDTH) - 1 : (i * MASTER_FIFO_WIDTH)]
+`define master_coming_data(i) combined_fifo_out_data_vector[((i+1) * HUB_FIFO_WIDTH) - 1 : (i * HUB_FIFO_WIDTH)]
 `define master_coming_valid(i) combined_fifo_out_valid_vector[i]
 `define master_coming_is_taken(i) combined_fifo_out_ready_vector[i]
 
@@ -185,47 +186,48 @@ endgenerate
 `define gathered_elected_output_message_index (`expanded_elected_output_message_index(DIRECT_CHANNEL_ROOT_IDX))
 `define gathered_elected_output_message_data (`expanded_elected_output_message_data(DIRECT_CHANNEL_ROOT_IDX))
 
-wire [MASTER_FIFO_WIDTH - 1:0] temporal_final_message;
-assign temporal_final_message = `gathered_elected_output_message_data;
-
-reg [FIFO_IDWIDTH - 1 : 0] destination_fifo;
-reg [FPGAID_WIDTH - 1 : 0] destination_id;
-
-`define message_from_stage_controller (`gathered_elected_output_message_index != FIFO_COUNT ) ? 1 : 0
-`define direct_message (temporal_final_message[DIRECT_MESSAGE_WIDTH])
-
-always@(*) begin
-    destination_fifo = 32'b0;
-    destination_id = 32'b0;
-    if(`message_from_stage_controller) begin
-        destination_fifo = 32'hffffffff;
-        destination_id = MY_ID;
-    end else if (`direct_message) begin
-        destination_fifo = `gathered_elected_output_message_index;
-        destination_id = MY_ID;
-    end else if (X_START == 0) begin
-        destination_fifo = `gathered_elected_output_message_index;
-        destination_id = BOTTOM_FPGA_ID;
-    end else begin
-        destination_fifo = /*$$DEST_LOGIC_1*/;
-        destination_id = /*$$DEST_LOGIC_2*/;
-    end
-end
-
-assign final_fifo_out_data_internal[MASTER_FIFO_WIDTH - 1:0] = `gathered_elected_output_message_data;
-assign final_fifo_out_data_internal[FINAL_FIFO_WIDTH - 1: MASTER_FIFO_WIDTH] = destination_fifo;
-assign final_fifo_out_data_internal[FINAL_FIFO_WIDTH + FIFO_IDWIDTH - 1: FINAL_FIFO_WIDTH] = 
-    (`gathered_elected_output_message_index != FIFO_COUNT) ? 8'b0 : 8'b11111111;
-assign final_fifo_out_data_internal[HUB_FIFO_WIDTH - 1: FINAL_FIFO_WIDTH + FIFO_IDWIDTH] = destination_id;
+wire [HUB_FIFO_WIDTH - 1:0] temporal_final_message;
+assign final_fifo_out_data_internal = `gathered_elected_output_message_data;
 assign final_fifo_out_valid_internal = `gathered_elected_output_message_valid;
 
-// take the direct message from channel
-generate
-    for (i=0; i < TRUE_FIFO_COUNT; i=i+1) begin: taking_direct_message
-        assign `master_coming_is_taken(i) = 
-            ((i == `gathered_elected_output_message_index) && `gathered_elected_output_message_valid  && !final_fifo_out_is_full_internal);
-    end
-endgenerate
+// reg [FIFO_IDWIDTH - 1 : 0] destination_fifo;
+// reg [FPGAID_WIDTH - 1 : 0] destination_id;
+
+// `define message_from_stage_controller (`gathered_elected_output_message_index != FIFO_COUNT ) ? 1 : 0
+// `define direct_message (temporal_final_message[DIRECT_MESSAGE_WIDTH])
+
+// always@(*) begin
+//     destination_fifo = 32'b0;
+//     destination_id = 32'b0;
+//     if(`message_from_stage_controller) begin
+//         destination_fifo = 32'hffffffff;
+//         destination_id = MY_ID;
+//     end else if (`direct_message) begin
+//         destination_fifo = `gathered_elected_output_message_index;
+//         destination_id = MY_ID;
+//     end else if (X_START == 0) begin
+//         destination_fifo = `gathered_elected_output_message_index;
+//         destination_id = BOTTOM_FPGA_ID;
+//     end else begin
+//         destination_fifo = /*$$DEST_LOGIC_1*/;
+//         destination_id = /*$$DEST_LOGIC_2*/;
+//     end
+// end
+
+// assign final_fifo_out_data_internal[MASTER_FIFO_WIDTH - 1:0] = `gathered_elected_output_message_data;
+// assign final_fifo_out_data_internal[FINAL_FIFO_WIDTH - 1: MASTER_FIFO_WIDTH] = destination_fifo;
+// assign final_fifo_out_data_internal[FINAL_FIFO_WIDTH + FIFO_IDWIDTH - 1: FINAL_FIFO_WIDTH] = 
+//     (`gathered_elected_output_message_index != FIFO_COUNT) ? 8'b0 : 8'b11111111;
+// assign final_fifo_out_data_internal[HUB_FIFO_WIDTH - 1: FINAL_FIFO_WIDTH + FIFO_IDWIDTH] = destination_id;
+// assign final_fifo_out_valid_internal = `gathered_elected_output_message_valid;
+
+// // take the direct message from channel
+// generate
+//     for (i=0; i < TRUE_FIFO_COUNT; i=i+1) begin: taking_direct_message
+//         assign `master_coming_is_taken(i) = 
+//             ((i == `gathered_elected_output_message_index) && `gathered_elected_output_message_valid  && !final_fifo_out_is_full_internal);
+//     end
+// endgenerate
 
 // always@(*) begin
 //     sc_fifo_out_ready = 1'b0;
@@ -280,32 +282,36 @@ fifo_fwft #(.DEPTH(16), .WIDTH(FINAL_FIFO_WIDTH)) in_fifo
     .rd_en(final_fifo_in_ready_internal)
 );
 
-wire [TRUE_FIFO_COUNT*MASTER_FIFO_WIDTH - 1 : 0] combined_fifo_in_data_vector;
+wire [TRUE_FIFO_COUNT*HUB_FIFO_WIDTH - 1 : 0] combined_fifo_in_data_vector;
 wire [TRUE_FIFO_COUNT - 1 : 0] combined_fifo_in_valid_vector;
 wire [TRUE_FIFO_COUNT - 1 : 0] combined_fifo_in_ready_vector;
 
-assign master_fifo_in_data_vector = combined_fifo_in_data_vector [FIFO_COUNT*MASTER_FIFO_WIDTH - 1 : 0];
-assign sc_fifo_in_data = combined_fifo_in_data_vector [TRUE_FIFO_COUNT*MASTER_FIFO_WIDTH - 1 : FIFO_COUNT*MASTER_FIFO_WIDTH];
+assign master_fifo_in_data_vector = combined_fifo_in_data_vector [FIFO_COUNT*HUB_FIFO_WIDTH - 1 : 0];
+assign sc_fifo_in_data = combined_fifo_in_data_vector [TRUE_FIFO_COUNT*HUB_FIFO_WIDTH - 1 : FIFO_COUNT*HUB_FIFO_WIDTH];
 assign master_fifo_in_valid_vector = combined_fifo_in_valid_vector[FIFO_COUNT - 1 : 0];
 assign sc_fifo_in_valid = combined_fifo_in_valid_vector[FIFO_COUNT];
 assign combined_fifo_in_ready_vector[FIFO_COUNT - 1 : 0] = master_fifo_in_ready_vector;
 assign combined_fifo_in_ready_vector[FIFO_COUNT] = sc_fifo_in_ready;
 
-`define master_fifo_in_data(i) combined_fifo_in_data_vector[((i+1) * MASTER_FIFO_WIDTH) - 1 : (i * MASTER_FIFO_WIDTH)]
+`define master_fifo_in_data(i) combined_fifo_in_data_vector[((i+1) * HUB_FIFO_WIDTH) - 1 : (i * HUB_FIFO_WIDTH)]
 `define master_fifo_in_valid(i) combined_fifo_in_valid_vector[i]
 `define master_fifo_in_ready(i) combined_fifo_in_ready_vector[i]
-`define destination_index final_fifo_in_data_internal[FINAL_FIFO_WIDTH - 1: MASTER_FIFO_WIDTH]
+`define destination_index final_fifo_in_data_internal[HUB_FIFO_WIDTH - FPGA_ID_WIDTH - 1 : HUB_FIFO_WIDTH - FPGA_ID_WIDTH - FIFO_IDWIDTH]
 
 generate
     for (i=0; i < TRUE_FIFO_COUNT; i=i+1) begin: writing_incoming_data
-        assign `master_fifo_in_data (i) = final_fifo_in_data_internal[MASTER_FIFO_WIDTH - 1 :0];
+        assign `master_fifo_in_data (i) = final_fifo_in_data_internal[HUB_FIFO_WIDTH - 1 :0];
     end
 endgenerate
 
 generate
     for (i=0; i < TRUE_FIFO_COUNT; i=i+1) begin: making_correct_incoming_channel_correct
-        assign `master_fifo_in_valid(i) = 
-            ((i == `destination_index) && !final_fifo_in_empty_internal);
+        if(i < FIFO_COUNT) begin:
+            assign `master_fifo_in_valid(i) = 
+                ((i == `destination_index) && !final_fifo_in_empty_internal);
+        end else begin:
+            assign `master_fifo_in_valid(i) = 
+                ((`destination_index == {FIFO_IDWIDTH{1'b1}}) && !final_fifo_in_empty_internal);
     end
 endgenerate
 

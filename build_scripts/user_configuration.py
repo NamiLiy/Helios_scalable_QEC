@@ -6,6 +6,11 @@ from pickletools import long4
 codeDistanceX = 3
 codeDistanceZ = 2
 
+class Route_Entry:
+    def __init__(self, fpga, fifo):
+        self.fpga=fpga
+        self.fifo=fifo
+
 class Node:
     def __init__(self, id):
         self.children = []
@@ -16,7 +21,9 @@ class Node:
         self.num_children = 0
         self.leaf_id = 0
         self.grid = {0,0,0,0}  #x_start x_end z_start z_end
-        self.edge_count = 0
+        self.edge_count = 0 #This is edges per measurement round
+        self.route_directions_neighbour = []
+        self.route_directions_direct = []
 
 class UserProperties:
     def __init__(self, codeDistanceX, codeDistanceY):

@@ -1,6 +1,8 @@
 module pu_arbitration_unit #(
     parameter CODE_DISTANCE_X = 5,
-    parameter CODE_DISTANCE_Z = 4
+    parameter CODE_DISTANCE_Z = 4,
+    parameter FINAL_FIFO_WIDTH = 32,
+    parameter HEADER_WIDTH = 4
 )(
     clk,
     reset,
@@ -23,6 +25,8 @@ module pu_arbitration_unit #(
     master_fifo_in_valid,
     master_fifo_in_ready,
     has_flying_messages
+    receiver_id_neighbour,
+    receiver_id_direct,
 );
 
 `include "../../parameters/parameters.sv"
@@ -56,20 +60,23 @@ output reg  blocking_fifo_out_ready;
 output [DIRECT_MESSAGE_WIDTH-1: 0] blocking_fifo_in_data;
 output reg blocking_fifo_in_valid;
 input reg blocking_fifo_in_ready;
-output [MASTER_FIFO_WIDTH-1: 0] master_fifo_out_data;
+output [FINAL_FIFO_WIDTH-1: 0] master_fifo_out_data;
 output master_fifo_out_valid;
 input master_fifo_out_ready;
-input [MASTER_FIFO_WIDTH-1: 0] master_fifo_in_data;
+input [FINAL_FIFO_WIDTH-1: 0] master_fifo_in_data;
 input master_fifo_in_valid;
 output master_fifo_in_ready;
 
+input [HEADER_WIDTH-1 : 0] receiver_id_neighbour;
+input [HEADER_WIDTH-1 : 0] receiver_id_direct;
+
 output has_flying_messages;
 
-reg [MASTER_FIFO_WIDTH-1: 0] master_fifo_out_data_internal;
+reg [FINAL_FIFO_WIDTH-1: 0] master_fifo_out_data_internal;
 wire master_fifo_out_valid_internal;
 wire master_fifo_out_is_full_internal;
 
-wire [MASTER_FIFO_WIDTH-1: 0] master_fifo_in_data_internal;
+wire [FINAL_FIFO_WIDTH-1: 0] master_fifo_in_data_internal;
 reg master_fifo_in_ready_internal;
 wire master_fifo_in_empty_internal;
 
@@ -81,7 +88,7 @@ assign master_fifo_in_ready = ! master_fifo_in_full;
 
 assign has_flying_messages = neighbor_fifo_out_valid || neighbor_fifo_in_valid ||blocking_fifo_out_valid || blocking_fifo_in_valid || master_fifo_out_valid || master_fifo_in_valid;
 
-fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH)) out_fifo 
+fifo_fwft #(.DEPTH(16), .WIDTH(FINAL_FIFO_WIDTH)) out_fifo 
     (
     .clk(clk),
     .srst(reset),
@@ -98,11 +105,13 @@ always@(*) begin
     blocking_fifo_out_ready = 1'b0;
     master_fifo_out_data_internal[DIRECT_MESSAGE_WIDTH] = 1'b1;
     master_fifo_out_data_internal[DIRECT_MESSAGE_WIDTH-1:0] = blocking_fifo_out_data;
+    master_fifo_out_data_internal[FINAL_FIFO_WIDTH-1 : DIRECT_MESSAGE_WIDTH+1] = receiver_id_direct
     if(!master_fifo_out_is_full_internal) begin
         if(neighbor_fifo_out_valid) begin
             neighbor_fifo_out_ready = 1'b1;
             master_fifo_out_data_internal[DIRECT_MESSAGE_WIDTH-1:0] = neighbor_fifo_out_data;
             master_fifo_out_data_internal[DIRECT_MESSAGE_WIDTH] = 1'b0;
+            master_fifo_out_data_internal[FINAL_FIFO_WIDTH-1 : DIRECT_MESSAGE_WIDTH+1] = receiver_id_neighbour;
         end else begin
             blocking_fifo_out_ready = 1'b1;
         end

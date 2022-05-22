@@ -1,13 +1,16 @@
+from pickle import FALSE, TRUE
 import user_configuration
 import partitionScheme as pt
 import math
 import copy
+from  user_configuration import Route_Entry 
 
 codeDistanceX = 3
 codeDistanceZ = 2
 hub_fifo_width = 16
 fpga_id_width = 4
 fifo_id_width = 4
+global_pointer_to_parent = None
 
 class hdlTemplate:
     out = ""
@@ -110,7 +113,7 @@ def add_routing_table(node):
         OF = hdlTemplate(templateSV)
         OF.r("ID", node.id)
         OF.r("FPGAID_WIDTH", fpga_id_width)
-        OF.r("FIFO_IDWIDTH", fifo_id_width)
+        OF.r("DOWNSTREAM_FIFO_COUNT", node.num_children)
 
         # Write to file
         f = open("../design/generated/routing_table_." + str(node.id) + ".sv", "w")
@@ -123,9 +126,9 @@ def add_routing_table(node):
         for idx, child in enumerate(node.children):
             l1 = get_child_list(child)
             for fpga in l1:
-                f.write("\n" + str(fpga_id_width)+"'d"+str(fpga)+" : destination_index = "+ str(idx)+";")
+                f.write("\n" + str(fpga_id_width)+"'d"+str(fpga)+" : destination_index = 1 << "+ str(idx)+";")
 
-        f.write("\ndefault : destination_index = {" + str(fifo_id_width) + "{1'b1}};") #{128{1'b1}};
+        f.write("\ndefault : destination_index = 1 << " + str(node.num_children) + ";") 
         f.write("\nendcase")
         f.write("\nend")
         f.write("\n\nendmodule")
@@ -192,7 +195,71 @@ def add_leaf(node):
         f = open("../design/generated/top_level_test_bench.sv", "a")
         f.write(OF.out)
         f.close()
+
+    # Add leaf top module
+    with open("./templates/top_module_for_leaf.sv","r") as f:
+        templateSV = f.read()
+        x_start = list(node.grid)[0]
+        x_end = list(node.grid)[1]
+        OF = hdlTemplate(templateSV)
+        OF.r("ID", node.id)
+        OF.r("CODE_DISTANCE_X", codeDistanceX)
+        OF.r("CODE_DISTANCE_Z", codeDistanceZ)
+        OF.r("EDGE_COUNT", node.edge_count) # This is split edges per measurement round
+        OF.r("X_START", x_start) # This is split edges per measurement round
+        OF.r("X_END", x_end) # This is split edges per measurement round
+        OF.r("HUB_FIFO_WIDTH", hub_fifo_width)
+
+        # Write to file
+        f = open("../design/generated/top_module_for_leaf_" + str(node.id) + ".sv", "w")
+        f.write(OF.out)
+        f.close()
+
+    with open("./templates/standard_planar_code_2d.sv","r") as f:
+        templateSV = f.read()
+        x_start = list(node.grid)[0]
+        x_end = list(node.grid)[1]
+
+        OF = hdlTemplate(templateSV)
+        OF.r("ID", node.id)
+        OF.r("CODE_DISTANCE_X", codeDistanceX)
+        OF.r("CODE_DISTANCE_Z", codeDistanceZ)
+        OF.r("EDGE_COUNT", node.edge_count) # This is split edges per measurement round
+        OF.r("X_START", x_start) # This is split edges per measurement round
+        OF.r("X_END", x_end) # This is split edges per measurement round
+        OF.r("FPGAID_WIDTH", fpga_id_width)
+        OF.r("FIFO_IDWIDTH", fifo_id_width)
+        OF.r("HUB_FIFO_WIDTH", hub_fifo_width)
+        neighbor_routes = generate_routing_string(node.route_directions_neighbour)
+        direct_routes = generate_routing_string(node.route_directions_direct)
+        OF.r("NEIGBOUR_PATH", neighbor_routes)
+        OF.r("DIRECT_PATH", direct_routes)
+        # Write to file
+        f = open("../design/generated/standard_planar_code_2d_" + str(node.id) + ".sv", "w")
+        f.write(OF.out)
+        f.close()
+
+    with open("./templates/decoder_stage_controller_dummy.sv","r") as f:
+        templateSV = f.read()
+        OF = hdlTemplate(templateSV)
+        OF.r("ID", node.id)
+        OF.r("CODE_DISTANCE_X", codeDistanceX)
+        OF.r("CODE_DISTANCE_Z", codeDistanceZ)
+        OF.r("HUB_FIFO_WIDTH", hub_fifo_width)
+        x_start = list(node.grid)[0]
+        x_end = list(node.grid)[1]
+        OF.r("X_START", x_start) # This is split edges per measurement round
+        OF.r("X_END", x_end) # This is split edges per measurement round
+
+        # Write to file
+        f = open("../design/generated/decoder_stage_controller_dummy_" + str(node.id) + ".sv", "w")
+        f.write(OF.out)
+        f.close()
+
+    
+
     return
+
 
 def add_root_hub(node):
     print("Root hub " + str(node.id))
@@ -319,6 +386,83 @@ def populate_grid_of_each_fpga(node, numSplit):
         populate_grid_of_each_fpga(child, numSplit)
     return
 
+def find_node_from_leaf_id_internal(node, leaf_id):
+    if (node.leaf_id == leaf_id):
+        return (node, TRUE)
+    else:
+        for child in node.children:
+            return_node, result = find_node_from_leaf_id_internal(child, leaf_id)
+            if(result == TRUE):
+                return (return_node, TRUE)
+    return (node, FALSE)
+
+def find_node_from_leaf_id(leaf_id):
+    print("REquest for "+str(leaf_id))
+    result = find_node_from_leaf_id_internal(global_pointer_to_parent, leaf_id)
+    return result[0]
+
+
+def create_routing_destinations(node, numSplit):
+    print(str(node.leaf_id) + str(node.grid))
+    if node.children == []:
+        x_start = list(node.grid)[0]
+        x_end = list(node.grid)[1]
+        predecessor = find_node_from_leaf_id(node.leaf_id - 1)
+        successor = find_node_from_leaf_id(node.leaf_id + 1)
+        last_leaf = find_node_from_leaf_id(numSplit - 1)
+        # print(neighbour_routing_list)
+        # if(node.leaf_id == 0):
+        #     print(str(successor.leaf_id)+" "+str(last_leaf.leaf_id))
+
+        for round in range(0,codeDistanceX):
+            for edge in range(0,node.edge_count):
+                if(edge < codeDistanceZ): # All northern edges except the first one
+                    if(node.leaf_id == 0):
+                        # print(node.route_directions_neighbour)
+                        node.route_directions_neighbour.append(Route_Entry(successor.leaf_id, edge + round*(successor.edge_count)))
+                        # print(node.route_directions_neighbour)
+                    else:
+                        if(predecessor.leaf_id == 0):
+                            node.route_directions_neighbour.append(Route_Entry(predecessor.leaf_id, edge + round*(predecessor.edge_count)))
+                        else:
+                            node.route_directions_neighbour.append(Route_Entry(predecessor.leaf_id, edge + codeDistanceZ + round*(predecessor.edge_count)))
+                else: # All southern edges
+                    node.route_directions_neighbour.append(Route_Entry(successor.leaf_id, edge + round*(successor.edge_count)))
+                    # print(node.route_directions_neighbour)
+
+        # node.route_directions_neighbour = neighbour_routing_list;
+
+        for round in range(0,codeDistanceX):
+            for edge in range(0,node.edge_count):
+                if(edge < codeDistanceZ):
+                    if(node.leaf_id == 0):
+                        node.route_directions_direct.append(Route_Entry(last_leaf.leaf_id, edge + round*(successor.edge_count)))
+                    else:
+                        node.route_directions_direct.append(Route_Entry(predecessor.leaf_id, edge + round*(predecessor.edge_count)))
+                else:
+                    node.route_directions_direct.append(Route_Entry(0 , 0))
+
+        # node.route_directions_direct = direct_routing_list;
+        print("Neighbor entries")
+        for entry in node.route_directions_neighbour:
+            print(str(entry.fpga)+" "+str(entry.fifo))
+        print("Direct entries")
+        for entry in node.route_directions_direct:
+            print(str(entry.fpga)+" "+str(entry.fifo))
+
+    for child in node.children:
+        create_routing_destinations(child, numSplit)
+
+def generate_routing_string(route_list):
+    bit_width = fpga_id_width + fifo_id_width
+    start_string = str(bit_width) + "'d"
+    output_string = ""
+    for element in route_list:
+        output_string = output_string + start_string + str((element.fpga << fifo_id_width) + element.fifo) + ", "
+
+    output_string = output_string + "32'd0"
+    return output_string
+
 def get_max_edge_count(node):
     max_edge_count = 0
     if node.children == []:
@@ -345,6 +489,7 @@ def calculate_fifo_id_width(node):
     # FPGA ID is based on total number of FPGAs on the tree + rootFPGA
     numSplit = num_leafs(node, 0)
     populate_grid_of_each_fpga(node, numSplit)
+    create_routing_destinations(node, numSplit)
     max_edges = get_max_edge_count(node)
     print("max_edges = " + str(max_edges * codeDistanceX))
     return math.ceil(math.log2(max_edges*codeDistanceX + 1)) #+1 for stage controller
@@ -360,6 +505,7 @@ def calculate_hub_fifo_width():
 numSplit = 2
 leaf_to_hub_fifo_width = 32 #Pick a proper number
 treeStructure, global_details = user_configuration.treeConfig()
+global_pointer_to_parent = treeStructure
 codeDistanceX = global_details.codeDistanceX
 codeDistanceZ = global_details.codeDistanceZ
 hub_fifo_width = global_details.interconnectWidth
@@ -376,96 +522,9 @@ write_verilog_files(treeStructure)
 # Now let's calculate dimensions for l2 and above hub cards
 
 
-# with open("./templates/standard_planar_code_2d.sv","r") as f:
-#     templateSV = f.read()
-# for i in range(numSplit):
-#     x_start = math.ceil(codeDistanceX *i / numSplit)
-#     x_end = math.ceil(codeDistanceX *(i+1) / numSplit) - 1
-#     if(i == 0 or i == numSplit - 1):
-#         edgeCount = codeDistanceZ
-#     else:
-#         edgeCount = codeDistanceZ*2
-#     print(x_start)
-#     print(x_end)
-#     OF = hdlTemplate(templateSV)
-#     OF.r("ID", str(i))
-#     OF.r("CODE_DISTANCE_X", codeDistanceX)
-#     OF.r("CODE_DISTANCE_Z", codeDistanceZ)
-#     OF.r("EDGE_COUNT", edgeCount) # This is split edges per measurement round
-#     OF.r("X_START", x_start) # This is split edges per measurement round
-#     OF.r("X_END", x_end) # This is split edges per measurement round
 
-#     # Write to file
-#     f = open("../design/generated/standard_planar_code_2d_" + str(i) + ".sv", "w")
-#     f.write(OF.out)
-#     f.close()
 
-# with open("./templates/decoder_stage_controller_dummy.sv","r") as f:
-#     templateSV = f.read()
-# for i in range(numSplit):
-#     x_start = math.ceil(codeDistanceX *i / numSplit)
-#     x_end = math.ceil(codeDistanceX *(i+1) / numSplit) - 1
-#     OF = hdlTemplate(templateSV)
-#     OF.r("ID", str(i))
-#     OF.r("CODE_DISTANCE_X", codeDistanceX)
-#     OF.r("CODE_DISTANCE_Z", codeDistanceZ)
-#     OF.r("EDGE_COUNT", edgeCount) # This is split edges per measurement round
-#     OF.r("X_START", x_start) # This is split edges per measurement round
-#     OF.r("X_END", x_end) # This is split edges per measurement round
 
-#     # Write to file
-#     f = open("../design/generated/decoder_stage_controller_dummy_" + str(i) + ".sv", "w")
-#     f.write(OF.out)
-#     f.close()
-
-# with open("./templates/top_module_for_leaf.sv","r") as f:
-#     templateSV = f.read()
-# for i in range(numSplit):
-#     x_start = math.ceil(codeDistanceX *i / numSplit)
-#     x_end = math.ceil(codeDistanceX *(i+1) / numSplit) - 1
-#     OF = hdlTemplate(templateSV)
-#     OF.r("ID", str(i))
-#     OF.r("CODE_DISTANCE_X", codeDistanceX)
-#     OF.r("CODE_DISTANCE_Z", codeDistanceZ)
-#     OF.r("EDGE_COUNT", edgeCount) # This is split edges per measurement round
-#     OF.r("X_START", x_start) # This is split edges per measurement round
-#     OF.r("X_END", x_end) # This is split edges per measurement round
-#     OF.r("HUB_FIFO_WIDTH", leaf_to_hub_fifo_width)
-
-#     # Write to file
-#     f = open("../design/generated/top_module_for_leaf_" + str(i) + ".sv", "w")
-#     f.write(OF.out)
-#     f.close()
-
-# with open("./templates/final_arbitration.sv","r") as f:
-#     templateSV = f.read()
-# for i in range(numSplit):
-#     x_start = math.ceil(codeDistanceX *i / numSplit)
-#     x_end = math.ceil(codeDistanceX *(i+1) / numSplit) - 1
-#     OF = hdlTemplate(templateSV)
-#     OF.r("ID", str(i))
-#     # write dest logic 1 and 2
-#     OF.r("DEST_LOGIC_1", dest_logic_1)
-#     OF.r("DEST_LOGIC_2", dest_logic_2)
-
-#     f = open("../design/generated/final_arbitration_" + str(i) + ".sv", "w")
-#     f.write(OF.out)
-#     f.close()
-
-# with open("./templates/top_module_hub_.sv","r") as f:
-#     templateSV = f.read()
-# for i in range(numHubs):
-#     x_start = math.ceil(codeDistanceX *i / numSplit)
-#     x_end = math.ceil(codeDistanceX *(i+1) / numSplit) - 1
-#     OF = hdlTemplate(templateSV)
-#     OF.r("ID", str(i))
-#     # write dest logic 1 and 2
-#     OF.r("DEST_LOGIC_1", dest_logic_1)
-#     OF.r("DEST_LOGIC_2", dest_logic_2)
-
-#     f = open("../design/generated/top_module_hub_" + str(i) + ".sv", "w")
-#     f.write(OF.out)
-#     f.close()
 
 
 
