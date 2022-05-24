@@ -162,7 +162,7 @@ decoder_stage_controller_dummy_/*$$ID*/ #(
     .has_odd_clusters_otherside(has_odd_clusters_otherside)
 );
 
-final_arbitration_unit/*$$ID*/ #(
+final_arbitration_unit #(
     .FPGAID_WIDTH(FPGAID_WIDTH),
     .HUB_FIFO_WIDTH(HUB_FIFO_WIDTH),
     .FIFO_IDWIDTH(FIFO_IDWIDTH),
@@ -185,7 +185,7 @@ final_arbitration_unit/*$$ID*/ #(
     .final_fifo_out_data(final_fifo_out_data),
     .final_fifo_out_valid(final_fifo_out_valid),
     .final_fifo_out_ready(final_fifo_out_ready),
-    .final_fifo_in_data(final_fifo_in_data[FINAL_FIFO_WIDTH-1:0]),
+    .final_fifo_in_data(final_fifo_in_data),
     .final_fifo_in_valid(final_fifo_in_valid),
     .final_fifo_in_ready(final_fifo_in_ready),
     .has_flying_messages(has_message_flying_interconnect)

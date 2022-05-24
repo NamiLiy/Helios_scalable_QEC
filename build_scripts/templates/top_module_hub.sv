@@ -112,7 +112,7 @@ generate
         wire [HUB_FIFO_WIDTH - 1 :0] downstream_fifo_in_data_d;
         wire downstream_fifo_in_valid_d;
         wire downstream_fifo_in_taken_d;
-        wire downstream_fifo_is_full
+        wire downstream_fifo_is_full;
         blocking_channel #(
             .WIDTH(HUB_FIFO_WIDTH), // width of data
             .DEPTH(256)
@@ -136,13 +136,13 @@ endgenerate
 wire [HUB_FIFO_WIDTH - 1 :0] upstream_fifo_in_data_d;
 wire upstream_fifo_in_valid_d;
 wire upstream_fifo_in_taken_d;
-wire upstream_fifo_is_full
+wire upstream_fifo_is_full;
 blocking_channel #(
     .WIDTH(HUB_FIFO_WIDTH), // width of data
     .DEPTH(256)
 ) down_input_fifo (
     .in_data(upstream_fifo_in_data),
-    .in_valid(upstream_fifo_in_valid[i]),
+    .in_valid(upstream_fifo_in_valid),
     .in_is_full(upstream_fifo_is_full),
     .out_data(upstream_fifo_in_data_d),
     .out_valid(upstream_fifo_in_valid_d),
@@ -156,9 +156,9 @@ assign upstream_fifo_in_ready = ~upstream_fifo_is_full;
 
 // 2. Select a message to process. Upstream gets priority
 
-`define downstream_coming_data(i) downstream_fifo_in_data_d[i]
-`define downstream_coming_valid(i) downstream_fifo_in_valid[i]
-`define downstream_coming_is_taken(i) downstream_fifo_in_taken[i]
+`define downstream_coming_data(i) dwn_input_fifos[i].downstream_fifo_in_data_d
+`define downstream_coming_valid(i) dwn_input_fifos[i].downstream_fifo_in_valid_d
+`define downstream_coming_is_taken(i) dwn_input_fifos[i].downstream_fifo_in_taken_d
 
 localparam DIRECT_CHANNEL_DEPTH = $clog2(DOWNSTREAM_FIFO_COUNT); //1
 localparam DIRECT_CHANNEL_EXPAND_COUNT = 2 ** DIRECT_CHANNEL_DEPTH; //2
@@ -220,30 +220,33 @@ reg [7:0] selected_index;
 // take the direct message from downstream
 generate
     for (i=0; i < DOWNSTREAM_FIFO_COUNT; i=i+1) begin: taking_direct_message
-        assign `downstream_coming_is_taken(i) = 
-            ((i == `gathered_elected_output_message_index) && `gathered_elected_output_message_valid  && router_ready && !upstream_fifo_in_valid_d);
+        assign `downstream_coming_is_taken(i) = ((i == `gathered_elected_downstream_message_index) && `gathered_elected_downstream_message_valid  && router_ready && !upstream_fifo_in_valid_d);
     end
 endgenerate
 
 assign upstream_fifo_in_taken_d = router_ready;
 
-always@(posedge clk)
+always@(posedge clk) begin
     if(upstream_fifo_in_valid_d && router_ready) begin
         selected_message <= upstream_fifo_in_data_d;
         selected_valid <= 1;
         selected_index <= 8'b11111111;
-    end else if(`gathered_elected_downstream_message_valid && router_ready) begin
-        selected_message <= gathered_elected_downstream_message_data;
-        selected_valid <= 1;
-        selected_index <= `gathered_elected_downstream_message_index;
-    end else if(router_ready) begin
-        selected_valid <= 0;
+    end else begin
+        if(`gathered_elected_downstream_message_valid && router_ready) begin
+            selected_message <= `gathered_elected_downstream_message_data;
+            selected_valid <= 1;
+            selected_index <= `gathered_elected_downstream_message_index;
+        end else begin
+            if(router_ready) begin
+                selected_valid <= 0;
+            end
+        end
     end
 end
         
 // 3. Now write the routing logic
 // Todo : Check the logic here
-wire all_output_fifos_free
+wire all_output_fifos_free;
 assign all_output_fifos_free = (& downstream_fifo_out_ready) && upstream_fifo_out_ready;
 assign router_ready =  all_output_fifos_free;
 
@@ -251,13 +254,13 @@ reg [HUB_FIFO_WIDTH - 1 :0] output_message_register;
 reg [DOWNSTREAM_FIFO_COUNT : 0] output_valid_register;
 
 `define message_from_upstream (selected_index == 8'b11111111 ? 1 : 0)
-`define message_from_stage_controller (output_message_register[HUB_FIFO_WIDTH-FPGAID_WIDTH-1:HUB_FIFO_WIDTH-FPGAID_WIDTH-FIFO_IDWIDTH] == 8'b11111111 ? 1 : 0)
-`define direct_message (output_message_register[DIRECT_MESSAGE_WIDTH])
+`define message_from_stage_controller (selected_message[HUB_FIFO_WIDTH-FPGAID_WIDTH-1:HUB_FIFO_WIDTH-FPGAID_WIDTH-FIFO_IDWIDTH] == {FIFO_IDWIDTH{1'b1}} ? 1 : 0)
+`define direct_message (selected_message[DIRECT_MESSAGE_WIDTH])
 
 wire [DOWNSTREAM_FIFO_COUNT : 0] destination_index;
 wire [ADDRESS_WIDTH-1 : 0] direct_address; 
 
-assign direct_address = output_message_register [DIRECT_MESSAGE_WIDTH - 1 : 2];
+assign direct_address = selected_message [DIRECT_MESSAGE_WIDTH - 1 : 2];
 
 // Finding the correct output FIFO to a neighboring message is follows
 // First if you are the first L1 fifo and input message is connected then you must decide whether it is from the top half or the bottom half of the split
@@ -265,7 +268,7 @@ assign direct_address = output_message_register [DIRECT_MESSAGE_WIDTH - 1 : 2];
 // If top half then to bottom half unless going to the first FIFO
 // If bottom half then definitely to the first half.
 // This is also offloaded to the leaf card
-assign dest_fpga_id = output_message_register[HUB_FIFO_WIDTH - 1: HUB_FIFO_WIDTH - FPGAID_WIDTH];
+assign dest_fpga_id = selected_message[HUB_FIFO_WIDTH - 1: HUB_FIFO_WIDTH - FPGAID_WIDTH];
 
 genvar k;
 
@@ -290,31 +293,37 @@ genvar k;
 
 
 
-always@(posedge clk)
+always@(posedge clk) begin
     if(all_output_fifos_free) begin
         if(selected_valid) begin
             if(`message_from_upstream) begin
                 if(`message_from_stage_controller) begin
                     output_valid_register[DOWNSTREAM_FIFO_COUNT-1 :0] <= {DOWNSTREAM_FIFO_COUNT{1'b1}};
                     output_valid_register[DOWNSTREAM_FIFO_COUNT] <= 1'b0;
-                end else if(`direct_message) begin
-                    output_valid_register[DOWNSTREAM_FIFO_COUNT :0] <= destination_index;
                 end else begin
-                    output_valid_register[DOWNSTREAM_FIFO_COUNT :0] <= destination_index;
+                    if(`direct_message) begin
+                        output_valid_register[DOWNSTREAM_FIFO_COUNT :0] <= destination_index;
+                    end else begin
+                        output_valid_register[DOWNSTREAM_FIFO_COUNT :0] <= destination_index;
+                    end
                 end
             end else begin
                 if(`message_from_stage_controller) begin
                     output_valid_register[DOWNSTREAM_FIFO_COUNT-1 :0] <= {DOWNSTREAM_FIFO_COUNT{1'b0}};
                     output_valid_register[DOWNSTREAM_FIFO_COUNT] <= 1'b1;
-                end else if(`direct_message) begin
-                    output_valid_register[DOWNSTREAM_FIFO_COUNT :0] <= destination_index;
                 end else begin
-                    output_valid_register[DOWNSTREAM_FIFO_COUNT :0] <= destination_index;
+                    if(`direct_message) begin
+                        output_valid_register[DOWNSTREAM_FIFO_COUNT :0] <= destination_index;
+                    end else begin
+                        output_valid_register[DOWNSTREAM_FIFO_COUNT :0] <= destination_index;
+                    end
                 end        
             end
         end else begin
-            selected_valid <= 0;
+            output_valid_register[DOWNSTREAM_FIFO_COUNT-1 :0] <= {DOWNSTREAM_FIFO_COUNT{1'b0}};
+            output_valid_register[DOWNSTREAM_FIFO_COUNT] <= 1'b0;
         end
+        output_message_register <= selected_message;
     end
 end
 

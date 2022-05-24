@@ -25,9 +25,6 @@ module root_hub_/*$$ID*/ #(
     downstream_fifo_in_valid,
     downstream_fifo_in_ready,
 
-    upstream_has_message_flying,
-    upstream_has_odd_clusters,
-
     downstream_has_message_flying,
     downstream_has_odd_clusters,
 );
@@ -87,9 +84,9 @@ input [DOWNSTREAM_FIFO_COUNT - 1 :0] downstream_has_odd_clusters;
 
 top_module_hub_/*$$ID*/ #(
     .CODE_DISTANCE_X(/*$$CODE_DISTANCE_X*/),
-    .CODE_DISTANCE_Z(/*$$CODE_DISTANCE_Z*/)
-    .WEIGHT_X(WEIGHT_X)
-    .WEIGHT_Z(WEIGHT_Z)
+    .CODE_DISTANCE_Z(/*$$CODE_DISTANCE_Z*/),
+    .WEIGHT_X(WEIGHT_X),
+    .WEIGHT_Z(WEIGHT_Z),
     .WEIGHT_UD(WEIGHT_UD)
 ) u_hub_/*$$ID*/ (
     .clk(clk),

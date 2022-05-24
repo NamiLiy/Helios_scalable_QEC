@@ -271,7 +271,7 @@ generate
             pu_arbitration_unit #(
                 .CODE_DISTANCE_X(CODE_DISTANCE_X),
                 .CODE_DISTANCE_Z(CODE_DISTANCE_Z),
-                .FINAL_FIFO_WIDTH(HUB_FIFO_WIDTH),
+                .FINAL_FIFO_WIDTH(FINAL_FIFO_WIDTH),
                 .HEADER_WIDTH(FIFO_IDWIDTH+FPGAID_WIDTH)
             ) u_pu_arbitration_unit (
                 .clk(clk),
@@ -296,7 +296,7 @@ generate
                 .master_fifo_in_ready(`MASTER_FIFO_SIGNAL_VEC(master_fifo_in_ready_vector, `FIFO_INDEX(l, m))),
                 .has_flying_messages(`MASTER_FIFO_SIGNAL_VEC(arbitration_has_flying_messages, `FIFO_INDEX(l, m))),
                 .receiver_id_neighbour(neighbour_route_paths [`FIFO_INDEX(l, m)]),
-                .receiver_id_direct(direct_route_paths [`FIFO_INDEX(l, m)]),
+                .receiver_id_direct(direct_route_paths [`FIFO_INDEX(l, m)])
             );
 
             assign blocking_fifo_in_ready = ~blocking_fifo_in_full;
@@ -408,7 +408,7 @@ blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH)) blocking_channel_top (\
 );
 
 `define DIRECT_CHANNEL_VERTICAL_WRAP_INSTANTIATE \
-blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH), .DEPTH(128))) blocking_channel_top (\
+blocking_channel #(.WIDTH(DIRECT_MESSAGE_WIDTH), .DEPTH(128)) blocking_channel_top (\
     .clk(clk), .reset(reset), .initialize(initialize_neighbors), \
     .in_data(`PU((i+1)%CODE_DISTANCE_X, j, k).direct_out_channels_data_single),\
     .in_valid(`PU((i+1)%CODE_DISTANCE_X, j, k).direct_out_channels_valid[0]),\

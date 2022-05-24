@@ -16,12 +16,12 @@ module bench_multi_fpga;
 `include "../../parameters/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
-localparam CODE_DISTANCE = 3;
 localparam CODE_DISTANCE_X = /*$$CODE_DISTANCE_X*/;
 localparam CODE_DISTANCE_Z = /*$$CODE_DISTANCE_Z*/;
 localparam WEIGHT_X = 1;
 localparam WEIGHT_Z = 1;
 localparam WEIGHT_UD = 1; // Weight up down
+localparam CODE_DISTANCE = CODE_DISTANCE_X;
 
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
@@ -80,7 +80,7 @@ wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_out_ready_d_/*$$ID*/;
 wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_has_message_flying_d_/*$$ID*/;
 wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_has_odd_clusters_d_/*$$ID*/;
 
-genvar i,j,k;
+genvar i2,j2,k2;
 
 function [ADDRESS_WIDTH-1:0] make_address;
 input [PER_DIMENSION_WIDTH-1:0] i;
@@ -231,7 +231,7 @@ end
 initial begin
     clk = 1'b1;
     reset = 1'b1;
-    deadlock = 1'b0;
+    // deadlock = 1'b0;
     #107;
     reset = 1'b0;
     #100;
@@ -241,9 +241,9 @@ end
 
 root_hub_/*$$ID*/ #(
     .CODE_DISTANCE_X(/*$$CODE_DISTANCE_X*/),
-    .CODE_DISTANCE_Z(/*$$CODE_DISTANCE_Z*/)
-    .WEIGHT_X(WEIGHT_X)
-    .WEIGHT_Z(WEIGHT_Z)
+    .CODE_DISTANCE_Z(/*$$CODE_DISTANCE_Z*/),
+    .WEIGHT_X(WEIGHT_X),
+    .WEIGHT_Z(WEIGHT_Z),
     .WEIGHT_UD(WEIGHT_UD)
 ) u_hub_/*$$ID*/ (
     .clk(clk),
@@ -257,7 +257,7 @@ root_hub_/*$$ID*/ #(
     .iteration_counter(iteration_counter),
     .cycle_counter(cycle_counter),
     .deadlock(deadlock),
-    .final_cardinality(final_cardinality)
+    .final_cardinality(final_cardinality),
 
 
     // .upstream_fifo_out_data(),
@@ -274,8 +274,8 @@ root_hub_/*$$ID*/ #(
     .downstream_fifo_in_valid(downstream_fifo_in_valid_/*$$ID*/),
     .downstream_fifo_in_ready(downstream_fifo_in_ready_/*$$ID*/),
 
-    .upstream_has_message_flying(),
-    .upstream_has_odd_clusters(),
+    // .upstream_has_message_flying(),
+    // .upstream_has_odd_clusters(),
 
     .downstream_has_message_flying(downstream_has_message_flying_/*$$ID*/),
     .downstream_has_odd_clusters(downstream_has_odd_clusters_/*$$ID*/)

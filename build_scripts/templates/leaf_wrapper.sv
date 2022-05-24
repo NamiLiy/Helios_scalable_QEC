@@ -1,4 +1,4 @@
-wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots_/*$$ID*/
+wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots_/*$$ID*/;
 
 // instantiate
 top_module_for_leaf_/*$$ID*/ #(
@@ -25,14 +25,14 @@ top_module_for_leaf_/*$$ID*/ #(
     .final_fifo_in_valid(downstream_fifo_out_valid_d_/*$$PARENT*/[/*$$CHILD_ID*/]),
     .final_fifo_in_ready(downstream_fifo_out_ready_d_/*$$PARENT*/[/*$$CHILD_ID*/]),
     .has_message_flying_otherside(downstream_has_message_flying_d_/*$$PARENT*/[/*$$CHILD_ID*/]),
-    .has_odd_clusters_otherside(downstream_has_odd_cluster_d_/*$$PARENT*/[/*$$CHILD_ID*/])
+    .has_odd_clusters_otherside(downstream_has_odd_clusters_d_/*$$PARENT*/[/*$$CHILD_ID*/])
 );
 
 generate
-    for (k=0; k < MEASUREMENT_ROUNDS; k=k+1) begin: assign_k
-        for (i=/*$$X_START*/; i <= /*$$X_END*/; i=i+1) begin: assign_i
-            for (j=0; j < CODE_DISTANCE_Z; j=j+1) begin: assign_j
-                `root(i, j, k) = roots_/*$$ID*/[ADDRESS_WIDTH*`INDEX(i, j, k) +: ADDRESS_WIDTH];
+    for (k2=0; k2 < MEASUREMENT_ROUNDS; k2=k2+1) begin: assign_k_/*$$ID*/
+        for (i2=/*$$X_START*/; i2 <= /*$$X_END*/; i2=i2+1) begin: assign_i_/*$$ID*/
+            for (j2=0; j2 < CODE_DISTANCE_Z; j2=j2+1) begin: assign_j_/*$$ID*/
+                assign `root(i2, j2, k2) = roots_/*$$ID*/[ADDRESS_WIDTH*`INDEX(i2, j2, k2) +: ADDRESS_WIDTH];
             end
         end
     end

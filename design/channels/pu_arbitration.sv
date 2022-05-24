@@ -24,7 +24,7 @@ module pu_arbitration_unit #(
     master_fifo_in_data,
     master_fifo_in_valid,
     master_fifo_in_ready,
-    has_flying_messages
+    has_flying_messages,
     receiver_id_neighbour,
     receiver_id_direct,
 );
@@ -105,8 +105,8 @@ always@(*) begin
     blocking_fifo_out_ready = 1'b0;
     master_fifo_out_data_internal[DIRECT_MESSAGE_WIDTH] = 1'b1;
     master_fifo_out_data_internal[DIRECT_MESSAGE_WIDTH-1:0] = blocking_fifo_out_data;
-    master_fifo_out_data_internal[FINAL_FIFO_WIDTH-1 : DIRECT_MESSAGE_WIDTH+1] = receiver_id_direct
-    if(!master_fifo_out_is_full_internal) begin
+    master_fifo_out_data_internal[FINAL_FIFO_WIDTH-1 : DIRECT_MESSAGE_WIDTH+1] = receiver_id_direct;
+    if(master_fifo_out_is_full_internal == 1'b0) begin
         if(neighbor_fifo_out_valid) begin
             neighbor_fifo_out_ready = 1'b1;
             master_fifo_out_data_internal[DIRECT_MESSAGE_WIDTH-1:0] = neighbor_fifo_out_data;

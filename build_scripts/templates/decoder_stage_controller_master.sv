@@ -34,6 +34,8 @@ module decoder_stage_controller_master_/*$$ID*/ #(
     // net_roots_out
 );
 
+`include "../../parameters/parameters.sv"
+
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
 `define MAX3(a, b, c) (((a) > `MAX((b), (c))) ? (a) : `MAX((b), (c)))
 `define MIN(a, b) (((a) < (b))? (a) : (b))
@@ -53,7 +55,7 @@ localparam COUNTER_WIDTH = $clog2(MAXIMUM_DELAY + 1);
 input clk;
 input reset;
 input new_round_start;
-input has_odd_clusters;
+// input has_odd_clusters;
 // input [PU_COUNT-1:0] is_touching_boundaries;
 // input [PU_COUNT-1:0] is_odd_cardinalities;
 // output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
@@ -69,8 +71,8 @@ input sc_fifo_out_ready;
 input [MASTER_FIFO_WIDTH - 1 :0] sc_fifo_in_data;
 input sc_fifo_in_valid;
 output sc_fifo_in_ready;
-input has_message_flying_otherside;
-input has_odd_clusters_otherside;
+input downstream_has_message_flying;
+input downstream_has_odd_clusters;
 reg [(ADDRESS_WIDTH * PU_COUNT)-1:0] net_roots_out;
 
 reg [COUNTER_WIDTH-1:0] delay_counter;
@@ -139,14 +141,6 @@ always@(*) begin
     has_odd_clusters_both_sides = downstream_has_odd_clusters;
 end
 
-always@(*) begin
-    if (has_odd_clusters || has_odd_clusters_otherside) begin
-        has_odd_clusters_both_sides = 1'b1;
-    end else begin
-        has_odd_clusters_both_sides = 1'b0;
-    end
-end
-
 // deadlock detection logic
 always @(posedge clk) begin
     if (reset) begin
@@ -196,7 +190,7 @@ always @(posedge clk) begin
     end
 end
 
-reg [$clog2(CODE_DISTANCE_X*RIGHT_BLOCK+1) : 0] result_data_frame;
+// reg [$clog2(CODE_DISTANCE_X*RIGHT_BLOCK+1) : 0] result_data_frame;
 reg [PU_COUNT-1:0] net_is_touching_boundaries;
 reg [PU_COUNT-1:0] net_is_odd_cardinalities;
 reg [ADDRESS_WIDTH*PU_COUNT-1:0] net_roots;
@@ -208,7 +202,7 @@ always @(posedge clk) begin
         stage <= STAGE_IDLE;
         delay_counter <= 0;
         result_valid <= 0;
-        result_data_frame <= 0;
+        // result_data_frame <= 0;
         net_is_touching_boundaries <= 0;
         net_is_odd_cardinalities <= 0;
         net_roots <= {ADDRESS_WIDTH*PU_COUNT-1{1'b0}};

@@ -20,9 +20,9 @@ wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_has_odd_clusters_d_/*$$ID*/;
 
 top_module_hub_/*$$ID*/ #(
     .CODE_DISTANCE_X(/*$$CODE_DISTANCE_X*/),
-    .CODE_DISTANCE_Z(/*$$CODE_DISTANCE_Z*/)
-    .WEIGHT_X(WEIGHT_X)
-    .WEIGHT_Z(WEIGHT_Z)
+    .CODE_DISTANCE_Z(/*$$CODE_DISTANCE_Z*/),
+    .WEIGHT_X(WEIGHT_X),
+    .WEIGHT_Z(WEIGHT_Z),
     .WEIGHT_UD(WEIGHT_UD)
 ) u_hub_/*$$ID*/ (
     .clk(clk),

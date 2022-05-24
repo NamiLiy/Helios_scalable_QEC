@@ -138,10 +138,11 @@ localparam DIRECT_CHANNEL_EXPAND_COUNT = 2 ** DIRECT_CHANNEL_DEPTH; //4
 localparam DIRECT_CHANNEL_ALL_EXPAND_COUNT = 2 * DIRECT_CHANNEL_EXPAND_COUNT - 1;  // the length of tree structured gathering // 7
 
 wire [DIRECT_CHANNEL_ALL_EXPAND_COUNT-1:0] tree_gathering_elected_direct_message_valid;
-wire [(MASTER_FIFO_WIDTH * DIRECT_CHANNEL_ALL_EXPAND_COUNT)-1:0] tree_gathering_elected_direct_message_data;
-`define expanded_elected_output_message_data(i) tree_gathering_elected_direct_message_data[((i+1) * MASTER_FIFO_WIDTH) - 1 : (i * MASTER_FIFO_WIDTH)]
-wire [(MASTER_FIFO_WIDTH * DIRECT_CHANNEL_ALL_EXPAND_COUNT)-1:0] tree_gathering_elected_direct_message_index;
-`define expanded_elected_output_message_index(i) tree_gathering_elected_direct_message_index[((i+1) * MASTER_FIFO_WIDTH) - 1 : (i * MASTER_FIFO_WIDTH)]
+wire [(HUB_FIFO_WIDTH * DIRECT_CHANNEL_ALL_EXPAND_COUNT)-1:0] tree_gathering_elected_direct_message_data;
+`define expanded_elected_output_message_data(i) tree_gathering_elected_direct_message_data[((i+1) * HUB_FIFO_WIDTH) - 1 : (i * HUB_FIFO_WIDTH)]
+wire [(HUB_FIFO_WIDTH * DIRECT_CHANNEL_ALL_EXPAND_COUNT)-1:0] tree_gathering_elected_direct_message_index;
+
+`define expanded_elected_output_message_index(i) tree_gathering_elected_direct_message_index[((i+1) * HUB_FIFO_WIDTH) - 1 : (i * HUB_FIFO_WIDTH)]
 
 `define DIRECT_CHANNEL_LAYER_WIDTH (2 ** (DIRECT_CHANNEL_DEPTH - 1 - i))
 `define DIRECT_CHANNEL_LAYERT_IDX (2 ** (DIRECT_CHANNEL_DEPTH + 1) - 2 ** (DIRECT_CHANNEL_DEPTH - i))
@@ -269,7 +270,7 @@ assign final_fifo_out_valid_internal = `gathered_elected_output_message_valid;
 
 // receiver side
 
-fifo_fwft #(.DEPTH(16), .WIDTH(FINAL_FIFO_WIDTH)) in_fifo 
+fifo_fwft #(.DEPTH(16), .WIDTH(HUB_FIFO_WIDTH)) in_fifo 
     (
     .clk(clk),
     .srst(reset),
@@ -304,20 +305,22 @@ generate
 endgenerate
 
 generate
-    for (i=0; i < TRUE_FIFO_COUNT; i=i+1) begin: making_correct_incoming_channel_correct
-        if(i < FIFO_COUNT) begin:
+    for (i=0; i < FIFO_COUNT; i=i+1) begin: making_correct_incoming_channel_correct
+//        if(i < FIFO_COUNT) begin:
             assign `master_fifo_in_valid(i) = 
                 ((i == `destination_index) && !final_fifo_in_empty_internal);
-        end else begin:
-            assign `master_fifo_in_valid(i) = 
-                ((`destination_index == {FIFO_IDWIDTH{1'b1}}) && !final_fifo_in_empty_internal);
-        end
+        //end else begin:
+        //    assign `master_fifo_in_valid(i) = 
+        //        ((`destination_index == {FIFO_IDWIDTH{1'b1}}) && !final_fifo_in_empty_internal);
+        //end
     end
 endgenerate
 
+assign `master_fifo_in_valid(FIFO_COUNT) = ((`destination_index == {FIFO_IDWIDTH{1'b1}}) && !final_fifo_in_empty_internal);
+
 
 `define message_read (combined_fifo_in_ready_vector[`destination_index])
-assign final_fifo_in_ready_internal = `message_read;
+assign final_fifo_in_ready_internal = (`destination_index == {FIFO_IDWIDTH{1'b1}}) ?  combined_fifo_in_ready_vector[FIFO_COUNT] : `message_read;
 
 
 // assign master_fifo_in_data_vector[MASTER_FIFO_WIDTH - 1:0] = final_fifo_in_data_internal;

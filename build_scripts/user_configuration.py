@@ -53,6 +53,7 @@ def populate_other_tree_params(node, level):
 def initialize():
     root = Node(0)
     l1 = Node(1)
+    # root.children = [l1]
     l2 = Node(2)
     root.children = [l1,l2]
 

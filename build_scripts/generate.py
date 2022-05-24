@@ -210,6 +210,8 @@ def add_leaf(node):
         OF.r("ID", node.id)
         OF.r("CODE_DISTANCE_X", codeDistanceX)
         OF.r("CODE_DISTANCE_Z", codeDistanceZ)
+        OF.r("FPGAID_WIDTH", fpga_id_width)
+        OF.r("FIFO_IDWIDTH", fifo_id_width)
         OF.r("EDGE_COUNT", node.edge_count) # This is split edges per measurement round
         OF.r("X_START", x_start) # This is split edges per measurement round
         OF.r("X_END", x_end) # This is split edges per measurement round
@@ -275,6 +277,7 @@ def add_root_hub(node):
         OF.r("LEVEL", node.level)
         OF.r("CHILD_ID", node.child_id)
         OF.r("NUM_CHILDREN", node.num_children)
+        OF.r("HUB_FIFO_WIDTH", hub_fifo_width)
 
         # Write to file
         f = open("../design/generated/top_level_test_bench.sv", "w")
@@ -325,6 +328,7 @@ def add_interconnection(node):
         templateSV = f.read()
         OF = hdlTemplate(templateSV)
         OF.r("ID", node.id)
+        OF.r("NUM_CHILDREN", node.num_children)
         # Write to file
         f = open("../design/generated/top_level_test_bench.sv", "a")
         f.write(OF.out)
@@ -379,7 +383,9 @@ def populate_grid_of_each_fpga(node, numSplit):
         node.grid = Node_Grid(x_start, x_end, z_start, z_end)
         print(str(node.leaf_id) + " : " + str(x_start)+" " + str(x_end))
         edgeCount = 0
-        if(node.leaf_id == 0 or node.leaf_id == numSplit - 1):
+        if(node.leaf_id == 0 and node.leaf_id == numSplit - 1):
+            edgeCount = 0
+        elif(node.leaf_id == 0 or node.leaf_id == numSplit - 1):
             edgeCount = codeDistanceZ
         else:
             edgeCount = codeDistanceZ*2
@@ -494,7 +500,7 @@ def calculate_fifo_id_width(node):
     create_routing_destinations(node, numSplit)
     max_edges = get_max_edge_count(node)
     print("max_edges = " + str(max_edges * codeDistanceX))
-    return math.ceil(math.log2(max_edges*codeDistanceX + 1)) #+1 for stage controller
+    return math.ceil(math.log2(max(max_edges*codeDistanceX + 1,2))) #+1 for stage controller
 
 def calculate_hub_fifo_width():
     per_dimesnion_width = math.ceil(math.log2(codeDistanceX))
