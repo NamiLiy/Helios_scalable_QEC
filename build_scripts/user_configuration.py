@@ -3,8 +3,8 @@ from email.errors import NoBoundaryInMultipartDefect
 from pickletools import long4
 
 
-codeDistanceX = 3
-codeDistanceZ = 2
+codeDistanceX = 5
+codeDistanceZ = 4
 
 class Route_Entry:
     def __init__(self, fpga, fifo):

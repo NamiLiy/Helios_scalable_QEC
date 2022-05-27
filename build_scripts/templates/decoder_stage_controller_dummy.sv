@@ -222,9 +222,15 @@ always @(posedge clk) begin
                 end
             end
             STAGE_GROW_BOUNDARY: begin
-                if(sc_fifo_in_empty_internal == 0 && sc_fifo_in_data_internal[2:0] == 3'b1) begin
+                // if(sc_fifo_in_empty_internal == 0 && sc_fifo_in_data_internal[2:0] == 3'b1) begin
+                //     stage <= STAGE_SPREAD_CLUSTER;
+                //     sc_fifo_in_ready_internal <= 1'b1;
+                // end
+                if (delay_counter >= BOUNDARY_GROW_DELAY) begin
                     stage <= STAGE_SPREAD_CLUSTER;
-                    sc_fifo_in_ready_internal <= 1'b1;
+                    delay_counter <= 0;
+                end else begin
+                    delay_counter <= delay_counter + 1;
                 end
             end
             STAGE_SYNC_IS_ODD_CLUSTER: begin

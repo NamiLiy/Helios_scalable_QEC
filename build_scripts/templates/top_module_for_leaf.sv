@@ -92,13 +92,13 @@ wire [HUB_FIFO_WIDTH - 1 :0] sc_fifo_in_data;
 wire sc_fifo_in_valid;
 wire sc_fifo_in_ready;
 
-wire [PU_INST*MEASUREMENT_ROUNDS-1:0] is_odd_cardinalities;
-wire [PU_INST*MEASUREMENT_ROUNDS-1:0] is_touching_boundaries;
+wire [PU_COUNT*MEASUREMENT_ROUNDS-1:0] is_odd_cardinalities;
+wire [PU_COUNT*MEASUREMENT_ROUNDS-1:0] is_touching_boundaries;
 wire has_message_flying;
 wire [STAGE_WIDTH-1:0] stage;
-wire [PU_INST*MEASUREMENT_ROUNDS-1:0] is_odd_clusters;
+wire [PU_COUNT*MEASUREMENT_ROUNDS-1:0] is_odd_clusters;
 reg has_odd_clusters;
-wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] left_roots;
+// wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] left_roots;
 wire has_message_flying_sc;
 wire has_message_flying_grid;
 wire has_message_flying_interconnect;
@@ -123,7 +123,7 @@ standard_planar_code_3d_no_fast_channel_/*$$ID*/ #(
     .is_odd_clusters(is_odd_clusters),
     .is_odd_cardinalities(is_odd_cardinalities),
     .is_touching_boundaries(is_touching_boundaries),
-    .roots(left_roots),
+    .roots(roots),
     .has_message_flying(has_message_flying_grid),
     .master_fifo_out_data_vector(master_fifo_out_data_vector),
     .master_fifo_out_valid_vector(master_fifo_out_valid_vector),
@@ -144,7 +144,7 @@ decoder_stage_controller_dummy_/*$$ID*/ #(
     .has_odd_clusters(has_odd_clusters),
     .is_touching_boundaries(is_touching_boundaries),
     .is_odd_cardinalities(is_odd_cardinalities),
-    .roots(left_roots),
+    .roots(roots),
     .new_round_start(new_round_start),
     .stage(stage),
     .result_valid(result_valid),

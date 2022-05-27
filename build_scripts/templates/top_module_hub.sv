@@ -94,7 +94,7 @@ input [DOWNSTREAM_FIFO_COUNT - 1 :0] downstream_has_odd_clusters;
 
 always@(posedge clk) begin
     upstream_has_odd_clusters <= |downstream_has_odd_clusters;
-    upstream_has_message_flying <= downstream_has_message_flying;
+    upstream_has_message_flying <= |downstream_has_message_flying;
 end
 
 // Todo : Final result calculation can be perfomed more efficiently. So this is a workaround.

@@ -329,7 +329,21 @@ assign `PU(i+1, j, k).neighbor_is_fully_grown[`NEIGHBOR_IDX_TOP(i+1, j, k)] = `P
 assign `PU(i+1, j, k).neighbor_is_odd_cluster[`NEIGHBOR_IDX_TOP(i+1, j, k)] = `PU(i, j, k).neighbor_is_odd_cluster[`NEIGHBOR_IDX_BOTTOM(i, j, k)];
 
 // Keep in mind a and b are interchanged 
-`define NEIGHBOR_VERTICAL_TO_FIFO_INSTANTIATE(n_i, n_j, n_k, pu_i, new_j) \
+`define NEIGHBOR_VERTICAL_TO_FIFO_INSTANTIATE_TOP_BORDER(n_i, n_j, n_k, pu_i, new_j) \
+neighbor_link_to_fifo #(.LENGTH(NEIGHBOR_COST_X), .PER_DIMENSION_WIDTH(PER_DIMENSION_WIDTH), .N_I(n_i), .N_J(n_j), .N_K(n_k)) neighbor_vertical_fifo (\
+    .clk(clk), .reset(reset), .initialize(initialize_neighbors), .is_fully_grown(`PU(pu_i, j, k).neighbor_is_fully_grown[`NEIGHBOR_IDX_TOP(pu_i, j, k)]),\
+    .is_odd_cluster(`PU(pu_i, j, k).neighbor_is_odd_cluster[`NEIGHBOR_IDX_TOP(pu_i, j, k)]), \
+    .a_old_root_in(`PU(pu_i, j, k).updated_root), .a_increase(`PU(pu_i, j, k).neighbor_increase), .a_is_odd_cluster(`PU(pu_i, j, k).is_odd_cluster),\
+    .b_old_root_out(`SLICE_ADDRESS_VEC(`PU(pu_i, j, k).neighbor_roots, `NEIGHBOR_IDX_TOP(pu_i, j, k))),\
+    .neighbor_fifo_out_data(`PU_FIFO(new_j,k).neighbor_fifo_out_data),  \
+    .neighbor_fifo_out_valid(`PU_FIFO(new_j,k).neighbor_fifo_out_valid), \
+    .neighbor_fifo_out_ready(`PU_FIFO(new_j,k).neighbor_fifo_out_ready), \
+    .neighbor_fifo_in_data(`PU_FIFO(new_j,k).neighbor_fifo_in_data), \
+    .neighbor_fifo_in_valid(`PU_FIFO(new_j,k).neighbor_fifo_in_valid), \
+    .neighbor_fifo_in_ready(`PU_FIFO(new_j,k).neighbor_fifo_in_ready) \
+);
+
+`define NEIGHBOR_VERTICAL_TO_FIFO_INSTANTIATE_BOTTOM_BORDER(n_i, n_j, n_k, pu_i, new_j) \
 neighbor_link_to_fifo #(.LENGTH(NEIGHBOR_COST_X), .PER_DIMENSION_WIDTH(PER_DIMENSION_WIDTH), .N_I(n_i), .N_J(n_j), .N_K(n_k)) neighbor_vertical_fifo (\
     .clk(clk), .reset(reset), .initialize(initialize_neighbors), .is_fully_grown(`PU(pu_i, j, k).neighbor_is_fully_grown[`NEIGHBOR_IDX_BOTTOM(pu_i, j, k)]),\
     .is_odd_cluster(`PU(pu_i, j, k).neighbor_is_odd_cluster[`NEIGHBOR_IDX_BOTTOM(pu_i, j, k)]), \
@@ -500,19 +514,19 @@ generate
     for (k=0; k < MEASUREMENT_ROUNDS; k=k+1) begin: neighbor_k_extra
         for (j=0; j < CODE_DISTANCE_Z; j=j+1) begin: neighbor_j_extra
             if (X_START == 0 && X_END < CODE_DISTANCE_X-1) begin
-                `NEIGHBOR_VERTICAL_TO_FIFO_INSTANTIATE(X_END+1, j, k, X_END, j)
+                `NEIGHBOR_VERTICAL_TO_FIFO_INSTANTIATE_BOTTOM_BORDER(X_END+1, j, k, X_END, j)
                 `DIRECT_CHANNEL_VERTICAL_TO_FIFO_INSTANTIATE_INPUT(X_END, j)
                 `DIRECT_CHANNEL_VERTICAL_TO_FIFO_INSTANTIATE_OUTPUT(X_START, j)
             end else if  (X_START > 0 && X_END == CODE_DISTANCE_X-1) begin
-                `NEIGHBOR_VERTICAL_TO_FIFO_INSTANTIATE(X_START-1, j, k, X_START, j)
+                `NEIGHBOR_VERTICAL_TO_FIFO_INSTANTIATE_TOP_BORDER(X_START-1, j, k, X_START, j)
                 `DIRECT_CHANNEL_VERTICAL_TO_FIFO_INSTANTIATE_INPUT(X_END, j)
                 `DIRECT_CHANNEL_VERTICAL_TO_FIFO_INSTANTIATE_OUTPUT(X_START, j)
             end else if  (X_START > 0 && X_END < CODE_DISTANCE_X-1) begin // This is the hard one as it is a split in the middle
                 for(s=0; s <2; s++) begin : s_value
                     if(s==0) begin
-                        `NEIGHBOR_VERTICAL_TO_FIFO_INSTANTIATE(X_START-1, j, k, X_START, j)
+                        `NEIGHBOR_VERTICAL_TO_FIFO_INSTANTIATE_TOP_BORDER(X_START-1, j, k, X_START, j)
                     end else begin
-                        `NEIGHBOR_VERTICAL_TO_FIFO_INSTANTIATE(X_END+1, j, k, X_END, j + CODE_DISTANCE_Z)
+                        `NEIGHBOR_VERTICAL_TO_FIFO_INSTANTIATE_BOTTOM_BORDER(X_END+1, j, k, X_END, j + CODE_DISTANCE_Z)
                     end
                 end
                 `DIRECT_CHANNEL_VERTICAL_TO_FIFO_INSTANTIATE_INPUT(X_END , j)

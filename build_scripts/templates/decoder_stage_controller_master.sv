@@ -2,9 +2,9 @@ module decoder_stage_controller_master_/*$$ID*/ #(
     parameter CODE_DISTANCE_X = /*$$CODE_DISTANCE_X*/,
     parameter CODE_DISTANCE_Z = /*$$CODE_DISTANCE_Z*/,
     parameter ITERATION_COUNTER_WIDTH = 8,  // counts to 255 iterations
-    parameter BOUNDARY_GROW_DELAY = 3,  // clock cycles
-    parameter SPREAD_CLUSTER_DELAY = 2,  // clock cycles
-    parameter SYNC_IS_ODD_CLUSTER_DELAY = 2  // clock cycles
+    parameter BOUNDARY_GROW_DELAY = 3,  // 7 should be derived
+    parameter SPREAD_CLUSTER_DELAY = 2 + 7,  // 7 should be derived
+    parameter SYNC_IS_ODD_CLUSTER_DELAY = 2 + 7  // 7 should be derived
 
 ) (
     clk,
@@ -234,7 +234,7 @@ always @(posedge clk) begin
                 end
             end
             STAGE_GROW_BOUNDARY: begin
-                if (delay_counter >= BOUNDARY_GROW_DELAY && !has_messages_flying_both_sides) begin
+                if (delay_counter >= BOUNDARY_GROW_DELAY) begin
                     stage <= STAGE_SPREAD_CLUSTER;
                     delay_counter <= 0;
                 end else begin

@@ -22,7 +22,7 @@ interonncetion_model #(
     .downstream_fifo_in_ready(downstream_fifo_in_ready_d_/*$$ID*/),
 
     .upstream_has_message_flying(downstream_has_message_flying_/*$$ID*/),
-    .upstream_has_odd_clusters(downstream_has_odd_cluster_/*$$ID*/),
+    .upstream_has_odd_clusters(downstream_has_odd_clusters_/*$$ID*/),
 
     .downstream_has_message_flying(downstream_has_message_flying_d_/*$$ID*/),
     .downstream_has_odd_clusters(downstream_has_odd_clusters_d_/*$$ID*/)
