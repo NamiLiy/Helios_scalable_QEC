@@ -268,6 +268,7 @@ assign direct_address = selected_message [DIRECT_MESSAGE_WIDTH - 1 : 2];
 // If top half then to bottom half unless going to the first FIFO
 // If bottom half then definitely to the first half.
 // This is also offloaded to the leaf card
+wire [FPGAID_WIDTH - 1 : 0] dest_fpga_id;
 assign dest_fpga_id = selected_message[HUB_FIFO_WIDTH - 1: HUB_FIFO_WIDTH - FPGAID_WIDTH];
 
 genvar k;
