@@ -12,8 +12,6 @@ module decoder_stage_controller_dummy_/*$$ID*/ #(
     clk,
     reset,
     new_round_start,
-    has_message_flying,
-    has_odd_clusters,
     is_touching_boundaries,
     is_odd_cardinalities,
     roots,
@@ -28,9 +26,7 @@ module decoder_stage_controller_dummy_/*$$ID*/ #(
     sc_fifo_out_ready,
     sc_fifo_in_data,
     sc_fifo_in_valid,
-    sc_fifo_in_ready,
-    has_message_flying_otherside,
-    has_odd_clusters_otherside
+    sc_fifo_in_ready
 );
 
 `include "../../parameters/parameters.sv"
@@ -58,8 +54,8 @@ localparam ROOTS_PER_ROUND = (X_END-X_START+1)*CODE_DISTANCE_Z;
 input clk;
 input reset;
 input new_round_start;
-input has_message_flying;
-input has_odd_clusters;
+// input has_message_flying;
+// input has_odd_clusters;
 input [PU_COUNT-1:0] is_touching_boundaries;
 input [PU_COUNT-1:0] is_odd_cardinalities;
 output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
@@ -75,8 +71,8 @@ input sc_fifo_out_ready;
 input [HUB_FIFO_WIDTH - 1 :0] sc_fifo_in_data;
 input sc_fifo_in_valid;
 output sc_fifo_in_ready;
-output has_message_flying_otherside;
-output has_odd_clusters_otherside;
+// output has_message_flying_otherside;
+// output has_odd_clusters_otherside;
 
 reg [COUNTER_WIDTH-1:0] delay_counter;
 reg [31:0] cycles_in_stage;
@@ -139,8 +135,8 @@ fifo_fwft #(.DEPTH(16), .WIDTH(HUB_FIFO_WIDTH)) in_fifo
 //     end
 // end
 
-assign has_message_flying_otherside = has_message_flying;
-assign has_odd_clusters_otherside = has_odd_clusters;
+// assign has_message_flying_otherside = has_message_flying;
+// assign has_odd_clusters_otherside = has_odd_clusters;
 
 // deadlock detection logic
 always @(posedge clk) begin

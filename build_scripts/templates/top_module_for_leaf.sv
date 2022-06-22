@@ -26,8 +26,8 @@ module top_module_for_leaf_/*$$ID*/ #(
     final_fifo_in_valid,
     final_fifo_in_ready,
 
-    has_message_flying_otherside,
-    has_odd_clusters_otherside
+    has_message_flying,
+    has_odd_clusters
 );
 
 `include "../../parameters/parameters.sv"
@@ -56,6 +56,7 @@ localparam MY_ID = /*$$ID*/;
 // localparam BOTTOM_FPGA_ID = /*$$ID*/ + 1;
 localparam FPGAID_WIDTH = /*$$FPGAID_WIDTH*/;
 localparam FIFO_IDWIDTH = /*$$FIFO_IDWIDTH*/;
+localparam MESSAGE_FLYING_DELAY = /*$$MESSAGE_FLYING_DELAY*/;
 
 input clk;
 input reset;
@@ -68,8 +69,8 @@ output [31:0] cycle_counter;
 output deadlock;
 output final_cardinality;
 
-output has_message_flying_otherside;
-output has_odd_clusters_otherside;
+output has_message_flying;
+output reg has_odd_clusters;
 
 output [HUB_FIFO_WIDTH - 1 :0] final_fifo_out_data;
 output final_fifo_out_valid;
@@ -94,16 +95,23 @@ wire sc_fifo_in_ready;
 
 wire [PU_COUNT*MEASUREMENT_ROUNDS-1:0] is_odd_cardinalities;
 wire [PU_COUNT*MEASUREMENT_ROUNDS-1:0] is_touching_boundaries;
-wire has_message_flying;
+reg [MESSAGE_FLYING_DELAY-1:0]has_message_flying_reg;
 wire [STAGE_WIDTH-1:0] stage;
 wire [PU_COUNT*MEASUREMENT_ROUNDS-1:0] is_odd_clusters;
-reg has_odd_clusters;
 // wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] left_roots;
-wire has_message_flying_sc;
 wire has_message_flying_grid;
 wire has_message_flying_interconnect;
 
-assign has_message_flying_sc = has_message_flying_grid | has_message_flying_interconnect;
+assign has_message_flying = |has_message_flying_reg;
+
+always@(posedge clk) begin
+    if (reset) begin
+        has_message_flying_reg <= 32'b0;
+    end else begin
+        has_message_flying_reg[0] <= has_message_flying_grid | has_message_flying_interconnect;
+        has_message_flying_reg[MESSAGE_FLYING_DELAY-1:1] <= has_message_flying_reg[MESSAGE_FLYING_DELAY-2:0];
+    end
+end
 
 always@(posedge clk) begin
     has_odd_clusters <= |is_odd_clusters;
@@ -140,8 +148,6 @@ decoder_stage_controller_dummy_/*$$ID*/ #(
 ) u_decoder_stage_controller (
     .clk(clk),
     .reset(reset),
-    .has_message_flying(has_message_flying_sc),
-    .has_odd_clusters(has_odd_clusters),
     .is_touching_boundaries(is_touching_boundaries),
     .is_odd_cardinalities(is_odd_cardinalities),
     .roots(roots),
@@ -157,9 +163,7 @@ decoder_stage_controller_dummy_/*$$ID*/ #(
     .sc_fifo_out_ready(sc_fifo_out_ready),
     .sc_fifo_in_data(sc_fifo_in_data),
     .sc_fifo_in_valid(sc_fifo_in_valid),
-    .sc_fifo_in_ready(sc_fifo_in_ready),
-    .has_message_flying_otherside(has_message_flying_otherside),
-    .has_odd_clusters_otherside(has_odd_clusters_otherside)
+    .sc_fifo_in_ready(sc_fifo_in_ready)
 );
 
 final_arbitration_unit #(

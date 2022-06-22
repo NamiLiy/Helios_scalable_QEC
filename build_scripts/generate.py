@@ -12,6 +12,7 @@ hub_fifo_width = 16
 fpga_id_width = 4
 fifo_id_width = 4
 global_pointer_to_parent = None
+dealy_for_pe_busy = 4
 
 class hdlTemplate:
     out = ""
@@ -216,6 +217,7 @@ def add_leaf(node):
         OF.r("X_START", x_start) # This is split edges per measurement round
         OF.r("X_END", x_end) # This is split edges per measurement round
         OF.r("HUB_FIFO_WIDTH", hub_fifo_width)
+        OF.r("MESSAGE_FLYING_DELAY",dealy_for_pe_busy)
 
         # Write to file
         f = open("../design/generated/top_module_for_leaf_" + str(node.id) + ".sv", "w")
@@ -314,6 +316,7 @@ def add_root_hub(node):
         OF.r("ID", str(node.id))
         OF.r("CODE_DISTANCE_X", codeDistanceX)
         OF.r("CODE_DISTANCE_Z", codeDistanceZ)
+        OF.r("MESSAGE_FLYING_DELAY",dealy_for_pe_busy)
 
         # Write to file
         f = open("../design/generated/decoder_stage_controller_master_" + str(node.id) + ".sv", "w")

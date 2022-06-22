@@ -24,8 +24,8 @@ top_module_for_leaf_/*$$ID*/ #(
     .final_fifo_in_data(downstream_fifo_out_data_d_/*$$PARENT*/[(/*$$CHILD_ID*/ + 1)*INTERCONNECT_WIDTH : /*$$CHILD_ID*/ *INTERCONNECT_WIDTH]),
     .final_fifo_in_valid(downstream_fifo_out_valid_d_/*$$PARENT*/[/*$$CHILD_ID*/]),
     .final_fifo_in_ready(downstream_fifo_out_ready_d_/*$$PARENT*/[/*$$CHILD_ID*/]),
-    .has_message_flying_otherside(downstream_has_message_flying_d_/*$$PARENT*/[/*$$CHILD_ID*/]),
-    .has_odd_clusters_otherside(downstream_has_odd_clusters_d_/*$$PARENT*/[/*$$CHILD_ID*/])
+    .has_message_flying(downstream_has_message_flying_d_/*$$PARENT*/[/*$$CHILD_ID*/]),
+    .has_odd_clusters(downstream_has_odd_clusters_d_/*$$PARENT*/[/*$$CHILD_ID*/])
 );
 
 generate

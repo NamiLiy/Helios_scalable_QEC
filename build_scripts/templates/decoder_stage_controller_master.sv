@@ -51,6 +51,7 @@ localparam MASTER_FIFO_WIDTH = DIRECT_MESSAGE_WIDTH + 1;
 
 localparam MAXIMUM_DELAY = `MAX3(BOUNDARY_GROW_DELAY, SPREAD_CLUSTER_DELAY, SYNC_IS_ODD_CLUSTER_DELAY);
 localparam COUNTER_WIDTH = $clog2(MAXIMUM_DELAY + 1);
+localparam MESSAGE_FLYING_DELAY = /*$$MESSAGE_FLYING_DELAY*/;
 
 input clk;
 input reset;
@@ -135,9 +136,19 @@ fifo_fwft #(.DEPTH(16), .WIDTH(MASTER_FIFO_WIDTH)) in_fifo
 //         has_odd_clusters_both_sides == 1'b1;
 //     end
 // end
+reg [MESSAGE_FLYING_DELAY-1:0]has_message_flying_reg;
+
+always@(posedge clk) begin
+    if (reset) begin
+        has_message_flying_reg <= 32'b0;
+    end else begin
+        has_message_flying_reg[0] <= downstream_has_message_flying;
+        has_message_flying_reg[MESSAGE_FLYING_DELAY-1:1] <= has_message_flying_reg[MESSAGE_FLYING_DELAY-2:0];
+    end
+end
 
 always@(*) begin
-    has_messages_flying_both_sides = downstream_has_message_flying;
+    has_messages_flying_both_sides = |has_message_flying_reg;
     has_odd_clusters_both_sides = downstream_has_odd_clusters;
 end
 
