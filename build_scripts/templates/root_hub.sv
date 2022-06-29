@@ -43,6 +43,7 @@ localparam DIRECT_MESSAGE_WIDTH = ADDRESS_WIDTH + 1 + 1;  // [receiver, is_odd_c
 localparam MASTER_FIFO_WIDTH = DIRECT_MESSAGE_WIDTH + 1;
 
 localparam HUB_FIFO_WIDTH = /*$$HUB_FIFO_WIDTH*/;
+localparam HUB_FIFO_PHYSICAL_WIDTH = /*$$HUB_FIFO_PHYSICAL_WIDTH*/;
 localparam DOWNSTREAM_FIFO_COUNT = /*$$DOWNSTREAM_FIFO_COUNT*/;
 localparam FPGAID_WIDTH = /*$$FPGAID_WIDTH*/;
 localparam FIFO_IDWIDTH = /*$$FIFO_IDWIDTH*/;
@@ -69,10 +70,10 @@ wire [HUB_FIFO_WIDTH - 1 :0] upstream_fifo_in_data;
 wire upstream_fifo_in_valid;
 wire upstream_fifo_in_ready;
 
-output [DOWNSTREAM_FIFO_COUNT*HUB_FIFO_WIDTH - 1 :0] downstream_fifo_out_data;
+output [DOWNSTREAM_FIFO_COUNT*HUB_FIFO_PHYSICAL_WIDTH - 1 :0] downstream_fifo_out_data;
 output [DOWNSTREAM_FIFO_COUNT - 1 :0] downstream_fifo_out_valid;
 input [DOWNSTREAM_FIFO_COUNT - 1 :0] downstream_fifo_out_ready;
-input [DOWNSTREAM_FIFO_COUNT*HUB_FIFO_WIDTH - 1 :0] downstream_fifo_in_data;
+input [DOWNSTREAM_FIFO_COUNT*HUB_FIFO_PHYSICAL_WIDTH - 1 :0] downstream_fifo_in_data;
 input [DOWNSTREAM_FIFO_COUNT - 1 :0] downstream_fifo_in_valid;
 output [DOWNSTREAM_FIFO_COUNT - 1 :0] downstream_fifo_in_ready;
 

@@ -47,6 +47,7 @@ localparam EDGE_COUNT = /*$$EDGE_COUNT*/;
 localparam FIFO_COUNT = /*$$EDGE_COUNT*/ * MEASUREMENT_ROUNDS;
 localparam FINAL_FIFO_WIDTH = MASTER_FIFO_WIDTH + $clog2(FIFO_COUNT+1);
 localparam HUB_FIFO_WIDTH = /*$$HUB_FIFO_WIDTH*/;
+localparam HUB_FIFO_PHYSICAL_WIDTH = /*$$HUB_FIFO_PHYSICAL_WIDTH*/;
 
 localparam X_START = /*$$X_START*/;
 localparam X_END = /*$$X_END*/;
@@ -72,10 +73,10 @@ output final_cardinality;
 output has_message_flying;
 output reg has_odd_clusters;
 
-output [HUB_FIFO_WIDTH - 1 :0] final_fifo_out_data;
+output [HUB_FIFO_PHYSICAL_WIDTH - 1 :0] final_fifo_out_data;
 output final_fifo_out_valid;
 input final_fifo_out_ready;
-input [HUB_FIFO_WIDTH - 1 :0] final_fifo_in_data;
+input [HUB_FIFO_PHYSICAL_WIDTH - 1 :0] final_fifo_in_data;
 input final_fifo_in_valid;
 output final_fifo_in_ready;
 
@@ -93,11 +94,11 @@ wire [HUB_FIFO_WIDTH - 1 :0] sc_fifo_in_data;
 wire sc_fifo_in_valid;
 wire sc_fifo_in_ready;
 
-wire [PU_COUNT*MEASUREMENT_ROUNDS-1:0] is_odd_cardinalities;
-wire [PU_COUNT*MEASUREMENT_ROUNDS-1:0] is_touching_boundaries;
+wire [PU_COUNT -1:0] is_odd_cardinalities;
+wire [PU_COUNT -1:0] is_touching_boundaries;
 reg [MESSAGE_FLYING_DELAY-1:0]has_message_flying_reg;
 wire [STAGE_WIDTH-1:0] stage;
-wire [PU_COUNT*MEASUREMENT_ROUNDS-1:0] is_odd_clusters;
+wire [PU_COUNT -1:0] is_odd_clusters;
 // wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] left_roots;
 wire has_message_flying_grid;
 wire has_message_flying_interconnect;
@@ -169,6 +170,7 @@ decoder_stage_controller_dummy_/*$$ID*/ #(
 final_arbitration_unit #(
     .FPGAID_WIDTH(FPGAID_WIDTH),
     .HUB_FIFO_WIDTH(HUB_FIFO_WIDTH),
+    .HUB_FIFO_PHYSICAL_WIDTH(HUB_FIFO_PHYSICAL_WIDTH),
     .FIFO_IDWIDTH(FIFO_IDWIDTH),
     .FIFO_COUNT(FIFO_COUNT)
 ) u_final_arbitration_unit (

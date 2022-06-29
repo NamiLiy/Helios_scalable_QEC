@@ -37,7 +37,7 @@ localparam MASTER_FIFO_WIDTH = DIRECT_MESSAGE_WIDTH + 1;
 localparam FIFO_COUNT = MEASUREMENT_ROUNDS * (CODE_DISTANCE_Z);
 localparam FINAL_FIFO_WIDTH = MASTER_FIFO_WIDTH + $clog2(FIFO_COUNT+1);
 
-localparam INTERCONNECT_WIDTH = /*$$HUB_FIFO_WIDTH*/;
+localparam INTERCONNECT_PHYSICAL_WIDTH = /*$$HUB_FIFO_PHYSICAL_WIDTH*/;
 
 reg clk;
 reg reset;
@@ -60,20 +60,20 @@ reg deadlock;
 `define PU(i, j, k) decoder.decoder.pu_k[k].pu_i[i].pu_j[j].u_processing_unit
 
 
-wire [/*$$NUM_CHILDREN*/*INTERCONNECT_WIDTH - 1 : 0] downstream_fifo_in_data_/*$$ID*/;
+wire [/*$$NUM_CHILDREN*/*INTERCONNECT_PHYSICAL_WIDTH - 1 : 0] downstream_fifo_in_data_/*$$ID*/;
 wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_in_valid_/*$$ID*/;
 wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_in_ready_/*$$ID*/;
-wire [/*$$NUM_CHILDREN*/*INTERCONNECT_WIDTH - 1 : 0] downstream_fifo_out_data_/*$$ID*/;
+wire [/*$$NUM_CHILDREN*/*INTERCONNECT_PHYSICAL_WIDTH - 1 : 0] downstream_fifo_out_data_/*$$ID*/;
 wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_out_valid_/*$$ID*/;
 wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_out_ready_/*$$ID*/;
 
 wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_has_message_flying_/*$$ID*/;
 wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_has_odd_clusters_/*$$ID*/;
 
-wire [/*$$NUM_CHILDREN*/*INTERCONNECT_WIDTH - 1 : 0] downstream_fifo_in_data_d_/*$$ID*/;
+wire [/*$$NUM_CHILDREN*/*INTERCONNECT_PHYSICAL_WIDTH - 1 : 0] downstream_fifo_in_data_d_/*$$ID*/;
 wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_in_valid_d_/*$$ID*/;
 wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_in_ready_d_/*$$ID*/;
-wire [/*$$NUM_CHILDREN*/*INTERCONNECT_WIDTH - 1 : 0] downstream_fifo_out_data_d_/*$$ID*/;
+wire [/*$$NUM_CHILDREN*/*INTERCONNECT_PHYSICAL_WIDTH - 1 : 0] downstream_fifo_out_data_d_/*$$ID*/;
 wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_out_valid_d_/*$$ID*/;
 wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_out_ready_d_/*$$ID*/;
 

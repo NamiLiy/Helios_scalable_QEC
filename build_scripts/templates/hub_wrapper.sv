@@ -1,17 +1,17 @@
-wire [/*$$NUM_CHILDREN*/*INTERCONNECT_WIDTH - 1 : 0] downstream_fifo_in_data_/*$$ID*/;
+wire [/*$$NUM_CHILDREN*/*INTERCONNECT_PHYSICAL_WIDTH - 1 : 0] downstream_fifo_in_data_/*$$ID*/;
 wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_in_valid_/*$$ID*/;
 wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_in_ready_/*$$ID*/;
-wire [/*$$NUM_CHILDREN*/*INTERCONNECT_WIDTH - 1 : 0] downstream_fifo_out_data_/*$$ID*/;
+wire [/*$$NUM_CHILDREN*/*INTERCONNECT_PHYSICAL_WIDTH - 1 : 0] downstream_fifo_out_data_/*$$ID*/;
 wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_out_valid_/*$$ID*/;
 wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_out_ready_/*$$ID*/;
 
 wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_has_message_flying_/*$$ID*/;
 wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_has_odd_clusters_/*$$ID*/;
 
-wire [/*$$NUM_CHILDREN*/*INTERCONNECT_WIDTH - 1 : 0] downstream_fifo_in_data_d_/*$$ID*/;
+wire [/*$$NUM_CHILDREN*/*INTERCONNECT_PHYSICAL_WIDTH - 1 : 0] downstream_fifo_in_data_d_/*$$ID*/;
 wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_in_valid_d_/*$$ID*/;
 wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_in_ready_d_/*$$ID*/;
-wire [/*$$NUM_CHILDREN*/*INTERCONNECT_WIDTH - 1 : 0] downstream_fifo_out_data_d_/*$$ID*/;
+wire [/*$$NUM_CHILDREN*/*INTERCONNECT_PHYSICAL_WIDTH - 1 : 0] downstream_fifo_out_data_d_/*$$ID*/;
 wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_out_valid_d_/*$$ID*/;
 wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_out_ready_d_/*$$ID*/;
 
@@ -39,10 +39,10 @@ top_module_hub_/*$$ID*/ #(
     // .final_cardinality(final_cardinality)
 
 
-    .upstream_fifo_out_data(downstream_fifo_in_data_d_/*$$PARENT*/[(/*$$CHILD_ID*/ + 1)*INTERCONNECT_WIDTH : /*$$CHILD_ID*/ *INTERCONNECT_WIDTH]),
+    .upstream_fifo_out_data(downstream_fifo_in_data_d_/*$$PARENT*/[(/*$$CHILD_ID*/ + 1)*INTERCONNECT_PHYSICAL_WIDTH - 1: /*$$CHILD_ID*/ *INTERCONNECT_PHYSICAL_WIDTH]),
     .upstream_fifo_out_valid(downstream_fifo_in_valid_d_/*$$PARENT*/[/*$$CHILD_ID*/]),
     .upstream_fifo_out_ready(downstream_fifo_in_ready_d_/*$$PARENT*/[/*$$CHILD_ID*/]),
-    .upstream_fifo_in_data(downstream_fifo_out_data_d_/*$$PARENT*/[(/*$$CHILD_ID*/ + 1)*INTERCONNECT_WIDTH : /*$$CHILD_ID*/ *INTERCONNECT_WIDTH]),
+    .upstream_fifo_in_data(downstream_fifo_out_data_d_/*$$PARENT*/[(/*$$CHILD_ID*/ + 1)*INTERCONNECT_PHYSICAL_WIDTH - 1: /*$$CHILD_ID*/ *INTERCONNECT_PHYSICAL_WIDTH]),
     .upstream_fifo_in_valid(downstream_fifo_out_valid_d_/*$$PARENT*/[/*$$CHILD_ID*/]),
     .upstream_fifo_in_ready(downstream_fifo_out_ready_d_/*$$PARENT*/[/*$$CHILD_ID*/]),
 

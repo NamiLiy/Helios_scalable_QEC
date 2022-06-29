@@ -1,5 +1,5 @@
 interonncetion_model #(
-    .WIDTH(INTERCONNECT_WIDTH),
+    .WIDTH(INTERCONNECT_PHYSICAL_WIDTH),
     .LATENCY(1),
     .CHANNELS(/*$$NUM_CHILDREN*/)
 ) u_interconnection_model_/*$$ID*/(

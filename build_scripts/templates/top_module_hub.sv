@@ -53,6 +53,8 @@ localparam DIRECT_MESSAGE_WIDTH = ADDRESS_WIDTH + 1 + 1;  // [receiver, is_odd_c
 localparam MASTER_FIFO_WIDTH = DIRECT_MESSAGE_WIDTH + 1;
 
 localparam HUB_FIFO_WIDTH = /*$$HUB_FIFO_WIDTH*/;
+localparam HUB_FIFO_PHYSICAL_WIDTH_DWN = /*$$HUB_FIFO_PHYSICAL_WIDTH_DWN*/;
+localparam HUB_FIFO_PHYSICAL_WIDTH_UP = /*$$HUB_FIFO_PHYSICAL_WIDTH_UP*/;
 localparam DOWNSTREAM_FIFO_COUNT = /*$$DOWNSTREAM_FIFO_COUNT*/;
 localparam FPGAID_WIDTH = /*$$FPGAID_WIDTH*/;
 localparam FIFO_IDWIDTH = /*$$FIFO_IDWIDTH*/;
@@ -72,17 +74,17 @@ input reset;
 // output has_message_flying_otherside;
 // output has_odd_clusters_otherside;
 
-output [HUB_FIFO_WIDTH - 1 :0] upstream_fifo_out_data;
+output [HUB_FIFO_PHYSICAL_WIDTH_UP - 1 :0] upstream_fifo_out_data;
 output upstream_fifo_out_valid;
 input upstream_fifo_out_ready;
-input [HUB_FIFO_WIDTH - 1 :0] upstream_fifo_in_data;
+input [HUB_FIFO_PHYSICAL_WIDTH_UP - 1 :0] upstream_fifo_in_data;
 input upstream_fifo_in_valid;
 output upstream_fifo_in_ready;
 
-output [DOWNSTREAM_FIFO_COUNT*HUB_FIFO_WIDTH - 1 :0] downstream_fifo_out_data;
+output [DOWNSTREAM_FIFO_COUNT*HUB_FIFO_PHYSICAL_WIDTH_DWN - 1 :0] downstream_fifo_out_data;
 output [DOWNSTREAM_FIFO_COUNT - 1 :0] downstream_fifo_out_valid;
 input [DOWNSTREAM_FIFO_COUNT - 1 :0] downstream_fifo_out_ready;
-input [DOWNSTREAM_FIFO_COUNT*HUB_FIFO_WIDTH - 1 :0] downstream_fifo_in_data;
+input [DOWNSTREAM_FIFO_COUNT*HUB_FIFO_PHYSICAL_WIDTH_DWN - 1 :0] downstream_fifo_in_data;
 input [DOWNSTREAM_FIFO_COUNT - 1 :0] downstream_fifo_in_valid;
 output [DOWNSTREAM_FIFO_COUNT - 1 :0] downstream_fifo_in_ready;
 
@@ -91,6 +93,14 @@ output reg upstream_has_odd_clusters;
 
 input [DOWNSTREAM_FIFO_COUNT - 1 :0] downstream_has_message_flying;
 input [DOWNSTREAM_FIFO_COUNT - 1 :0] downstream_has_odd_clusters;
+
+wire [DOWNSTREAM_FIFO_COUNT*HUB_FIFO_WIDTH - 1 :0] downstream_fifo_out_data_pre;
+wire [DOWNSTREAM_FIFO_COUNT - 1 :0] downstream_fifo_out_valid_pre;
+wire [DOWNSTREAM_FIFO_COUNT - 1 :0] downstream_fifo_out_ready_pre;
+
+wire [HUB_FIFO_WIDTH - 1 :0] upstream_fifo_out_data_pre;
+wire upstream_fifo_out_valid_pre;
+wire upstream_fifo_out_ready_pre;
 
 always@(posedge clk) begin
     upstream_has_odd_clusters <= |downstream_has_odd_clusters;
@@ -113,19 +123,36 @@ generate
         wire downstream_fifo_in_valid_d;
         wire downstream_fifo_in_taken_d;
         wire downstream_fifo_is_full;
+
+        wire [HUB_FIFO_PHYSICAL_WIDTH_DWN - 1 :0] downstream_fifo_in_data_temp;
+        wire downstream_fifo_in_valid_temp;
+        wire downstream_fifo_in_taken_temp;
+
         blocking_channel #(
-            .WIDTH(HUB_FIFO_WIDTH), // width of data
+            .WIDTH(HUB_FIFO_PHYSICAL_WIDTH_DWN), // width of data
             .DEPTH(256)
         ) down_input_fifo (
-            .in_data(downstream_fifo_in_data[(i+1)*HUB_FIFO_WIDTH -1 : i*HUB_FIFO_WIDTH]),
+            .in_data(downstream_fifo_in_data[(i+1)*HUB_FIFO_PHYSICAL_WIDTH_DWN -1 : i*HUB_FIFO_PHYSICAL_WIDTH_DWN]),
             .in_valid(downstream_fifo_in_valid[i]),
             .in_is_full(downstream_fifo_is_full),
-            .out_data(downstream_fifo_in_data_d),
-            .out_valid(downstream_fifo_in_valid_d),
-            .out_is_taken(downstream_fifo_in_taken_d),
+            .out_data(downstream_fifo_in_data_temp),
+            .out_valid(downstream_fifo_in_valid_temp),
+            .out_is_taken(downstream_fifo_in_taken_temp),
             .clk(clk),
             .reset(reset),
             .initialize(reset) //Check for correct signal
+        );
+
+        deserializer #(.HUB_FIFO_WIDTH(HUB_FIFO_WIDTH), .HUB_FIFO_PHYSICAL_WIDTH(HUB_FIFO_PHYSICAL_WIDTH_DWN)) des_down_input
+        (
+            .clk(clk),
+            .reset(reset),
+            .wide_fifo_data(downstream_fifo_in_data_d),
+            .wide_fifo_valid(downstream_fifo_in_valid_d),
+            .wide_fifo_ready(downstream_fifo_in_taken_d),
+            .narrow_fifo_valid(downstream_fifo_in_valid_temp),
+            .narrow_fifo_ready(downstream_fifo_in_taken_temp),
+            .narrow_fifo_data(downstream_fifo_in_data_temp)
         );
 
         assign downstream_fifo_in_ready[i] = ~downstream_fifo_is_full;
@@ -137,20 +164,37 @@ wire [HUB_FIFO_WIDTH - 1 :0] upstream_fifo_in_data_d;
 wire upstream_fifo_in_valid_d;
 wire upstream_fifo_in_taken_d;
 wire upstream_fifo_is_full;
+
+wire [HUB_FIFO_PHYSICAL_WIDTH_UP - 1 :0] upstream_fifo_in_data_temp;
+wire upstream_fifo_in_valid_temp;
+wire upstream_fifo_in_taken_temp;
+
 blocking_channel #(
-    .WIDTH(HUB_FIFO_WIDTH), // width of data
+    .WIDTH(HUB_FIFO_PHYSICAL_WIDTH_UP), // width of data
     .DEPTH(256)
 ) down_input_fifo (
     .in_data(upstream_fifo_in_data),
     .in_valid(upstream_fifo_in_valid),
     .in_is_full(upstream_fifo_is_full),
-    .out_data(upstream_fifo_in_data_d),
-    .out_valid(upstream_fifo_in_valid_d),
-    .out_is_taken(upstream_fifo_in_taken_d),
+    .out_data(upstream_fifo_in_data_temp),
+    .out_valid(upstream_fifo_in_valid_temp),
+    .out_is_taken(upstream_fifo_in_taken_temp),
     .clk(clk),
     .reset(reset),
     .initialize(reset) //Check for correct signal
 );
+
+deserializer #(.HUB_FIFO_WIDTH(HUB_FIFO_WIDTH), .HUB_FIFO_PHYSICAL_WIDTH(HUB_FIFO_PHYSICAL_WIDTH_UP)) des_up_input
+        (
+            .clk(clk),
+            .reset(reset),
+            .wide_fifo_data(upstream_fifo_in_data_d),
+            .wide_fifo_valid(upstream_fifo_in_valid_d),
+            .wide_fifo_ready(upstream_fifo_in_taken_d),
+            .narrow_fifo_valid(upstream_fifo_in_valid_temp),
+            .narrow_fifo_ready(upstream_fifo_in_taken_temp),
+            .narrow_fifo_data(upstream_fifo_in_data_temp)
+        );
 
 assign upstream_fifo_in_ready = ~upstream_fifo_is_full;
 
@@ -247,7 +291,7 @@ end
 // 3. Now write the routing logic
 // Todo : Check the logic here
 wire all_output_fifos_free;
-assign all_output_fifos_free = (& downstream_fifo_out_ready) && upstream_fifo_out_ready;
+assign all_output_fifos_free = (& downstream_fifo_out_ready_pre) && upstream_fifo_out_ready_pre;
 assign router_ready =  all_output_fifos_free;
 
 reg [HUB_FIFO_WIDTH - 1 :0] output_message_register;
@@ -295,51 +339,80 @@ genvar k;
 
 
 always@(posedge clk) begin
-    if(all_output_fifos_free) begin
-        if(selected_valid) begin
-            if(`message_from_upstream) begin
-                if(`message_from_stage_controller) begin
-                    output_valid_register[DOWNSTREAM_FIFO_COUNT-1 :0] <= {DOWNSTREAM_FIFO_COUNT{1'b1}};
-                    output_valid_register[DOWNSTREAM_FIFO_COUNT] <= 1'b0;
-                end else begin
-                    if(`direct_message) begin
-                        output_valid_register[DOWNSTREAM_FIFO_COUNT :0] <= destination_index;
+    if (reset) begin
+        output_valid_register <= 32'b0;
+    end else begin
+        if(all_output_fifos_free) begin
+            if(selected_valid) begin
+                if(`message_from_upstream) begin
+                    if(`message_from_stage_controller) begin
+                        output_valid_register[DOWNSTREAM_FIFO_COUNT-1 :0] <= {DOWNSTREAM_FIFO_COUNT{1'b1}};
+                        output_valid_register[DOWNSTREAM_FIFO_COUNT] <= 1'b0;
                     end else begin
-                        output_valid_register[DOWNSTREAM_FIFO_COUNT :0] <= destination_index;
+                        if(`direct_message) begin
+                            output_valid_register[DOWNSTREAM_FIFO_COUNT :0] <= destination_index;
+                        end else begin
+                            output_valid_register[DOWNSTREAM_FIFO_COUNT :0] <= destination_index;
+                        end
                     end
+                end else begin
+                    if(`message_from_stage_controller) begin
+                        output_valid_register[DOWNSTREAM_FIFO_COUNT-1 :0] <= {DOWNSTREAM_FIFO_COUNT{1'b0}};
+                        output_valid_register[DOWNSTREAM_FIFO_COUNT] <= 1'b1;
+                    end else begin
+                        if(`direct_message) begin
+                            output_valid_register[DOWNSTREAM_FIFO_COUNT :0] <= destination_index;
+                        end else begin
+                            output_valid_register[DOWNSTREAM_FIFO_COUNT :0] <= destination_index;
+                        end
+                    end        
                 end
             end else begin
-                if(`message_from_stage_controller) begin
-                    output_valid_register[DOWNSTREAM_FIFO_COUNT-1 :0] <= {DOWNSTREAM_FIFO_COUNT{1'b0}};
-                    output_valid_register[DOWNSTREAM_FIFO_COUNT] <= 1'b1;
-                end else begin
-                    if(`direct_message) begin
-                        output_valid_register[DOWNSTREAM_FIFO_COUNT :0] <= destination_index;
-                    end else begin
-                        output_valid_register[DOWNSTREAM_FIFO_COUNT :0] <= destination_index;
-                    end
-                end        
+                output_valid_register[DOWNSTREAM_FIFO_COUNT-1 :0] <= {DOWNSTREAM_FIFO_COUNT{1'b0}};
+                output_valid_register[DOWNSTREAM_FIFO_COUNT] <= 1'b0;
             end
-        end else begin
-            output_valid_register[DOWNSTREAM_FIFO_COUNT-1 :0] <= {DOWNSTREAM_FIFO_COUNT{1'b0}};
-            output_valid_register[DOWNSTREAM_FIFO_COUNT] <= 1'b0;
+            output_message_register <= selected_message;
         end
-        output_message_register <= selected_message;
     end
 end
 
 assign upstream_fifo_out_data = output_message_register;
 assign upstream_fifo_out_valid = output_valid_register[DOWNSTREAM_FIFO_COUNT];
 
-`define downstream_fifo_out_data(i) downstream_fifo_out_data[((i+1) * HUB_FIFO_WIDTH) - 1 : (i * HUB_FIFO_WIDTH)]
+`define downstream_fifo_out_data(i) downstream_fifo_out_data[((i+1) * HUB_FIFO_PHYSICAL_WIDTH_DWN) - 1 : (i * HUB_FIFO_PHYSICAL_WIDTH_DWN)]
 
 generate
-    for (i=0; i < DOWNSTREAM_FIFO_COUNT; i=i+1) begin: writing_incoming_data
-        assign `downstream_fifo_out_data(i) = output_message_register;
+    for (i=0; i < DOWNSTREAM_FIFO_COUNT; i=i+1) begin: output_data_writing
+
+        wire[HUB_FIFO_PHYSICAL_WIDTH_DWN-1 : 0] narrow_fifo_data;
+
+        serializer #(.HUB_FIFO_WIDTH(HUB_FIFO_WIDTH), .HUB_FIFO_PHYSICAL_WIDTH(HUB_FIFO_PHYSICAL_WIDTH_DWN)) ser_dwn_out
+        (
+            .clk(clk),
+            .reset(reset),
+            .wide_fifo_data(output_message_register),
+            .wide_fifo_valid(output_valid_register[i]),
+            .wide_fifo_ready(downstream_fifo_out_ready_pre[i]),
+            .narrow_fifo_valid(downstream_fifo_out_valid[i]),
+            .narrow_fifo_ready(downstream_fifo_out_ready[i]),
+            .narrow_fifo_data(narrow_fifo_data)
+        );
+
+        assign `downstream_fifo_out_data(i) = narrow_fifo_data;
     end
 endgenerate
 
-assign  downstream_fifo_out_valid = output_valid_register[DOWNSTREAM_FIFO_COUNT - 1 :0];
+serializer #(.HUB_FIFO_WIDTH(HUB_FIFO_WIDTH), .HUB_FIFO_PHYSICAL_WIDTH(HUB_FIFO_PHYSICAL_WIDTH_UP)) ser_up_out
+(
+    .clk(clk),
+    .reset(reset),
+    .wide_fifo_data(output_message_register),
+    .wide_fifo_valid(output_valid_register[DOWNSTREAM_FIFO_COUNT]),
+    .wide_fifo_ready(upstream_fifo_out_ready_pre),
+    .narrow_fifo_data(upstream_fifo_out_data),
+    .narrow_fifo_ready(upstream_fifo_out_ready),
+    .narrow_fifo_valid(upstream_fifo_out_valid)
+);
 
 // upstream messages from the stage controller has to be broadcasted down
 // upstream messages for neighboring or blocking FIFOs need to be send to the correct downstream port

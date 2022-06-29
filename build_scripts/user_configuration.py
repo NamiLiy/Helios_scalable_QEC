@@ -36,7 +36,8 @@ class UserProperties:
     def __init__(self, codeDistanceX, codeDistanceY):
         self.codeDistanceX = codeDistanceX
         self.codeDistanceZ = codeDistanceZ
-        self.interconnectWidth = 128
+        self.interconnectWidth = 128 #overrriden
+        self.interconnectPhysicalWidth = 8
 
 
 def populate_other_tree_params(node, level):

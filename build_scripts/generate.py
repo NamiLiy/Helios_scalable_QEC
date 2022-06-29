@@ -12,7 +12,8 @@ hub_fifo_width = 16
 fpga_id_width = 4
 fifo_id_width = 4
 global_pointer_to_parent = None
-dealy_for_pe_busy = 4
+dealy_for_pe_busy = 8
+interconnect_physical_width = 8
 
 class hdlTemplate:
     out = ""
@@ -147,6 +148,11 @@ def add_hub_top_module(node):
         OF.r("FIFO_IDWIDTH", fifo_id_width)
         OF.r("DOWNSTREAM_FIFO_COUNT", node.num_children)
         OF.r("HUB_FIFO_WIDTH", hub_fifo_width)
+        OF.r("HUB_FIFO_PHYSICAL_WIDTH_DWN", interconnect_physical_width)
+        if node.id == 0:
+            OF.r("HUB_FIFO_PHYSICAL_WIDTH_UP", hub_fifo_width)
+        else :
+            OF.r("HUB_FIFO_PHYSICAL_WIDTH_UP", interconnect_physical_width)
 
         # Write to file
         f = open("../design/generated/top_module_hub_" + str(node.id) + ".sv", "w")
@@ -166,6 +172,7 @@ def add_hub(node):
         OF.r("PARENT", node.parent)
         OF.r("CHILD_ID", node.child_id)
         OF.r("NUM_CHILDREN", node.num_children)
+        # OF.r("HUB_FIFO_PHYSICAL_WIDTH", interconnect_physical_width)
 
         # Write to file
         f = open("../design/generated/top_level_test_bench.sv", "a")
@@ -218,6 +225,7 @@ def add_leaf(node):
         OF.r("X_END", x_end) # This is split edges per measurement round
         OF.r("HUB_FIFO_WIDTH", hub_fifo_width)
         OF.r("MESSAGE_FLYING_DELAY",dealy_for_pe_busy)
+        OF.r("HUB_FIFO_PHYSICAL_WIDTH",interconnect_physical_width)
 
         # Write to file
         f = open("../design/generated/top_module_for_leaf_" + str(node.id) + ".sv", "w")
@@ -280,6 +288,7 @@ def add_root_hub(node):
         OF.r("CHILD_ID", node.child_id)
         OF.r("NUM_CHILDREN", node.num_children)
         OF.r("HUB_FIFO_WIDTH", hub_fifo_width)
+        OF.r("HUB_FIFO_PHYSICAL_WIDTH", interconnect_physical_width)
 
         # Write to file
         f = open("../design/generated/top_level_test_bench.sv", "w")
@@ -297,6 +306,7 @@ def add_root_hub(node):
         OF.r("FIFO_IDWIDTH", fifo_id_width)
         OF.r("DOWNSTREAM_FIFO_COUNT", node.num_children)
         OF.r("HUB_FIFO_WIDTH", hub_fifo_width)
+        OF.r("HUB_FIFO_PHYSICAL_WIDTH", interconnect_physical_width)
 
         # Write to file
         f = open("../design/generated/root_hub_" + str(node.id) + ".sv", "w")
@@ -509,7 +519,7 @@ def calculate_hub_fifo_width():
     per_dimesnion_width = math.ceil(math.log2(codeDistanceX))
     direct_message_width = per_dimesnion_width*3 + 2
     total_width = fpga_id_width + fifo_id_width + 1 + direct_message_width
-    print("total_width = " + str(total_width))
+    print("logical_width_hub_fifo = " + str(total_width))
     return total_width
 
 
@@ -520,11 +530,13 @@ global_pointer_to_parent = treeStructure
 codeDistanceX = global_details.codeDistanceX
 codeDistanceZ = global_details.codeDistanceZ
 hub_fifo_width = global_details.interconnectWidth
+interconnect_physical_width = global_details.interconnectPhysicalWidth
 fpga_id_width = calculate_fpga_id_width(treeStructure)
 print("FPGA ID WIDTH = " + str(fpga_id_width))
 fifo_id_width = calculate_fifo_id_width(treeStructure)
 print("FIFO ID WIDTH = " + str(fifo_id_width))
 hub_fifo_width = calculate_hub_fifo_width()
+# interconnect_physical_width = hub_fifo_width
 # edgeCount = 2
 templateSV = ""
 

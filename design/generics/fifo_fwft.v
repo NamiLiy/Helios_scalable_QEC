@@ -18,6 +18,7 @@ module fifo_fwft #(
     localparam PW = $clog2(DEPTH);
     reg  [PW-1:0]   head;   // Data is dequeued from the head
     reg  [PW-1:0]   tail;   // Data is enqueued at the tail
+    wire  [PW-1:0]   tail_plus_one;   // Data is enqueued at the tail
 
     wire in_ready;
     wire out_valid;
@@ -65,7 +66,8 @@ module fifo_fwft #(
     
     // Control data output from the FIFO
     assign out_valid = head != tail;
-    assign in_ready = (tail + 1) != head;
+    assign tail_plus_one = tail + 1;
+    assign in_ready = tail_plus_one != head;
 
     assign dout = fifo[head];
     assign full = !in_ready;

@@ -2,6 +2,7 @@ module final_arbitration_unit#(
     // parameter CODE_DISTANCE_X = 5,
     // parameter CODE_DISTANCE_Z = 4,
     parameter HUB_FIFO_WIDTH = 32,
+    parameter HUB_FIFO_PHYSICAL_WIDTH = 8, //this should exclude valid and ready or out of band signals
     parameter FPGAID_WIDTH = 4,
     // parameter MY_ID = 0 ,
     // parameter X_START = 0,
@@ -69,20 +70,20 @@ output [HUB_FIFO_WIDTH - 1 :0] sc_fifo_in_data;
 output sc_fifo_in_valid;
 input sc_fifo_in_ready;
 
-output reg [HUB_FIFO_WIDTH - 1 :0] final_fifo_out_data;
+output reg [HUB_FIFO_PHYSICAL_WIDTH - 1 :0] final_fifo_out_data;
 output final_fifo_out_valid;
 input final_fifo_out_ready;
-input [HUB_FIFO_WIDTH - 1 :0] final_fifo_in_data;
+input [HUB_FIFO_PHYSICAL_WIDTH - 1 :0] final_fifo_in_data;
 input final_fifo_in_valid;
 output final_fifo_in_ready;
 
 output has_flying_messages;
 
-reg [HUB_FIFO_WIDTH-1: 0] final_fifo_out_data_internal;
+reg [HUB_FIFO_PHYSICAL_WIDTH-1: 0] final_fifo_out_data_internal;
 wire final_fifo_out_valid_internal;
 wire final_fifo_out_is_full_internal;
 
-wire [HUB_FIFO_WIDTH-1: 0] final_fifo_in_data_internal;
+wire [HUB_FIFO_PHYSICAL_WIDTH-1: 0] final_fifo_in_data_internal;
 reg final_fifo_in_ready_internal;
 wire final_fifo_in_empty_inernal;
 
@@ -104,7 +105,7 @@ end
 
 assign has_flying_messages = has_flying_messages_reg;
 
-fifo_fwft #(.DEPTH(16), .WIDTH(HUB_FIFO_WIDTH)) out_fifo 
+fifo_fwft #(.DEPTH(16), .WIDTH(HUB_FIFO_PHYSICAL_WIDTH)) out_fifo 
     (
     .clk(clk),
     .srst(reset),
@@ -186,9 +187,33 @@ endgenerate
 `define gathered_elected_output_message_index (`expanded_elected_output_message_index(DIRECT_CHANNEL_ROOT_IDX))
 `define gathered_elected_output_message_data (`expanded_elected_output_message_data(DIRECT_CHANNEL_ROOT_IDX))
 
-wire [HUB_FIFO_WIDTH - 1:0] temporal_final_message;
-assign final_fifo_out_data_internal = `gathered_elected_output_message_data;
-assign final_fifo_out_valid_internal = `gathered_elected_output_message_valid;
+wire [HUB_FIFO_WIDTH - 1:0] temporal_out_final_message;
+wire temporal_out_valid;
+assign temporal_out_final_message = `gathered_elected_output_message_data;
+assign temporal_out_valid = `gathered_elected_output_message_valid;
+
+wire narrow_out_fifo_ready;
+assign narrow_out_fifo_ready = !final_fifo_out_is_full_internal;
+wire temporal_out_fifo_ready;
+
+serializer #(.HUB_FIFO_WIDTH(HUB_FIFO_WIDTH), .HUB_FIFO_PHYSICAL_WIDTH(HUB_FIFO_PHYSICAL_WIDTH)) ser
+(
+    .clk(clk),
+    .reset(reset),
+    .wide_fifo_data(temporal_out_final_message),
+    .wide_fifo_valid(temporal_out_valid),
+    .wide_fifo_ready(temporal_out_fifo_ready),
+    .narrow_fifo_valid(final_fifo_out_valid_internal),
+    .narrow_fifo_ready(narrow_out_fifo_ready),
+    .narrow_fifo_data(final_fifo_out_data_internal)
+);
+
+generate
+    for (i=0; i < TRUE_FIFO_COUNT; i=i+1) begin: taking_direct_message
+        assign `master_coming_is_taken(i) = 
+            ((i == `gathered_elected_output_message_index) && `gathered_elected_output_message_valid  && temporal_out_fifo_ready);
+    end
+endgenerate
 
 // reg [FIFO_IDWIDTH - 1 : 0] destination_fifo;
 // reg [FPGAID_WIDTH - 1 : 0] destination_id;
@@ -270,7 +295,7 @@ assign final_fifo_out_valid_internal = `gathered_elected_output_message_valid;
 
 // receiver side
 
-fifo_fwft #(.DEPTH(16), .WIDTH(HUB_FIFO_WIDTH)) in_fifo 
+fifo_fwft #(.DEPTH(16), .WIDTH(HUB_FIFO_PHYSICAL_WIDTH)) in_fifo 
     (
     .clk(clk),
     .srst(reset),
@@ -280,6 +305,25 @@ fifo_fwft #(.DEPTH(16), .WIDTH(HUB_FIFO_WIDTH)) in_fifo
     .empty(final_fifo_in_empty_internal),
     .dout(final_fifo_in_data_internal),
     .rd_en(final_fifo_in_ready_internal)
+);
+
+wire narrow_fifo_in_valid;
+assign narrow_fifo_in_valid = !final_fifo_in_empty_internal;
+
+wire [HUB_FIFO_WIDTH-1 : 0] temporal_in_fifo;
+wire temporal_in_ready;
+wire temporal_in_valid;
+
+deserializer #(.HUB_FIFO_WIDTH(HUB_FIFO_WIDTH), .HUB_FIFO_PHYSICAL_WIDTH(HUB_FIFO_PHYSICAL_WIDTH)) des
+(
+    .clk(clk),
+    .reset(reset),
+    .wide_fifo_data(temporal_in_fifo),
+    .wide_fifo_valid(temporal_in_valid),
+    .wide_fifo_ready(temporal_in_ready),
+    .narrow_fifo_valid(narrow_fifo_in_valid),
+    .narrow_fifo_ready(final_fifo_in_ready_internal),
+    .narrow_fifo_data(final_fifo_in_data_internal)
 );
 
 wire [TRUE_FIFO_COUNT*HUB_FIFO_WIDTH - 1 : 0] combined_fifo_in_data_vector;
@@ -296,11 +340,11 @@ assign combined_fifo_in_ready_vector[FIFO_COUNT] = sc_fifo_in_ready;
 `define master_fifo_in_data(i) combined_fifo_in_data_vector[((i+1) * HUB_FIFO_WIDTH) - 1 : (i * HUB_FIFO_WIDTH)]
 `define master_fifo_in_valid(i) combined_fifo_in_valid_vector[i]
 `define master_fifo_in_ready(i) combined_fifo_in_ready_vector[i]
-`define destination_index final_fifo_in_data_internal[HUB_FIFO_WIDTH - FPGAID_WIDTH - 1 : HUB_FIFO_WIDTH - FPGAID_WIDTH - FIFO_IDWIDTH]
+`define destination_index temporal_in_fifo[HUB_FIFO_WIDTH - FPGAID_WIDTH - 1 : HUB_FIFO_WIDTH - FPGAID_WIDTH - FIFO_IDWIDTH]
 
 generate
     for (i=0; i < TRUE_FIFO_COUNT; i=i+1) begin: writing_incoming_data
-        assign `master_fifo_in_data (i) = final_fifo_in_data_internal[HUB_FIFO_WIDTH - 1 :0];
+        assign `master_fifo_in_data (i) = temporal_in_fifo[HUB_FIFO_WIDTH - 1 :0];
     end
 endgenerate
 
@@ -308,7 +352,7 @@ generate
     for (i=0; i < FIFO_COUNT; i=i+1) begin: making_correct_incoming_channel_correct
 //        if(i < FIFO_COUNT) begin:
             assign `master_fifo_in_valid(i) = 
-                ((i == `destination_index) && !final_fifo_in_empty_internal);
+                ((i == `destination_index) && temporal_in_valid);
         //end else begin:
         //    assign `master_fifo_in_valid(i) = 
         //        ((`destination_index == {FIFO_IDWIDTH{1'b1}}) && !final_fifo_in_empty_internal);
@@ -316,11 +360,11 @@ generate
     end
 endgenerate
 
-assign `master_fifo_in_valid(FIFO_COUNT) = ((`destination_index == {FIFO_IDWIDTH{1'b1}}) && !final_fifo_in_empty_internal);
+assign `master_fifo_in_valid(FIFO_COUNT) = ((`destination_index == {FIFO_IDWIDTH{1'b1}}) && temporal_in_valid);
 
 
 `define message_read (combined_fifo_in_ready_vector[`destination_index])
-assign final_fifo_in_ready_internal = (`destination_index == {FIFO_IDWIDTH{1'b1}}) ?  combined_fifo_in_ready_vector[FIFO_COUNT] : `message_read;
+assign temporal_in_ready = (`destination_index == {FIFO_IDWIDTH{1'b1}}) ?  combined_fifo_in_ready_vector[FIFO_COUNT] : `message_read;
 
 
 // assign master_fifo_in_data_vector[MASTER_FIFO_WIDTH - 1:0] = final_fifo_in_data_internal;
