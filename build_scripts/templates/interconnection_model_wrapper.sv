@@ -1,6 +1,6 @@
 interonncetion_model #(
     .WIDTH(INTERCONNECT_PHYSICAL_WIDTH),
-    .LATENCY(1),
+    .LATENCY(/*$$INTERCONNECTION_LATENCY*/),
     .CHANNELS(/*$$NUM_CHILDREN*/)
 ) u_interconnection_model_/*$$ID*/(
     .clk(clk),

@@ -14,6 +14,7 @@ fifo_id_width = 4
 global_pointer_to_parent = None
 dealy_for_pe_busy = 8
 interconnect_physical_width = 8
+interconnection_latency = 3
 
 class hdlTemplate:
     out = ""
@@ -342,6 +343,7 @@ def add_interconnection(node):
         OF = hdlTemplate(templateSV)
         OF.r("ID", node.id)
         OF.r("NUM_CHILDREN", node.num_children)
+        OF.r("INTERCONNECTION_LATENCY", interconnection_latency)
         # Write to file
         f = open("../design/generated/top_level_test_bench.sv", "a")
         f.write(OF.out)
@@ -531,6 +533,7 @@ codeDistanceX = global_details.codeDistanceX
 codeDistanceZ = global_details.codeDistanceZ
 hub_fifo_width = global_details.interconnectWidth
 interconnect_physical_width = global_details.interconnectPhysicalWidth
+interconnection_latency = global_details.interconnection_latency
 fpga_id_width = calculate_fpga_id_width(treeStructure)
 print("FPGA ID WIDTH = " + str(fpga_id_width))
 fifo_id_width = calculate_fifo_id_width(treeStructure)

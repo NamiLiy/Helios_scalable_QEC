@@ -38,6 +38,7 @@ class UserProperties:
         self.codeDistanceZ = codeDistanceZ
         self.interconnectWidth = 128 #overrriden
         self.interconnectPhysicalWidth = 8
+        self.interconnection_latency = 3
 
 
 def populate_other_tree_params(node, level):
