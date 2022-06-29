@@ -99,7 +99,7 @@ always@(posedge clk) begin
     if (reset) begin
         has_flying_messages_reg <= 0;
     end else begin
-        has_flying_messages_reg <= sc_fifo_out_valid || final_fifo_out_valid || (master_fifo_out_valid_vector != 0) || final_fifo_in_valid || sc_fifo_in_valid || (master_fifo_in_valid_vector != 0);
+        has_flying_messages_reg <= sc_fifo_out_valid || final_fifo_out_valid || (master_fifo_out_valid_vector != 0) || final_fifo_in_valid || sc_fifo_in_valid || (master_fifo_in_valid_vector != 0) || temporal_out_valid || final_fifo_out_valid_internal || temporal_in_valid || narrow_fifo_in_valid;
     end
 end
 

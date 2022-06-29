@@ -12,7 +12,7 @@ hub_fifo_width = 16
 fpga_id_width = 4
 fifo_id_width = 4
 global_pointer_to_parent = None
-dealy_for_pe_busy = 8
+dealy_for_pe_busy = 6
 interconnect_physical_width = 8
 interconnection_latency = 3
 

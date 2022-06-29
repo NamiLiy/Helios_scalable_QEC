@@ -212,6 +212,7 @@ always @(posedge clk) begin
         end else begin
             $display("%t\tTest case %d fail %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
             fail_count = fail_count + 1;
+            $finish;
         end
     end
     if (input_eof == 1)begin
