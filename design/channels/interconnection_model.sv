@@ -77,12 +77,12 @@ generate
         reg interconnect_fifo_up_rd_en;
 
         always@(*) begin
-            if(!interconnect_fifo_up_empty && read_counter_returned_up >= counter) begin
+            if(!interconnect_fifo_up_empty && read_counter_returned_up <= counter) begin
                 upstream_fifo_out_valid[i] = 1'b1;
             end else begin
                 upstream_fifo_out_valid[i] = 1'b0;
             end
-            if(!interconnect_fifo_up_empty && read_counter_returned_up >= counter) begin
+            if(!interconnect_fifo_up_empty && read_counter_returned_up <= counter) begin
                 interconnect_fifo_up_rd_en = upstream_fifo_out_ready[i];
             end else begin
                 interconnect_fifo_up_rd_en = 1'b0;
@@ -109,12 +109,12 @@ generate
         reg interconnect_fifo_dwn_rd_en;
 
         always@(*) begin
-            if(!interconnect_fifo_dwn_empty && read_counter_returned_dwn >= counter) begin
+            if(!interconnect_fifo_dwn_empty && read_counter_returned_dwn <= counter) begin
                 downstream_fifo_out_valid[i] = 1'b1;
             end else begin
                 downstream_fifo_out_valid[i] = 1'b0;
             end
-            if(!interconnect_fifo_dwn_empty && read_counter_returned_dwn >= counter) begin
+            if(!interconnect_fifo_dwn_empty && read_counter_returned_dwn <= counter) begin
                 interconnect_fifo_dwn_rd_en = downstream_fifo_out_ready[i];
             end else begin
                 interconnect_fifo_dwn_rd_en = 1'b0;

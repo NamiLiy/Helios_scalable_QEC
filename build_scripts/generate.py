@@ -12,7 +12,7 @@ hub_fifo_width = 16
 fpga_id_width = 4
 fifo_id_width = 4
 global_pointer_to_parent = None
-dealy_for_pe_busy = 6
+dealy_for_pe_busy = 9 #Critical parameter please choose wisely
 interconnect_physical_width = 8
 interconnection_latency = 3
 
@@ -450,7 +450,7 @@ def create_routing_destinations(node, numSplit):
                         else:
                             node.route_directions_neighbour.append(Route_Entry(predecessor.leaf_id, edge + codeDistanceZ + round*(predecessor.edge_count)))
                 else: # All southern edges
-                    node.route_directions_neighbour.append(Route_Entry(successor.leaf_id, edge + round*(successor.edge_count)))
+                    node.route_directions_neighbour.append(Route_Entry(successor.leaf_id, edge - codeDistanceZ + round*(successor.edge_count)))
                     # print(node.route_directions_neighbour)
 
         # node.route_directions_neighbour = neighbour_routing_list;

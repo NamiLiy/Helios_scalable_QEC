@@ -54,7 +54,7 @@ top_module_hub_/*$$ID*/ #(
     .downstream_fifo_in_ready(downstream_fifo_in_ready_/*$$ID*/),
 
     .upstream_has_message_flying(downstream_has_message_flying_d_/*$$PARENT*/[/*$$CHILD_ID*/]),
-    .upstream_has_odd_clusters(downstream_has_odd_cluster_d_/*$$PARENT*/[/*$$CHILD_ID*/]),
+    .upstream_has_odd_clusters(downstream_has_odd_clusters_d_/*$$PARENT*/[/*$$CHILD_ID*/]),
 
     .downstream_has_message_flying(downstream_has_message_flying_/*$$ID*/),
     .downstream_has_odd_clusters(downstream_has_odd_clusters_/*$$ID*/)

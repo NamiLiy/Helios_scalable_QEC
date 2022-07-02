@@ -4,7 +4,7 @@ from pickletools import long4
 
 
 codeDistanceX = 5
-codeDistanceZ = 4
+codeDistanceZ = codeDistanceX - 1
 
 class Route_Entry:
     def __init__(self, fpga, fifo):
@@ -37,7 +37,7 @@ class UserProperties:
         self.codeDistanceX = codeDistanceX
         self.codeDistanceZ = codeDistanceZ
         self.interconnectWidth = 128 #overrriden
-        self.interconnectPhysicalWidth = 8
+        self.interconnectPhysicalWidth = 128
         self.interconnection_latency = 3
 
 
@@ -59,13 +59,13 @@ def initialize():
     l2 = Node(2)
     root.children = [l1,l2]
 
-    # l3 = Node(3)
-    # l4 = Node(4)
-    # l1.children = [l3,l4]
+    l3 = Node(3)
+    l4 = Node(4)
+    l1.children = [l3,l4]
 
-    # l5 = Node(5)
-    # l6 = Node(6)
-    # l2.children = [l5,l6]
+    l5 = Node(5)
+    l6 = Node(6)
+    l2.children = [l5,l6]
     populate_other_tree_params(root,0)
     return root
 
