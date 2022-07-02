@@ -376,8 +376,8 @@ always@(posedge clk) begin
     end
 end
 
-assign upstream_fifo_out_data = output_message_register;
-assign upstream_fifo_out_valid = output_valid_register[DOWNSTREAM_FIFO_COUNT] & all_output_fifos_free;
+// assign upstream_fifo_out_data = output_message_register;
+// assign upstream_fifo_out_valid = output_valid_register[DOWNSTREAM_FIFO_COUNT] & all_output_fifos_free;
 
 `define downstream_fifo_out_data(i) downstream_fifo_out_data[((i+1) * HUB_FIFO_PHYSICAL_WIDTH_DWN) - 1 : (i * HUB_FIFO_PHYSICAL_WIDTH_DWN)]
 

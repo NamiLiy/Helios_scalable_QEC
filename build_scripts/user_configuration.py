@@ -37,7 +37,7 @@ class UserProperties:
         self.codeDistanceX = codeDistanceX
         self.codeDistanceZ = codeDistanceZ
         self.interconnectWidth = 128 #overrriden
-        self.interconnectPhysicalWidth = 128
+        self.interconnectPhysicalWidth = 8
         self.interconnection_latency = 3
 
 
