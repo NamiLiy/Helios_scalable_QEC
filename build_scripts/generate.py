@@ -13,8 +13,10 @@ fpga_id_width = 4
 fifo_id_width = 4
 global_pointer_to_parent = None
 dealy_for_pe_busy = 9 #Critical parameter please choose wisely
-interconnect_physical_width = 8
-interconnection_latency = 3
+interconnect_physical_width = 0
+interconnection_latency = 0
+ll_connections = False
+num_leaf_fpgas = 0
 
 class hdlTemplate:
     out = ""
@@ -191,47 +193,92 @@ def add_leaf(node):
     print("Leaf " + str(node.id))
 
     # Add test bench
-    with open("./templates/leaf_wrapper.sv","r") as f:
-        templateSV = f.read()
-        OF = hdlTemplate(templateSV)
-        OF.r("ID", node.id)
-        OF.r("CODE_DISTANCE_X", codeDistanceX)
-        OF.r("CODE_DISTANCE_Z", codeDistanceZ)
-        OF.r("ID", node.id)
-        OF.r("PARENT", node.parent)
-        OF.r("CHILD_ID", node.child_id)
-        x_start = node.grid.x_start
-        x_end = node.grid.x_end
-        OF.r("X_START", x_start) # This is split edges per measurement round
-        OF.r("X_END", x_end) # This is split edges per measurement round
+    if(ll_connections == True):
+        with open("./templates/leaf_wrapper_ll_connected.sv","r") as f:
+            templateSV = f.read()
+            OF = hdlTemplate(templateSV)
+            OF.r("ID", node.id)
+            OF.r("CODE_DISTANCE_X", codeDistanceX)
+            OF.r("CODE_DISTANCE_Z", codeDistanceZ)
+            OF.r("ID", node.id)
+            OF.r("PARENT", node.parent)
+            OF.r("CHILD_ID", node.child_id)
+            x_start = node.grid.x_start
+            x_end = node.grid.x_end
+            OF.r("X_START", x_start) # This is split edges per measurement round
+            OF.r("X_END", x_end) # This is split edges per measurement round
 
-        # Write to file
-        f = open("../design/generated/top_level_test_bench.sv", "a")
-        f.write(OF.out)
-        f.close()
+            # Write to file
+            f = open("../design/generated/top_level_test_bench.sv", "a")
+            f.write(OF.out)
+            f.close()
+    else:
+        with open("./templates/leaf_wrapper.sv","r") as f:
+            templateSV = f.read()
+            OF = hdlTemplate(templateSV)
+            OF.r("ID", node.id)
+            OF.r("CODE_DISTANCE_X", codeDistanceX)
+            OF.r("CODE_DISTANCE_Z", codeDistanceZ)
+            OF.r("ID", node.id)
+            OF.r("PARENT", node.parent)
+            OF.r("CHILD_ID", node.child_id)
+            x_start = node.grid.x_start
+            x_end = node.grid.x_end
+            OF.r("X_START", x_start) # This is split edges per measurement round
+            OF.r("X_END", x_end) # This is split edges per measurement round
 
-    # Add leaf top module
-    with open("./templates/top_module_for_leaf.sv","r") as f:
-        templateSV = f.read()
-        x_start = node.grid.x_start
-        x_end = node.grid.x_end
-        OF = hdlTemplate(templateSV)
-        OF.r("ID", node.id)
-        OF.r("CODE_DISTANCE_X", codeDistanceX)
-        OF.r("CODE_DISTANCE_Z", codeDistanceZ)
-        OF.r("FPGAID_WIDTH", fpga_id_width)
-        OF.r("FIFO_IDWIDTH", fifo_id_width)
-        OF.r("EDGE_COUNT", node.edge_count) # This is split edges per measurement round
-        OF.r("X_START", x_start) # This is split edges per measurement round
-        OF.r("X_END", x_end) # This is split edges per measurement round
-        OF.r("HUB_FIFO_WIDTH", hub_fifo_width)
-        OF.r("MESSAGE_FLYING_DELAY",dealy_for_pe_busy)
-        OF.r("HUB_FIFO_PHYSICAL_WIDTH",interconnect_physical_width)
+            # Write to file
+            f = open("../design/generated/top_level_test_bench.sv", "a")
+            f.write(OF.out)
+            f.close()
 
-        # Write to file
-        f = open("../design/generated/top_module_for_leaf_" + str(node.id) + ".sv", "w")
-        f.write(OF.out)
-        f.close()
+    # Add leaf top module'
+    if(ll_connections == True):
+        with open("./templates/top_module_for_leaf_ll_connected.sv","r") as f:
+            templateSV = f.read()
+            x_start = node.grid.x_start
+            x_end = node.grid.x_end
+            OF = hdlTemplate(templateSV)
+            OF.r("ID", node.id)
+            OF.r("CODE_DISTANCE_X", codeDistanceX)
+            OF.r("CODE_DISTANCE_Z", codeDistanceZ)
+            OF.r("FPGAID_WIDTH", fpga_id_width)
+            OF.r("FIFO_IDWIDTH", fifo_id_width)
+            OF.r("EDGE_COUNT", node.edge_count) # This is split edges per measurement round
+            OF.r("X_START", x_start) # This is split edges per measurement round
+            OF.r("X_END", x_end) # This is split edges per measurement round
+            OF.r("HUB_FIFO_WIDTH", hub_fifo_width)
+            OF.r("MESSAGE_FLYING_DELAY",dealy_for_pe_busy)
+            OF.r("HUB_FIFO_PHYSICAL_WIDTH",interconnect_physical_width)
+            OF.r("LL_NEIGHBORS",2)
+            neighbor_FPGA_list = generate_neighbor_FPGA_list(node)
+            OF.r("LL_NEIGHBOR_IDS",neighbor_FPGA_list)
+            # Write to file
+            f = open("../design/generated/top_module_for_leaf_" + str(node.id) + ".sv", "w")
+            f.write(OF.out)
+            f.close()
+    else:
+        with open("./templates/top_module_for_leaf.sv","r") as f:
+            templateSV = f.read()
+            x_start = node.grid.x_start
+            x_end = node.grid.x_end
+            OF = hdlTemplate(templateSV)
+            OF.r("ID", node.id)
+            OF.r("CODE_DISTANCE_X", codeDistanceX)
+            OF.r("CODE_DISTANCE_Z", codeDistanceZ)
+            OF.r("FPGAID_WIDTH", fpga_id_width)
+            OF.r("FIFO_IDWIDTH", fifo_id_width)
+            OF.r("EDGE_COUNT", node.edge_count) # This is split edges per measurement round
+            OF.r("X_START", x_start) # This is split edges per measurement round
+            OF.r("X_END", x_end) # This is split edges per measurement round
+            OF.r("HUB_FIFO_WIDTH", hub_fifo_width)
+            OF.r("MESSAGE_FLYING_DELAY",dealy_for_pe_busy)
+            OF.r("HUB_FIFO_PHYSICAL_WIDTH",interconnect_physical_width)
+            
+            # Write to file
+            f = open("../design/generated/top_module_for_leaf_" + str(node.id) + ".sv", "w")
+            f.write(OF.out)
+            f.close()
 
     with open("./templates/standard_planar_code_2d.sv","r") as f:
         templateSV = f.read()
@@ -290,6 +337,10 @@ def add_root_hub(node):
         OF.r("NUM_CHILDREN", node.num_children)
         OF.r("HUB_FIFO_WIDTH", hub_fifo_width)
         OF.r("HUB_FIFO_PHYSICAL_WIDTH", interconnect_physical_width)
+        if ll_connections==True:
+            OF.r("DIRECT_CONNECTED_NEIGHBORS", 2)
+        else:
+            OF.r("DIRECT_CONNECTED_NEIGHBORS", 0)
 
         # Write to file
         f = open("../design/generated/top_level_test_bench.sv", "w")
@@ -350,6 +401,38 @@ def add_interconnection(node):
         f.close()
     return
 
+def add_ll_interconnection(node):
+    print("interconnection " + str(node.id))
+    with open("./templates/interconnection_model_wrapper_ll_connected.sv","r") as f:
+        templateSV = f.read()
+        OF = hdlTemplate(templateSV)
+        OF.r("INTERCONNECT_ID", node.id)
+        OF.r("NUM_CHILDREN", 1)
+        OF.r("INTERCONNECTION_LATENCY", interconnection_latency)
+        predecessor = find_node_from_leaf_id(node.leaf_id - 1)
+        successor = find_node_from_leaf_id(node.leaf_id + 1)
+        last_leaf = find_node_from_leaf_id(num_leaf_fpgas - 1)
+        # first_leaf = find_node_from_leaf_id(0)
+        if(node.leaf_id == 0):
+            OF.r("WEST_ID", last_leaf.id)
+        else:
+            OF.r("WEST_ID", predecessor.id)
+        OF.r("EAST_ID", node.id)
+        # Write to file
+        f = open("../design/generated/top_level_test_bench.sv", "a")
+        f.write(OF.out)
+        f.close()
+    return
+
+def write_ll_interconnections(node):
+    print(node.id)
+    if node.children == []:
+        add_ll_interconnection(node)
+    for child in node.children:
+        # add_interconnection(node.id, child.id)
+        write_ll_interconnections(child)
+    return
+
 def write_verilog_files(node):
     print(node.id)
     if node.children:
@@ -365,6 +448,8 @@ def write_verilog_files(node):
         write_verilog_files(child)
 
     if node.id == 0:
+        if ll_connections==True:
+            write_ll_interconnections(node)
         f = open("../design/generated/top_level_test_bench.sv", "a")
         f.write("\n\nendmodule")
         f.close()
@@ -420,9 +505,34 @@ def find_node_from_leaf_id_internal(node, leaf_id):
     return (node, FALSE)
 
 def find_node_from_leaf_id(leaf_id):
-    print("REquest for "+str(leaf_id))
+    # print("REquest for "+str(leaf_id))
     result = find_node_from_leaf_id_internal(global_pointer_to_parent, leaf_id)
     return result[0]
+
+def generate_neighbor_FPGA_list(node):
+    predecessor = find_node_from_leaf_id(node.leaf_id - 1)
+    successor = find_node_from_leaf_id(node.leaf_id + 1)
+    last_leaf = find_node_from_leaf_id(num_leaf_fpgas - 1)
+    first_leaf = find_node_from_leaf_id(0)
+    print("Num leaf FPGAs "+str(num_leaf_fpgas))
+    if(node.leaf_id == 0):
+        fpga_list = [last_leaf,successor]
+    elif(node.leaf_id == num_leaf_fpgas - 1):
+        fpga_list = [predecessor,first_leaf]
+    else:
+        fpga_list = [predecessor,successor]
+    for element in fpga_list:
+        print("Neighbor of  "+str(node.id)+"("+str(node.leaf_id)+") : "+ str(element.id))
+    bit_width = fpga_id_width
+    start_string = str(bit_width) + "'d"
+    output_string = ""
+    for idx, element in enumerate(fpga_list):
+        if(idx < 1):
+            output_string = output_string + start_string + str(element.leaf_id) + ", "
+        else:
+            output_string = output_string + start_string + str(element.leaf_id)
+
+    return output_string
 
 
 def create_routing_destinations(node, numSplit):
@@ -504,15 +614,15 @@ def get_child_list(node):
 
 def calculate_fpga_id_width(node):
     # FPGA ID is based on total number of FPGAs on the tree + rootFPGA
-    num_leaf_fpgas = num_leafs(node, 0)
+    # num_leaf_fpgas = num_leafs(node, 0)
     print("NUM leaf FPGAs = " + str(num_leaf_fpgas)) # +1 for root FPGA and +1 for broadcast message
     return math.ceil(math.log2(num_leaf_fpgas + 2))
 
 def calculate_fifo_id_width(node):
     # FPGA ID is based on total number of FPGAs on the tree + rootFPGA
-    numSplit = num_leafs(node, 0)
-    populate_grid_of_each_fpga(node, numSplit)
-    create_routing_destinations(node, numSplit)
+    # num_leaf_fpgas = num_leafs(node, 0)
+    populate_grid_of_each_fpga(node, num_leaf_fpgas)
+    create_routing_destinations(node, num_leaf_fpgas)
     max_edges = get_max_edge_count(node)
     print("max_edges = " + str(max_edges * codeDistanceX))
     return math.ceil(math.log2(max(max_edges*codeDistanceX + 1,2))) #+1 for stage controller
@@ -534,6 +644,10 @@ codeDistanceZ = global_details.codeDistanceZ
 hub_fifo_width = global_details.interconnectWidth
 interconnect_physical_width = global_details.interconnectPhysicalWidth
 interconnection_latency = global_details.interconnection_latency
+ll_connections = global_details.ll_connections
+
+dealy_for_pe_busy = interconnection_latency + 6;
+num_leaf_fpgas = num_leafs(treeStructure, 0)
 fpga_id_width = calculate_fpga_id_width(treeStructure)
 print("FPGA ID WIDTH = " + str(fpga_id_width))
 fifo_id_width = calculate_fifo_id_width(treeStructure)

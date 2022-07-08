@@ -38,6 +38,7 @@ localparam FIFO_COUNT = MEASUREMENT_ROUNDS * (CODE_DISTANCE_Z);
 localparam FINAL_FIFO_WIDTH = MASTER_FIFO_WIDTH + $clog2(FIFO_COUNT+1);
 
 localparam INTERCONNECT_PHYSICAL_WIDTH = /*$$HUB_FIFO_PHYSICAL_WIDTH*/;
+localparam FPGA_NEIGHBORS = /*$$DIRECT_CONNECTED_NEIGHBORS*/;
 
 reg clk;
 reg reset;
@@ -194,7 +195,7 @@ always @(posedge clk) begin
                         eof = $feof(file);
                         if (result_valid) begin
                             if (expected_x != `root_x(i, j, k) || expected_y != `root_y(i, j, k) || expected_z != `root_z(i, j, k)) begin
-                                $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d)" , $time, k, i ,j, `root_z(i, j, k), `root_x(i, j, k), `root_y(i, j, k), expected_z, expected_x, expected_y);
+                                // $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d)" , $time, k, i ,j, `root_z(i, j, k), `root_x(i, j, k), `root_y(i, j, k), expected_z, expected_x, expected_y);
                                 test_fail = 1;
                             end
                         end
