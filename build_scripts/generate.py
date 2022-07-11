@@ -465,6 +465,7 @@ def num_FPGAs(node):
 def num_leafs(node, current_leaf_id):
     # print(node.id)
     for child in node.children:
+        node.leaf_id = -1
         current_leaf_id = num_leafs(child, current_leaf_id)
     if node.children ==[]:
         node.leaf_id = current_leaf_id
@@ -511,6 +512,7 @@ def find_node_from_leaf_id(leaf_id):
 
 def generate_neighbor_FPGA_list(node):
     predecessor = find_node_from_leaf_id(node.leaf_id - 1)
+    print("Predecessor of  "+str(node.id)+"("+str(node.leaf_id)+") : "+ str(predecessor.id))
     successor = find_node_from_leaf_id(node.leaf_id + 1)
     last_leaf = find_node_from_leaf_id(num_leaf_fpgas - 1)
     first_leaf = find_node_from_leaf_id(0)
