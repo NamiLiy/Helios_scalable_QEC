@@ -3,6 +3,7 @@ import user_configuration
 import partitionScheme as pt
 import math
 import copy
+import random
 from  user_configuration import Route_Entry
 from  user_configuration import Node_Grid  
 
@@ -17,6 +18,7 @@ interconnect_physical_width = 0
 interconnection_latency = 0
 ll_connections = False
 num_leaf_fpgas = 0
+random_error_gen = False
 
 class hdlTemplate:
     out = ""
@@ -385,6 +387,18 @@ def add_root_hub(node):
         f.write(OF.out)
         f.close()
 
+    # Fill up the random error generator
+    with open("./templates/rand_gen_top.sv","r") as f:
+        templateSV = f.read()
+        OF = hdlTemplate(templateSV)
+        s0 = generate_rand_string(codeDistanceX*(codeDistanceZ + 1) + (codeDistanceX-1)*codeDistanceZ + codeDistanceX*codeDistanceZ)
+        OF.r("S0_ARRAY", s0)
+        s1 = generate_rand_string(codeDistanceX*(codeDistanceZ + 1) + (codeDistanceX-1)*codeDistanceZ + codeDistanceX*codeDistanceZ)
+        OF.r("S1_ARRAY", s1)
+        f = open("../design/generated/rand_gen_top.sv" , "w")
+        f.write(OF.out)
+        f.close()
+
     return
 
 def add_interconnection(node):
@@ -598,6 +612,18 @@ def generate_routing_string(route_list):
     output_string = output_string + "32'd0"
     return output_string
 
+def generate_rand_string(length):
+    output_string = ""
+    start_string = "64'h"
+    for i in range(length):
+        temp_string = ""
+        for j in range(4):
+            temp_string = temp_string + hex(random.randrange(65536)).lstrip("0x").rstrip("L").zfill(4)
+        output_string = output_string + start_string + temp_string + ", "
+    output_string = output_string + "64'h0"
+    return output_string
+
+
 def get_max_edge_count(node):
     max_edge_count = 0
     if node.children == []:
@@ -647,6 +673,7 @@ hub_fifo_width = global_details.interconnectWidth
 interconnect_physical_width = global_details.interconnectPhysicalWidth
 interconnection_latency = global_details.interconnection_latency
 ll_connections = global_details.ll_connections
+random_error_gen = global_details.random_error_gen
 
 dealy_for_pe_busy = interconnection_latency + 6;
 num_leaf_fpgas = num_leafs(treeStructure, 0)

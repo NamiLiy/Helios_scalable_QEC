@@ -3,7 +3,7 @@ from email.errors import NoBoundaryInMultipartDefect
 from pickletools import long4
 
 
-codeDistanceX = 11
+codeDistanceX = 5
 codeDistanceZ = codeDistanceX - 1
 
 class Route_Entry:
@@ -37,9 +37,11 @@ class UserProperties:
         self.codeDistanceX = codeDistanceX
         self.codeDistanceZ = codeDistanceZ
         self.interconnectWidth = 128 #overrriden
-        self.interconnectPhysicalWidth = 16
-        self.interconnection_latency = 17
-        self.ll_connections = True
+        self.interconnectPhysicalWidth = 6
+        self.interconnection_latency = 5
+        #For GTX use 17 as latency and 16 as width
+        self.ll_connections = False
+        self.random_error_gen = True
 
 
 def populate_other_tree_params(node, level):
@@ -58,17 +60,17 @@ def initialize():
     l1 = Node(1)
     # root.children = [l1]
     l2 = Node(2)
-    # root.children = [l1,l2]
+    root.children = [l1,l2]
 
     l3 = Node(3)
     l4 = Node(4)
-    # l1.children = [l3,l4]
+    l1.children = [l3,l4]
 
-    root.children = [l1,l2,l3,l4]
+    # root.children = [l1,l2,l3,l4]
 
-    # l5 = Node(5)
-    # l6 = Node(6)
-    # l2.children = [l5,l6]
+    l5 = Node(5)
+    l6 = Node(6)
+    l2.children = [l5,l6]
     populate_other_tree_params(root,0)
     return root
 
