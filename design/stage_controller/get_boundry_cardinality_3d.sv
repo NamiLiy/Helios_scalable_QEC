@@ -15,6 +15,7 @@ module get_boundry_cardinality #(
     done
 );
 
+
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
 localparam MEASUREMENT_ROUNDS = `MAX(CODE_DISTANCE_X, CODE_DISTANCE_Z);
@@ -38,7 +39,18 @@ input [PU_COUNT-1:0] is_touching_boundaries;
 input [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 output final_cardinality;
 input go;
-output done;
+output reg done;
+
+
+always@(posedge clk) begin
+    if(reset) begin
+        done <= 0;
+    end else begin
+        done <= go;
+    end
+end
+// Temporarly disabling this for convenience
+/*
 
 reg [PU_COUNT-1:0] root_array; //indicating used PUs
 reg [ADDRESS_WIDTH-1 :0] selected_PU;
@@ -133,6 +145,8 @@ end
 
 assign final_cardinality = ^root_array;
 assign done = state==2'b10 ? 1 : 0;
+
+*/
 
 endmodule
 

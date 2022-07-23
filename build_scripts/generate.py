@@ -215,24 +215,44 @@ def add_leaf(node):
             f.write(OF.out)
             f.close()
     else:
-        with open("./templates/leaf_wrapper.sv","r") as f:
-            templateSV = f.read()
-            OF = hdlTemplate(templateSV)
-            OF.r("ID", node.id)
-            OF.r("CODE_DISTANCE_X", codeDistanceX)
-            OF.r("CODE_DISTANCE_Z", codeDistanceZ)
-            OF.r("ID", node.id)
-            OF.r("PARENT", node.parent)
-            OF.r("CHILD_ID", node.child_id)
-            x_start = node.grid.x_start
-            x_end = node.grid.x_end
-            OF.r("X_START", x_start) # This is split edges per measurement round
-            OF.r("X_END", x_end) # This is split edges per measurement round
+        if(random_error_gen == True):
+            with open("./templates/leaf_wrapper_with_rand_err_gen.sv","r") as f:
+                templateSV = f.read()
+                OF = hdlTemplate(templateSV)
+                OF.r("ID", node.id)
+                OF.r("CODE_DISTANCE_X", codeDistanceX)
+                OF.r("CODE_DISTANCE_Z", codeDistanceZ)
+                OF.r("ID", node.id)
+                OF.r("PARENT", node.parent)
+                OF.r("CHILD_ID", node.child_id)
+                x_start = node.grid.x_start
+                x_end = node.grid.x_end
+                OF.r("X_START", x_start) # This is split edges per measurement round
+                OF.r("X_END", x_end) # This is split edges per measurement round
 
-            # Write to file
-            f = open("../design/generated/top_level_test_bench.sv", "a")
-            f.write(OF.out)
-            f.close()
+                # Write to file
+                f = open("../design/generated/top_level_test_bench.sv", "a")
+                f.write(OF.out)
+                f.close()
+        else:
+            with open("./templates/leaf_wrapper.sv","r") as f:
+                templateSV = f.read()
+                OF = hdlTemplate(templateSV)
+                OF.r("ID", node.id)
+                OF.r("CODE_DISTANCE_X", codeDistanceX)
+                OF.r("CODE_DISTANCE_Z", codeDistanceZ)
+                OF.r("ID", node.id)
+                OF.r("PARENT", node.parent)
+                OF.r("CHILD_ID", node.child_id)
+                x_start = node.grid.x_start
+                x_end = node.grid.x_end
+                OF.r("X_START", x_start) # This is split edges per measurement round
+                OF.r("X_END", x_end) # This is split edges per measurement round
+
+                # Write to file
+                f = open("../design/generated/top_level_test_bench.sv", "a")
+                f.write(OF.out)
+                f.close()
 
     # Add leaf top module'
     if(ll_connections == True):
@@ -260,27 +280,50 @@ def add_leaf(node):
             f.write(OF.out)
             f.close()
     else:
-        with open("./templates/top_module_for_leaf.sv","r") as f:
-            templateSV = f.read()
-            x_start = node.grid.x_start
-            x_end = node.grid.x_end
-            OF = hdlTemplate(templateSV)
-            OF.r("ID", node.id)
-            OF.r("CODE_DISTANCE_X", codeDistanceX)
-            OF.r("CODE_DISTANCE_Z", codeDistanceZ)
-            OF.r("FPGAID_WIDTH", fpga_id_width)
-            OF.r("FIFO_IDWIDTH", fifo_id_width)
-            OF.r("EDGE_COUNT", node.edge_count) # This is split edges per measurement round
-            OF.r("X_START", x_start) # This is split edges per measurement round
-            OF.r("X_END", x_end) # This is split edges per measurement round
-            OF.r("HUB_FIFO_WIDTH", hub_fifo_width)
-            OF.r("MESSAGE_FLYING_DELAY",dealy_for_pe_busy)
-            OF.r("HUB_FIFO_PHYSICAL_WIDTH",interconnect_physical_width)
-            
-            # Write to file
-            f = open("../design/generated/top_module_for_leaf_" + str(node.id) + ".sv", "w")
-            f.write(OF.out)
-            f.close()
+        if(random_error_gen == True):
+            with open("./templates/top_module_for_leaf_with_rand_err_gen.sv","r") as f:
+                templateSV = f.read()
+                x_start = node.grid.x_start
+                x_end = node.grid.x_end
+                OF = hdlTemplate(templateSV)
+                OF.r("ID", node.id)
+                OF.r("CODE_DISTANCE_X", codeDistanceX)
+                OF.r("CODE_DISTANCE_Z", codeDistanceZ)
+                OF.r("FPGAID_WIDTH", fpga_id_width)
+                OF.r("FIFO_IDWIDTH", fifo_id_width)
+                OF.r("EDGE_COUNT", node.edge_count) # This is split edges per measurement round
+                OF.r("X_START", x_start) # This is split edges per measurement round
+                OF.r("X_END", x_end) # This is split edges per measurement round
+                OF.r("HUB_FIFO_WIDTH", hub_fifo_width)
+                OF.r("MESSAGE_FLYING_DELAY",dealy_for_pe_busy)
+                OF.r("HUB_FIFO_PHYSICAL_WIDTH",interconnect_physical_width)
+                
+                # Write to file
+                f = open("../design/generated/top_module_for_leaf_" + str(node.id) + ".sv", "w")
+                f.write(OF.out)
+                f.close()
+        else:
+            with open("./templates/top_module_for_leaf.sv","r") as f:
+                templateSV = f.read()
+                x_start = node.grid.x_start
+                x_end = node.grid.x_end
+                OF = hdlTemplate(templateSV)
+                OF.r("ID", node.id)
+                OF.r("CODE_DISTANCE_X", codeDistanceX)
+                OF.r("CODE_DISTANCE_Z", codeDistanceZ)
+                OF.r("FPGAID_WIDTH", fpga_id_width)
+                OF.r("FIFO_IDWIDTH", fifo_id_width)
+                OF.r("EDGE_COUNT", node.edge_count) # This is split edges per measurement round
+                OF.r("X_START", x_start) # This is split edges per measurement round
+                OF.r("X_END", x_end) # This is split edges per measurement round
+                OF.r("HUB_FIFO_WIDTH", hub_fifo_width)
+                OF.r("MESSAGE_FLYING_DELAY",dealy_for_pe_busy)
+                OF.r("HUB_FIFO_PHYSICAL_WIDTH",interconnect_physical_width)
+                
+                # Write to file
+                f = open("../design/generated/top_module_for_leaf_" + str(node.id) + ".sv", "w")
+                f.write(OF.out)
+                f.close()
 
     with open("./templates/standard_planar_code_2d.sv","r") as f:
         templateSV = f.read()
@@ -327,27 +370,50 @@ def add_leaf(node):
 
 def add_root_hub(node):
     print("Root hub " + str(node.id))
-    with open("./templates/root_hub_wrapper.sv","r") as f:
-        templateSV = f.read()
-        OF = hdlTemplate(templateSV)
-        OF.r("ID", node.id)
-        OF.r("CODE_DISTANCE_X", codeDistanceX)
-        OF.r("CODE_DISTANCE_Z", codeDistanceZ)
-        OF.r("ID", node.id)
-        OF.r("LEVEL", node.level)
-        OF.r("CHILD_ID", node.child_id)
-        OF.r("NUM_CHILDREN", node.num_children)
-        OF.r("HUB_FIFO_WIDTH", hub_fifo_width)
-        OF.r("HUB_FIFO_PHYSICAL_WIDTH", interconnect_physical_width)
-        if ll_connections==True:
-            OF.r("DIRECT_CONNECTED_NEIGHBORS", 2)
-        else:
-            OF.r("DIRECT_CONNECTED_NEIGHBORS", 0)
+    if(random_error_gen == True):
+        with open("./templates/root_hub_wrapper_with_rand_err_gen.sv","r") as f:
+            templateSV = f.read()
+            OF = hdlTemplate(templateSV)
+            OF.r("ID", node.id)
+            OF.r("CODE_DISTANCE_X", codeDistanceX)
+            OF.r("CODE_DISTANCE_Z", codeDistanceZ)
+            OF.r("ID", node.id)
+            OF.r("LEVEL", node.level)
+            OF.r("CHILD_ID", node.child_id)
+            OF.r("NUM_CHILDREN", node.num_children)
+            OF.r("HUB_FIFO_WIDTH", hub_fifo_width)
+            OF.r("HUB_FIFO_PHYSICAL_WIDTH", interconnect_physical_width)
+            if ll_connections==True:
+                OF.r("DIRECT_CONNECTED_NEIGHBORS", 2)
+            else:
+                OF.r("DIRECT_CONNECTED_NEIGHBORS", 0)
 
-        # Write to file
-        f = open("../design/generated/top_level_test_bench.sv", "w")
-        f.write(OF.out)
-        f.close()
+            # Write to file
+            f = open("../design/generated/top_level_test_bench.sv", "w")
+            f.write(OF.out)
+            f.close()
+    else:
+        with open("./templates/root_hub_wrapper.sv","r") as f:
+            templateSV = f.read()
+            OF = hdlTemplate(templateSV)
+            OF.r("ID", node.id)
+            OF.r("CODE_DISTANCE_X", codeDistanceX)
+            OF.r("CODE_DISTANCE_Z", codeDistanceZ)
+            OF.r("ID", node.id)
+            OF.r("LEVEL", node.level)
+            OF.r("CHILD_ID", node.child_id)
+            OF.r("NUM_CHILDREN", node.num_children)
+            OF.r("HUB_FIFO_WIDTH", hub_fifo_width)
+            OF.r("HUB_FIFO_PHYSICAL_WIDTH", interconnect_physical_width)
+            if ll_connections==True:
+                OF.r("DIRECT_CONNECTED_NEIGHBORS", 2)
+            else:
+                OF.r("DIRECT_CONNECTED_NEIGHBORS", 0)
+
+            # Write to file
+            f = open("../design/generated/top_level_test_bench.sv", "w")
+            f.write(OF.out)
+            f.close()
 
     # Add root hub module
     with open("./templates/root_hub.sv","r") as f:
