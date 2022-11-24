@@ -13,10 +13,11 @@ hub_fifo_width = 16
 fpga_id_width = 4
 fifo_id_width = 4
 global_pointer_to_parent = None
-dealy_for_pe_busy = 9 #Critical parameter please choose wisely
+dealy_for_pe_busy = 3 #Critical parameter please choose wisely
 interconnect_physical_width = 0
 interconnection_latency = 0
 ll_connections = False
+ll_connection_latency = 0
 num_leaf_fpgas = 0
 random_error_gen = False
 
@@ -196,24 +197,44 @@ def add_leaf(node):
 
     # Add test bench
     if(ll_connections == True):
-        with open("./templates/leaf_wrapper_ll_connected.sv","r") as f:
-            templateSV = f.read()
-            OF = hdlTemplate(templateSV)
-            OF.r("ID", node.id)
-            OF.r("CODE_DISTANCE_X", codeDistanceX)
-            OF.r("CODE_DISTANCE_Z", codeDistanceZ)
-            OF.r("ID", node.id)
-            OF.r("PARENT", node.parent)
-            OF.r("CHILD_ID", node.child_id)
-            x_start = node.grid.x_start
-            x_end = node.grid.x_end
-            OF.r("X_START", x_start) # This is split edges per measurement round
-            OF.r("X_END", x_end) # This is split edges per measurement round
+        if(random_error_gen == True):
+            with open("./templates/leaf_wrapper_ll_connected_with_rand_err_gen.sv","r") as f:
+                templateSV = f.read()
+                OF = hdlTemplate(templateSV)
+                OF.r("ID", node.id)
+                OF.r("CODE_DISTANCE_X", codeDistanceX)
+                OF.r("CODE_DISTANCE_Z", codeDistanceZ)
+                OF.r("ID", node.id)
+                OF.r("PARENT", node.parent)
+                OF.r("CHILD_ID", node.child_id)
+                x_start = node.grid.x_start
+                x_end = node.grid.x_end
+                OF.r("X_START", x_start) # This is split edges per measurement round
+                OF.r("X_END", x_end) # This is split edges per measurement round
 
-            # Write to file
-            f = open("../design/generated/top_level_test_bench.sv", "a")
-            f.write(OF.out)
-            f.close()
+                # Write to file
+                f = open("../design/generated/top_level_test_bench.sv", "a")
+                f.write(OF.out)
+                f.close()
+        else:
+            with open("./templates/leaf_wrapper_ll_connected.sv","r") as f:
+                templateSV = f.read()
+                OF = hdlTemplate(templateSV)
+                OF.r("ID", node.id)
+                OF.r("CODE_DISTANCE_X", codeDistanceX)
+                OF.r("CODE_DISTANCE_Z", codeDistanceZ)
+                OF.r("ID", node.id)
+                OF.r("PARENT", node.parent)
+                OF.r("CHILD_ID", node.child_id)
+                x_start = node.grid.x_start
+                x_end = node.grid.x_end
+                OF.r("X_START", x_start) # This is split edges per measurement round
+                OF.r("X_END", x_end) # This is split edges per measurement round
+
+                # Write to file
+                f = open("../design/generated/top_level_test_bench.sv", "a")
+                f.write(OF.out)
+                f.close()
     else:
         if(random_error_gen == True):
             with open("./templates/leaf_wrapper_with_rand_err_gen.sv","r") as f:
@@ -256,29 +277,55 @@ def add_leaf(node):
 
     # Add leaf top module'
     if(ll_connections == True):
-        with open("./templates/top_module_for_leaf_ll_connected.sv","r") as f:
-            templateSV = f.read()
-            x_start = node.grid.x_start
-            x_end = node.grid.x_end
-            OF = hdlTemplate(templateSV)
-            OF.r("ID", node.id)
-            OF.r("CODE_DISTANCE_X", codeDistanceX)
-            OF.r("CODE_DISTANCE_Z", codeDistanceZ)
-            OF.r("FPGAID_WIDTH", fpga_id_width)
-            OF.r("FIFO_IDWIDTH", fifo_id_width)
-            OF.r("EDGE_COUNT", node.edge_count) # This is split edges per measurement round
-            OF.r("X_START", x_start) # This is split edges per measurement round
-            OF.r("X_END", x_end) # This is split edges per measurement round
-            OF.r("HUB_FIFO_WIDTH", hub_fifo_width)
-            OF.r("MESSAGE_FLYING_DELAY",dealy_for_pe_busy)
-            OF.r("HUB_FIFO_PHYSICAL_WIDTH",interconnect_physical_width)
-            OF.r("LL_NEIGHBORS",2)
-            neighbor_FPGA_list = generate_neighbor_FPGA_list(node)
-            OF.r("LL_NEIGHBOR_IDS",neighbor_FPGA_list)
-            # Write to file
-            f = open("../design/generated/top_module_for_leaf_" + str(node.id) + ".sv", "w")
-            f.write(OF.out)
-            f.close()
+        if(random_error_gen == True):
+            with open("./templates/top_module_for_leaf_ll_connected_with_rand_err_gen.sv","r") as f:
+                templateSV = f.read()
+                x_start = node.grid.x_start
+                x_end = node.grid.x_end
+                OF = hdlTemplate(templateSV)
+                OF.r("ID", node.id)
+                OF.r("CODE_DISTANCE_X", codeDistanceX)
+                OF.r("CODE_DISTANCE_Z", codeDistanceZ)
+                OF.r("FPGAID_WIDTH", fpga_id_width)
+                OF.r("FIFO_IDWIDTH", fifo_id_width)
+                OF.r("EDGE_COUNT", node.edge_count) # This is split edges per measurement round
+                OF.r("X_START", x_start) # This is split edges per measurement round
+                OF.r("X_END", x_end) # This is split edges per measurement round
+                OF.r("HUB_FIFO_WIDTH", hub_fifo_width)
+                OF.r("MESSAGE_FLYING_DELAY",dealy_for_pe_busy)
+                OF.r("HUB_FIFO_PHYSICAL_WIDTH",interconnect_physical_width)
+                OF.r("LL_NEIGHBORS",2)
+                neighbor_FPGA_list = generate_neighbor_FPGA_list(node)
+                OF.r("LL_NEIGHBOR_IDS",neighbor_FPGA_list)
+                
+                # Write to file
+                f = open("../design/generated/top_module_for_leaf_" + str(node.id) + ".sv", "w")
+                f.write(OF.out)
+                f.close()
+        else:
+            with open("./templates/top_module_for_leaf_ll_connected.sv","r") as f:
+                templateSV = f.read()
+                x_start = node.grid.x_start
+                x_end = node.grid.x_end
+                OF = hdlTemplate(templateSV)
+                OF.r("ID", node.id)
+                OF.r("CODE_DISTANCE_X", codeDistanceX)
+                OF.r("CODE_DISTANCE_Z", codeDistanceZ)
+                OF.r("FPGAID_WIDTH", fpga_id_width)
+                OF.r("FIFO_IDWIDTH", fifo_id_width)
+                OF.r("EDGE_COUNT", node.edge_count) # This is split edges per measurement round
+                OF.r("X_START", x_start) # This is split edges per measurement round
+                OF.r("X_END", x_end) # This is split edges per measurement round
+                OF.r("HUB_FIFO_WIDTH", hub_fifo_width)
+                OF.r("MESSAGE_FLYING_DELAY",dealy_for_pe_busy)
+                OF.r("HUB_FIFO_PHYSICAL_WIDTH",interconnect_physical_width)
+                OF.r("LL_NEIGHBORS",2)
+                neighbor_FPGA_list = generate_neighbor_FPGA_list(node)
+                OF.r("LL_NEIGHBOR_IDS",neighbor_FPGA_list)
+                # Write to file
+                f = open("../design/generated/top_module_for_leaf_" + str(node.id) + ".sv", "w")
+                f.write(OF.out)
+                f.close()
     else:
         if(random_error_gen == True):
             with open("./templates/top_module_for_leaf_with_rand_err_gen.sv","r") as f:
@@ -488,7 +535,7 @@ def add_ll_interconnection(node):
         OF = hdlTemplate(templateSV)
         OF.r("INTERCONNECT_ID", node.id)
         OF.r("NUM_CHILDREN", 1)
-        OF.r("INTERCONNECTION_LATENCY", interconnection_latency)
+        OF.r("INTERCONNECTION_LATENCY", ll_connection_latency)
         predecessor = find_node_from_leaf_id(node.leaf_id - 1)
         successor = find_node_from_leaf_id(node.leaf_id + 1)
         last_leaf = find_node_from_leaf_id(num_leaf_fpgas - 1)
@@ -565,7 +612,7 @@ def populate_grid_of_each_fpga(node, numSplit):
         print(str(node.leaf_id) + " : " + str(x_start)+" " + str(x_end))
         edgeCount = 0
         if(node.leaf_id == 0 and node.leaf_id == numSplit - 1):
-            edgeCount = 0
+            edgeCount = 1 #This should be zero but just for the sake of safety we have it as 1
         elif(node.leaf_id == 0 or node.leaf_id == numSplit - 1):
             edgeCount = codeDistanceZ
         else:
@@ -739,6 +786,7 @@ hub_fifo_width = global_details.interconnectWidth
 interconnect_physical_width = global_details.interconnectPhysicalWidth
 interconnection_latency = global_details.interconnection_latency
 ll_connections = global_details.ll_connections
+ll_connection_latency = global_details.ll_connection_latency
 random_error_gen = global_details.random_error_gen
 
 dealy_for_pe_busy = interconnection_latency + 6;

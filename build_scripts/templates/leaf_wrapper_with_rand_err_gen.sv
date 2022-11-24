@@ -16,6 +16,8 @@ top_module_for_leaf_with_rand_err_gen_/*$$ID*/ #(
     .iteration_counter(),
     .cycle_counter(),
     .deadlock(),
+    .is_touching_boundaries(is_touching_boundaries), //temp
+    .is_odd_cardinalities(is_odd_cardinalities), //temp
     .final_cardinality(),
     .final_fifo_out_data(downstream_fifo_in_data_d_/*$$PARENT*/[(/*$$CHILD_ID*/ + 1)*INTERCONNECT_PHYSICAL_WIDTH  - 1: /*$$CHILD_ID*/ *INTERCONNECT_PHYSICAL_WIDTH]),
     .final_fifo_out_valid(downstream_fifo_in_valid_d_/*$$PARENT*/[/*$$CHILD_ID*/]),
@@ -26,5 +28,7 @@ top_module_for_leaf_with_rand_err_gen_/*$$ID*/ #(
     .has_message_flying(downstream_has_message_flying_d_/*$$PARENT*/[/*$$CHILD_ID*/]),
     .has_odd_clusters(downstream_has_odd_clusters_d_/*$$PARENT*/[/*$$CHILD_ID*/])
 );
+
+assign roots = roots_/*$$ID*/; //temporary for debug
 
 

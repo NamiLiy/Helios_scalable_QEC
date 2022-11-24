@@ -5,7 +5,8 @@ module rand_gen_top #(
     clk,
     reset,
     next,
-    measurement_values
+    measurement_values,
+    is_odd_syndrome
 );
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
@@ -16,6 +17,7 @@ input clk;
 input reset;
 input next;
 output [PU_COUNT - 1 : 0] measurement_values;
+output is_odd_syndrome;
 
 genvar i;
 genvar j;
@@ -29,56 +31,62 @@ genvar k;
 localparam logic [63:0] s0[CODE_DISTANCE_X*(CODE_DISTANCE_Z + 1) + (CODE_DISTANCE_X-1)*CODE_DISTANCE_Z + CODE_DISTANCE_X*CODE_DISTANCE_Z + 1] = {/*$$S0_ARRAY*/};
 localparam logic [63:0] s1[CODE_DISTANCE_X*(CODE_DISTANCE_Z + 1) + (CODE_DISTANCE_X-1)*CODE_DISTANCE_Z + CODE_DISTANCE_X*CODE_DISTANCE_Z + 1] = {/*$$S1_ARRAY*/};
 
+wire [CODE_DISTANCE_X - 1 : 0] odd_chains;
+assign is_odd_syndrome = ^odd_chains;
+// assign is_odd_syndrome = 1'b0;
 
 generate
     for (i=0; i < CODE_DISTANCE_X; i=i+1) begin: m_i_horizontal_lines
         for (j=0; j <= CODE_DISTANCE_Z; j=j+1) begin: m_j
-            wire [MEASUREMENT_ROUNDS - 1 : 0] measurement_values;
+            wire [MEASUREMENT_ROUNDS - 1 : 0] temp_measurement_values;
             error_stream #(.MEASUREMENT_ROUNDS(MEASUREMENT_ROUNDS)) es(
                 .s0_initial(s0[`HOR_INDEX(i,j)]),
                 .s1_initial(s1[`HOR_INDEX(i,j)]),
                 .update_errors(next),
                 .update_valid(),
-                .error_stream(measurement_values),
+                .error_stream(temp_measurement_values),
                 .clk(clk),
                 .reset(reset)
             );
+             if(j==0) begin
+                 assign odd_chains[i] = ^temp_measurement_values;
+             end
         end
     end
 
     for (i=0; i < CODE_DISTANCE_Z; i=i+1) begin: m_i_vertical_lines
         for (j=0; j <= CODE_DISTANCE_X; j=j+1) begin: m_j
-            wire [MEASUREMENT_ROUNDS - 1 : 0] measurement_values;
+            wire [MEASUREMENT_ROUNDS - 1 : 0] temp_measurement_values;
             if(j > 0 && j < CODE_DISTANCE_X) begin
                 error_stream #(.MEASUREMENT_ROUNDS(MEASUREMENT_ROUNDS)) es(
                     .s0_initial(s0[`VER_INDEX(i,j)]),
                     .s1_initial(s1[`VER_INDEX(i,j)]),
                     .update_errors(next),
                     .update_valid(),
-                    .error_stream(measurement_values),
+                    .error_stream(temp_measurement_values),
                     .clk(clk),
                     .reset(reset)
                 );
             end else begin
-                assign measurement_values = {MEASUREMENT_ROUNDS{1'b0}};
+                assign temp_measurement_values = {MEASUREMENT_ROUNDS{1'b0}};
             end
         end
     end
 
     for (i=0; i < CODE_DISTANCE_X; i=i+1) begin: m_i_measurement_lines
         for (j=0; j < CODE_DISTANCE_Z; j=j+1) begin: m_j
-            wire [MEASUREMENT_ROUNDS  : 0] measurement_values;
+            wire [MEASUREMENT_ROUNDS  : 0] temp_measurement_values;
             error_stream #(.MEASUREMENT_ROUNDS(MEASUREMENT_ROUNDS)) es(
                 .s0_initial(s0[`MEASURE_INDEX(i,j)]),
                 .s1_initial(s1[`MEASURE_INDEX(i,j)]),
                 .update_errors(next),
                 .update_valid(),
-                .error_stream(measurement_values[MEASUREMENT_ROUNDS - 1 : 1]),
+                .error_stream(temp_measurement_values[MEASUREMENT_ROUNDS - 1 : 1]),
                 .clk(clk),
                 .reset(reset)
             );
-            assign measurement_values[0] = 1'b0;
-            assign measurement_values[MEASUREMENT_ROUNDS] = 1'b0;
+            assign temp_measurement_values[0] = 1'b0;
+            assign temp_measurement_values[MEASUREMENT_ROUNDS] = 1'b0;
         end
     end
 
@@ -89,16 +97,15 @@ generate
         for (i=0; i < CODE_DISTANCE_X; i=i+1) begin: pu_i
             for (j=0; j < CODE_DISTANCE_Z; j=j+1) begin: pu_j
                 assign measurement_values[`INDEX(i, j, k)] = 
-                    m_i_horizontal_lines[i].m_j[j].measurement_values[k]^
-                    m_i_horizontal_lines[i].m_j[j+1].measurement_values[k]^
-                    m_i_vertical_lines[j].m_j[i].measurement_values[k]^
-                    m_i_vertical_lines[j].m_j[i+1].measurement_values[k]^
-                    m_i_measurement_lines[i].m_j[j].measurement_values[k]^
-                    m_i_measurement_lines[i].m_j[j].measurement_values[k+1];
+                    m_i_horizontal_lines[i].m_j[j].temp_measurement_values[k]^
+                    m_i_horizontal_lines[i].m_j[j+1].temp_measurement_values[k]^
+                    m_i_vertical_lines[j].m_j[i].temp_measurement_values[k]^
+                    m_i_vertical_lines[j].m_j[i+1].temp_measurement_values[k]^
+                    m_i_measurement_lines[i].m_j[j].temp_measurement_values[k]^
+                    m_i_measurement_lines[i].m_j[j].temp_measurement_values[k+1];
             end
         end
     end
 endgenerate
 
 endmodule
-    

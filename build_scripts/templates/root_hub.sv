@@ -18,6 +18,11 @@ module root_hub_/*$$ID*/ #(
     deadlock,
     final_cardinality,
 
+    // Following three ports are for single FPGA debug only and should not be used in the multi-FPGA design
+    is_touching_boundaries, 
+    is_odd_cardinalities, 
+    roots,
+
     downstream_fifo_out_data,
     downstream_fifo_out_valid,
     downstream_fifo_out_ready,
@@ -52,8 +57,7 @@ localparam FIFO_IDWIDTH = /*$$FIFO_IDWIDTH*/;
 input clk;
 input reset;
 input new_round_start;
-// input [PU_COUNT-1:0] is_error_syndromes;
-// output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
+
 output reg result_valid;
 output reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
 output [31:0] cycle_counter;
@@ -82,6 +86,10 @@ wire upstream_has_odd_clusters;
 
 input [DOWNSTREAM_FIFO_COUNT - 1 :0] downstream_has_message_flying;
 input [DOWNSTREAM_FIFO_COUNT - 1 :0] downstream_has_odd_clusters;
+
+input [PU_COUNT-1:0] is_odd_cardinalities;
+input [PU_COUNT-1:0] is_touching_boundaries;
+input [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 
 top_module_hub_/*$$ID*/ #(
     .CODE_DISTANCE_X(/*$$CODE_DISTANCE_X*/),
@@ -134,9 +142,11 @@ decoder_stage_controller_master_/*$$ID*/ #(
     .reset(reset),
     // .has_message_flying(has_message_flying_sc),
     // .has_odd_clusters(has_odd_clusters),
-    // .is_touching_boundaries(is_touching_boundaries),
-    // .is_odd_cardinalities(is_odd_cardinalities),
-    // .roots(left_roots),
+
+    .is_touching_boundaries(is_touching_boundaries),
+    .is_odd_cardinalities(is_odd_cardinalities),
+    .roots(roots),
+
     .new_round_start(new_round_start),
     // .stage(stage),
     .result_valid(result_valid),

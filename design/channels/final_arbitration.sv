@@ -33,7 +33,7 @@ module final_arbitration_unit#(
     has_flying_messages
 );
 
-`include "parameters.sv"
+`include "../../parameters/parameters.sv"
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
 // localparam MEASUREMENT_ROUNDS = `MAX(CODE_DISTANCE_X, CODE_DISTANCE_Z);

@@ -28,6 +28,7 @@ top_module_for_leaf_/*$$ID*/ #(
     .has_odd_clusters(downstream_has_odd_clusters_d_/*$$PARENT*/[/*$$CHILD_ID*/])
 );
 
+
 generate
     for (k2=0; k2 < MEASUREMENT_ROUNDS; k2=k2+1) begin: assign_k_/*$$ID*/
         for (i2=/*$$X_START*/; i2 <= /*$$X_END*/; i2=i2+1) begin: assign_i_/*$$ID*/

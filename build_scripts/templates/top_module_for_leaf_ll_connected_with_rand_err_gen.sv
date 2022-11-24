@@ -28,9 +28,6 @@ module top_module_for_leaf_with_rand_err_gen_/*$$ID*/ #(
     has_message_flying,
     has_odd_clusters,
 
-    is_touching_boundaries, 
-    is_odd_cardinalities, 
-
     is_odd_syndrome // This is indicating whether the real error pattern is odd or not, used only for debug validation and should not be used in any QEC task
 );
 
@@ -63,6 +60,8 @@ localparam FPGAID_WIDTH = /*$$FPGAID_WIDTH*/;
 localparam FIFO_IDWIDTH = /*$$FIFO_IDWIDTH*/;
 localparam MESSAGE_FLYING_DELAY = /*$$MESSAGE_FLYING_DELAY*/;
 
+localparam FPGA_NEIGHBORS = /*$$LL_NEIGHBORS*/;
+
 input clk;
 input reset;
 input new_round_start;
@@ -76,12 +75,12 @@ output final_cardinality;
 output has_message_flying;
 output reg has_odd_clusters;
 
-output [HUB_FIFO_PHYSICAL_WIDTH - 1 :0] final_fifo_out_data;
-output final_fifo_out_valid;
-input final_fifo_out_ready;
-input [HUB_FIFO_PHYSICAL_WIDTH - 1 :0] final_fifo_in_data;
-input final_fifo_in_valid;
-output final_fifo_in_ready;
+output [HUB_FIFO_PHYSICAL_WIDTH*(FPGA_NEIGHBORS + 1) - 1 :0] final_fifo_out_data;
+output [FPGA_NEIGHBORS : 0] final_fifo_out_valid;
+input [FPGA_NEIGHBORS : 0] final_fifo_out_ready;
+input [HUB_FIFO_PHYSICAL_WIDTH*(FPGA_NEIGHBORS + 1) - 1 :0] final_fifo_in_data;
+input [FPGA_NEIGHBORS : 0] final_fifo_in_valid;
+output [FPGA_NEIGHBORS : 0] final_fifo_in_ready;
 output reg is_odd_syndrome;
 wire is_odd_syndrome_wire;
 
@@ -101,8 +100,8 @@ wire [HUB_FIFO_WIDTH - 1 :0] sc_fifo_in_data;
 wire sc_fifo_in_valid;
 wire sc_fifo_in_ready;
 
-output [PU_COUNT -1:0] is_odd_cardinalities;
-output [PU_COUNT -1:0] is_touching_boundaries;
+wire [PU_COUNT -1:0] is_odd_cardinalities;
+wire [PU_COUNT -1:0] is_touching_boundaries;
 reg [MESSAGE_FLYING_DELAY-1:0]has_message_flying_reg;
 wire [STAGE_WIDTH-1:0] stage;
 wire [PU_COUNT -1:0] is_odd_clusters;
@@ -174,12 +173,25 @@ decoder_stage_controller_dummy_/*$$ID*/ #(
     .sc_fifo_in_ready(sc_fifo_in_ready)
 );
 
-final_arbitration_unit #(
+localparam logic [FPGAID_WIDTH - 1:0] fpga_neighbor_array[FPGA_NEIGHBORS] = {/*$$LL_NEIGHBOR_IDS*/};
+
+wire [FPGAID_WIDTH*FPGA_NEIGHBORS - 1:0] fpga_neighbor_array_packed;
+
+genvar i;
+
+generate
+    for(i=0;i<FPGA_NEIGHBORS;i=i+1) begin: packing_n_list
+        assign fpga_neighbor_array_packed[(i+1)*FPGAID_WIDTH - 1 : i*FPGAID_WIDTH] = fpga_neighbor_array[i];
+    end
+endgenerate
+
+final_arbitration_ll_connected_unit #(
     .FPGAID_WIDTH(FPGAID_WIDTH),
     .HUB_FIFO_WIDTH(HUB_FIFO_WIDTH),
     .HUB_FIFO_PHYSICAL_WIDTH(HUB_FIFO_PHYSICAL_WIDTH),
     .FIFO_IDWIDTH(FIFO_IDWIDTH),
-    .FIFO_COUNT(FIFO_COUNT)
+    .FIFO_COUNT(FIFO_COUNT),
+    .FPGA_NEIGHBORS(FPGA_NEIGHBORS)
 ) u_final_arbitration_unit (
     .clk(clk),
     .reset(reset),
@@ -201,7 +213,8 @@ final_arbitration_unit #(
     .final_fifo_in_data(final_fifo_in_data),
     .final_fifo_in_valid(final_fifo_in_valid),
     .final_fifo_in_ready(final_fifo_in_ready),
-    .has_flying_messages(has_message_flying_interconnect)
+    .has_flying_messages(has_message_flying_interconnect),
+    .fpga_neighbor_array(fpga_neighbor_array_packed)
 );
 
 reg [10:0] counter;

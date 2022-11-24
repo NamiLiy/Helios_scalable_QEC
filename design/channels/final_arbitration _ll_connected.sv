@@ -87,7 +87,7 @@ reg [HUB_FIFO_PHYSICAL_WIDTH*(FPGA_NEIGHBORS + 1) - 1 :0] final_fifo_out_data_in
 wire [FPGA_NEIGHBORS : 0] final_fifo_out_valid_internal;
 wire [FPGA_NEIGHBORS : 0] final_fifo_out_is_full_internal;
 
-wire [HUB_FIFO_PHYSICAL_WIDTH-1: 0] final_fifo_in_data_internal;
+wire [HUB_FIFO_PHYSICAL_WIDTH*(FPGA_NEIGHBORS + 1) - 1 :0] final_fifo_in_data_internal;
 reg [FPGA_NEIGHBORS : 0] final_fifo_in_ready_internal;
 wire [FPGA_NEIGHBORS : 0] final_fifo_in_empty_internal;
 

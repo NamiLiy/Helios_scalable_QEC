@@ -51,6 +51,9 @@ wire result_valid;
 wire [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
 reg deadlock;
 
+wire [PU_COUNT-1:0] is_touching_boundaries;
+wire [PU_COUNT-1:0] is_odd_cardinalities;
+
 `define INDEX(i, j, k) (i * CODE_DISTANCE_Z + j + k * CODE_DISTANCE_Z*CODE_DISTANCE_X)
 `define is_error_syndrome(i, j, k) is_error_syndromes[`INDEX(i, j, k)]
 `define is_odd_cluster(i, j, k) decoder.is_odd_clusters[`INDEX(i, j, k)]
@@ -115,7 +118,7 @@ reg [31:0] total_count;
 
 // Output verification logic
 always @(posedge clk) begin
-    if (!valid_delayed && (result_valid || deadlock)) begin
+    if (!valid_delayed && result_valid) begin
         processing = 0;
         if (deadlock) begin
             $display("%t\tTest case %d hit a deadlock", $time, test_case);
@@ -167,6 +170,11 @@ root_hub_/*$$ID*/ #(
     .cycle_counter(cycle_counter),
     .deadlock(deadlock),
     .final_cardinality(final_cardinality),
+
+    // Following three ports are for single FPGA debug only and should not be used in the multi-FPGA design
+    .is_touching_boundaries(is_touching_boundaries),
+    .is_odd_cardinalities(is_odd_cardinalities),
+    .roots(roots),
 
 
     // .upstream_fifo_out_data(),

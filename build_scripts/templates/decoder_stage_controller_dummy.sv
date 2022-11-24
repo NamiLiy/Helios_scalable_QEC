@@ -213,7 +213,7 @@ always @(posedge clk) begin
                     stage <= STAGE_SYNC_IS_ODD_CLUSTER;
                     sc_fifo_in_ready_internal <= 1'b1;
                 end else if(sc_fifo_in_empty_internal == 0 && sc_fifo_in_data_internal[2:0] == 3'b10) begin
-                    stage <= STAGE_IDLE;
+                    stage <= STAGE_RESULT_CALCULATING;
                     sc_fifo_in_ready_internal <= 1'b1;
                 end
             end
@@ -237,7 +237,7 @@ always @(posedge clk) begin
                     stage <= STAGE_RESULT_CALCULATING;
                     sc_fifo_in_ready_internal <= 1'b1;
                 end else if(sc_fifo_in_empty_internal == 0 && sc_fifo_in_data_internal[2:0] == 3'b11) begin
-                    stage <= STAGE_IDLE;
+                    stage <= STAGE_RESULT_CALCULATING;
                     sc_fifo_in_ready_internal <= 1'b1;
                 end
             end

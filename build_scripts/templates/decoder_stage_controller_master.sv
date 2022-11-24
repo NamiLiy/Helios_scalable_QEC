@@ -11,9 +11,11 @@ module decoder_stage_controller_master_/*$$ID*/ #(
     reset,
     new_round_start,
 
-    // is_touching_boundaries,
-    // is_odd_cardinalities,
-    // roots,
+    // Following three ports are for single FPGA debug only and should not be used in the multi-FPGA design
+    is_touching_boundaries, 
+    is_odd_cardinalities, 
+    roots,
+
     // stage,
     result_valid,
     iteration_counter,
@@ -57,9 +59,11 @@ input clk;
 input reset;
 input new_round_start;
 // input has_odd_clusters;
-// input [PU_COUNT-1:0] is_touching_boundaries;
-// input [PU_COUNT-1:0] is_odd_cardinalities;
-// output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
+
+input [PU_COUNT-1:0] is_touching_boundaries;
+input [PU_COUNT-1:0] is_odd_cardinalities;
+input [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
+
 reg [STAGE_WIDTH-1:0] stage;
 output reg result_valid;
 output reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
@@ -195,7 +199,7 @@ always @(posedge clk) begin
     end else begin
         if (stage == STAGE_MEASUREMENT_LOADING) begin
             cycle_counter <= 1;
-        end else if (!result_valid) begin
+        end else if (!result_valid && stage != STAGE_IDLE) begin
             cycle_counter <= cycle_counter + 1;
         end
     end
@@ -216,7 +220,7 @@ always @(posedge clk) begin
         // result_data_frame <= 0;
         net_is_touching_boundaries <= 0;
         net_is_odd_cardinalities <= 0;
-        net_roots <= {ADDRESS_WIDTH*PU_COUNT-1{1'b0}};
+        // net_roots <= {ADDRESS_WIDTH*PU_COUNT-1{1'b0}};
 
     end else begin
         case (stage)
@@ -238,7 +242,8 @@ always @(posedge clk) begin
                         stage <= STAGE_SYNC_IS_ODD_CLUSTER;
                         delay_counter <= 0;
                     end else if (cycles_in_stage > DEADLOCK_THRESHOLD)  begin
-                        stage <= STAGE_IDLE;
+                        stage <= STAGE_RESULT_CALCULATING;
+                        delay_counter <= 0;
                     end
                 end else begin
                     delay_counter <= delay_counter + 1;
@@ -261,10 +266,11 @@ always @(posedge clk) begin
                         end else begin
                             stage <= STAGE_RESULT_CALCULATING;
                             delay_counter <= 0;
-                           sc_fifo_in_ready_internal <= 1'b1;
+                        //    sc_fifo_in_ready_internal <= 1'b1;
                         end
                     end else if (cycles_in_stage > DEADLOCK_THRESHOLD)  begin
-                        stage <= STAGE_IDLE;
+                        stage <= STAGE_RESULT_CALCULATING;
+                        delay_counter <= 0;
                     end
                 end else begin
                     delay_counter <= delay_counter + 1;
@@ -277,12 +283,12 @@ always @(posedge clk) begin
                 delay_counter <= 0;
                 result_valid <= 0; // for safety
             end
-            // Todo : Temporary disabling result calculating logic for debugging
+            // Todo : Temporary overrriding result calculating to read from leaf
             STAGE_RESULT_CALCULATING: begin 
                 stage <= STAGE_IDLE;
                 go_to_result_calculator <= 1;
                 result_valid <= 0; // for safety
-                sc_fifo_in_ready_internal <= 1'b0;    
+                // sc_fifo_in_ready_internal <= 1'b0;    
                 // if (sc_fifo_in_data_internal[2:0] == 32'd4 && sc_fifo_in_data_internal[MASTER_FIFO_WIDTH - 1 : 3] == 32'd0 && !sc_fifo_in_empty_internal) begin
                 //     stage <= STAGE_IDLE;
                 //     go_to_result_calculator <= 1;
@@ -410,9 +416,9 @@ get_boundry_cardinality #(
 ) result_calculator(
     .clk(clk),
     .reset(reset),
-    .is_touching_boundaries(net_is_touching_boundaries),
-    .is_odd_cardinalities(net_is_odd_cardinalities),
-    .roots(net_roots),
+    .is_touching_boundaries(is_touching_boundaries),
+    .is_odd_cardinalities(is_odd_cardinalities),
+    .roots(roots),
     .final_cardinality(final_cardinality),
     .go(go_to_result_calculator),
     .done(done_from_calculator)

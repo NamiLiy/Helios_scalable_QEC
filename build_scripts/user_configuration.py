@@ -37,11 +37,12 @@ class UserProperties:
         self.codeDistanceX = codeDistanceX
         self.codeDistanceZ = codeDistanceZ
         self.interconnectWidth = 128 #overrriden
-        self.interconnectPhysicalWidth = 6
-        self.interconnection_latency = 5
-        #For GTX use 17 as latency and 16 as width
+        self.interconnectPhysicalWidth = 128 #5
+        self.interconnection_latency = 1 #5
+        #For GTX use 17 as latency
         self.ll_connections = False
-        self.random_error_gen = True
+        self.ll_connection_latency = 11
+        self.random_error_gen = False
 
 
 def populate_other_tree_params(node, level):
@@ -58,19 +59,21 @@ def populate_other_tree_params(node, level):
 def initialize():
     root = Node(0)
     l1 = Node(1)
-    # root.children = [l1]
-    l2 = Node(2)
-    root.children = [l1,l2]
+    root.children = [l1]
 
-    l3 = Node(3)
-    l4 = Node(4)
-    l1.children = [l3,l4]
+    # l2 = Node(2)
+    # root.children = [l1,l2]
 
-    # root.children = [l1,l2,l3,l4]
+    # l3 = Node(3)
+    # l4 = Node(4)
+    # l1.children = [l3,l4]
 
-    l5 = Node(5)
-    l6 = Node(6)
-    l2.children = [l5,l6]
+    # # root.children = [l1,l2,l3,l4]
+
+    # l5 = Node(5)
+    # l6 = Node(6)
+    # l2.children = [l5,l6]
+
     populate_other_tree_params(root,0)
     return root
 
