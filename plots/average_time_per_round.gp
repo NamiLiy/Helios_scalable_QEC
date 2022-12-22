@@ -1,13 +1,13 @@
-set terminal pdf enhanced font "Times-Roman"
+set terminal pdf enhanced font "Times-Roman,18"
 set output 'average_case_per_round.pdf'
 
-set xlabel 'code distance (d)'                 # x-axis label
-set ylabel 'time per measurement round (FPGA clock cycles)'   # y-axis label
+set xlabel 'code distance (d)'   font ",18"                # x-axis label
+set ylabel 'time per measurement round'  font ",18"   # y-axis label
 
 set ytics nomirror
 # set yrange [0:1]
 
-set key font ",8"
+set key font ",18"
 set key spacing 1
 set key at 17, 20
 set xrange [1:17]

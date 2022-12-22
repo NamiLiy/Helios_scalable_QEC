@@ -46,6 +46,10 @@ set xrange [8 : 14]
 unset xtics
 set xtics ("1" 9, "2" 11, "4" 13)
 
+set arrow 9 from 9,47 to 9,359 heads size screen 0.005,90 lt 2
+set arrow 11 from 11,47 to 11,359 heads size screen 0.005,90 lt 2
+set arrow 13 from 13,47 to 13,361 heads size screen 0.005,90 lt 2
+
 set label at graph 0.166666666666667,0.209975 "" point  pointtype 2 pointsize 1
 set label at graph 0.5,0.209975 "" point  pointtype 2 pointsize 1
 set label at graph 0.833333333333333,0.209975 "" point  pointtype 2 pointsize 1

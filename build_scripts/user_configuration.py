@@ -3,7 +3,7 @@ from email.errors import NoBoundaryInMultipartDefect
 from pickletools import long4
 
 
-codeDistanceX = 5
+codeDistanceX = 3
 codeDistanceZ = codeDistanceX - 1
 
 class Route_Entry:
