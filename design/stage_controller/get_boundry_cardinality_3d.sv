@@ -43,16 +43,16 @@ input go;
 output reg done;
 
 
-// always@(posedge clk) begin
-//     if(reset) begin
-//         done <= 0;
-//     end else begin
-//         done <= go;
-//     end
-// end
-// assign final_cardinality = 1'b0;
+always@(posedge clk) begin
+    if(reset) begin
+        done <= 0;
+    end else begin
+        done <= go;
+    end
+end
+assign final_cardinality = 1'b0;
 // Temporarly disabling this for convenience
-
+/*
 
 reg [PU_COUNT-1:0] root_array; //indicating used PUs
 reg [ADDRESS_WIDTH-1 :0] selected_PU;

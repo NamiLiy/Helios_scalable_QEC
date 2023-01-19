@@ -58,8 +58,8 @@ localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
 
 localparam FINAL_FIFO_WIDTH = /*$$HUB_FIFO_WIDTH*/;
 
-localparam SHORT_BUFFER_SIZE = 32;
-localparam LONG_BUFFER_SIZE = 128;
+localparam SHORT_BUFFER_SIZE = 4;
+localparam LONG_BUFFER_SIZE = 4;
 
 input clk;
 input reset;

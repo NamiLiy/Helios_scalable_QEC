@@ -12,8 +12,8 @@ module decoder_stage_controller_dummy_/*$$ID*/ #(
     clk,
     reset,
     new_round_start,
-    is_touching_boundaries,
-    is_odd_cardinalities,
+    // is_touching_boundaries,
+    // is_odd_cardinalities,
     roots,
     stage,
     result_valid,
@@ -21,12 +21,13 @@ module decoder_stage_controller_dummy_/*$$ID*/ #(
     cycle_counter,
     deadlock,
     final_cardinality,
-    sc_fifo_out_data,
-    sc_fifo_out_valid,
-    sc_fifo_out_ready,
-    sc_fifo_in_data,
-    sc_fifo_in_valid,
-    sc_fifo_in_ready
+    // sc_fifo_out_data,
+    // sc_fifo_out_valid,
+    // sc_fifo_out_ready,
+    // sc_fifo_in_data,
+    // sc_fifo_in_valid,
+    // sc_fifo_in_ready
+    state_signal,
 );
 
 `include "../../parameters/parameters.sv"
@@ -56,8 +57,9 @@ input reset;
 input new_round_start;
 // input has_message_flying;
 // input has_odd_clusters;
-input [PU_COUNT-1:0] is_touching_boundaries;
-input [PU_COUNT-1:0] is_odd_cardinalities;
+// input [PU_COUNT-1:0] is_touching_boundaries;
+// input [PU_COUNT-1:0] is_odd_cardinalities;
+input [1:0] state_signal;
 output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 output reg [STAGE_WIDTH-1:0] stage;
 output reg result_valid;
@@ -65,12 +67,12 @@ output reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
 output reg [31:0] cycle_counter;
 output reg deadlock;
 output final_cardinality;
-output [HUB_FIFO_WIDTH - 1 :0] sc_fifo_out_data;
-output sc_fifo_out_valid;
-input sc_fifo_out_ready;
-input [HUB_FIFO_WIDTH - 1 :0] sc_fifo_in_data;
-input sc_fifo_in_valid;
-output sc_fifo_in_ready;
+// output [HUB_FIFO_WIDTH - 1 :0] sc_fifo_out_data;
+// output sc_fifo_out_valid;
+// input sc_fifo_out_ready;
+// input [HUB_FIFO_WIDTH - 1 :0] sc_fifo_in_data;
+// input sc_fifo_in_valid;
+// output sc_fifo_in_ready;
 // output has_message_flying_otherside;
 // output has_odd_clusters_otherside;
 
@@ -85,7 +87,7 @@ wire done_from_calculator;
 reg has_messages_flying_both_sides;
 reg has_odd_clusters_both_sides;
 
-reg [HUB_FIFO_WIDTH - 1 :0] sc_fifo_out_data_internal;
+/* reg [HUB_FIFO_WIDTH - 1 :0] sc_fifo_out_data_internal;
 reg sc_fifo_out_valid_internal;
 wire sc_fifo_out_full_internal;
 
@@ -137,6 +139,8 @@ fifo_fwft #(.DEPTH(16), .WIDTH(HUB_FIFO_WIDTH)) in_fifo
 
 // assign has_message_flying_otherside = has_message_flying;
 // assign has_odd_clusters_otherside = has_odd_clusters;
+
+*/
 
 // deadlock detection logic
 always @(posedge clk) begin
@@ -200,21 +204,29 @@ always @(posedge clk) begin
     end else begin
         case (stage)
             STAGE_IDLE: begin
-                sc_fifo_out_valid_internal <= 1'b0;
-                if(sc_fifo_in_empty_internal == 0 && sc_fifo_in_data_internal[2:0] == 3'b1) begin
+                // sc_fifo_out_valid_internal <= 1'b0;
+                // if(sc_fifo_in_empty_internal == 0 && sc_fifo_in_data_internal[2:0] == 3'b1) begin
+                //     stage <= STAGE_MEASUREMENT_LOADING;
+                //     sc_fifo_in_ready_internal <= 1'b1;
+                // end
+                if(state_signal == 2'b1) begin
                     stage <= STAGE_MEASUREMENT_LOADING;
-                    sc_fifo_in_ready_internal <= 1'b1;
                 end
                 pu_local_index <= 0;
                 measurement_local_index <= 0;
             end
             STAGE_SPREAD_CLUSTER:   begin
-                if(sc_fifo_in_empty_internal == 0 && sc_fifo_in_data_internal[2:0] == 3'b1) begin
+                // if(sc_fifo_in_empty_internal == 0 && sc_fifo_in_data_internal[2:0] == 3'b1) begin
+                //     stage <= STAGE_SYNC_IS_ODD_CLUSTER;
+                //     sc_fifo_in_ready_internal <= 1'b1;
+                // end else if(sc_fifo_in_empty_internal == 0 && sc_fifo_in_data_internal[2:0] == 3'b10) begin
+                //     stage <= STAGE_RESULT_CALCULATING;
+                //     sc_fifo_in_ready_internal <= 1'b1;
+                // end
+                if(state_signal == 2'b11) begin
                     stage <= STAGE_SYNC_IS_ODD_CLUSTER;
-                    sc_fifo_in_ready_internal <= 1'b1;
-                end else if(sc_fifo_in_empty_internal == 0 && sc_fifo_in_data_internal[2:0] == 3'b10) begin
+                end else if (state_signal == 2'b0) begin
                     stage <= STAGE_RESULT_CALCULATING;
-                    sc_fifo_in_ready_internal <= 1'b1;
                 end
             end
             STAGE_GROW_BOUNDARY: begin
@@ -222,23 +234,31 @@ always @(posedge clk) begin
                 //     stage <= STAGE_SPREAD_CLUSTER;
                 //     sc_fifo_in_ready_internal <= 1'b1;
                 // end
-                if (delay_counter >= BOUNDARY_GROW_DELAY) begin
+                // if (delay_counter >= BOUNDARY_GROW_DELAY) begin
+                //     stage <= STAGE_SPREAD_CLUSTER;
+                //     delay_counter <= 0;
+                // end else begin
+                //     delay_counter <= delay_counter + 1;
+                // end
+                if(state_signal == 2'b1) begin
                     stage <= STAGE_SPREAD_CLUSTER;
-                    delay_counter <= 0;
-                end else begin
-                    delay_counter <= delay_counter + 1;
                 end
             end
             STAGE_SYNC_IS_ODD_CLUSTER: begin
-                if(sc_fifo_in_empty_internal == 0 && sc_fifo_in_data_internal[2:0] == 3'b1) begin
+                // if(sc_fifo_in_empty_internal == 0 && sc_fifo_in_data_internal[2:0] == 3'b1) begin
+                //     stage <= STAGE_GROW_BOUNDARY;
+                //     sc_fifo_in_ready_internal <= 1'b1;
+                // end else if(sc_fifo_in_empty_internal == 0 && sc_fifo_in_data_internal[2:0] == 3'b10) begin
+                //     stage <= STAGE_RESULT_CALCULATING;
+                //     sc_fifo_in_ready_internal <= 1'b1;
+                // end else if(sc_fifo_in_empty_internal == 0 && sc_fifo_in_data_internal[2:0] == 3'b11) begin
+                //     stage <= STAGE_RESULT_CALCULATING;
+                //     sc_fifo_in_ready_internal <= 1'b1;
+                // end
+                if(state_signal == 2'b10) begin
                     stage <= STAGE_GROW_BOUNDARY;
-                    sc_fifo_in_ready_internal <= 1'b1;
-                end else if(sc_fifo_in_empty_internal == 0 && sc_fifo_in_data_internal[2:0] == 3'b10) begin
+                end else if (state_signal == 2'b0) begin
                     stage <= STAGE_RESULT_CALCULATING;
-                    sc_fifo_in_ready_internal <= 1'b1;
-                end else if(sc_fifo_in_empty_internal == 0 && sc_fifo_in_data_internal[2:0] == 3'b11) begin
-                    stage <= STAGE_RESULT_CALCULATING;
-                    sc_fifo_in_ready_internal <= 1'b1;
                 end
             end
             STAGE_MEASUREMENT_LOADING: begin

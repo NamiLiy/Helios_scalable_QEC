@@ -6,7 +6,7 @@
 # 4) kernel density
 #
 
-set terminal pdf enhanced font "Times-Roman"
+set terminal pdf enhanced font "Times-Roman,16"
 set output 'noise_variation.pdf'
 
 
@@ -39,8 +39,8 @@ plot "../scripts/d7_005_expanded.csv" using 1:(1) smooth kdensity bandwidth 1. w
 unset table
 unset key
 
-set xlabel "physical error rate (p)"
-set ylabel "decoding time (cycles)"
+set xlabel "physical error rate (p)" font ",16" 
+set ylabel "decoding time" font ",16" 
 set xrange [8 : 14]
 
 # set label at graph 0.2,0.1265 "" point  pointtype 2 pointsize 1				

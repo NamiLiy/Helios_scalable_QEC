@@ -27,7 +27,8 @@ module top_module_for_leaf_/*$$ID*/ #(
     final_fifo_in_ready,
 
     has_message_flying,
-    has_odd_clusters
+    has_odd_clusters,
+    state_signal
 );
 
 `include "../../parameters/parameters.sv"
@@ -72,6 +73,7 @@ output final_cardinality;
 
 output has_message_flying;
 output reg has_odd_clusters;
+input [1:0] state_signal;
 
 output [HUB_FIFO_PHYSICAL_WIDTH - 1 :0] final_fifo_out_data;
 output final_fifo_out_valid;
@@ -149,8 +151,9 @@ decoder_stage_controller_dummy_/*$$ID*/ #(
 ) u_decoder_stage_controller (
     .clk(clk),
     .reset(reset),
-    .is_touching_boundaries(is_touching_boundaries),
-    .is_odd_cardinalities(is_odd_cardinalities),
+    // .is_touching_boundaries(is_touching_boundaries),
+    // .is_odd_cardinalities(is_odd_cardinalities),
+    .state_signal(state_signal),
     .roots(roots),
     .new_round_start(new_round_start),
     .stage(stage),
@@ -158,13 +161,13 @@ decoder_stage_controller_dummy_/*$$ID*/ #(
     .iteration_counter(iteration_counter),
     .cycle_counter(cycle_counter),
     .deadlock(deadlock),
-    .final_cardinality(final_cardinality),
-    .sc_fifo_out_data(sc_fifo_out_data),
-    .sc_fifo_out_valid(sc_fifo_out_valid),
-    .sc_fifo_out_ready(sc_fifo_out_ready),
-    .sc_fifo_in_data(sc_fifo_in_data),
-    .sc_fifo_in_valid(sc_fifo_in_valid),
-    .sc_fifo_in_ready(sc_fifo_in_ready)
+    .final_cardinality(final_cardinality)
+    // .sc_fifo_out_data(sc_fifo_out_data),
+    // .sc_fifo_out_valid(sc_fifo_out_valid),
+    // .sc_fifo_out_ready(sc_fifo_out_ready),
+    // .sc_fifo_in_data(sc_fifo_in_data),
+    // .sc_fifo_in_valid(sc_fifo_in_valid),
+    // .sc_fifo_in_ready(sc_fifo_in_ready)
 );
 
 final_arbitration_unit #(

@@ -6,7 +6,7 @@
 # 4) kernel density
 #
 
-set terminal pdf enhanced font "Times-Roman"
+set terminal pdf enhanced font "Times-Roman,16"
 set output 'violin_plot.pdf'
 
 
@@ -57,8 +57,8 @@ plot "../scripts/d7_expanded.csv" using 1:(1) smooth kdensity bandwidth 1. with 
 unset table
 unset key
 
-set xlabel "distance (d)"
-set ylabel "decoding time"
+set xlabel "distance (d)" font ",16" 
+set ylabel "decoding time" font ",16" 
 set xrange [1:17]
 set xtics 1,2,17
 

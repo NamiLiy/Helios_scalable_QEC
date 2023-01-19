@@ -2,7 +2,7 @@
 
 module neighbor_link #(
     parameter LENGTH = 2,  // in a graph with integer edge weight, the LENGTH should be weight * 2, LENGHT > 0
-    parameter ADDRESS_WIDTH = 12  // width of address, e.g. single measurement standard surface code under d <= 15 could be 4bit * 2 = 8bit
+    parameter ADDRESS_WIDTH = 15  // width of address, e.g. single measurement standard surface code under d <= 15 could be 4bit * 2 = 8bit
 ) (
     input clk,
     input reset,

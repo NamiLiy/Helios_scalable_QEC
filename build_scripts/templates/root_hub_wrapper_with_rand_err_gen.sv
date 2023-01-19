@@ -64,25 +64,27 @@ wire [PU_COUNT-1:0] is_odd_cardinalities;
 `define PU(i, j, k) decoder.decoder.pu_k[k].pu_i[i].pu_j[j].u_processing_unit
 
 
-wire [/*$$NUM_CHILDREN*/*INTERCONNECT_PHYSICAL_WIDTH - 1 : 0] downstream_fifo_in_data_/*$$ID*/;
-wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_in_valid_/*$$ID*/;
-wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_in_ready_/*$$ID*/;
-wire [/*$$NUM_CHILDREN*/*INTERCONNECT_PHYSICAL_WIDTH - 1 : 0] downstream_fifo_out_data_/*$$ID*/;
-wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_out_valid_/*$$ID*/;
-wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_out_ready_/*$$ID*/;
+// wire [/*$$NUM_CHILDREN*/*INTERCONNECT_PHYSICAL_WIDTH - 1 : 0] downstream_fifo_in_data_/*$$ID*/;
+// wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_in_valid_/*$$ID*/;
+// wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_in_ready_/*$$ID*/;
+// wire [/*$$NUM_CHILDREN*/*INTERCONNECT_PHYSICAL_WIDTH - 1 : 0] downstream_fifo_out_data_/*$$ID*/;
+// wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_out_valid_/*$$ID*/;
+// wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_out_ready_/*$$ID*/;
 
 wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_has_message_flying_/*$$ID*/;
 wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_has_odd_clusters_/*$$ID*/;
+wire [/*$$NUM_CHILDREN*/*2 - 1 : 0] downstream_state_signal_/*$$ID*/;
 
-wire [/*$$NUM_CHILDREN*/*INTERCONNECT_PHYSICAL_WIDTH - 1 : 0] downstream_fifo_in_data_d_/*$$ID*/;
-wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_in_valid_d_/*$$ID*/;
-wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_in_ready_d_/*$$ID*/;
-wire [/*$$NUM_CHILDREN*/*INTERCONNECT_PHYSICAL_WIDTH - 1 : 0] downstream_fifo_out_data_d_/*$$ID*/;
-wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_out_valid_d_/*$$ID*/;
-wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_out_ready_d_/*$$ID*/;
+// wire [/*$$NUM_CHILDREN*/*INTERCONNECT_PHYSICAL_WIDTH - 1 : 0] downstream_fifo_in_data_d_/*$$ID*/;
+// wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_in_valid_d_/*$$ID*/;
+// wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_in_ready_d_/*$$ID*/;
+// wire [/*$$NUM_CHILDREN*/*INTERCONNECT_PHYSICAL_WIDTH - 1 : 0] downstream_fifo_out_data_d_/*$$ID*/;
+// wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_out_valid_d_/*$$ID*/;
+// wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_out_ready_d_/*$$ID*/;
 
 wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_has_message_flying_d_/*$$ID*/;
 wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_has_odd_clusters_d_/*$$ID*/;
+wire [/*$$NUM_CHILDREN*/*2 - 1 : 0] downstream_state_signal_d_/*$$ID*/;
 
 genvar i2,j2,k2;
 
@@ -115,6 +117,7 @@ reg [31:0] syndrome_count;
 reg [31:0] pass_count = 0;
 reg [31:0] fail_count = 0;
 reg [31:0] total_count;
+wire other_modules_busy_to_ac;
 
 // Output verification logic
 always @(posedge clk) begin
@@ -184,26 +187,28 @@ root_hub_/*$$ID*/ #(
     // .upstream_fifo_in_valid(1'b0),
     // .upstream_fifo_in_ready(),
 
-    .downstream_fifo_out_data(downstream_fifo_out_data_/*$$ID*/),
-    .downstream_fifo_out_valid(downstream_fifo_out_valid_/*$$ID*/),
-    .downstream_fifo_out_ready(downstream_fifo_out_ready_/*$$ID*/),
-    .downstream_fifo_in_data(downstream_fifo_in_data_/*$$ID*/),
-    .downstream_fifo_in_valid(downstream_fifo_in_valid_/*$$ID*/),
-    .downstream_fifo_in_ready(downstream_fifo_in_ready_/*$$ID*/),
+    // .downstream_fifo_out_data(downstream_fifo_out_data_/*$$ID*/),
+    // .downstream_fifo_out_valid(downstream_fifo_out_valid_/*$$ID*/),
+    // .downstream_fifo_out_ready(downstream_fifo_out_ready_/*$$ID*/),
+    // .downstream_fifo_in_data(downstream_fifo_in_data_/*$$ID*/),
+    // .downstream_fifo_in_valid(downstream_fifo_in_valid_/*$$ID*/),
+    // .downstream_fifo_in_ready(downstream_fifo_in_ready_/*$$ID*/),
 
-    // .upstream_has_message_flying(),
+    .upstream_has_message_flying(other_modules_busy_to_ac),
     // .upstream_has_odd_clusters(),
 
     .downstream_has_message_flying(downstream_has_message_flying_/*$$ID*/),
-    .downstream_has_odd_clusters(downstream_has_odd_clusters_/*$$ID*/)
+    .downstream_has_odd_clusters(downstream_has_odd_clusters_/*$$ID*/),
+    .downstream_state_signal(downstream_state_signal_/*$$ID*/)
 );
 
-arm_communicator #(.reset_threshold(32'd100)) ac(
+arm_communicator #(.reset_threshold(32'd100), .number_of_runs(32'd100)) ac(
     .clk(clk),
     .reset(reset),
     .new_round_start(new_round_start),
     .result_valid(result_valid),
-    .total_test_case_counter(test_case)
+    .total_test_case_counter(test_case),
+    .downstream_busy(other_modules_busy_to_ac)
 );
 
 

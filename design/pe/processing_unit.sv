@@ -4,18 +4,18 @@
 // Therefore boundry cost Z , UD , has boundry z UD is the only used parameter
 
 module processing_unit #(
-    parameter ADDRESS_WIDTH = 18,  // width of address, e.g. single measurement standard surface code under d <= 15 could be 4bit * 2 = 8bit
+    parameter ADDRESS_WIDTH = 15,  // width of address, e.g. single measurement standard surface code under d <= 15 could be 4bit * 2 = 8bit
     parameter DISTANCE_WIDTH = 6,  // the maximum distance between two nodes should fit into DISTANCE_WIDTH bits
     parameter BOUNDARY_WIDTH = 2,  // usually boundary cost would be 2, so by default 2 bits for boundary cost
     parameter NEIGHBOR_COUNT = 6,  // the direct neighbor of a stabilizer, usually between 2 and 4 for surface code
     parameter FAST_CHANNEL_COUNT = 0,  // CHANNEL_COUNT = NEIGHBOR_COUNT + FAST_CHANNEL_COUNT
-    parameter I = 0,
-    parameter J = 0,
-    parameter K = 0,
-    parameter CODE_DISTANCE_X = 4,
-    parameter CODE_DISTANCE_Z = 12,
-    parameter MEASUREMENT_ROUNDS = 12,
-    parameter INIT_BOUNDARY_COST_X = 6,
+    parameter I = 1,
+    parameter J = 2,
+    parameter K = 6,
+    parameter CODE_DISTANCE_X = 27,
+    parameter CODE_DISTANCE_Z = 26,
+    parameter MEASUREMENT_ROUNDS = 27,
+    parameter INIT_BOUNDARY_COST_X = 2,
     parameter INIT_BOUNDARY_COST_Z = 2,
     parameter INIT_BOUNDARY_COST_UD = 2,
     parameter DIRECT_CHANNEL_COUNT = 3

@@ -42,7 +42,7 @@ class UserProperties:
         #For GTX use 17 as latency
         self.ll_connections = False
         self.ll_connection_latency = 11
-        self.random_error_gen = False
+        self.random_error_gen = True
 
 
 def populate_other_tree_params(node, level):

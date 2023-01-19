@@ -43,78 +43,7 @@ def inlineCase(var, pairs, otw):
         ret = ret + str(otw)
     return ret
 
-# codeDistanceX, codeDistanceZ, numSplit, presetArrange = user_configuration.retConfig()
-# binWidth = math.ceil(math.log(max(codeDistanceZ, codeDistanceX), 2))
-# vOut = []
-# if presetArrange == [[]]:
-#     totalFIFOs, splitBoard = pt.findOptBoard(codeDistanceX, codeDistanceZ, numSplit)
-#     print("FIFOs: " + str(totalFIFOs))
-# else:
-#     splitBoard = presetArrange
-# pt.printGrid(splitBoard)
 
-# templateSV = ""
-# with open("./templates/standard_planar_code_2d.sv","r") as f:
-#     templateSV = f.read()
-# for i in range(numSplit):
-#     puInst = 0
-#     puCoords = ""
-#     puCont = ""
-#     initLoop = True
-#     puCoordList = []
-#     for x in range(len(splitBoard)):
-#         for y in range(len(splitBoard[0])):
-#             if(splitBoard[x][y] == i):
-#                 if(initLoop):
-#                     initLoop=False
-#                 else:
-#                     puCont = puCont + " || "
-#                 puCoordList.append(str(binWidth)+"\'d" + str(x))
-#                 puCoordList.append(str(binWidth)+"\'d" + str(y))
-#                 puCont = puCont + "i == " + str(x) + " && " + "j == " + str(y)
-#                 puInst = puInst + 1
-#     puCoordList.reverse()
-#     print(puCoordList)
-#     print(puCont)
-#     initLoop = True
-#     for pc in puCoordList:
-#         if(initLoop):
-#             initLoop = False
-#         else:
-#             puCoords = puCoords + ", "
-#         puCoords = puCoords + pc
-#     print(puCoords)
-#     edgeCount = pt.getEdgeCount(splitBoard, i)
-#     print(edgeCount)
-#     gridFifos = pt.gridIO(splitBoard,i)
-#     print(gridFifos)
-#     OF = hdlTemplate(templateSV)
-#     OF.r("ID", str(i))
-#     OF.r("CODE_DISTANCE_X", codeDistanceX)
-#     OF.r("CODE_DISTANCE_Z", codeDistanceZ)
-#     OF.r("EDGE_COUNT", edgeCount) # This is split edges per measurement round
-#     OF.r("PU_COORDS_WIDTH", 2*binWidth*sum(splitBoard,[]).count(i))
-#     OF.r("PU_COORDS", puCoords)
-#     OF.r("PU_CONT", puCont)
-#     OF.r("EDGE_DIRS_WIDTH", str(5*sum(splitBoard,[]).count(i)))
-#     OF.r("BIN_WIDTH", str(binWidth))
-#     OF.r("PU_INST", str(puInst))
-#     OF.r("X_TO_Y",  inlineCase(["x","dir"], pt.xToY(splitBoard,i), 0))
-
-#     # Bugs likely to occur below, wrapping badly understood still
-#     OF.r("IS_FIFO_VERT_INPUT", inlineCase(["x"], pt.fifosHere(gridFifos,0),0))
-#     OF.r("IS_FIFO_HOR_INPUT", inlineCase(["x"], pt.fifosHere(gridFifos,1),0))
-#     OF.r("IS_FIFO_VERT_OUTPUT", inlineCase(["x"], pt.fifosHere(gridFifos,2),0))
-#     OF.r("IS_FIFO_HOR_OUTPUT", inlineCase(["x"], pt.fifosHere(gridFifos,3),0))
-#     OF.r("IS_FIFO_WRAP_VERT", inlineCase(["x"], pt.vertWrap(splitBoard, i),0))
-#     OF.r("IS_FIFO_WRAP_HOR", inlineCase(["x"], pt.horWrap(splitBoard, i),0))
-#     OF.r("INC_I", inlineCase(["x"], pt.incI(splitBoard, i), 0))
-#     OF.r("INC_J", inlineCase(["x"], pt.incJ(splitBoard, i), 0))
-
-#     # Write to file
-#     f = open("../design/generated/standard_planar_code_2d_" + str(i) + ".sv", "w")
-#     f.write(OF.out)
-#     f.close()
 
 def add_routing_table(node):
     with open("./templates/routing_table.sv","r") as f:
@@ -328,7 +257,7 @@ def add_leaf(node):
                 f.close()
     else:
         if(random_error_gen == True):
-            with open("./templates/top_module_for_leaf_with_rand_err_gen.sv","r") as f:
+            with open("./templates/top_module_for_leaf_with_rand_err_gen.v","r") as f:
                 templateSV = f.read()
                 x_start = node.grid.x_start
                 x_end = node.grid.x_end
@@ -344,9 +273,17 @@ def add_leaf(node):
                 OF.r("HUB_FIFO_WIDTH", hub_fifo_width)
                 OF.r("MESSAGE_FLYING_DELAY",dealy_for_pe_busy)
                 OF.r("HUB_FIFO_PHYSICAL_WIDTH",interconnect_physical_width)
+                loc_measurement_rounds = max(codeDistanceX, codeDistanceZ)
+                OF.r("MEASUREMENT_ROUNDS", loc_measurement_rounds)
+                loc_pu_count = loc_measurement_rounds*codeDistanceX*codeDistanceZ
+                OF.r("PU_COUNT", loc_pu_count)
+                loc_address_width = int(math.ceil(math.log2(loc_measurement_rounds)))*3
+                OF.r("ADDRESS_WIDTH", loc_address_width)
+                loc_root_width = loc_address_width*loc_pu_count;
+                OF.r("ROOT_WIDTH", loc_root_width)
                 
                 # Write to file
-                f = open("../design/generated/top_module_for_leaf_" + str(node.id) + ".sv", "w")
+                f = open("../design/generated/top_module_for_leaf_" + str(node.id) + ".v", "w")
                 f.write(OF.out)
                 f.close()
         else:
@@ -463,7 +400,7 @@ def add_root_hub(node):
             f.close()
 
     # Add root hub module
-    with open("./templates/root_hub.sv","r") as f:
+    with open("./templates/root_hub.v","r") as f:
         templateSV = f.read()
         OF = hdlTemplate(templateSV)
         OF.r("ID", node.id)
@@ -474,9 +411,18 @@ def add_root_hub(node):
         OF.r("DOWNSTREAM_FIFO_COUNT", node.num_children)
         OF.r("HUB_FIFO_WIDTH", hub_fifo_width)
         OF.r("HUB_FIFO_PHYSICAL_WIDTH", interconnect_physical_width)
+        loc_measurement_rounds = max(codeDistanceX, codeDistanceZ)
+        OF.r("MEASUREMENT_ROUNDS", loc_measurement_rounds)
+        loc_pu_count = loc_measurement_rounds*codeDistanceX*codeDistanceZ
+        OF.r("PU_COUNT", loc_pu_count)
+        loc_address_width = int(math.ceil(math.log2(loc_measurement_rounds)))*3
+        OF.r("ADDRESS_WIDTH", loc_address_width)
+        loc_root_width = loc_address_width*loc_pu_count;
+        OF.r("ROOT_WIDTH", loc_root_width)
+        OF.r("STATE_SIGNAL_WIDTH", node.num_children*2)
 
         # Write to file
-        f = open("../design/generated/root_hub_" + str(node.id) + ".sv", "w")
+        f = open("../design/generated/root_hub_" + str(node.id) + ".v", "w")
         f.write(OF.out)
         f.close()
 

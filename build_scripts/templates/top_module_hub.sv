@@ -34,9 +34,11 @@ module top_module_hub_/*$$ID*/ #(
 
     upstream_has_message_flying,
     upstream_has_odd_clusters,
+    upstream_state_signal,
 
     downstream_has_message_flying,
     downstream_has_odd_clusters,
+    downstream_state_signal
 );
 
 `include "../../parameters/parameters.sv"
@@ -90,9 +92,11 @@ output [DOWNSTREAM_FIFO_COUNT - 1 :0] downstream_fifo_in_ready;
 
 output reg upstream_has_message_flying;
 output reg upstream_has_odd_clusters;
+input [1:0] upstream_state_signal;
 
 input [DOWNSTREAM_FIFO_COUNT - 1 :0] downstream_has_message_flying;
 input [DOWNSTREAM_FIFO_COUNT - 1 :0] downstream_has_odd_clusters;
+output reg [1:0] downstream_state_signal;
 
 wire [DOWNSTREAM_FIFO_COUNT*HUB_FIFO_WIDTH - 1 :0] downstream_fifo_out_data_pre;
 wire [DOWNSTREAM_FIFO_COUNT - 1 :0] downstream_fifo_out_valid_pre;
@@ -104,7 +108,9 @@ wire upstream_fifo_out_ready_pre;
 
 always@(posedge clk) begin
     upstream_has_odd_clusters <= |downstream_has_odd_clusters;
-    upstream_has_message_flying <= (|downstream_has_message_flying) || upstream_fifo_out_valid || upstream_fifo_in_valid || downstream_fifo_out_valid || downstream_fifo_in_valid;
+    upstream_has_message_flying <= |downstream_has_message_flying;
+    downstream_state_signal <= upstream_state_signal;
+    // upstream_has_message_flying <= (|downstream_has_message_flying) || upstream_fifo_out_valid || upstream_fifo_in_valid || downstream_fifo_out_valid || downstream_fifo_in_valid;
 end
 
 // Todo : Final result calculation can be perfomed more efficiently. So this is a workaround.

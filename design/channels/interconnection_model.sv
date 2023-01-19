@@ -22,9 +22,11 @@ module interonncetion_model #(
 
     upstream_has_message_flying,
     upstream_has_odd_clusters,
+    upstream_state_signal,
 
     downstream_has_message_flying,
     downstream_has_odd_clusters,
+    downstream_state_signal,
 );
 
 `include "../../parameters/parameters.sv"
@@ -49,9 +51,12 @@ output [CHANNELS - 1 :0] downstream_fifo_in_ready;
 
 output reg [CHANNELS - 1 :0] upstream_has_message_flying;
 output reg [CHANNELS - 1 :0] upstream_has_odd_clusters;
+input [CHANNELS*2 - 1 : 0] upstream_state_signal;
+
 
 input [CHANNELS - 1 :0] downstream_has_message_flying;
 input [CHANNELS - 1 :0] downstream_has_odd_clusters;
+output reg [CHANNELS*2 - 1 : 0] downstream_state_signal;
 
 reg[31:0] counter;
 
@@ -137,17 +142,22 @@ generate
 
         reg [CHANNELS - 1 :0] upstream_has_message_flying_d;
         reg [CHANNELS - 1 :0] upstream_has_odd_clusters_d;
+        reg [CHANNELS*2 - 1 :0] downstream_state_signal_d;
         always@(posedge clk) begin
             if(reset) begin
                 upstream_has_message_flying <= 0;
                 upstream_has_message_flying_d <= 0;
                 upstream_has_odd_clusters <= 0;
                 upstream_has_odd_clusters_d <= 0;
+                downstream_state_signal_d <= 0;
+                downstream_state_signal <= 0;
             end else begin
                 upstream_has_message_flying_d <= downstream_has_message_flying;
                 upstream_has_message_flying <= upstream_has_message_flying_d;
                 upstream_has_odd_clusters <= upstream_has_odd_clusters_d;
                 upstream_has_odd_clusters_d <= downstream_has_odd_clusters;
+                downstream_state_signal_d <= upstream_state_signal;
+                downstream_state_signal <= downstream_state_signal_d;
             end
         end
     end else begin
@@ -161,6 +171,7 @@ generate
             downstream_fifo_out_valid = upstream_fifo_in_valid;
             upstream_has_message_flying = downstream_has_message_flying;
             upstream_has_odd_clusters = downstream_has_odd_clusters;
+            downstream_state_signal = upstream_state_signal;
         end
     end
 

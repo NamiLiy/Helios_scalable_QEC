@@ -61,25 +61,27 @@ reg deadlock;
 `define PU(i, j, k) decoder.decoder.pu_k[k].pu_i[i].pu_j[j].u_processing_unit
 
 
-wire [/*$$NUM_CHILDREN*/*INTERCONNECT_PHYSICAL_WIDTH - 1 : 0] downstream_fifo_in_data_/*$$ID*/;
-wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_in_valid_/*$$ID*/;
-wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_in_ready_/*$$ID*/;
-wire [/*$$NUM_CHILDREN*/*INTERCONNECT_PHYSICAL_WIDTH - 1 : 0] downstream_fifo_out_data_/*$$ID*/;
-wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_out_valid_/*$$ID*/;
-wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_out_ready_/*$$ID*/;
+// wire [/*$$NUM_CHILDREN*/*INTERCONNECT_PHYSICAL_WIDTH - 1 : 0] downstream_fifo_in_data_/*$$ID*/;
+// wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_in_valid_/*$$ID*/;
+// wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_in_ready_/*$$ID*/;
+// wire [/*$$NUM_CHILDREN*/*INTERCONNECT_PHYSICAL_WIDTH - 1 : 0] downstream_fifo_out_data_/*$$ID*/;
+// wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_out_valid_/*$$ID*/;
+// wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_out_ready_/*$$ID*/;
 
 wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_has_message_flying_/*$$ID*/;
 wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_has_odd_clusters_/*$$ID*/;
+wire [/*$$NUM_CHILDREN*/*2 - 1 : 0] downstream_state_signal_/*$$ID*/;
 
-wire [/*$$NUM_CHILDREN*/*INTERCONNECT_PHYSICAL_WIDTH - 1 : 0] downstream_fifo_in_data_d_/*$$ID*/;
-wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_in_valid_d_/*$$ID*/;
-wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_in_ready_d_/*$$ID*/;
-wire [/*$$NUM_CHILDREN*/*INTERCONNECT_PHYSICAL_WIDTH - 1 : 0] downstream_fifo_out_data_d_/*$$ID*/;
-wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_out_valid_d_/*$$ID*/;
-wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_out_ready_d_/*$$ID*/;
+// wire [/*$$NUM_CHILDREN*/*INTERCONNECT_PHYSICAL_WIDTH - 1 : 0] downstream_fifo_in_data_d_/*$$ID*/;
+// wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_in_valid_d_/*$$ID*/;
+// wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_in_ready_d_/*$$ID*/;
+// wire [/*$$NUM_CHILDREN*/*INTERCONNECT_PHYSICAL_WIDTH - 1 : 0] downstream_fifo_out_data_d_/*$$ID*/;
+// wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_out_valid_d_/*$$ID*/;
+// wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_fifo_out_ready_d_/*$$ID*/;
 
 wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_has_message_flying_d_/*$$ID*/;
 wire [/*$$NUM_CHILDREN*/ - 1 : 0] downstream_has_odd_clusters_d_/*$$ID*/;
+wire [/*$$NUM_CHILDREN*/*2 - 1 : 0] downstream_state_signal_d_/*$$ID*/;
 
 genvar i2,j2,k2;
 
@@ -270,18 +272,19 @@ root_hub_/*$$ID*/ #(
     // .upstream_fifo_in_valid(1'b0),
     // .upstream_fifo_in_ready(),
 
-    .downstream_fifo_out_data(downstream_fifo_out_data_/*$$ID*/),
-    .downstream_fifo_out_valid(downstream_fifo_out_valid_/*$$ID*/),
-    .downstream_fifo_out_ready(downstream_fifo_out_ready_/*$$ID*/),
-    .downstream_fifo_in_data(downstream_fifo_in_data_/*$$ID*/),
-    .downstream_fifo_in_valid(downstream_fifo_in_valid_/*$$ID*/),
-    .downstream_fifo_in_ready(downstream_fifo_in_ready_/*$$ID*/),
+    // .downstream_fifo_out_data(downstream_fifo_out_data_/*$$ID*/),
+    // .downstream_fifo_out_valid(downstream_fifo_out_valid_/*$$ID*/),
+    // .downstream_fifo_out_ready(downstream_fifo_out_ready_/*$$ID*/),
+    // .downstream_fifo_in_data(downstream_fifo_in_data_/*$$ID*/),
+    // .downstream_fifo_in_valid(downstream_fifo_in_valid_/*$$ID*/),
+    // .downstream_fifo_in_ready(downstream_fifo_in_ready_/*$$ID*/),
 
     // .upstream_has_message_flying(),
     // .upstream_has_odd_clusters(),
 
     .downstream_has_message_flying(downstream_has_message_flying_/*$$ID*/),
-    .downstream_has_odd_clusters(downstream_has_odd_clusters_/*$$ID*/)
+    .downstream_has_odd_clusters(downstream_has_odd_clusters_/*$$ID*/),
+    .downstream_state_signal(downstream_state_signal_/*$$ID*/)
 );
 
 
