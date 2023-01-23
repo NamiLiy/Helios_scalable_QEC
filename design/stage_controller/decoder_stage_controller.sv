@@ -3,8 +3,8 @@
 `include "../../parameters/parameters.sv"
 
 module decoder_stage_controller #(
-    parameter CODE_DISTANCE_X = 4,
-    parameter CODE_DISTANCE_Z = 12,
+    parameter CODE_DISTANCE_X = 3,
+    parameter CODE_DISTANCE_Z = 2,
     parameter ITERATION_COUNTER_WIDTH = 8,  // counts to 255 iterations
     parameter BOUNDARY_GROW_DELAY = 3,  // clock cycles
     parameter SPREAD_CLUSTER_DELAY = 2,  // clock cycles
