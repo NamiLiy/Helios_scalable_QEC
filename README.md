@@ -1,16 +1,23 @@
-# FPGA implementation of distributed union find algorithm
+# Helios : FPGA implementation of a distributed union find algorithm
 
 ## Algorithm
+
+Please refer to our paper on arxiv : https://arxiv.org/abs/2301.08419
 
 ## Folder Structure
 
     .
-    ├── design                  # RTL design files
+    ├── build_scripts           # Python scripts to generate final RTL files and tcl scripts for various configurations of Helios
+    ├       └── templates       # RTL templates
+    ├── design                  # Generic RTL files common to all configurations of Helios
     ├── test_benches            # Unit tests and other verification tests
+    ├       ├── unit_tests      # Unit tests for RTL modules
+    ├       ├── full_tests      # Test benches for various surface code parameters
+    ├       └── test_data       # Input and expected outputs for full_tests
     ├── parameters              # Parameters shared by both design file and test benches
-    ├── ip_repo                 # ips used in the project
+    ├── plots                   # Scripts to generate plots
     ├── old_files               # Previous versions of the design (No longer in use)
-    └── scripts                 # Scripts to build the Vivado Project and run verification tests
+    └── scripts                 # Scripts to build a simple Vivado Project and run verification tests
     
 ## Build
 
@@ -24,13 +31,21 @@ Running on other FPGA boards require modifications on pin assignments and block 
 
 ### Build project
 
+#### Simple vivado project
+
 ```sh
 cd scripts
 vivado total.tcl
 ```
 
-### Run on FPGA
+#### Complete Helios project
 
-### Branches
+Modify the content in build_scripts/user_configuration.py to change the configuration of Helios.
+Currently supported parameters : codeDistance (X and Z), Helios tree stucture of control nodes, physical bit width of interconnect between control nodes, laency of interconnect (for latency estimations)
 
-Multi fpga version of this design is in multi_fpga branch. Please checkout and follow the script to run the multi FPGA version.
+```sh
+cd build_scripts
+python generate.py
+```
+
+Generated output files will be available at design/generated
