@@ -1,4 +1,4 @@
-# Helios : FPGA implementation of a distributed union find algorithm
+# Helios : FPGA implementation of a distributed union find decoder
 
 ## Algorithm
 
