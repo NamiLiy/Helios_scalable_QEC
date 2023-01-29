@@ -3,3 +3,14 @@ scripts/*.txt
 old_files/distributed_union_find/simulation_data/*.txt
 plots/*.pdf
 build_scripts/__pycache__/*
+bitstreams/*
+design/.Xil/*
+design/generated/*
+design/*.log
+design/*.log
+design/*.str
+ip_repo/
+plots/*.png
+plots/*.csv
+plots/*.txt
+

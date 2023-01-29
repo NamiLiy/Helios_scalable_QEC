@@ -9,7 +9,7 @@ module min_val_less_8x_with_index_tb;
 
     min_val_less_8x_with_index  #(
         .DATA_WIDTH(DATA_WIDTH),
-        .CHANNEL_COUNT(4*CHANNEL_COUNT)
+        .CHANNEL_COUNT(CHANNEL_COUNT)
     ) uut (
         .values(values),
         .valids(valids),
