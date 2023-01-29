@@ -1,0 +1,5 @@
+scripts/*.csv
+scripts/*.txt
+old_files/distributed_union_find/simulation_data/*.txt
+plots/*.pdf
+build_scripts/__pycache__/*
