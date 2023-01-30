@@ -1,5 +1,5 @@
 module neighbor_link #(
-    parameter ADDRESS_WIDTH = 9,
+    parameter ADDRESS_WIDTH = 6,
     parameter WEIGHT = 2,
     parameter BOUNDARY_CONDITION = 0 //0 : No boundary 1: A boundary 2: Non existant edge 
 ) (
@@ -37,7 +37,7 @@ module neighbor_link #(
     a_child_touching_boundary_in,
     b_child_touching_boundary_in,
     a_child_touching_boundary_out,
-    b_child_touching_boundary_out,
+    b_child_touching_boundary_out
 );
 
 `include "../../parameters/parameters.sv"
@@ -57,6 +57,10 @@ input b_parent_vector_in;
 output a_parent_vector_out;
 output b_parent_vector_out;
 
+input a_increase;
+input b_increase;
+output is_boundary;
+
 input a_parent_odd_in;
 input b_parent_odd_in;
 output a_parent_odd_out;
@@ -72,8 +76,10 @@ input b_child_touching_boundary_in;
 output a_child_touching_boundary_out;
 output b_child_touching_boundary_out;
 
+localparam LINK_BIT_WIDTH = $clog2(WEIGHT + 1);
 
-reg growth;
+
+reg [LINK_BIT_WIDTH-1 : 0] growth;
 
 generate
 
@@ -132,11 +138,11 @@ assign b_root_out = a_root_in;
 assign a_parent_odd_out = b_parent_odd_in;
 assign b_parent_odd_out = a_parent_odd_in;
 
-assign a_cluster_parity_out = b_cluster_parity_in;
-assign b_cluster_parity_out = a_cluster_parity_in;
+assign a_child_cluster_parity_out = b_child_cluster_parity_in;
+assign b_child_cluster_parity_out = a_child_cluster_parity_in;
 
-assign a_touching_boundary_out = b_touching_boundary_in;
-assign b_touching_boundary_out = a_touching_boundary_in;
+assign a_child_touching_boundary_out = b_child_touching_boundary_in;
+assign b_child_touching_boundary_out = a_child_touching_boundary_in;
 
 
 endmodule

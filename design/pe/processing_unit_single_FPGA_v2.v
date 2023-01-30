@@ -3,7 +3,7 @@
 // This PEs are written for Z type ancillas
 
 module processing_unit #(
-    parameter PER_DIM_BIT_WIDTH = 3,
+    parameter PER_DIM_BIT_WIDTH = 2,
     parameter BOUNDARY_BIT_WIDTH = 2,
     parameter NEIGHBOR_COUNT = 6,
     parameter ADDRESS = 0, // M,X,Z, address
@@ -55,7 +55,7 @@ input [NEIGHBOR_COUNT-1:0] parent_odd;
 input [NEIGHBOR_COUNT - 1:0] child_cluster_parity;
 input [NEIGHBOR_COUNT - 1:0] child_touching_boundary;
 
-output reg [ADDRESS_WIDTH-1:0] parent_vector;
+output reg [NEIGHBOR_COUNT-1:0] parent_vector;
 output reg cluster_parity;
 output reg cluster_touching_boundary;
 
@@ -92,7 +92,7 @@ assign neighbor_increase = odd && (stage == STAGE_GROW) && (last_stage != STAGE_
 
 // root is the minimum of valid roots
 // when root changes : change parent vector
-wire [NEIGHBOR_COUNT-1 : 0] valid_from_root_comparotor;
+wire [NEIGHBOR_COUNT-1 : 0] valid_from_root_comparator;
 wire [ADDRESS_WIDTH - 1 : 0] result_from_root_comparator;
 
 min_val_less_8x_with_index #(
@@ -101,8 +101,8 @@ min_val_less_8x_with_index #(
 ) u_tree_compare_solver (
     .values(neighbor_root),
     .valids(neighbor_fully_grown),
-    .result(result_from_root_comparotor),
-    .output_valids(valid_from_root_comparotor)
+    .result(result_from_root_comparator),
+    .output_valids(valid_from_root_comparator)
 );
 
 always@(posedge clk) begin
@@ -111,9 +111,9 @@ always@(posedge clk) begin
         parent_vector <= 0;
     end else begin
         if (stage == STAGE_MERGE) begin
-            if( (|valid_from_root_comparotor) && result_from_root_comparator < root) begin
+            if( (|valid_from_root_comparator) && result_from_root_comparator < root) begin
                 root <= result_from_root_comparator;
-                parent_vector <= valid_from_root_comparotor;
+                parent_vector <= valid_from_root_comparator;
             end
         end
     end
@@ -159,7 +159,7 @@ always@(posedge clk) begin
         busy <= 0;
     end else begin
         if (stage == STAGE_MERGE) begin
-            if( ((|valid_from_root_comparotor) && result_from_root_comparator < root) ||
+            if( ((|valid_from_root_comparator) && result_from_root_comparator < root) ||
                  next_cluster_parity != cluster_parity ||
                  next_cluster_touching_boundary != cluster_touching_boundary ||
                  (|(parent_vector) & (parent_odd != odd)) ||

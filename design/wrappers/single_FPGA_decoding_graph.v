@@ -9,7 +9,6 @@ module single_FPGA_decoding_graph #(
 ) (
     clk,
     reset,
-    stage,
     measurements,
     odd_clusters,
     roots,
@@ -29,9 +28,8 @@ localparam NEIGHBOR_COUNT = 6;
 
 input clk;
 input reset;
-input [STAGE_WIDTH-1:0] stage;
 input [PU_COUNT-1:0] measurements;
-input global_stage;
+input [STAGE_WIDTH-1:0] global_stage;
 
 output reg odd_clusters;
 output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
@@ -115,11 +113,12 @@ endgenerate
 `define PU(i, j, k) pu_k[k].pu_i[i].pu_j[j]
 `define SLICE_ADDRESS_VEC(vec, idx) (vec[(((idx)+1)*ADDRESS_WIDTH)-1:(idx)*ADDRESS_WIDTH])
 
-// Generate North South neighbors
+
 generate
-    for (k=0; k < MEASUREMENT_ROUNDS; k=k+1) begin: neighbor_k
-        for (i=0; i <= CODE_DISTANCE_X; i=i+1) begin: neighbor_i
-            for (j=0; j < CODE_DISTANCE_Z; j=j+1) begin: neighbor_j
+    // Generate North South neighbors
+    for (k=0; k < MEASUREMENT_ROUNDS; k=k+1) begin: ns_k
+        for (i=0; i <= CODE_DISTANCE_X; i=i+1) begin: ns_i
+            for (j=0; j < CODE_DISTANCE_Z; j=j+1) begin: ns_j
                 if(i==0) begin
                     neighbor_link #(
                         .ADDRESS_WIDTH(ADDRESS_WIDTH),
@@ -201,6 +200,179 @@ generate
             end
         end
     end
+
+    // Generate East West neighbors
+    for (k=0; k < MEASUREMENT_ROUNDS; k=k+1) begin: ew_k
+        for (i=0; i < CODE_DISTANCE_X; i=i+1) begin: ew_i
+            for (j=0; j <= CODE_DISTANCE_Z; j=j+1) begin: ew_j
+                if(j==0) begin
+                    neighbor_link #(
+                        .ADDRESS_WIDTH(ADDRESS_WIDTH),
+                        .WEIGHT(WEIGHT_Z),
+                        .BOUNDARY_CONDITION(1)
+                    ) neighbor_link_EW (
+                        .clk(clk),
+                        .reset(reset),
+                        .global_stage(global_stage),
+                        .fully_grown(`PU(i, j, k).neighbor_fully_grown[`NEIGHBOR_IDX_WEST]),
+                        .a_root_in(), .b_root_in(), .a_root_out(), .b_root_out(), .a_parent_vector_in(), .b_parent_vector_in(),
+                        .a_parent_vector_out(`PU(i, j, k).neighbor_parent_vector[`NEIGHBOR_IDX_WEST]),
+                        .b_parent_vector_out(),
+                        .a_increase(`PU(i, j, k).neighbor_increase),
+                        .b_increase(),
+                        .is_boundary(`PU(i, j, k).neighbor_is_boundary[`NEIGHBOR_IDX_WEST]),
+                        .a_parent_odd_in(), .b_parent_odd_in(), .a_parent_odd_out(), .b_parent_odd_out(),
+                        .a_child_cluster_parity_in(), .b_child_cluster_parity_in(), .a_child_cluster_parity_out(), .b_child_cluster_parity_out(),
+                        .a_child_touching_boundary_in(), .b_child_touching_boundary_in(), .a_child_touching_boundary_out(), .b_child_touching_boundary_out()
+                    );     
+                end else if (j < CODE_DISTANCE_Z) begin
+                    neighbor_link #(
+                        .ADDRESS_WIDTH(ADDRESS_WIDTH),
+                        .WEIGHT(WEIGHT_Z),
+                        .BOUNDARY_CONDITION(0)
+                    ) neighbor_link_EW (
+                        .clk(clk),
+                        .reset(reset),
+                        .global_stage(global_stage),
+                        .fully_grown(`PU(i, j, k).neighbor_fully_grown[`NEIGHBOR_IDX_WEST]),
+                        .a_root_in(`PU(i, j-1, k).root),
+                        .b_root_in(`PU(i, j, k).root),
+                        .a_root_out(`SLICE_ADDRESS_VEC(`PU(i, j-1, k).neighbor_root, `NEIGHBOR_IDX_EAST)),
+                        .b_root_out(`SLICE_ADDRESS_VEC(`PU(i, j, k).neighbor_root, `NEIGHBOR_IDX_WEST)),
+                        .a_parent_vector_in(`PU(i, j-1, k).parent_vector[`NEIGHBOR_IDX_EAST]),
+                        .b_parent_vector_in(`PU(i, j, k).parent_vector[`NEIGHBOR_IDX_WEST]),
+                        .a_parent_vector_out(`PU(i, j-1, k).neighbor_parent_vector[`NEIGHBOR_IDX_EAST]),
+                        .b_parent_vector_out(`PU(i, j, k).neighbor_parent_vector[`NEIGHBOR_IDX_WEST]),
+                        .a_increase(`PU(i, j-1, k).neighbor_increase),
+                        .b_increase(`PU(i, j, k).neighbor_increase),
+                        .is_boundary(`PU(i, j, k).neighbor_is_boundary[`NEIGHBOR_IDX_WEST]),
+                        .a_parent_odd_in(`PU(i, j-1, k).odd),
+                        .b_parent_odd_in(`PU(i, j, k).odd),
+                        .a_parent_odd_out(`PU(i, j-1, k).parent_odd[`NEIGHBOR_IDX_EAST]),
+                        .b_parent_odd_out(`PU(i, j, k).parent_odd[`NEIGHBOR_IDX_WEST]),
+                        .a_child_cluster_parity_in(`PU(i, j-1, k).cluster_parity),
+                        .b_child_cluster_parity_in(`PU(i, j, k).cluster_parity),
+                        .a_child_cluster_parity_out(`PU(i, j-1, k).child_cluster_parity[`NEIGHBOR_IDX_EAST]),
+                        .b_child_cluster_parity_out(`PU(i, j, k).child_cluster_parity[`NEIGHBOR_IDX_WEST]),
+                        .a_child_touching_boundary_in(`PU(i, j-1, k).cluster_touching_boundary),
+                        .b_child_touching_boundary_in(`PU(i, j, k).cluster_touching_boundary),
+                        .a_child_touching_boundary_out(`PU(i, j-1, k).child_touching_boundary[`NEIGHBOR_IDX_EAST]),
+                        .b_child_touching_boundary_out(`PU(i, j, k).child_touching_boundary[`NEIGHBOR_IDX_SOUTH])
+                    );
+
+                    assign `PU(i, j-1, k).neighbor_fully_grown[`NEIGHBOR_IDX_EAST] = `PU(i, j, k).neighbor_fully_grown[`NEIGHBOR_IDX_SOUTH];
+                    assign `PU(i, j-1, k).neighbor_is_boundary[`NEIGHBOR_IDX_EAST] = `PU(i, j, k).neighbor_is_boundary[`NEIGHBOR_IDX_SOUTH];
+                end else begin
+                    neighbor_link #(
+                        .ADDRESS_WIDTH(ADDRESS_WIDTH),
+                        .WEIGHT(WEIGHT_Z),
+                        .BOUNDARY_CONDITION(1)
+                    ) neighbor_link_EW (
+                        .clk(clk),
+                        .reset(reset),
+                        .global_stage(global_stage),
+                        .fully_grown(`PU(i, j-1, k).neighbor_fully_grown[`NEIGHBOR_IDX_EAST]),
+                        .a_root_in(), .b_root_in(), .a_root_out(), .b_root_out(), .a_parent_vector_in(), .b_parent_vector_in(),
+                        .a_parent_vector_out(`PU(i, j-1, k).neighbor_parent_vector[`NEIGHBOR_IDX_EAST]),
+                        .b_parent_vector_out(),
+                        .a_increase(`PU(i, j-1, k).neighbor_increase),
+                        .b_increase(),
+                        .is_boundary(`PU(i, j-1, k).neighbor_is_boundary[`NEIGHBOR_IDX_EAST]),
+                        .a_parent_odd_in(), .b_parent_odd_in(), .a_parent_odd_out(), .b_parent_odd_out(),
+                        .a_child_cluster_parity_in(), .b_child_cluster_parity_in(), .a_child_cluster_parity_out(), .b_child_cluster_parity_out(),
+                        .a_child_touching_boundary_in(), .b_child_touching_boundary_in(), .a_child_touching_boundary_out(), .b_child_touching_boundary_out()
+                    );
+                end
+            end
+        end
+    end
+
+    // Generate UP DOWN link
+    for (k=0; k <= MEASUREMENT_ROUNDS; k=k+1) begin: ud_k
+        for (i=0; i < CODE_DISTANCE_X; i=i+1) begin: ud_i
+            for (j=0; j < CODE_DISTANCE_Z; j=j+1) begin: ud_j
+                if(k==0) begin
+                    neighbor_link #(
+                        .ADDRESS_WIDTH(ADDRESS_WIDTH),
+                        .WEIGHT(WEIGHT_M),
+                        .BOUNDARY_CONDITION(1)
+                    ) neighbor_link_UD (
+                        .clk(clk),
+                        .reset(reset),
+                        .global_stage(global_stage),
+                        .fully_grown(`PU(i, j, k).neighbor_fully_grown[`NEIGHBOR_IDX_DOWN]),
+                        .a_root_in(), .b_root_in(), .a_root_out(), .b_root_out(), .a_parent_vector_in(), .b_parent_vector_in(),
+                        .a_parent_vector_out(`PU(i, j, k).neighbor_parent_vector[`NEIGHBOR_IDX_DOWN]),
+                        .b_parent_vector_out(),
+                        .a_increase(`PU(i, j, k).neighbor_increase),
+                        .b_increase(),
+                        .is_boundary(`PU(i, j, k).neighbor_is_boundary[`NEIGHBOR_IDX_DOWN]),
+                        .a_parent_odd_in(), .b_parent_odd_in(), .a_parent_odd_out(), .b_parent_odd_out(),
+                        .a_child_cluster_parity_in(), .b_child_cluster_parity_in(), .a_child_cluster_parity_out(), .b_child_cluster_parity_out(),
+                        .a_child_touching_boundary_in(), .b_child_touching_boundary_in(), .a_child_touching_boundary_out(), .b_child_touching_boundary_out()
+                    );     
+                end else if (k < MEASUREMENT_ROUNDS) begin
+                    neighbor_link #(
+                        .ADDRESS_WIDTH(ADDRESS_WIDTH),
+                        .WEIGHT(WEIGHT_Z),
+                        .BOUNDARY_CONDITION(0)
+                    ) neighbor_link_UD (
+                        .clk(clk),
+                        .reset(reset),
+                        .global_stage(global_stage),
+                        .fully_grown(`PU(i, j, k).neighbor_fully_grown[`NEIGHBOR_IDX_DOWN]),
+                        .a_root_in(`PU(i, j, k-1).root),
+                        .b_root_in(`PU(i, j, k).root),
+                        .a_root_out(`SLICE_ADDRESS_VEC(`PU(i, j, k-1).neighbor_root, `NEIGHBOR_IDX_UP)),
+                        .b_root_out(`SLICE_ADDRESS_VEC(`PU(i, j, k).neighbor_root, `NEIGHBOR_IDX_DOWN)),
+                        .a_parent_vector_in(`PU(i, j, k-1).parent_vector[`NEIGHBOR_IDX_UP]),
+                        .b_parent_vector_in(`PU(i, j, k).parent_vector[`NEIGHBOR_IDX_DOWN]),
+                        .a_parent_vector_out(`PU(i, j, k-1).neighbor_parent_vector[`NEIGHBOR_IDX_UP]),
+                        .b_parent_vector_out(`PU(i, j, k).neighbor_parent_vector[`NEIGHBOR_IDX_DOWN]),
+                        .a_increase(`PU(i, j, k-1).neighbor_increase),
+                        .b_increase(`PU(i, j, k).neighbor_increase),
+                        .is_boundary(`PU(i, j, k).neighbor_is_boundary[`NEIGHBOR_IDX_DOWN]),
+                        .a_parent_odd_in(`PU(i, j, k-1).odd),
+                        .b_parent_odd_in(`PU(i, j, k).odd),
+                        .a_parent_odd_out(`PU(i, j, k-1).parent_odd[`NEIGHBOR_IDX_UP]),
+                        .b_parent_odd_out(`PU(i, j, k).parent_odd[`NEIGHBOR_IDX_DOWN]),
+                        .a_child_cluster_parity_in(`PU(i, j, k-1).cluster_parity),
+                        .b_child_cluster_parity_in(`PU(i, j, k).cluster_parity),
+                        .a_child_cluster_parity_out(`PU(i, j, k-1).child_cluster_parity[`NEIGHBOR_IDX_UP]),
+                        .b_child_cluster_parity_out(`PU(i, j, k).child_cluster_parity[`NEIGHBOR_IDX_DOWN]),
+                        .a_child_touching_boundary_in(`PU(i, j, k-1).cluster_touching_boundary),
+                        .b_child_touching_boundary_in(`PU(i, j, k).cluster_touching_boundary),
+                        .a_child_touching_boundary_out(`PU(i, j, k-1).child_touching_boundary[`NEIGHBOR_IDX_UP]),
+                        .b_child_touching_boundary_out(`PU(i, j, k).child_touching_boundary[`NEIGHBOR_IDX_SOUTH])
+                    );
+
+                    assign `PU(i, j, k-1).neighbor_fully_grown[`NEIGHBOR_IDX_UP] = `PU(i, j, k).neighbor_fully_grown[`NEIGHBOR_IDX_SOUTH];
+                    assign `PU(i, j, k-1).neighbor_is_boundary[`NEIGHBOR_IDX_UP] = `PU(i, j, k).neighbor_is_boundary[`NEIGHBOR_IDX_SOUTH];
+                end else begin
+                    neighbor_link #(
+                        .ADDRESS_WIDTH(ADDRESS_WIDTH),
+                        .WEIGHT(WEIGHT_Z),
+                        .BOUNDARY_CONDITION(2)
+                    ) neighbor_link_UD (
+                        .clk(clk),
+                        .reset(reset),
+                        .global_stage(global_stage),
+                        .fully_grown(`PU(i, j, k-1).neighbor_fully_grown[`NEIGHBOR_IDX_UP]),
+                        .a_root_in(), .b_root_in(), .a_root_out(), .b_root_out(), .a_parent_vector_in(), .b_parent_vector_in(),
+                        .a_parent_vector_out(`PU(i, j, k-1).neighbor_parent_vector[`NEIGHBOR_IDX_UP]),
+                        .b_parent_vector_out(),
+                        .a_increase(`PU(i, j, k-1).neighbor_increase),
+                        .b_increase(),
+                        .is_boundary(`PU(i, j, k-1).neighbor_is_boundary[`NEIGHBOR_IDX_UP]),
+                        .a_parent_odd_in(), .b_parent_odd_in(), .a_parent_odd_out(), .b_parent_odd_out(),
+                        .a_child_cluster_parity_in(), .b_child_cluster_parity_in(), .a_child_cluster_parity_out(), .b_child_cluster_parity_out(),
+                        .a_child_touching_boundary_in(), .b_child_touching_boundary_in(), .a_child_touching_boundary_out(), .b_child_touching_boundary_out()
+                    );
+                end
+            end
+        end
+    end
+    
 endgenerate
 
 endmodule

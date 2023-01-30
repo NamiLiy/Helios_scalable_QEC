@@ -167,7 +167,7 @@ module min_val_8x_with_index #(
 );
 
     wire [2*DATA_WIDTH-1:0] min_val_1;
-    wire [4*CHANNEL_COUNT - 1 :0] min_valid_1;
+    wire [8*CHANNEL_COUNT - 1 :0] min_valid_1;
 
     min_val_4x_with_index #(
         .DATA_WIDTH(DATA_WIDTH),
