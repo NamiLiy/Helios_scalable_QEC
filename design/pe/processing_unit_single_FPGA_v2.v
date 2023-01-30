@@ -88,12 +88,12 @@ always@(posedge clk) begin
 end
 
 // Increase growth during the growth stage
-assign neighbor_increase = odd && (stage == STAGE_GROW_BOUNDARY) && (last_stage != STAGE_GROW_BOUNDARY);
+assign neighbor_increase = odd && (stage == STAGE_GROW) && (last_stage != STAGE_GROW);
 
 // root is the minimum of valid roots
 // when root changes : change parent vector
 wire [NEIGHBOR_COUNT-1 : 0] valid_from_root_comparotor;
-wire [DATA_WIDTH - 1 : 0] result_from_root_comparator;
+wire [ADDRESS_WIDTH - 1 : 0] result_from_root_comparator;
 
 min_val_less_8x_with_index #(
     .DATA_WIDTH(ADDRESS_WIDTH),

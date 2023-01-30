@@ -124,7 +124,7 @@ end else if (BOUNDARY_CONDITION == 2) begin // A non existant edge
     assign b_parent_vector_out = 0;
 end
 
-
+endgenerate
 
 assign a_root_out = b_root_in;
 assign b_root_out = a_root_in;
@@ -139,6 +139,6 @@ assign a_touching_boundary_out = b_touching_boundary_in;
 assign b_touching_boundary_out = a_touching_boundary_in;
 
 
-
+endmodule
 
 
