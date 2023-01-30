@@ -11,7 +11,7 @@
 // root_of_0,1
 // .......
 
-module bench_planar_code_no_fast_channel;
+module bench_single_FPGA;
 
 `include "../../parameters/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
@@ -19,29 +19,31 @@ module bench_planar_code_no_fast_channel;
 localparam CODE_DISTANCE = 5;                ;
 localparam CODE_DISTANCE_X = CODE_DISTANCE;
 localparam CODE_DISTANCE_Z = CODE_DISTANCE_X - 1;
-localparam WEIGHT_X = 1;
-localparam WEIGHT_Z = 1;
-localparam WEIGHT_UD = 1; // Weight up down
+localparam WEIGHT_X = 2;
+localparam WEIGHT_Z = 2;
+localparam WEIGHT_M = 2; // Weight up down
 
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
 localparam MEASUREMENT_ROUNDS = `MAX(CODE_DISTANCE_X, CODE_DISTANCE_Z);
 localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
-localparam PER_DIMENSION_WIDTH = $clog2(MEASUREMENT_ROUNDS);
-localparam ADDRESS_WIDTH = PER_DIMENSION_WIDTH * 3;
+localparam PER_DIM_WIDTH = $clog2(MEASUREMENT_ROUNDS);
+localparam ADDRESS_WIDTH = PER_DIM_WIDTH * 3;
 localparam ITERATION_COUNTER_WIDTH = 8;  // counts up to CODE_DISTANCE iterations
 
 reg clk;
 reg reset;
 reg new_round_start = 0;
 
-reg [PU_COUNT-1:0] is_error_syndromes;
-wire [PU_COUNT-1:0] is_odd_cardinalities;
+reg [PU_COUNT-1:0] measurements;
 wire [31:0] cycle_counter;
 wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
+wire result_valid;
+wire [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
+
 `define INDEX(i, j, k) (i * CODE_DISTANCE_Z + j + k * CODE_DISTANCE_Z*CODE_DISTANCE_X)
-`define is_error_syndrome(i, j, k) is_error_syndromes[`INDEX(i, j, k)]
-`define is_odd_cluster(i, j, k) decoder.is_odd_clusters[`INDEX(i, j, k)]
+`define measurements(i, j, k) measurements[`INDEX(i, j, k)]
+// `define is_odd_cluster(i, j, k) decoder.is_odd_clusters[`INDEX(i, j, k)]
 `define root(i, j, k) roots[ADDRESS_WIDTH*`INDEX(i, j, k) +: ADDRESS_WIDTH]
 `define root_x(i, j, k) roots[ADDRESS_WIDTH*`INDEX(i, j, k)+PER_DIMENSION_WIDTH +: PER_DIMENSION_WIDTH]
 `define root_y(i, j, k) roots[ADDRESS_WIDTH*`INDEX(i, j, k) +: PER_DIMENSION_WIDTH]
@@ -50,26 +52,24 @@ wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 
 wire result_valid;
 wire [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
-wire deadlock;
 
 // instantiate
-standard_planar_code_3d_no_fast_channel_with_stage_controller #(
+Helios_single_FPGA #(
     .CODE_DISTANCE_X(CODE_DISTANCE_X),
     .CODE_DISTANCE_Z(CODE_DISTANCE_Z),
     .WEIGHT_X(WEIGHT_X),
     .WEIGHT_Z(WEIGHT_Z),
-    .WEIGHT_UD(WEIGHT_UD)
+    .WEIGHT_M(WEIGHT_M)
  ) decoder (
     .clk(clk),
     .reset(reset),
     .new_round_start(new_round_start),
-    .is_error_syndromes(is_error_syndromes),
+    .measurements(measurements),
     .roots(roots),
     .result_valid(result_valid),
     .iteration_counter(iteration_counter),
     .cycle_counter(cycle_counter),
-    .deadlock(deadlock),
-    .final_cardinality(final_cardinality)
+    .global_stage()
 );
 
 function [ADDRESS_WIDTH-1:0] make_address;
@@ -113,11 +113,11 @@ always @(negedge clk) begin
             end else if (CODE_DISTANCE == 7) begin
                 input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_7.txt", "r");
             end else if (CODE_DISTANCE == 9) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/input_data_9.txt", "r");
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_9.txt", "r");
             end else if (CODE_DISTANCE == 11) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/input_data_11.txt", "r");
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_11.txt", "r");
             end else if (CODE_DISTANCE == 13) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/input_data_13.txt", "r");
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_13.txt", "r");
             end
             input_open = 0;
         end
@@ -135,7 +135,7 @@ always @(negedge clk) begin
                 for (j=0 ;j <CODE_DISTANCE - 1; j++) begin
                     if (input_eof == 0)begin 
                         $fscanf (input_file, "%h\n", input_read_value);
-                        `is_error_syndrome(i, j, k) = input_read_value;
+                        `measurements(i, j, k) = input_read_value;
                         if (input_read_value == 1) begin
                             syndrome_count = syndrome_count + 1;
                         end
@@ -151,7 +151,7 @@ end
 
 // Output verification logic
 always @(posedge clk) begin
-    if (!valid_delayed && (result_valid || deadlock)) begin
+    if (!valid_delayed && result_valid) begin
         processing = 0;
         if(open == 1) begin
             if (CODE_DISTANCE == 3) begin
@@ -161,11 +161,11 @@ always @(posedge clk) begin
             end else if (CODE_DISTANCE == 7) begin
                 file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_7.txt", "r");
             end else if (CODE_DISTANCE == 9) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/output_data_9.txt", "r");
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_9.txt", "r");
             end else if (CODE_DISTANCE == 11) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/output_data_11.txt", "r");
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_11.txt", "r");
             end else if (CODE_DISTANCE == 13) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/distributed_union_find/simulation_data/output_data_13.txt", "r");
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_13.txt", "r");
             end 
             open = 0;
         end
@@ -193,10 +193,6 @@ always @(posedge clk) begin
                 end
             end
         end
-        if (deadlock) begin
-            $display("%t\tTest case %d hit a deadlock", $time, test_case);
-            test_fail = 1;
-        end
         if (!test_fail) begin
             $display("%t\tTest case %d pass %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
             pass_count = pass_count + 1;
@@ -222,63 +218,11 @@ end
 initial begin
     clk = 1'b1;
     reset = 1'b1;
-    // is_error_syndromes = 0;
-    // Rust distributed_uf_decoder.rs: distributed_union_find_decoder_test_case_2()
-    // `is_error_syndrome(1, 0) = 1;
-    // `is_error_syndrome(1, 1) = 1;
-    // `is_error_syndrome(1, 2) = 1;
-    // `is_error_syndrome(1, 3) = 1;
+
     #107;
     reset = 1'b0;
     #100;
-    // new_round_start = 1;
-    // #10;
-    // new_round_start = 0;
-    // #500;
-    // `assert(`root(0, 0) == make_address(0, 0), "root should be itself");
-    // `assert(`root(1, 0) == make_address(1, 0), "root should be (1, 0)");
-    // `assert(`root(1, 1) == make_address(1, 0), "root should be (1, 0)");
-    // `assert(`root(1, 2) == make_address(1, 0), "root should be (1, 0)");
-    // `assert(`root(1, 3) == make_address(1, 0), "root should be (1, 0)");
-    // `assert(`root(2, 0) == make_address(2, 0), "root should be itself");
-    // `assert(`is_odd_cluster(1, 0) == 0, "it's a even cluster");
-    // `assert(result_valid, "decoder should terminate after 1us");
-    // `assert(iteration_counter == 2, "this simple case should terminate after 2 iterations");
-    
-    
-    // Rust distributed_uf_decoder.rs: distributed_union_find_decoder_test_case_3()
-    // #10;
-    // is_error_syndromes = 0;
-    // `is_error_syndrome(0, 0) = 1;
-    // `is_error_syndrome(0, 1) = 1;
-    // `is_error_syndrome(0, 2) = 1;
-    // `is_error_syndrome(1, 1) = 1;
-    // `is_error_syndrome(1, 2) = 1;
-    // #20;
-    // new_round_start = 1;
-    // #10;
-    // new_round_start = 0;
-    // #500;
-    // `assert(`root(0, 0) == make_address(0, 0), "root should be (0, 0)");
-    // `assert(`root(0, 1) == make_address(0, 0), "root should be (0, 0)");
-    // `assert(`root(0, 2) == make_address(0, 0), "root should be (0, 0)");
-    // `assert(`root(0, 3) == make_address(0, 0), "root should be (0, 0)");
-    // `assert(`root(1, 0) == make_address(0, 0), "root should be (0, 0)");
-    // `assert(`root(1, 1) == make_address(0, 0), "root should be (0, 0)");
-    // `assert(`root(1, 2) == make_address(0, 0), "root should be (0, 0)");
-    // `assert(`root(1, 3) == make_address(0, 0), "root should be (0, 0)");
-    // `assert(`root(2, 0) == make_address(2, 0), "root should be itself");
-    // `assert(`root(2, 1) == make_address(0, 0), "root should be (0, 0)");
-    // `assert(`root(2, 2) == make_address(0, 0), "root should be (0, 0)");
-    // `assert(`root(2, 3) == make_address(2, 3), "root should be itself");
-    // `assert(`root(3, 0) == make_address(3, 0), "root should be itself");
-    // `assert(`root(3, 1) == make_address(3, 1), "root should be itself");
-    // `assert(`root(3, 2) == make_address(3, 2), "root should be itself");
-    // `assert(`root(3, 3) == make_address(3, 3), "root should be itself");
-    // `assert(`is_odd_cluster(0, 0) == 0, "it's a even cluster");
-    // `assert(`PU(0, 0).is_touching_boundary == 1, "it's the root of a set that touching boundary");
-    // `assert(result_valid, "decoder should terminate after 1000ns");
-    // `assert(iteration_counter == 3, "this simple case should terminate after 3 iterations");
+
 
 end
 

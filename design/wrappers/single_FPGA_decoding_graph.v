@@ -42,7 +42,7 @@ genvar k;
 `define INDEX(i, j, k) (i * CODE_DISTANCE_Z + j + k * CODE_DISTANCE_Z*CODE_DISTANCE_X)
 `define roots(i, j, k) roots[ADDRESS_WIDTH*(`INDEX(i, j, k)+1)-1:ADDRESS_WIDTH*`INDEX(i, j, k)]
 `define odd_clusters(i, j, k) odd_clusters[`INDEX(i, j, k)]
-`define busy_PE(i, j, k) busy[`INDEX(i, j, k)]
+`define busy(i, j, k) busy[`INDEX(i, j, k)]
 
 generate
     for (k=0; k < MEASUREMENT_ROUNDS; k=k+1) begin: pu_k
@@ -61,7 +61,7 @@ generate
                 wire [NEIGHBOR_COUNT-1:0] cluster_touching_boundary;
                 wire odd;
                 wire [ADDRESS_WIDTH-1 : 0] root;
-                wire busy;
+                wire busy_PE;
                 processing_unit #(
                     .PER_DIM_BIT_WIDTH(PER_DIM_BIT_WIDTH),
                     .NEIGHBOR_COUNT(NEIGHBOR_COUNT),
@@ -89,7 +89,7 @@ generate
                     .busy(busy)
                 );
                 assign `roots(i, j, k) = root;
-                assign `busy(i, j, k) = busy;
+                assign `busy(i, j, k) = busy_PE;
                 assign `odd_clusters(i,j,k) = odd;
             end
         end

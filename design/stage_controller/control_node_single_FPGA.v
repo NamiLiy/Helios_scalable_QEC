@@ -1,8 +1,8 @@
-module unified_controller_/*$$ID*/ #(
+module unified_controller #(
     parameter CODE_DISTANCE_X = 3,
     parameter CODE_DISTANCE_Z = 2,
     parameter ITERATION_COUNTER_WIDTH = 8,  // counts to 255 iterations
-    parameter MAXIMUM_DELAY = 1,
+    parameter MAXIMUM_DELAY = 1
 ) (
     clk,
     reset,
@@ -12,10 +12,10 @@ module unified_controller_/*$$ID*/ #(
     odd_clusters_PE,
     global_stage,
 
-    results_valid,
+    result_valid,
     iteration_counter, 
     cycle_counter
-)
+);
 
 `include "../../parameters/parameters.sv"
 
@@ -29,12 +29,13 @@ localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
 input clk;
 input reset;
 output reg [STAGE_WIDTH-1:0] global_stage;
+reg [STAGE_WIDTH-1:0] global_stage_previous;
 
 input [PU_COUNT - 1 : 0]  odd_clusters_PE;
 input [PU_COUNT - 1 : 0]  busy_PE;
 input new_round_start;
 
-output reg results_valid;
+output reg result_valid;
 output reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
 output reg [31:0] cycle_counter;
 
@@ -50,10 +51,30 @@ always @(posedge clk) begin
     if (reset) begin
         cycle_counter <= 0;
     end else begin
-        if (stage == STAGE_MEASUREMENT_LOADING) begin
+        if (global_stage == STAGE_MEASUREMENT_LOADING) begin
             cycle_counter <= 1;
-        end else if (!result_valid && stage != STAGE_IDLE) begin
+        end else if (!result_valid && global_stage != STAGE_IDLE) begin
             cycle_counter <= cycle_counter + 1;
+        end
+    end
+end
+
+always @(posedge clk) begin
+    if (reset) begin
+        global_stage_previous <= STAGE_IDLE;
+    end else begin
+        global_stage_previous <= global_stage;
+    end
+end
+
+always @(posedge clk) begin
+    if (reset) begin
+        iteration_counter <= 0;
+    end else begin
+        if (global_stage == STAGE_MEASUREMENT_LOADING) begin
+            iteration_counter <= 0;
+        end else if (global_stage == STAGE_GROW && global_stage_previous != STAGE_GROW) begin
+            iteration_counter <= iteration_counter + 1;
         end
     end
 end
@@ -67,7 +88,7 @@ always @(posedge clk) begin
         delay_counter <= 0;
         result_valid <= 0;
     end else begin
-        case (stage)
+        case (global_stage)
             STAGE_IDLE: begin // 0
                 if (new_round_start) begin
                     global_stage <= STAGE_MEASUREMENT_LOADING;
@@ -88,7 +109,7 @@ always @(posedge clk) begin
             end
 
             STAGE_GROW: begin //2
-                stage <= STAGE_SPREAD_CLUSTER;
+                global_stage <= STAGE_MERGE;
                 delay_counter <= 0;
             end
 
@@ -96,10 +117,10 @@ always @(posedge clk) begin
                 if (delay_counter >= MAXIMUM_DELAY) begin
                     if(!busy) begin
                         if(!odd_clusters) begin
-                            stage <= STAGE_RESULT_CALCULATING;
+                            global_stage <= STAGE_RESULT_CALCULATING;
                             delay_counter <= 0;
                         end else begin
-                            stage <= STAGE_GROW;
+                            global_stage <= STAGE_GROW;
                             delay_counter <= 0;
                         end
                     end
@@ -110,8 +131,12 @@ always @(posedge clk) begin
             
             // Todo : Add the Peeling logic
             STAGE_RESULT_CALCULATING: begin 
-                stage <= STAGE_IDLE;
+                global_stage <= STAGE_IDLE;
                 result_valid <= 1; // for safety
+            end
+            
+            default: begin
+                global_stage <= STAGE_IDLE;
             end
         endcase
     end
