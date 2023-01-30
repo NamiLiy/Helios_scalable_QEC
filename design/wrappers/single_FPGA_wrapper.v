@@ -57,7 +57,7 @@ unified_controller #(
     .CODE_DISTANCE_X(CODE_DISTANCE_X),
     .CODE_DISTANCE_Z(CODE_DISTANCE_Z),
     .ITERATION_COUNTER_WIDTH(8),
-    .MAXIMUM_DELAY(2)
+    .MAXIMUM_DELAY(3)
 ) controller (
     .clk(clk),
     .reset(reset),

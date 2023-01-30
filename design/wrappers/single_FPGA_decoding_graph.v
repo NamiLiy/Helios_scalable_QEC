@@ -40,6 +40,7 @@ genvar j;
 genvar k;
 
 `define INDEX(i, j, k) (i * CODE_DISTANCE_Z + j + k * CODE_DISTANCE_Z*CODE_DISTANCE_X)
+`define ADDRESS(i,j,k) ( (k<< (PER_DIM_BIT_WIDTH*2)) + (i<< PER_DIM_BIT_WIDTH) + j)
 `define roots(i, j, k) roots[ADDRESS_WIDTH*(`INDEX(i, j, k)+1)-1:ADDRESS_WIDTH*`INDEX(i, j, k)]
 `define odd_clusters(i, j, k) odd_clusters[`INDEX(i, j, k)]
 `define busy(i, j, k) busy[`INDEX(i, j, k)]
@@ -65,13 +66,13 @@ generate
                 processing_unit #(
                     .PER_DIM_BIT_WIDTH(PER_DIM_BIT_WIDTH),
                     .NEIGHBOR_COUNT(NEIGHBOR_COUNT),
-                    .ADDRESS(`INDEX(i,j,k)),
+                    .ADDRESS(`ADDRESS(i,j,k)),
                     .CODE_DISTANCE_X(CODE_DISTANCE_X),
                     .CODE_DISTANCE_Z(CODE_DISTANCE_Z)
                 ) pu (
                     .clk(clk),
                     .reset(reset),
-                    .measurement(measurements),
+                    .measurement(measurements[`INDEX(i,j,k)]),
                     .global_stage(global_stage),
                     .neighbor_fully_grown(neighbor_fully_grown),
                     .neighbor_root(neighbor_root),
@@ -86,7 +87,7 @@ generate
                     .cluster_touching_boundary(cluster_touching_boundary),
                     .odd(odd),
                     .root(root),
-                    .busy(busy)
+                    .busy(busy_PE)
                 );
                 assign `roots(i, j, k) = root;
                 assign `busy(i, j, k) = busy_PE;
@@ -249,11 +250,11 @@ generate
                         .a_child_touching_boundary_in(`PU(i, j-1, k).cluster_touching_boundary),
                         .b_child_touching_boundary_in(`PU(i, j, k).cluster_touching_boundary),
                         .a_child_touching_boundary_out(`PU(i, j-1, k).child_touching_boundary[`NEIGHBOR_IDX_EAST]),
-                        .b_child_touching_boundary_out(`PU(i, j, k).child_touching_boundary[`NEIGHBOR_IDX_SOUTH])
+                        .b_child_touching_boundary_out(`PU(i, j, k).child_touching_boundary[`NEIGHBOR_IDX_WEST])
                     );
 
-                    assign `PU(i, j-1, k).neighbor_fully_grown[`NEIGHBOR_IDX_EAST] = `PU(i, j, k).neighbor_fully_grown[`NEIGHBOR_IDX_SOUTH];
-                    assign `PU(i, j-1, k).neighbor_is_boundary[`NEIGHBOR_IDX_EAST] = `PU(i, j, k).neighbor_is_boundary[`NEIGHBOR_IDX_SOUTH];
+                    assign `PU(i, j-1, k).neighbor_fully_grown[`NEIGHBOR_IDX_EAST] = `PU(i, j, k).neighbor_fully_grown[`NEIGHBOR_IDX_WEST];
+                    assign `PU(i, j-1, k).neighbor_is_boundary[`NEIGHBOR_IDX_EAST] = `PU(i, j, k).neighbor_is_boundary[`NEIGHBOR_IDX_WEST];
                 end else begin
                     neighbor_link #(
                         .ADDRESS_WIDTH(ADDRESS_WIDTH),
@@ -335,11 +336,11 @@ generate
                         .a_child_touching_boundary_in(`PU(i, j, k-1).cluster_touching_boundary),
                         .b_child_touching_boundary_in(`PU(i, j, k).cluster_touching_boundary),
                         .a_child_touching_boundary_out(`PU(i, j, k-1).child_touching_boundary[`NEIGHBOR_IDX_UP]),
-                        .b_child_touching_boundary_out(`PU(i, j, k).child_touching_boundary[`NEIGHBOR_IDX_SOUTH])
+                        .b_child_touching_boundary_out(`PU(i, j, k).child_touching_boundary[`NEIGHBOR_IDX_DOWN])
                     );
 
-                    assign `PU(i, j, k-1).neighbor_fully_grown[`NEIGHBOR_IDX_UP] = `PU(i, j, k).neighbor_fully_grown[`NEIGHBOR_IDX_SOUTH];
-                    assign `PU(i, j, k-1).neighbor_is_boundary[`NEIGHBOR_IDX_UP] = `PU(i, j, k).neighbor_is_boundary[`NEIGHBOR_IDX_SOUTH];
+                    assign `PU(i, j, k-1).neighbor_fully_grown[`NEIGHBOR_IDX_UP] = `PU(i, j, k).neighbor_fully_grown[`NEIGHBOR_IDX_DOWN];
+                    assign `PU(i, j, k-1).neighbor_is_boundary[`NEIGHBOR_IDX_UP] = `PU(i, j, k).neighbor_is_boundary[`NEIGHBOR_IDX_DOWN];
                 end else begin
                     neighbor_link #(
                         .ADDRESS_WIDTH(ADDRESS_WIDTH),
