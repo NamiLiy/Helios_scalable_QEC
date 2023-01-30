@@ -16,7 +16,7 @@ module bench_single_FPGA;
 `include "../../parameters/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
-localparam CODE_DISTANCE = 3;                ;
+localparam CODE_DISTANCE = 5;                ;
 localparam CODE_DISTANCE_X = CODE_DISTANCE;
 localparam CODE_DISTANCE_Z = CODE_DISTANCE_X - 1;
 localparam WEIGHT_X = 2;

@@ -122,7 +122,7 @@ end
 // Calculate the sub-tree parity and sub_tree touching boundary
 
 wire next_cluster_parity = (^(neighbor_parent_vector & child_cluster_parity)) ^ m;
-wire next_cluster_touching_boundary = (|(neighbor_parent_vector & child_touching_boundary)) | neighbor_is_boundary;
+wire next_cluster_touching_boundary = (|(neighbor_parent_vector & child_touching_boundary)) | (|neighbor_is_boundary);
 
 always@(posedge clk) begin
     if(stage == STAGE_MEASUREMENT_LOADING) begin
@@ -146,7 +146,7 @@ always@(posedge clk) begin
             if(|parent_vector) begin
                 odd <= |(parent_vector & parent_odd);
             end else begin
-                odd <= next_cluster_parity | next_cluster_touching_boundary;
+                odd <= next_cluster_parity & !next_cluster_touching_boundary;
             end
         end
     end
@@ -163,7 +163,7 @@ always@(posedge clk) begin
                  next_cluster_parity != cluster_parity ||
                  next_cluster_touching_boundary != cluster_touching_boundary ||
                  (|(parent_vector) & (parent_odd != odd)) ||
-                 (~|(parent_vector) && ((next_cluster_parity | next_cluster_touching_boundary) != odd))
+                 (~|(parent_vector) && ((next_cluster_parity & !next_cluster_touching_boundary) != odd))
             )  begin
                 busy <= 1;
             end else begin
