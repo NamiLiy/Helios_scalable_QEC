@@ -31,17 +31,9 @@ input reset;
 input [PU_COUNT-1:0] measurements;
 input [STAGE_WIDTH-1:0] global_stage;
 
-output reg odd_clusters;
+output [PU_COUNT - 1 : 0] odd_clusters;
 output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
-output reg busy;
-
-wire [PU_COUNT - 1 : 0]  odd_clusters_PE;
-wire [PU_COUNT - 1 : 0]  busy_PE;
-
-always@(posedge clk) begin
-    busy <= |busy_PE;
-    odd_clusters <= |odd_clusters_PE;
-end
+output [PU_COUNT - 1 : 0] busy;
 
 genvar i;
 genvar j;
@@ -49,8 +41,8 @@ genvar k;
 
 `define INDEX(i, j, k) (i * CODE_DISTANCE_Z + j + k * CODE_DISTANCE_Z*CODE_DISTANCE_X)
 `define roots(i, j, k) roots[ADDRESS_WIDTH*(`INDEX(i, j, k)+1)-1:ADDRESS_WIDTH*`INDEX(i, j, k)]
-`define odd_clusters_PE(i, j, k) odd_clusters_PE[`INDEX(i, j, k)]
-`define busy_PE(i, j, k) busy_PE[`INDEX(i, j, k)]
+`define odd_clusters(i, j, k) odd_clusters[`INDEX(i, j, k)]
+`define busy_PE(i, j, k) busy[`INDEX(i, j, k)]
 
 generate
     for (k=0; k < MEASUREMENT_ROUNDS; k=k+1) begin: pu_k
@@ -97,8 +89,8 @@ generate
                     .busy(busy)
                 );
                 assign `roots(i, j, k) = root;
-                assign `busy_PE(i, j, k) = busy;
-                assign `odd_clusters_PE(i,j,k) = odd;
+                assign `busy(i, j, k) = busy;
+                assign `odd_clusters(i,j,k) = odd;
             end
         end
     end
