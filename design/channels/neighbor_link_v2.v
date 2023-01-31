@@ -81,6 +81,9 @@ localparam LINK_BIT_WIDTH = $clog2(WEIGHT + 1);
 
 reg [LINK_BIT_WIDTH-1 : 0] growth;
 
+
+`define MIN(a, b) (((a) < (b)) ? (a) : (b))
+
 generate
 
 if (BOUNDARY_CONDITION == 0)  begin // No boundary default case 
@@ -91,7 +94,7 @@ if (BOUNDARY_CONDITION == 0)  begin // No boundary default case
             if(global_stage == STAGE_MEASUREMENT_LOADING) begin
                 growth <= 0;
             end else begin
-                growth <= growth + a_increase + b_increase;
+                growth <= `MIN(growth + a_increase + b_increase, WEIGHT);
             end
         end
     end

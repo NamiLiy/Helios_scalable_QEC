@@ -162,7 +162,7 @@ always@(posedge clk) begin
             if( ((|valid_from_root_comparator) && result_from_root_comparator < root) ||
                  next_cluster_parity != cluster_parity ||
                  next_cluster_touching_boundary != cluster_touching_boundary ||
-                 (|(parent_vector) & (parent_odd != odd)) ||
+                 (|(parent_vector) & (|(parent_vector & parent_odd) != odd)) ||
                  (~|(parent_vector) && ((next_cluster_parity & !next_cluster_touching_boundary) != odd))
             )  begin
                 busy <= 1;
