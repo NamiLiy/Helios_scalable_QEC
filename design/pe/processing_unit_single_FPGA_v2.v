@@ -100,7 +100,7 @@ min_val_less_8x_with_index #(
     .CHANNEL_COUNT(NEIGHBOR_COUNT)
 ) u_tree_compare_solver (
     .values(neighbor_root),
-    .valids(neighbor_fully_grown),
+    .valids(neighbor_fully_grown & ~neighbor_is_boundary),
     .result(result_from_root_comparator),
     .output_valids(valid_from_root_comparator)
 );
