@@ -30,7 +30,7 @@ module processing_unit #(
 
     child_peeling_complete,
     peeling_complete,
-    child_peeling_m,
+    child_peeling_m, //measurement for peeling stage from children
     peeling_m,
     parent_peeling_parity_completed,
     peeling_parity_completed,
@@ -39,6 +39,7 @@ module processing_unit #(
     cluster_touching_boundary,
 
     odd,
+    odd_to_children,
     root,
     busy
 );
@@ -78,7 +79,7 @@ input [NEIGHBOR_COUNT-1:0] parent_peeling_parity_completed;
 output reg peeling_parity_completed;
 
 output reg odd;
-output reg odd_to_children;
+output reg [NEIGHBOR_COUNT-1:0] odd_to_children;
 output reg [ADDRESS_WIDTH-1:0] root;
 output reg busy;
 
