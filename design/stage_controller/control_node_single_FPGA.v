@@ -2,7 +2,7 @@ module unified_controller #(
     parameter CODE_DISTANCE_X = 3,
     parameter CODE_DISTANCE_Z = 2,
     parameter ITERATION_COUNTER_WIDTH = 8,  // counts to 255 iterations
-    parameter MAXIMUM_DELAY = 1
+    parameter MAXIMUM_DELAY = 2
 ) (
     clk,
     reset,
