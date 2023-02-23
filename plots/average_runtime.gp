@@ -2,18 +2,18 @@ set terminal pdf enhanced font "Times-Roman,16"
 set output 'average_case.pdf'
 
 set xlabel 'code distance (d)' font ",16"                 # x-axis label
-set ylabel 'decoding time'  font ",16"                  # y-axis label
+set ylabel 'decoding time (ns)'  font ",16"                  # y-axis label
 
 set ytics nomirror
 set xtics nomirror
-set yrange [40:240]
+set yrange [0:7000]
 
 set key font ",16"
 set key spacing 1
-set key at 5, 215
+set key at 5, 2150
 set xrange [1:17]
 set xtics 1,2,17
-set ytics 40,20,240
+set ytics 0,1000,7000
 # set key maxrows 1
 set key center
 set key samplen 4
@@ -28,6 +28,6 @@ set style line 2 lt rgb "black" lw 1 pt 2
 set style line 3 lt rgb "black" lw 1 pt 3
 
 
-plot "average_time.txt" using 1:2 with linespoints title " p = 0.0005" ls 1, "average_time.txt" using 1:3 with linespoints title "p = 0.001" ls 2, "average_time.txt" using 1:4 with linespoints title "p = 0.005" ls 3
+plot "average_time.txt" using 1:($2*10) with linespoints title " p = 0.0005" ls 1, "average_time.txt" using 1:($3*10) with linespoints title "p = 0.001" ls 2, "average_time.txt" using 1:($4*10) with linespoints title "p = 0.005" ls 3
 
 # plot "average_time.txt" using 1:2:5:6 with yerrorbars title "p = 0.0005" lt 1, "average_time.txt" using 1:2 with lines notitle lt 1, "average_time.txt" using 1:3:7:8 with yerrorbars title "p = 0.001" lt 2, "average_time.txt" using 1:3 with lines notitle lt 2, "average_time.txt" using 1:4:9:10 with yerrorbars title "p = 0.005" lt 3,"average_time.txt" using 1:4 with linespoints notitle lt 3

@@ -2,7 +2,7 @@ module unified_controller #(
     parameter CODE_DISTANCE_X = 3,
     parameter CODE_DISTANCE_Z = 2,
     parameter ITERATION_COUNTER_WIDTH = 8,  // counts to 255 iterations
-    parameter MAXIMUM_DELAY = 1
+    parameter MAXIMUM_DELAY = 2
 ) (
     clk,
     reset,
@@ -117,7 +117,7 @@ always @(posedge clk) begin
                 if (delay_counter >= MAXIMUM_DELAY) begin
                     if(!busy) begin
                         if(!odd_clusters) begin
-                            global_stage <= STAGE_RESULT_CALCULATING;
+                            global_stage <= STAGE_PEELING;
                             delay_counter <= 0;
                         end else begin
                             global_stage <= STAGE_GROW;
@@ -128,12 +128,24 @@ always @(posedge clk) begin
                     delay_counter <= delay_counter + 1;
                 end
             end           
-            
-            // Todo : Add the Peeling logic
-            STAGE_RESULT_CALCULATING: begin 
-                global_stage <= STAGE_IDLE;
-                result_valid <= 1; // for safety
+
+            STAGE_PEELING: begin //4
+                if (delay_counter >= MAXIMUM_DELAY) begin
+                    if(!busy) begin
+                        global_stage <= STAGE_RESULT_VALID;
+                        delay_counter <= 0;
+                    end
+                end else begin
+                    delay_counter <= delay_counter + 1;
+                end
             end
+
+            STAGE_RESULT_VALID: begin //5
+                global_stage <= STAGE_IDLE;
+                result_valid <= 1;
+            end
+
+
             
             default: begin
                 global_stage <= STAGE_IDLE;
