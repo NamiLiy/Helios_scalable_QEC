@@ -27,8 +27,8 @@ localparam ADDRESS_WIDTH = PER_DIM_BIT_WIDTH * 3;
 localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
 localparam NEIGHBOR_COUNT = 6;
 
-localparam NS_ERROR_COUNT = (CODE_DISTANCE_X-1) * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS);
-localparam EW_ERROR_COUNT = CODE_DISTANCE_X * (CODE_DISTANCE_Z+1) * MEASUREMENT_ROUNDS);
+localparam NS_ERROR_COUNT = (CODE_DISTANCE_X-1) * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
+localparam EW_ERROR_COUNT = CODE_DISTANCE_X * (CODE_DISTANCE_Z+1) * MEASUREMENT_ROUNDS;
 localparam UD_ERROR_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
 localparam CORRECTION_COUNT = NS_ERROR_COUNT + EW_ERROR_COUNT + UD_ERROR_COUNT;
 
@@ -130,8 +130,8 @@ endgenerate
 `define SLICE_ADDRESS_VEC(vec, idx) (vec[(((idx)+1)*ADDRESS_WIDTH)-1:(idx)*ADDRESS_WIDTH])
 
 
-`define CORR_INDEX_NS(i, j, k) (k*(CODE_DISTANCE_X-1)*CODE_DISTANCE_Z + (j*CODE_DISTANCE_X-1) + (i-1))
-`define CORR_INDEX_EW(i, j, k) (k*CODE_DISTANCE_X*(CODE_DISTANCE_Z+1) + j + i*(CODE_DISTANCE_Z+1) + NS_ERROR_COUNT)
+`define CORR_INDEX_NS(i, j, k) (k*(CODE_DISTANCE_X-1)*CODE_DISTANCE_Z + (i-1)*(CODE_DISTANCE_X-1) + j)
+`define CORR_INDEX_EW(i, j, k) (k*CODE_DISTANCE_X*(CODE_DISTANCE_Z+1) + i*(CODE_DISTANCE_Z+1) + j + NS_ERROR_COUNT)
 `define CORR_INDEX_UD(i, j, k) (k*CODE_DISTANCE_X*CODE_DISTANCE_Z + i*CODE_DISTANCE_Z + j + NS_ERROR_COUNT + EW_ERROR_COUNT)
 
 
@@ -163,7 +163,7 @@ generate
                         .is_boundary(`PU(i, j, k).neighbor_is_boundary[`NEIGHBOR_IDX_SOUTH]),
                         .a_parent_odd_in(), .b_parent_odd_in(), .a_parent_odd_out(), .b_parent_odd_out(),
                         .a_child_cluster_parity_in(), .b_child_cluster_parity_in(), .a_child_cluster_parity_out(), .b_child_cluster_parity_out(),
-                        .a_child_touching_boundary_in(), .b_child_touching_boundary_in(), .a_child_touching_boundary_out(), .b_child_touching_boundary_out()
+                        .a_child_touching_boundary_in(), .b_child_touching_boundary_in(), .a_child_touching_boundary_out(), .b_child_touching_boundary_out(),
                         .a_is_error_in(`PU(i, j, k).neighbor_is_error[`NEIGHBOR_IDX_SOUTH])
                     );     
                 end else if (i < CODE_DISTANCE_X) begin
@@ -203,18 +203,17 @@ generate
                         .a_is_error_in(`PU(i-1, j, k).neighbor_is_error[`NEIGHBOR_IDX_NORTH]),
                         .a_child_peeling_complete_in(`PU(i-1, j, k).peeling_complete),
                         .a_child_peeling_m_in(`PU(i-1, j, k).peeling_m),
-                        .a_child_peeling_parity_completed_in(`PU(i-1, j, k).peeling_parity_completed),
-                        .a_parent_peeling_parity_completed_in(`PU(i-1, j, k).parent_peeling_parity_completed[`NEIGHBOR_IDX_NORTH]),
+                        .a_parent_peeling_parity_completed_in(`PU(i-1, j, k).peeling_parity_completed),
                         .a_child_peeling_complete_out(`PU(i-1, j, k).child_peeling_complete[`NEIGHBOR_IDX_NORTH]),
                         .a_child_peeling_m_out(`PU(i-1, j, k).child_peeling_m[`NEIGHBOR_IDX_NORTH]),
                         .a_parent_peeling_parity_completed_out(`PU(i-1, j, k).parent_peeling_parity_completed[`NEIGHBOR_IDX_NORTH]),
                         .b_is_error_in(`PU(i, j, k).neighbor_is_error[`NEIGHBOR_IDX_SOUTH]),
                         .b_child_peeling_complete_in(`PU(i, j, k).peeling_complete),
                         .b_child_peeling_m_in(`PU(i, j, k).peeling_m),
-                        .b_child_peeling_parity_completed_in(`PU(i, j, k).peeling_parity_completed),
+                        .b_parent_peeling_parity_completed_in(`PU(i, j, k).peeling_parity_completed),
                         .b_child_peeling_complete_out(`PU(i, j, k).child_peeling_complete[`NEIGHBOR_IDX_SOUTH]),
                         .b_child_peeling_m_out(`PU(i, j, k).child_peeling_m[`NEIGHBOR_IDX_SOUTH]),
-                        .b_parent_peeling_parity_completedout(`PU(i, j, k).parent_peeling_parity_completed[`NEIGHBOR_IDX_SOUTH]),
+                        .b_parent_peeling_parity_completed_out(`PU(i, j, k).parent_peeling_parity_completed[`NEIGHBOR_IDX_SOUTH]),
                         .is_error(`CORRECTION_NS(i, j, k))
                     );
 
@@ -309,18 +308,17 @@ generate
                         .a_is_error_in(`PU(i, j-1, k).neighbor_is_error[`NEIGHBOR_IDX_EAST]),
                         .a_child_peeling_complete_in(`PU(i, j-1, k).peeling_complete),
                         .a_child_peeling_m_in(`PU(i, j-1, k).peeling_m),
-                        .a_child_peeling_parity_completed_in(`PU(i, j-1, k).peeling_parity_completed),
-                        .a_parent_peeling_parity_completed_in(`PU(i, j-1, k).parent_peeling_parity_completed[`NEIGHBOR_IDX_EAST]),
+                        .a_parent_peeling_parity_completed_in(`PU(i, j-1, k).peeling_parity_completed),
                         .a_child_peeling_complete_out(`PU(i, j-1, k).child_peeling_complete[`NEIGHBOR_IDX_EAST]),
                         .a_child_peeling_m_out(`PU(i, j-1, k).child_peeling_m[`NEIGHBOR_IDX_EAST]),
                         .a_parent_peeling_parity_completed_out(`PU(i, j-1, k).parent_peeling_parity_completed[`NEIGHBOR_IDX_EAST]),
                         .b_is_error_in(`PU(i, j, k).neighbor_is_error[`NEIGHBOR_IDX_WEST]),
                         .b_child_peeling_complete_in(`PU(i, j, k).peeling_complete),
                         .b_child_peeling_m_in(`PU(i, j, k).peeling_m),
-                        .b_child_peeling_parity_completed_in(`PU(i, j, k).peeling_parity_completed),
+                        .b_parent_peeling_parity_completed_in(`PU(i, j, k).peeling_parity_completed),
                         .b_child_peeling_complete_out(`PU(i, j, k).child_peeling_complete[`NEIGHBOR_IDX_WEST]),
                         .b_child_peeling_m_out(`PU(i, j, k).child_peeling_m[`NEIGHBOR_IDX_WEST]),
-                        .b_parent_peeling_parity_completedout(`PU(i, j, k).parent_peeling_parity_completed[`NEIGHBOR_IDX_WEST]),
+                        .b_parent_peeling_parity_completed_out(`PU(i, j, k).parent_peeling_parity_completed[`NEIGHBOR_IDX_WEST]),
                         .is_error(`CORRECTION_EW(i, j, k))
                     );
 
@@ -345,7 +343,7 @@ generate
                         .a_parent_odd_in(), .b_parent_odd_in(), .a_parent_odd_out(), .b_parent_odd_out(),
                         .a_child_cluster_parity_in(), .b_child_cluster_parity_in(), .a_child_cluster_parity_out(), .b_child_cluster_parity_out(),
                         .a_child_touching_boundary_in(), .b_child_touching_boundary_in(), .a_child_touching_boundary_out(), .b_child_touching_boundary_out(),
-                        .a_is_error_in(`PU(i, j, k-1).neighbor_is_error[`NEIGHBOR_IDX_EAST]),
+                        .a_is_error_in(`PU(i, j-1, k).neighbor_is_error[`NEIGHBOR_IDX_EAST]),
                         .is_error(`CORRECTION_EW(i, j, k))
                     );
                 end
@@ -416,18 +414,17 @@ generate
                         .a_is_error_in(`PU(i, j, k-1).neighbor_is_error[`NEIGHBOR_IDX_UP]),
                         .a_child_peeling_complete_in(`PU(i, j, k-1).peeling_complete),
                         .a_child_peeling_m_in(`PU(i, j, k-1).peeling_m),
-                        .a_child_peeling_parity_completed_in(`PU(i, j, k-1).peeling_parity_completed),
-                        .a_parent_peeling_parity_completed_in(`PU(i, j, k-1).parent_peeling_parity_completed[`NEIGHBOR_IDX_UP]),
+                        .a_parent_peeling_parity_completed_in(`PU(i, j, k-1).peeling_parity_completed),
                         .a_child_peeling_complete_out(`PU(i, j, k-1).child_peeling_complete[`NEIGHBOR_IDX_UP]),
                         .a_child_peeling_m_out(`PU(i, j, k-1).child_peeling_m[`NEIGHBOR_IDX_UP]),
                         .a_parent_peeling_parity_completed_out(`PU(i, j, k-1).parent_peeling_parity_completed[`NEIGHBOR_IDX_UP]),
                         .b_is_error_in(`PU(i, j, k).neighbor_is_error[`NEIGHBOR_IDX_DOWN]),
                         .b_child_peeling_complete_in(`PU(i, j, k).peeling_complete),
                         .b_child_peeling_m_in(`PU(i, j, k).peeling_m),
-                        .b_child_peeling_parity_completed_in(`PU(i, j, k).peeling_parity_completed),
+                        .b_parent_peeling_parity_completed_in(`PU(i, j, k).peeling_parity_completed),
                         .b_child_peeling_complete_out(`PU(i, j, k).child_peeling_complete[`NEIGHBOR_IDX_DOWN]),
                         .b_child_peeling_m_out(`PU(i, j, k).child_peeling_m[`NEIGHBOR_IDX_DOWN]),
-                        .b_parent_peeling_parity_completedout(`PU(i, j, k).parent_peeling_parity_completed[`NEIGHBOR_IDX_DOWN]),
+                        .b_parent_peeling_parity_completed_out(`PU(i, j, k).parent_peeling_parity_completed[`NEIGHBOR_IDX_DOWN]),
                         .is_error(`CORRECTION_UD(i, j, k))
                     );
 

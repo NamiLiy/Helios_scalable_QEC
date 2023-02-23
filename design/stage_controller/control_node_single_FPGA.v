@@ -132,7 +132,7 @@ always @(posedge clk) begin
             STAGE_PEELING: begin //4
                 if (delay_counter >= MAXIMUM_DELAY) begin
                     if(!busy) begin
-                        global_stage <= STAGE_IDLE;
+                        global_stage <= STAGE_RESULT_VALID;
                         delay_counter <= 0;
                     end
                 end else begin

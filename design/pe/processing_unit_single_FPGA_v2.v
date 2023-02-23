@@ -180,7 +180,9 @@ always@(posedge clk) begin
                 end else begin // The cluster has odd number of vertices
                     if(|neighbor_is_boundary) begin // I am the boundary
                         odd <= 1;
+                        odd_to_children <= 0;
                     end else begin // I am not the boundary
+                        odd <= 1;
                         casex (neighbor_parent_vector & child_touching_boundary)
                             6'b1xxxxx: odd_to_children <= 6'b100000;
                             6'b01xxxx: odd_to_children <= 6'b010000;
@@ -198,6 +200,7 @@ always@(posedge clk) begin
                         odd <= 1;
                         odd_to_children <= 0;
                     end else begin // I am not the boundary
+                        odd <= 0;
                         casex (neighbor_parent_vector & child_touching_boundary)
                             6'b1xxxxx: odd_to_children <= 6'b100000;
                             6'b01xxxx: odd_to_children <= 6'b010000;
@@ -262,14 +265,14 @@ always@(posedge clk) begin
             peeling_m <= m;
         end else begin
             if(stage == STAGE_PEELING && !some_child_is_not_peeling_complete) begin
-                peeling_m <= m ^ (neighbor_parent_vector & child_peeling_m) ^ odd;
+                peeling_m <= m ^ (^(neighbor_parent_vector & child_peeling_m)) ^ odd;
             end
         end
     end
 end
 
-wire [NEIGHBOR_COUNT-1:0] neighbor_is_error_internal;
-wire [NEIGHBOR_COUNT-1:0] neighbor_is_error_border;
+reg [NEIGHBOR_COUNT-1:0] neighbor_is_error_internal;
+reg [NEIGHBOR_COUNT-1:0] neighbor_is_error_border;
 always@(*) begin
     if(stage == STAGE_PEELING && !some_child_is_not_peeling_complete) begin
         neighbor_is_error_internal = neighbor_parent_vector & child_peeling_m;
@@ -313,7 +316,8 @@ always@(posedge clk) begin
                 busy <= 0;
             end
         end else if (stage == STAGE_PEELING) begin
-            busy <= !peeling_complete;
+            // busy <= !peeling_complete;
+            busy <= some_child_is_not_peeling_complete;
         end
     end
 end

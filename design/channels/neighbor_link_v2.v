@@ -107,7 +107,7 @@ input b_child_peeling_m_in;
 input b_parent_peeling_parity_completed_in;
 
 output a_child_peeling_complete_out;
-output a_child_peeling_m_out,;
+output a_child_peeling_m_out;
 output a_parent_peeling_parity_completed_out;
 
 output b_child_peeling_complete_out;
