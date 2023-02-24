@@ -86,8 +86,8 @@ end
 
 always@(posedge clk) begin
     if(result_valid) begin
-        error_stream[counter] <= (r[63:53] == 11'd0) ? 1 : 0; //0.0005
-//        error_stream[counter] <= (r[63:54] == 10'd0) ? 1 : 0; //0.001
+//        error_stream[counter] <= (r[63:53] == 11'd0) ? 1 : 0; //0.0005
+        error_stream[counter] <= (r[63:54] == 10'd0) ? 1 : 0; //0.001
 //          error_stream[counter] <= (r[63:54] < 10'd5) ? 1 : 0; //0.005
     end
 end
