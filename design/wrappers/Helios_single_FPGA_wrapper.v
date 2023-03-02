@@ -1,6 +1,6 @@
 module Helios_single_FPGA_wrapper #(
-    parameter CODE_DISTANCE_X = 5,
-    parameter CODE_DISTANCE_Z = 4,
+    parameter CODE_DISTANCE_X = 11,
+    parameter CODE_DISTANCE_Z = 10,
     parameter WEIGHT_X = 2,
     parameter WEIGHT_Z = 2,
     parameter WEIGHT_M = 2 // Weight up down
