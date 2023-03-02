@@ -3,7 +3,9 @@ module neighbor_link #(
     parameter WEIGHT = 2,
     parameter BOUNDARY_CONDITION = 0, //0 : No boundary 1: A boundary 2: Non existant edge 3: Connected to a FIFO
     parameter ADDRESS_A = 0,
-    parameter ADDRESS_B = 0
+    parameter ADDRESS_B = 0,
+    parameter HEADER_ID = 0,
+    parameter HEADER_WIDTH = 2
 ) (
     clk,
     reset,
@@ -73,7 +75,7 @@ module neighbor_link #(
 `include "../../parameters/parameters.sv"
 
 localparam LINK_BIT_WIDTH = $clog2(WEIGHT + 1);
-localparam INTERCONNECTION_FIFO_WIDTH = ADDRESS_WIDTH + 9;
+localparam INTERCONNECTION_FIFO_WIDTH = ADDRESS_WIDTH + 9 + HEADER_WIDTH;
 
 input clk;
 input reset;
@@ -225,6 +227,9 @@ end else if (BOUNDARY_CONDITION == 3) begin
     reg valid_data_present;
     assign output_FIFO_valid = valid_data_present;
 
+    wire input_FIFO_valid_matched;
+    assign input_FIFO_valid_matched = input_FIFO_valid & (input_FIFO_data[ADDRESS_WIDTH-1 : ADDRESS_WIDTH-1+10] == HEADER_ID);
+
     reg a_increase_saved;
     reg a_is_error_saved;
     wire a_parent_vector_changed;
@@ -294,9 +299,10 @@ end else if (BOUNDARY_CONDITION == 3) begin
     assign output_FIFO_data[ADDRESS_WIDTH-1+7] = a_child_peeling_complete_in;
     assign output_FIFO_data[ADDRESS_WIDTH-1+8] = a_child_peeling_m_in;
     assign output_FIFO_data[ADDRESS_WIDTH-1+9] = a_parent_peeling_parity_completed_in;
+    assign output_FIFO_data[ADDRESS_WIDTH-1 : ADDRESS_WIDTH-1+10] = HEADER_ID;
 
-    assign FIFO_b_increase = input_FIFO_data[0] && input_FIFO_valid && input_FIFO_ready;
-    assign FIFO_b_is_error_in = input_FIFO_data[1] && input_FIFO_valid && input_FIFO_ready;
+    assign FIFO_b_increase = input_FIFO_data[0] && input_FIFO_valid_matched && input_FIFO_ready;
+    assign FIFO_b_is_error_in = input_FIFO_data[1] && input_FIFO_valid_matched && input_FIFO_ready;
     assign input_FIFO_ready = 1'b1;
 
     always@(posedge clk) begin
@@ -343,7 +349,7 @@ end else if (BOUNDARY_CONDITION == 3) begin
         if(reset) begin
             b_parent_vector_saved_from_FIFO <= 0;
         end else begin
-            if(input_FIFO_valid && input_FIFO_ready) begin
+            if(input_FIFO_valid_matched && input_FIFO_ready) begin
                 b_parent_vector_saved_from_FIFO <= input_FIFO_data[2];
             end else if (global_stage == STAGE_MEASUREMENT_LOADING) begin
                 b_parent_vector_saved_from_FIFO <= 0;
@@ -404,7 +410,7 @@ end else if (BOUNDARY_CONDITION == 3) begin
             b_child_peeling_m_saved_from_FIFO <= 0;
             b_parent_peeling_parity_completed_saved_from_FIFO <= 0;
         end else begin
-            if(input_FIFO_valid && input_FIFO_ready) begin
+            if(input_FIFO_valid_matched && input_FIFO_ready) begin
                 b_root_saved_from_FIFO <= input_FIFO_data[ADDRESS_WIDTH-1+3:3];
                 b_parent_odd_saved_from_FIFO <= input_FIFO_data[ADDRESS_WIDTH-1+4];
                 b_child_cluster_parity_saved_from_FIFO <= input_FIFO_data[ADDRESS_WIDTH-1+5];
