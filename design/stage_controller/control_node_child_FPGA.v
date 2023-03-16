@@ -3,12 +3,14 @@ module child_controller #(
     parameter CODE_DISTANCE_Z = 2,
     parameter ITERATION_COUNTER_WIDTH = 8,  // counts to 255 iterations
     parameter MAXIMUM_INITIAL_DELAY = 3,
-    parameter MAXIMUM_BUSY_DELAY = 1
+    parameter MAXIMUM_BUSY_DELAY = 1,
+    parameter INTERCONECT_COUNT = 2
 ) (
     clk,
     reset,
 
-    busy_PE, 
+    busy_PE,
+    busy_interconnects,
     odd_clusters_PE,
     global_stage,
 
@@ -37,8 +39,9 @@ input reset;
 output reg [STAGE_WIDTH-1:0] global_stage;
 reg [STAGE_WIDTH-1:0] global_stage_previous;
 
-input [CHILD_COUNT - 1 : 0]  busy_child;
-input [CHILD_COUNT - 1 : 0]  odd_clusters_child;
+input [CHILD_COUNT - 1 : 0]  busy_PE;
+input [INTERCONECT_COUNT - 1 : 0]  busy_interconnects;
+input [CHILD_COUNT - 1 : 0]  odd_clusters_PE;
 input new_round_start;
 
 output reg result_valid;
