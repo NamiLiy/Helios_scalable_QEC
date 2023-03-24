@@ -43,7 +43,7 @@ input [STAGE_WIDTH-1:0] global_stage;
 output [PU_COUNT - 1 : 0] odd_clusters;
 output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 output [PU_COUNT - 1 : 0] busy;
-output [CORRECTION_COUNT_PER_ROUND - 1 : 0] correction;
+output [CORRECTION_COUNT_PER_ROUND*GRID_WIDTH_U - 1 : 0] correction;
 
 genvar i;
 genvar j;

@@ -78,13 +78,13 @@ always@(posedge clk) begin
             if(global_stage == STAGE_MEASUREMENT_LOADING) begin
                 growth <= 0;
             end else begin
-                growth <= `MIN(growth + a_increase + b_increase, WEIGHT);
+                growth <= `MIN(growth + a_increase + b_increase, weight_out);
             end
         end else if (boundary_condition_out == 1) begin // edge touching a boundary
             if(global_stage == STAGE_MEASUREMENT_LOADING) begin
                 growth <= 0;
             end else begin
-                growth <= `MIN(growth + a_increase, WEIGHT);
+                growth <= `MIN(growth + a_increase, weight_out);
             end
         end
     end

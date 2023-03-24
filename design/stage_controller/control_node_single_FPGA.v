@@ -1,30 +1,39 @@
 module unified_controller #(
-    parameter CODE_DISTANCE_X = 3,
-    parameter CODE_DISTANCE_Z = 2,
+    parameter GRID_WIDTH_X = 3,
+    parameter GRID_WIDTH_Z = 2,
+    parameter GRID_WIDTH_U = 3,
     parameter ITERATION_COUNTER_WIDTH = 8,  // counts to 255 iterations
     parameter MAXIMUM_DELAY = 2
 ) (
     clk,
     reset,
-    new_round_start,
+
+    input_data,
+    input_valid,
+    input_ready,
+
+    output_data,
+    output_valid,
+    output_ready,
 
     busy_PE, 
     odd_clusters_PE,
-    global_stage,
-
-    result_valid,
-    iteration_counter, 
-    cycle_counter
+    measurements,
+    global_stage
 );
 
 `include "../../parameters/parameters.sv"
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
-localparam MEASUREMENT_ROUNDS = `MAX(CODE_DISTANCE_X, CODE_DISTANCE_Z);
-localparam PER_DIM_BIT_WIDTH = $clog2(MEASUREMENT_ROUNDS);
-localparam ADDRESS_WIDTH = PER_DIM_BIT_WIDTH * 3;
 
-localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
+localparam X_BIT_WIDTH = $clog2(GRID_WIDTH_X);
+localparam Z_BIT_WIDTH = $clog2(GRID_WIDTH_Z);
+localparam U_BIT_WIDTH = $clog2(GRID_WIDTH_U);
+localparam ADDRESS_WIDTH = X_BIT_WIDTH + Z_BIT_WIDTH + U_BIT_WIDTH;
+
+localparam PU_COUNT_PER_ROUND = GRID_WIDTH_X * GRID_WIDTH_Z;
+localparam PU_COUNT = PU_COUNT_PER_ROUND * GRID_WIDTH_U;
+
 
 input clk;
 input reset;
@@ -33,11 +42,19 @@ reg [STAGE_WIDTH-1:0] global_stage_previous;
 
 input [PU_COUNT - 1 : 0]  odd_clusters_PE;
 input [PU_COUNT - 1 : 0]  busy_PE;
-input new_round_start;
+output reg [PU_COUNT_PER_ROUND-1:0] measurements;
 
-output reg result_valid;
-output reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
-output reg [31:0] cycle_counter;
+input [7 : 0] input_data;
+input input_valid;
+output reg input_ready;
+
+output [7 : 0] output_data;
+output reg output_valid;
+input output_ready;
+
+reg result_valid;
+reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
+reg [31:0] cycle_counter;
 
 reg busy;
 reg odd_clusters;
@@ -82,6 +99,9 @@ end
 localparam DELAY_COUNTER_WIDTH = $clog2(MAXIMUM_DELAY + 1);
 reg [DELAY_COUNTER_WIDTH-1:0] delay_counter;
 
+reg [15:0] messages_per_round_of_measurement;
+reg [15:0] measurement_rounds;
+
 always @(posedge clk) begin
     if (reset) begin
         global_stage <= STAGE_IDLE;
@@ -90,22 +110,55 @@ always @(posedge clk) begin
     end else begin
         case (global_stage)
             STAGE_IDLE: begin // 0
-                if (new_round_start) begin
-                    global_stage <= STAGE_MEASUREMENT_LOADING;
-                    delay_counter <= 0;
-                    result_valid <= 0;
+                if (input_valid && input_ready) begin
+                    if(input_data == START_DECODING_MSG) begin
+                        global_stage <= STAGE_PARAMETERS_LOADING;
+                        delay_counter <= 0;
+                        result_valid <= 0;
+                    end else if(input_data == MEASUREMENT_DATA_HEADER) begin
+                        global_stage <= STAGE_MEASUREMENT_PREPARING;
+                        delay_counter <= 0;
+                        result_valid <= 0;
+                    end
                 end 
-                // else begin
-                //     result_valid <= 1;
-                // end
+            end
+
+            STAGE_PARAMETERS_LOADING: begin // 6
+                global_stage <= STAGE_IDLE;
+                messages_per_round_of_measurement <= 0;
+                measurement_rounds <= 0;
+            end
+
+            STAGE_MEASUREMENT_PREPARING: begin // 7
+                if (input_valid && input_ready) begin
+                    for (idx = 0; idx < (N - 8); idx = idx + 8) begin
+                        measurements[N-1-idx-7:N-1-idx-14] <= data_array[N-1-idx-15:N-1-idx-22];
+                    end
+                    measurements[7:0] <= data_in;
+                    messages_per_round_of_measurement <= messages_per_round_of_measurement + 8;
+                    if(messages_per_round_of_measurement + 8 >= PU_COUNT_PER_ROUND) begin
+                        global_stage <= STAGE_MEASUREMENT_LOADING;
+                        delay_counter <= 0;
+                        messages_per_round_of_measurement <= 0;
+                        measurement_rounds <= measurement_rounds + 1;
+                    end else begin
+                        messages_per_round_of_measurement <= messages_per_round_of_measurement + 8;
+                    end
+                end
             end
 
             STAGE_MEASUREMENT_LOADING: begin
                 // Currently this is single cycle as only from external buffer happens.
                 // In future might need multiple
-                global_stage <= STAGE_GROW;
-                delay_counter <= 0;
-                result_valid <= 0; // for safety
+                if(measurement_rounds < GRID_WIDTH_U) begin
+                    global_stage <= STAGE_MEASUREMENT_PREPARING;
+                    delay_counter <= 0;
+                    result_valid <= 0;
+                end else begin
+                    global_stage <= STAGE_GROW;
+                    delay_counter <= 0;
+                    result_valid <= 0;
+                end
             end
 
             STAGE_GROW: begin //2
@@ -143,6 +196,7 @@ always @(posedge clk) begin
             STAGE_RESULT_VALID: begin //5
                 global_stage <= STAGE_IDLE;
                 result_valid <= 1;
+                measurement_rounds <= 0;
             end
 
 
@@ -151,6 +205,30 @@ always @(posedge clk) begin
                 global_stage <= STAGE_IDLE;
             end
         endcase
+    end
+end
+
+always@(*) begin
+    if (reset) begin
+        input_ready = 0;
+    end else begin 
+        if(global_stage == STAGE_IDLE || STAGE_MEASUREMENT_PREPARING) begin
+            input_ready = 1;
+        end else begin
+            input_ready = 0;
+        end
+    end
+end
+
+always@(*) begin
+    if (reset) begin
+        output_valid = 0;
+    end else begin 
+        if(result_valid) begin
+            output_valid = 1;
+        end else begin
+            output_valid = 0;
+        end
     end
 end
 
