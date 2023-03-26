@@ -56,7 +56,7 @@ single_FPGA_decoding_graph_dynamic #(
     .GRID_WIDTH_X(GRID_WIDTH_X),
     .GRID_WIDTH_Z(GRID_WIDTH_Z),
     .GRID_WIDTH_U(GRID_WIDTH_U),
-    .MAX_WEIGHT(2)
+    .MAX_WEIGHT(MAX_WEIGHT)
 ) decoding_graph (
     .clk(clk),
     .reset(reset),

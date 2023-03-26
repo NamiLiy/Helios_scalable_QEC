@@ -63,11 +63,6 @@ generate
             for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: pu_j
                 wire local_measurement;
                 wire measurement_out;
-                if(k == GRID_WIDTH_U-1) begin
-                    assign local_measurement = measurements[`INDEX_PLANAR(i,j)];
-                end else begin
-                    assign local_measurement = `PU(i, j, k+1).measurement_out;
-                end
                 wire [NEIGHBOR_COUNT-1:0] neighbor_fully_grown;
                 wire neighbor_increase;
                 wire [NEIGHBOR_COUNT-1:0] neighbor_is_boundary;
@@ -83,7 +78,7 @@ generate
                 processing_unit #(
                     .ADDRESS_WIDTH(ADDRESS_WIDTH),
                     .NEIGHBOR_COUNT(NEIGHBOR_COUNT),
-                    .ADDRESS(`ADDRESS(i,j,k)),
+                    .ADDRESS(`ADDRESS(i,j,k))
                 ) pu (
                     .clk(clk),
                     .reset(reset),
@@ -110,6 +105,23 @@ generate
         end
     end
 endgenerate
+    
+
+
+generate
+    for (k=GRID_WIDTH_U-1; k >= 0; k=k-1) begin: pu_k_extra
+        for (i=0; i < GRID_WIDTH_X; i=i+1) begin: pu_i_extra
+            for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: pu_j_extra
+                if(k==GRID_WIDTH_U-1) begin
+                    assign `PU(i, j, k).local_measurement = measurements[`INDEX_PLANAR(i,j)];
+                end else begin
+                    assign `PU(i, j, k).local_measurement = `PU(i, j, k+1).measurement_out;
+                end
+            end
+        end
+    end
+
+endgenerate
 
 `define NEIGHBOR_IDX_NORTH 0
 `define NEIGHBOR_IDX_SOUTH 1 
@@ -119,12 +131,12 @@ endgenerate
 `define NEIGHBOR_IDX_UP 5
 
 `define SLICE_ADDRESS_VEC(vec, idx) (vec[(((idx)+1)*ADDRESS_WIDTH)-1:(idx)*ADDRESS_WIDTH])
-`define SLICE_VEC(vec, idx, width) (vec[(((idx)+1)*width)-1:(idx)*width])
+`define SLICE_VEC(vec, idx, width) (vec[idx*width +: width])
 
 
-`define CORR_INDEX_NS(i, j, k) (k*(GRID_WIDTH_X-1)*GRID_WIDTH_Z + (i-1)*(GRID_WIDTH_X-1) + j)
-`define CORR_INDEX_EW(i, j, k) (k*GRID_WIDTH_X*(GRID_WIDTH_Z+1) + i*(GRID_WIDTH_Z+1) + j + NS_ERROR_COUNT)
-`define CORR_INDEX_UD(i, j, k) (k*GRID_WIDTH_X*GRID_WIDTH_Z + i*GRID_WIDTH_Z + j + NS_ERROR_COUNT + EW_ERROR_COUNT)
+`define CORR_INDEX_NS(i, j, k) (k*(GRID_WIDTH_X-1)*GRID_WIDTH_Z + (i-1)*(GRID_WIDTH_Z) + j)
+`define CORR_INDEX_EW(i, j, k) (k*GRID_WIDTH_X*(GRID_WIDTH_Z+1) + i*(GRID_WIDTH_Z+1) + j + NS_ERROR_COUNT_PER_ROUND*GRID_WIDTH_U)
+`define CORR_INDEX_UD(i, j, k) (k*GRID_WIDTH_X*GRID_WIDTH_Z + i*GRID_WIDTH_Z + j + NS_ERROR_COUNT_PER_ROUND*GRID_WIDTH_U + EW_ERROR_COUNT_PER_ROUND*GRID_WIDTH_U)
 
 
 `define CORRECTION_NS(i, j, k) correction[`CORR_INDEX_NS(i, j, k)]
@@ -151,10 +163,10 @@ generate
                         .is_boundary(`PU(i, j, k).neighbor_is_boundary[`NEIGHBOR_IDX_NORTH]),
                         .a_is_error_in(`PU(i, j, k).neighbor_is_error[`NEIGHBOR_IDX_NORTH]),
                         .b_is_error_in(),
-                        .is_error(`CORRECTION_NS(i, j, k)),
-                        .a_input_data(`SLICE_VEC(`PU(i, j, k).output_data, NEIGHBOR_IDX_NORTH, EXPOSED_DATA_SIZE)),
+                        .is_error(),
+                        .a_input_data(`SLICE_VEC(`PU(i, j, k).output_data, `NEIGHBOR_IDX_NORTH, EXPOSED_DATA_SIZE)),
                         .b_input_data(),
-                        .a_output_data(`SLICE_VEC(`PU(i, j, k).input_data, NEIGHBOR_IDX_NORTH, EXPOSED_DATA_SIZE)),
+                        .a_output_data(`SLICE_VEC(`PU(i, j, k).input_data, `NEIGHBOR_IDX_NORTH, EXPOSED_DATA_SIZE)),
                         .b_output_data(),
                         .weight_in(2),
                         .weight_out(),
@@ -176,10 +188,10 @@ generate
                         .a_is_error_in(`PU(i-1, j, k).neighbor_is_error[`NEIGHBOR_IDX_SOUTH]),
                         .b_is_error_in(`PU(i, j, k).neighbor_is_error[`NEIGHBOR_IDX_NORTH]),
                         .is_error(`CORRECTION_NS(i, j, k)),
-                        .a_input_data(`SLICE_VEC(`PU(i-1, j, k).output_data, NEIGHBOR_IDX_SOUTH, EXPOSED_DATA_SIZE)),
-                        .b_input_data(`SLICE_VEC(`PU(i, j, k).output_data, NEIGHBOR_IDX_NORTH, EXPOSED_DATA_SIZE)),
-                        .a_output_data(`SLICE_VEC(`PU(i-1, j, k).input_data, NEIGHBOR_IDX_SOUTH, EXPOSED_DATA_SIZE)),
-                        .b_output_data(`SLICE_VEC(`PU(i, j, k).input_data, NEIGHBOR_IDX_NORTH, EXPOSED_DATA_SIZE)),
+                        .a_input_data(`SLICE_VEC(`PU(i-1, j, k).output_data, `NEIGHBOR_IDX_SOUTH, EXPOSED_DATA_SIZE)),
+                        .b_input_data(`SLICE_VEC(`PU(i, j, k).output_data, `NEIGHBOR_IDX_NORTH, EXPOSED_DATA_SIZE)),
+                        .a_output_data(`SLICE_VEC(`PU(i-1, j, k).input_data, `NEIGHBOR_IDX_SOUTH, EXPOSED_DATA_SIZE)),
+                        .b_output_data(`SLICE_VEC(`PU(i, j, k).input_data, `NEIGHBOR_IDX_NORTH, EXPOSED_DATA_SIZE)),
                         .weight_in(2),
                         .weight_out(),
                         .boundary_condition_in(0),
@@ -202,10 +214,10 @@ generate
                         .is_boundary(`PU(i-1, j, k).neighbor_is_boundary[`NEIGHBOR_IDX_SOUTH]),
                         .a_is_error_in(`PU(i-1, j, k).neighbor_is_error[`NEIGHBOR_IDX_SOUTH]),
                         .b_is_error_in(),
-                        .is_error(`CORRECTION_NS(i, j, k)),
-                        .a_input_data(`SLICE_VEC(`PU(i-1, j, k).output_data, NEIGHBOR_IDX_SOUTH, EXPOSED_DATA_SIZE)),
+                        .is_error(),
+                        .a_input_data(`SLICE_VEC(`PU(i-1, j, k).output_data, `NEIGHBOR_IDX_SOUTH, EXPOSED_DATA_SIZE)),
                         .b_input_data(),
-                        .a_output_data(`SLICE_VEC(`PU(i-1, j, k).input_data, NEIGHBOR_IDX_SOUTH, EXPOSED_DATA_SIZE)),
+                        .a_output_data(`SLICE_VEC(`PU(i-1, j, k).input_data, `NEIGHBOR_IDX_SOUTH, EXPOSED_DATA_SIZE)),
                         .b_output_data(),
                         .weight_in(2),
                         .weight_out(),
@@ -220,7 +232,7 @@ generate
     // Generate East West neighbors
     for (k=0; k < GRID_WIDTH_U; k=k+1) begin: ew_k
         for (i=0; i < GRID_WIDTH_X; i=i+1) begin: ew_i
-            for (j=0; j <= CODE_DISTANCE_Z; j=j+1) begin: ew_j
+            for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: ew_j
                 if(j==0) begin
                     neighbor_link_internal #(
                         .ADDRESS_WIDTH(ADDRESS_WIDTH),
@@ -236,9 +248,9 @@ generate
                         .a_is_error_in(`PU(i, j, k).neighbor_is_error[`NEIGHBOR_IDX_WEST]),
                         .b_is_error_in(),
                         .is_error(`CORRECTION_EW(i, j, k)),
-                        .a_input_data(`SLICE_VEC(`PU(i, j, k).output_data, NEIGHBOR_IDX_WEST, EXPOSED_DATA_SIZE)),
+                        .a_input_data(`SLICE_VEC(`PU(i, j, k).output_data, `NEIGHBOR_IDX_WEST, EXPOSED_DATA_SIZE)),
                         .b_input_data(),
-                        .a_output_data(`SLICE_VEC(`PU(i, j, k).input_data, NEIGHBOR_IDX_WEST, EXPOSED_DATA_SIZE)),
+                        .a_output_data(`SLICE_VEC(`PU(i, j, k).input_data, `NEIGHBOR_IDX_WEST, EXPOSED_DATA_SIZE)),
                         .b_output_data(),
                         .weight_in(2),
                         .weight_out(),
@@ -260,10 +272,10 @@ generate
                         .a_is_error_in(`PU(i, j-1, k).neighbor_is_error[`NEIGHBOR_IDX_EAST]),
                         .b_is_error_in(`PU(i, j, k).neighbor_is_error[`NEIGHBOR_IDX_WEST]),
                         .is_error(`CORRECTION_EW(i, j, k)),
-                        .a_input_data(`SLICE_VEC(`PU(i, j-1, k).output_data, NEIGHBOR_IDX_EAST, EXPOSED_DATA_SIZE)),
-                        .b_input_data(`SLICE_VEC(`PU(i, j, k).output_data, NEIGHBOR_IDX_WEST, EXPOSED_DATA_SIZE)),
-                        .a_output_data(`SLICE_VEC(`PU(i, j-1, k).input_data, NEIGHBOR_IDX_EAST, EXPOSED_DATA_SIZE)),
-                        .b_output_data(`SLICE_VEC(`PU(i, j, k).input_data, NEIGHBOR_IDX_WEST, EXPOSED_DATA_SIZE)),
+                        .a_input_data(`SLICE_VEC(`PU(i, j-1, k).output_data, `NEIGHBOR_IDX_EAST, EXPOSED_DATA_SIZE)),
+                        .b_input_data(`SLICE_VEC(`PU(i, j, k).output_data, `NEIGHBOR_IDX_WEST, EXPOSED_DATA_SIZE)),
+                        .a_output_data(`SLICE_VEC(`PU(i, j-1, k).input_data, `NEIGHBOR_IDX_EAST, EXPOSED_DATA_SIZE)),
+                        .b_output_data(`SLICE_VEC(`PU(i, j, k).input_data, `NEIGHBOR_IDX_WEST, EXPOSED_DATA_SIZE)),
                         .weight_in(2),
                         .weight_out(),
                         .boundary_condition_in(0),
@@ -280,11 +292,16 @@ generate
                         .clk(clk),
                         .reset(reset),
                         .global_stage(global_stage),
-                        .fully_grown(PU(i, j-1, k).neighbor_fully_grown[NEIGHBOR_IDX_EAST]),
-                        .a_increase(PU(i, j-1, k).neighbor_increase), .b_increase(), .is_boundary(PU(i, j-1, k).neighbor_is_boundary[NEIGHBOR_IDX_EAST]), .a_is_error_in(PU(i, j-1, k).neighbor_is_error[NEIGHBOR_IDX_EAST]), .b_is_error_in(), .is_error(CORRECTION_EW(i, j, k)),
-                        .a_input_data(SLICE_VEC(PU(i, j-1, k).output_data, NEIGHBOR_IDX_EAST, EXPOSED_DATA_SIZE)),
+                        .fully_grown(`PU(i, j-1, k).neighbor_fully_grown[`NEIGHBOR_IDX_EAST]),
+                        .a_increase(`PU(i, j-1, k).neighbor_increase),
+                        .b_increase(),
+                        .is_boundary(`PU(i, j-1, k).neighbor_is_boundary[`NEIGHBOR_IDX_EAST]),
+                        .a_is_error_in(`PU(i, j-1, k).neighbor_is_error[`NEIGHBOR_IDX_EAST]),
+                        .b_is_error_in(),
+                        .is_error(`CORRECTION_EW(i, j, k)),
+                        .a_input_data(`SLICE_VEC(`PU(i, j-1, k).output_data, `NEIGHBOR_IDX_EAST, EXPOSED_DATA_SIZE)),
                         .b_input_data(),
-                        .a_output_data(SLICE_VEC(PU(i, j-1, k).input_data, NEIGHBOR_IDX_EAST, EXPOSED_DATA_SIZE)),
+                        .a_output_data(`SLICE_VEC(`PU(i, j-1, k).input_data, `NEIGHBOR_IDX_EAST, EXPOSED_DATA_SIZE)),
                         .b_output_data(),
                         .weight_in(2),
                         .weight_out(),
@@ -315,9 +332,9 @@ generate
                         .a_is_error_in(`PU(i, j, k).neighbor_is_error[`NEIGHBOR_IDX_DOWN]),
                         .b_is_error_in(),
                         .is_error(`CORRECTION_UD(i, j, k)),
-                        .a_input_data(`SLICE_VEC(`PU(i, j, k).output_data, NEIGHBOR_IDX_DOWN, EXPOSED_DATA_SIZE)),
+                        .a_input_data(`SLICE_VEC(`PU(i, j, k).output_data, `NEIGHBOR_IDX_DOWN, EXPOSED_DATA_SIZE)),
                         .b_input_data(),
-                        .a_output_data(`SLICE_VEC(`PU(i, j, k).input_data, NEIGHBOR_IDX_DOWN, EXPOSED_DATA_SIZE)),
+                        .a_output_data(`SLICE_VEC(`PU(i, j, k).input_data, `NEIGHBOR_IDX_DOWN, EXPOSED_DATA_SIZE)),
                         .b_output_data(),
                         .weight_in(2),
                         .weight_out(),
@@ -339,10 +356,10 @@ generate
                         .a_is_error_in(`PU(i, j, k-1).neighbor_is_error[`NEIGHBOR_IDX_UP]),
                         .b_is_error_in(`PU(i, j, k).neighbor_is_error[`NEIGHBOR_IDX_DOWN]),
                         .is_error(`CORRECTION_UD(i, j, k)),
-                        .a_input_data(`SLICE_VEC(`PU(i, j, k-1).output_data, NEIGHBOR_IDX_UP, EXPOSED_DATA_SIZE)),
-                        .b_input_data(`SLICE_VEC(`PU(i, j, k).output_data, NEIGHBOR_IDX_DOWN, EXPOSED_DATA_SIZE)),
-                        .a_output_data(`SLICE_VEC(`PU(i, j, k-1).input_data, NEIGHBOR_IDX_UP, EXPOSED_DATA_SIZE)),
-                        .b_output_data(`SLICE_VEC(`PU(i, j, k).input_data, NEIGHBOR_IDX_DOWN, EXPOSED_DATA_SIZE)),
+                        .a_input_data(`SLICE_VEC(`PU(i, j, k-1).output_data, `NEIGHBOR_IDX_UP, EXPOSED_DATA_SIZE)),
+                        .b_input_data(`SLICE_VEC(`PU(i, j, k).output_data, `NEIGHBOR_IDX_DOWN, EXPOSED_DATA_SIZE)),
+                        .a_output_data(`SLICE_VEC(`PU(i, j, k-1).input_data, `NEIGHBOR_IDX_UP, EXPOSED_DATA_SIZE)),
+                        .b_output_data(`SLICE_VEC(`PU(i, j, k).input_data, `NEIGHBOR_IDX_DOWN, EXPOSED_DATA_SIZE)),
                         .weight_in(2),
                         .weight_out(),
                         .boundary_condition_in(0),
@@ -356,17 +373,19 @@ generate
                         .ADDRESS_WIDTH(ADDRESS_WIDTH),
                         .MAX_WEIGHT(MAX_WEIGHT)
                     ) neighbor_link_UD(
-                        .ADDRESS_WIDTH(ADDRESS_WIDTH),
-                        .MAX_WEIGHT(MAX_WEIGHT)
-                    ) neighbor_link_UD (
                         .clk(clk),
                         .reset(reset),
                         .global_stage(global_stage),
-                        .fully_grown(PU(i, j, k-1).neighbor_fully_grown[NEIGHBOR_IDX_UP]),
-                        .a_increase(PU(i, j, k-1).neighbor_increase), .b_increase(), .is_boundary(PU(i, j, k-1).neighbor_is_boundary[NEIGHBOR_IDX_UP]), .a_is_error_in(PU(i, j, k-1).neighbor_is_error[NEIGHBOR_IDX_UP]), .b_is_error_in(), .is_error(CORRECTION_UD(i, j, k)),
-                        .a_input_data(SLICE_VEC(PU(i, j, k-1).output_data, NEIGHBOR_IDX_UP, EXPOSED_DATA_SIZE)),
+                        .fully_grown(`PU(i, j, k-1).neighbor_fully_grown[`NEIGHBOR_IDX_UP]),
+                        .a_increase(`PU(i, j, k-1).neighbor_increase),
+                        .b_increase(),
+                        .is_boundary(`PU(i, j, k-1).neighbor_is_boundary[`NEIGHBOR_IDX_UP]),
+                        .a_is_error_in(`PU(i, j, k-1).neighbor_is_error[`NEIGHBOR_IDX_UP]),
+                        .b_is_error_in(),
+                        .is_error(),
+                        .a_input_data(`SLICE_VEC(`PU(i, j, k-1).output_data, `NEIGHBOR_IDX_UP, EXPOSED_DATA_SIZE)),
                         .b_input_data(),
-                        .a_output_data(SLICE_VEC(PU(i, j, k-1).input_data, NEIGHBOR_IDX_UP, EXPOSED_DATA_SIZE)),
+                        .a_output_data(`SLICE_VEC(`PU(i, j, k-1).input_data, `NEIGHBOR_IDX_UP, EXPOSED_DATA_SIZE)),
                         .b_output_data(),
                         .weight_in(2),
                         .weight_out(),

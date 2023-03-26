@@ -5,7 +5,7 @@
 module processing_unit #(
     parameter ADDRESS_WIDTH = 6,
     parameter NEIGHBOR_COUNT = 6,
-    parameter ADDRESS = 0, // M,X,Z, address
+    parameter ADDRESS = 0 // M,X,Z, address
 ) (
     clk,
     reset,
@@ -173,15 +173,15 @@ end
 always@(posedge clk) begin
     if(stage == STAGE_MEASUREMENT_LOADING) begin
         odd <= measurement;
-        odd_to_children <= measurement;
+        odd_to_children <= (measurement ? 6'h3f : 0);
     end else begin
         if (stage == STAGE_MERGE) begin
             if(|parent_vector) begin
                 odd <= |(parent_vector & parent_odd);
-                odd_to_children <= |(parent_vector & parent_odd);
+                odd_to_children <= (|(parent_vector & parent_odd) ? 6'h3f : 0);
             end else begin
                 odd <= next_cluster_parity & !next_cluster_touching_boundary;
-                odd_to_children <= next_cluster_parity & !next_cluster_touching_boundary;
+                odd_to_children <= ((next_cluster_parity & !next_cluster_touching_boundary) ? 6'h3f : 0);
             end
         end else if(stage == STAGE_PEELING) begin
             if(~(|parent_vector)) begin

@@ -31,6 +31,9 @@ localparam Z_BIT_WIDTH = $clog2(GRID_WIDTH_Z);
 localparam U_BIT_WIDTH = $clog2(GRID_WIDTH_U);
 localparam ADDRESS_WIDTH = X_BIT_WIDTH + Z_BIT_WIDTH + U_BIT_WIDTH;
 
+localparam BYTES_PER_ROUND = ((GRID_WIDTH_X * GRID_WIDTH_Z  + 7) >> 3);
+localparam ALIGNED_PU_PER_ROUND = (BYTES_PER_ROUND << 3);
+
 localparam PU_COUNT_PER_ROUND = GRID_WIDTH_X * GRID_WIDTH_Z;
 localparam PU_COUNT = PU_COUNT_PER_ROUND * GRID_WIDTH_U;
 
@@ -42,7 +45,7 @@ reg [STAGE_WIDTH-1:0] global_stage_previous;
 
 input [PU_COUNT - 1 : 0]  odd_clusters_PE;
 input [PU_COUNT - 1 : 0]  busy_PE;
-output reg [PU_COUNT_PER_ROUND-1:0] measurements;
+output reg [ALIGNED_PU_PER_ROUND-1:0] measurements;
 
 input [7 : 0] input_data;
 input input_valid;
@@ -131,10 +134,10 @@ always @(posedge clk) begin
 
             STAGE_MEASUREMENT_PREPARING: begin // 7
                 if (input_valid && input_ready) begin
-                    for (idx = 0; idx < (N - 8); idx = idx + 8) begin
-                        measurements[N-1-idx-7:N-1-idx-14] <= data_array[N-1-idx-15:N-1-idx-22];
+                    measurements[ALIGNED_PU_PER_ROUND-1:ALIGNED_PU_PER_ROUND-8] <= input_data;
+                    if(ALIGNED_PU_PER_ROUND > 8) begin
+                        measurements[ALIGNED_PU_PER_ROUND-9:0] <= measurements[ALIGNED_PU_PER_ROUND-1:8];
                     end
-                    measurements[7:0] <= data_in;
                     messages_per_round_of_measurement <= messages_per_round_of_measurement + 8;
                     if(messages_per_round_of_measurement + 8 >= PU_COUNT_PER_ROUND) begin
                         global_stage <= STAGE_MEASUREMENT_LOADING;
@@ -212,7 +215,7 @@ always@(*) begin
     if (reset) begin
         input_ready = 0;
     end else begin 
-        if(global_stage == STAGE_IDLE || STAGE_MEASUREMENT_PREPARING) begin
+        if(global_stage == STAGE_IDLE || global_stage == STAGE_MEASUREMENT_PREPARING) begin
             input_ready = 1;
         end else begin
             input_ready = 0;
@@ -224,7 +227,7 @@ always@(*) begin
     if (reset) begin
         output_valid = 0;
     end else begin 
-        if(result_valid) begin
+        if(global_stage == STAGE_RESULT_VALID) begin
             output_valid = 1;
         end else begin
             output_valid = 0;

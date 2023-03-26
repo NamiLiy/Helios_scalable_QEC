@@ -18,7 +18,7 @@ module neighbor_link_internal #(
     b_increase,
     is_boundary,
 
-    a_input_data
+    a_input_data,
     b_input_data,
     a_output_data,
     b_output_data,
@@ -62,6 +62,7 @@ input [LINK_BIT_WIDTH-1:0] weight_in;
 input [1:0] boundary_condition_in;
 
 output reg [LINK_BIT_WIDTH-1:0] weight_out;
+output reg [1:0] boundary_condition_out;
 
 reg [LINK_BIT_WIDTH-1 : 0] growth;
 
@@ -69,24 +70,32 @@ reg [LINK_BIT_WIDTH-1 : 0] growth;
 
 `define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
+localparam GROWTH_CALC_WIDTH = $clog2(MAX_WEIGHT + 3);
+reg [GROWTH_CALC_WIDTH-1:0] growth_new;
+
+always@(*) begin
+    if (boundary_condition_out == 0)  begin // No boundary default case 
+        growth_new = growth + a_increase + b_increase;
+    end else if (boundary_condition_out == 1) begin // edge touching a boundary
+        growth_new = growth + a_increase;
+    end else begin // Non existant edge
+        growth_new = 0;
+    end
+    if (growth_new > weight_out) begin
+        growth_new = weight_out;
+    end
+end
+
 
 always@(posedge clk) begin
     if(reset) begin
         growth <= 0;
     end else begin
-        if (boundary_condition_out == 0)  begin // No boundary default case 
-            if(global_stage == STAGE_MEASUREMENT_LOADING) begin
+        if(global_stage == STAGE_MEASUREMENT_LOADING) begin
                 growth <= 0;
-            end else begin
-                growth <= `MIN(growth + a_increase + b_increase, weight_out);
-            end
-        end else if (boundary_condition_out == 1) begin // edge touching a boundary
-            if(global_stage == STAGE_MEASUREMENT_LOADING) begin
-                growth <= 0;
-            end else begin
-                growth <= `MIN(growth + a_increase, weight_out);
-            end
-        end
+        end else begin
+            growth <= growth_new;
+        end 
     end
 end
 
@@ -106,12 +115,14 @@ always@(posedge clk) begin
             end else begin
                 is_error <= a_is_error_in;
             end
+        end else begin // Non existant edge
+            is_error <= 0;
         end
     end
 end
 
 assign fully_grown = growth >= weight_out;
-assign is_boundary = boundary_condition_out;
+assign is_boundary = boundary_condition_out && fully_grown;
 
 assign a_output_data = (boundary_condition_out ==0)? b_input_data : 0;
 assign b_output_data = (boundary_condition_out ==0)? a_input_data : 0;

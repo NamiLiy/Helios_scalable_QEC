@@ -14,7 +14,7 @@ localparam [STAGE_WIDTH-1:0]
 
 localparam [7:0]
     START_DECODING_MSG = 8'h01,
-    MEASUREMENT_DATA_HEADER = 8'h02,
+    MEASUREMENT_DATA_HEADER = 8'h02;
 
 //`define DEFINE_DUF_PARAMETERS 1
 //`endif
