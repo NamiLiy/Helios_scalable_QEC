@@ -1,6 +1,6 @@
 module Helios_single_FPGA #(
-    parameter GRID_WIDTH_X = 3,
-    parameter GRID_WIDTH_Z = 2,
+    parameter GRID_WIDTH_X = 4,
+    parameter GRID_WIDTH_Z = 1,
     parameter GRID_WIDTH_U = 3,
     parameter MAX_WEIGHT = 2
 ) (
@@ -29,7 +29,7 @@ localparam PU_COUNT_PER_ROUND = GRID_WIDTH_X * GRID_WIDTH_Z;
 localparam PU_COUNT = PU_COUNT_PER_ROUND * GRID_WIDTH_U;
 
 localparam NS_ERROR_COUNT_PER_ROUND = (GRID_WIDTH_X-1) * GRID_WIDTH_Z;
-localparam EW_ERROR_COUNT_PER_ROUND = GRID_WIDTH_X * (GRID_WIDTH_Z+1);
+localparam EW_ERROR_COUNT_PER_ROUND = (GRID_WIDTH_X-1) * GRID_WIDTH_Z + 1;
 localparam UD_ERROR_COUNT_PER_ROUND = GRID_WIDTH_X * GRID_WIDTH_Z;
 localparam CORRECTION_COUNT_PER_ROUND = NS_ERROR_COUNT_PER_ROUND + EW_ERROR_COUNT_PER_ROUND + UD_ERROR_COUNT_PER_ROUND;
 
@@ -52,12 +52,12 @@ wire [PU_COUNT_PER_ROUND-1:0] measurements;
 wire [PU_COUNT - 1 : 0] odd_clusters;
 wire [PU_COUNT - 1 : 0] busy;
 
-single_FPGA_decoding_graph_dynamic #( 
+single_FPGA_decoding_graph_dynamic_rsc #( 
     .GRID_WIDTH_X(GRID_WIDTH_X),
     .GRID_WIDTH_Z(GRID_WIDTH_Z),
     .GRID_WIDTH_U(GRID_WIDTH_U),
     .MAX_WEIGHT(MAX_WEIGHT)
-) decoding_graph (
+) decoding_graph_rsc (
     .clk(clk),
     .reset(reset),
     .measurements(measurements),
