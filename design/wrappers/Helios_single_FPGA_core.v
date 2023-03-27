@@ -11,9 +11,9 @@ module Helios_single_FPGA #(
     input_ready,
     output_data,
     output_valid,
-    output_ready,
+    output_ready
 
-    roots // A debug port. Do not use in the real implementation
+    // roots // A debug port. Do not use in the real implementation
 );
 
 `include "../../parameters/parameters.sv"
@@ -43,10 +43,10 @@ output [7 : 0] output_data;
 output output_valid;
 input output_ready;
 
-output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
+wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 
 wire [STAGE_WIDTH-1:0] global_stage;
-wire [CORRECTION_COUNT_PER_ROUND*GRID_WIDTH_U - 1 : 0] correction;
+wire [CORRECTION_COUNT_PER_ROUND - 1 : 0] correction;
 
 wire [PU_COUNT_PER_ROUND-1:0] measurements;
 wire [PU_COUNT - 1 : 0] odd_clusters;
@@ -86,7 +86,8 @@ unified_controller #(
     .busy_PE(busy),
     .odd_clusters_PE(odd_clusters),
     .global_stage(global_stage),
-    .measurements(measurements)
+    .measurements(measurements),
+    .correction(correction)
 );
 
 endmodule

@@ -16,7 +16,7 @@ module verification_bench_single_FPGA;
 `include "../../parameters/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
-localparam CODE_DISTANCE = 7;                ;
+localparam CODE_DISTANCE = 5;                ;
 localparam CODE_DISTANCE_X = CODE_DISTANCE;
 localparam CODE_DISTANCE_Z = CODE_DISTANCE_X - 1;
 localparam WEIGHT_X = 2;
@@ -62,11 +62,10 @@ reg [`ALIGNED_PU_PER_ROUND*GRID_WIDTH_U-1:0] measurements;
 `define PADDED_INDEX(i, j, k) (i * CODE_DISTANCE_Z + j + k * `ALIGNED_PU_PER_ROUND)
 `define measurements(i, j, k) measurements[`PADDED_INDEX(i, j, k)]
 // `define is_odd_cluster(i, j, k) decoder.is_odd_clusters[`INDEX(i, j, k)]
-`define root(i, j, k) roots[ADDRESS_WIDTH*`INDEX(i, j, k) +: ADDRESS_WIDTH]
-`define root_x(i, j, k) roots[ADDRESS_WIDTH*`INDEX(i, j, k)+Z_BIT_WIDTH +: X_BIT_WIDTH]
-`define root_z(i, j, k) roots[ADDRESS_WIDTH*`INDEX(i, j, k) +: Z_BIT_WIDTH]
-`define root_u(i, j, k) roots[ADDRESS_WIDTH*`INDEX(i, j, k)+X_BIT_WIDTH+Z_BIT_WIDTH +: U_BIT_WIDTH]
-`define PU(i, j, k) decoder.decoder.pu_k[k].pu_i[i].pu_j[j].u_processing_unit
+`define root(i, j, k) decoder.roots[ADDRESS_WIDTH*`INDEX(i, j, k) +: ADDRESS_WIDTH]
+`define root_x(i, j, k) decoder.roots[ADDRESS_WIDTH*`INDEX(i, j, k)+Z_BIT_WIDTH +: X_BIT_WIDTH]
+`define root_z(i, j, k) decoder.roots[ADDRESS_WIDTH*`INDEX(i, j, k) +: Z_BIT_WIDTH]
+`define root_u(i, j, k) decoder.roots[ADDRESS_WIDTH*`INDEX(i, j, k)+X_BIT_WIDTH+Z_BIT_WIDTH +: U_BIT_WIDTH]
 
 reg [7:0] input_data;
 reg input_valid;
@@ -96,9 +95,9 @@ Helios_single_FPGA #(
     .input_ready(input_ready_fifo),
     .output_data(output_data_fifo),
     .output_valid(output_valid_fifo),
-    .output_ready(output_ready_fifo),
+    .output_ready(output_ready_fifo)
     
-    .roots(roots)
+    //.roots(roots)
 );
 
 // FIFO
@@ -158,6 +157,7 @@ reg [31:0] input_fifo_counter;
 reg new_round_start;
 reg [31:0] cycle_counter;
 reg [31:0] iteration_counter;
+reg [31:0] message_counter;
 
 always @(posedge clk) begin
     if(reset) begin
@@ -184,12 +184,26 @@ always @(posedge clk) begin
             3'b100: begin
                 if(output_valid == 1) begin
                     loading_state <= 3'b101;
+                    message_counter <= 0;
                 end
             end
             3'b101: begin
                 if(output_valid == 0) begin
                     loading_state <= 3'b10;
+                end else begin
+                    message_counter <= message_counter + 1;
+                    if (message_counter == 0) begin
+                        iteration_counter <= {24'b0, output_data[7:0]};
+                    end
+                    if (message_counter == 1) begin
+                        cycle_counter[15:8] <= {24'b0, output_data[7:0]};
+                    end
+                    if (message_counter == 2) begin
+                        cycle_counter[7:0] <= {24'b0, output_data[7:0]};
+                    end
+                    cycle_counter[31:16] <= 16'b0;
                 end
+                
             end
         endcase
     end
@@ -266,7 +280,7 @@ end
 
 // Output verification logic
 always @(posedge clk) begin
-    if (loading_state == 3'b100 && output_valid) begin
+    if (loading_state == 3'b101 && !output_valid) begin // This is not becaus we wait until all messages are received
 
         if(open == 1) begin
             if (CODE_DISTANCE == 3) begin

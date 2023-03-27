@@ -43,7 +43,7 @@ input [STAGE_WIDTH-1:0] global_stage;
 output [PU_COUNT - 1 : 0] odd_clusters;
 output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 output [PU_COUNT - 1 : 0] busy;
-output [CORRECTION_COUNT_PER_ROUND*GRID_WIDTH_U - 1 : 0] correction;
+output [CORRECTION_COUNT_PER_ROUND - 1 : 0] correction;
 
 genvar i;
 genvar j;
@@ -107,7 +107,6 @@ generate
 endgenerate
     
 
-
 generate
     for (k=GRID_WIDTH_U-1; k >= 0; k=k-1) begin: pu_k_extra
         for (i=0; i < GRID_WIDTH_X; i=i+1) begin: pu_i_extra
@@ -134,14 +133,14 @@ endgenerate
 `define SLICE_VEC(vec, idx, width) (vec[idx*width +: width])
 
 
-`define CORR_INDEX_NS(i, j, k) (k*(GRID_WIDTH_X-1)*GRID_WIDTH_Z + (i-1)*(GRID_WIDTH_Z) + j)
-`define CORR_INDEX_EW(i, j, k) (k*GRID_WIDTH_X*(GRID_WIDTH_Z+1) + i*(GRID_WIDTH_Z+1) + j + NS_ERROR_COUNT_PER_ROUND*GRID_WIDTH_U)
-`define CORR_INDEX_UD(i, j, k) (k*GRID_WIDTH_X*GRID_WIDTH_Z + i*GRID_WIDTH_Z + j + NS_ERROR_COUNT_PER_ROUND*GRID_WIDTH_U + EW_ERROR_COUNT_PER_ROUND*GRID_WIDTH_U)
+`define CORR_INDEX_NS(i, j) ((i-1)*(GRID_WIDTH_Z) + j)
+`define CORR_INDEX_EW(i, j) (i*(GRID_WIDTH_Z+1) + j + NS_ERROR_COUNT_PER_ROUND)
+`define CORR_INDEX_UD(i, j) (i*GRID_WIDTH_Z + j + NS_ERROR_COUNT_PER_ROUND + EW_ERROR_COUNT_PER_ROUND)
 
 
-`define CORRECTION_NS(i, j, k) correction[`CORR_INDEX_NS(i, j, k)]
-`define CORRECTION_EW(i, j, k) correction[`CORR_INDEX_EW(i, j, k)]
-`define CORRECTION_UD(i, j, k) correction[`CORR_INDEX_UD(i, j, k)]
+`define CORRECTION_NS(i, j) correction[`CORR_INDEX_NS(i, j)]
+`define CORRECTION_EW(i, j) correction[`CORR_INDEX_EW(i, j)]
+`define CORRECTION_UD(i, j) correction[`CORR_INDEX_UD(i, j)]
 
 
 generate
@@ -149,6 +148,8 @@ generate
     for (k=0; k < GRID_WIDTH_U; k=k+1) begin: ns_k
         for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: ns_i
             for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: ns_j
+                wire is_error_systolic_in;
+                wire is_error_out;
                 if(i==0) begin
                     neighbor_link_internal #(
                         .ADDRESS_WIDTH(ADDRESS_WIDTH),
@@ -171,7 +172,9 @@ generate
                         .weight_in(2),
                         .weight_out(),
                         .boundary_condition_in(2),
-                        .boundary_condition_out()
+                        .boundary_condition_out(),
+                        .is_error_systolic_in(is_error_systolic_in)
+
                     );  
                 end else if (i < GRID_WIDTH_X) begin
                     neighbor_link_internal #(
@@ -187,7 +190,7 @@ generate
                         .is_boundary(`PU(i-1, j, k).neighbor_is_boundary[`NEIGHBOR_IDX_SOUTH]),
                         .a_is_error_in(`PU(i-1, j, k).neighbor_is_error[`NEIGHBOR_IDX_SOUTH]),
                         .b_is_error_in(`PU(i, j, k).neighbor_is_error[`NEIGHBOR_IDX_NORTH]),
-                        .is_error(`CORRECTION_NS(i, j, k)),
+                        .is_error(is_error_out),
                         .a_input_data(`SLICE_VEC(`PU(i-1, j, k).output_data, `NEIGHBOR_IDX_SOUTH, EXPOSED_DATA_SIZE)),
                         .b_input_data(`SLICE_VEC(`PU(i, j, k).output_data, `NEIGHBOR_IDX_NORTH, EXPOSED_DATA_SIZE)),
                         .a_output_data(`SLICE_VEC(`PU(i-1, j, k).input_data, `NEIGHBOR_IDX_SOUTH, EXPOSED_DATA_SIZE)),
@@ -195,7 +198,8 @@ generate
                         .weight_in(2),
                         .weight_out(),
                         .boundary_condition_in(0),
-                        .boundary_condition_out()
+                        .boundary_condition_out(),
+                        .is_error_systolic_in(is_error_systolic_in)
                     );
 
                     assign `PU(i, j, k).neighbor_fully_grown[`NEIGHBOR_IDX_NORTH] = `PU(i-1, j, k).neighbor_fully_grown[`NEIGHBOR_IDX_SOUTH];
@@ -222,7 +226,8 @@ generate
                         .weight_in(2),
                         .weight_out(),
                         .boundary_condition_in(2),
-                        .boundary_condition_out()
+                        .boundary_condition_out(),
+                        .is_error_systolic_in(is_error_systolic_in)
                     ); 
                 end
             end
@@ -233,6 +238,8 @@ generate
     for (k=0; k < GRID_WIDTH_U; k=k+1) begin: ew_k
         for (i=0; i < GRID_WIDTH_X; i=i+1) begin: ew_i
             for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: ew_j
+                wire is_error_systolic_in;
+                wire is_error_out;
                 if(j==0) begin
                     neighbor_link_internal #(
                         .ADDRESS_WIDTH(ADDRESS_WIDTH),
@@ -247,7 +254,7 @@ generate
                         .is_boundary(`PU(i, j, k).neighbor_is_boundary[`NEIGHBOR_IDX_WEST]),
                         .a_is_error_in(`PU(i, j, k).neighbor_is_error[`NEIGHBOR_IDX_WEST]),
                         .b_is_error_in(),
-                        .is_error(`CORRECTION_EW(i, j, k)),
+                        .is_error(is_error_out),
                         .a_input_data(`SLICE_VEC(`PU(i, j, k).output_data, `NEIGHBOR_IDX_WEST, EXPOSED_DATA_SIZE)),
                         .b_input_data(),
                         .a_output_data(`SLICE_VEC(`PU(i, j, k).input_data, `NEIGHBOR_IDX_WEST, EXPOSED_DATA_SIZE)),
@@ -255,7 +262,8 @@ generate
                         .weight_in(2),
                         .weight_out(),
                         .boundary_condition_in(1),
-                        .boundary_condition_out()
+                        .boundary_condition_out(),
+                        .is_error_systolic_in(is_error_systolic_in)
                     );  
                 end else if (j < GRID_WIDTH_Z) begin
                     neighbor_link_internal #(
@@ -271,7 +279,7 @@ generate
                         .is_boundary(`PU(i, j-1, k).neighbor_is_boundary[`NEIGHBOR_IDX_EAST]),
                         .a_is_error_in(`PU(i, j-1, k).neighbor_is_error[`NEIGHBOR_IDX_EAST]),
                         .b_is_error_in(`PU(i, j, k).neighbor_is_error[`NEIGHBOR_IDX_WEST]),
-                        .is_error(`CORRECTION_EW(i, j, k)),
+                        .is_error(is_error_out),
                         .a_input_data(`SLICE_VEC(`PU(i, j-1, k).output_data, `NEIGHBOR_IDX_EAST, EXPOSED_DATA_SIZE)),
                         .b_input_data(`SLICE_VEC(`PU(i, j, k).output_data, `NEIGHBOR_IDX_WEST, EXPOSED_DATA_SIZE)),
                         .a_output_data(`SLICE_VEC(`PU(i, j-1, k).input_data, `NEIGHBOR_IDX_EAST, EXPOSED_DATA_SIZE)),
@@ -279,7 +287,8 @@ generate
                         .weight_in(2),
                         .weight_out(),
                         .boundary_condition_in(0),
-                        .boundary_condition_out()
+                        .boundary_condition_out(),
+                        .is_error_systolic_in(is_error_systolic_in)
                     );
 
                     assign `PU(i, j, k).neighbor_fully_grown[`NEIGHBOR_IDX_WEST] = `PU(i, j-1, k).neighbor_fully_grown[`NEIGHBOR_IDX_EAST];
@@ -298,7 +307,7 @@ generate
                         .is_boundary(`PU(i, j-1, k).neighbor_is_boundary[`NEIGHBOR_IDX_EAST]),
                         .a_is_error_in(`PU(i, j-1, k).neighbor_is_error[`NEIGHBOR_IDX_EAST]),
                         .b_is_error_in(),
-                        .is_error(`CORRECTION_EW(i, j, k)),
+                        .is_error(is_error_out),
                         .a_input_data(`SLICE_VEC(`PU(i, j-1, k).output_data, `NEIGHBOR_IDX_EAST, EXPOSED_DATA_SIZE)),
                         .b_input_data(),
                         .a_output_data(`SLICE_VEC(`PU(i, j-1, k).input_data, `NEIGHBOR_IDX_EAST, EXPOSED_DATA_SIZE)),
@@ -306,7 +315,8 @@ generate
                         .weight_in(2),
                         .weight_out(),
                         .boundary_condition_in(1),
-                        .boundary_condition_out()
+                        .boundary_condition_out(),
+                        .is_error_systolic_in(is_error_systolic_in)
                     );
                 end
             end
@@ -317,6 +327,8 @@ generate
     for (k=0; k <= GRID_WIDTH_U; k=k+1) begin: ud_k
         for (i=0; i < GRID_WIDTH_X; i=i+1) begin: ud_i
             for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: ud_j
+                wire is_error_systolic_in;
+                wire is_error_out;
                 if(k==0) begin
                     neighbor_link_internal #(
                         .ADDRESS_WIDTH(ADDRESS_WIDTH),
@@ -331,7 +343,7 @@ generate
                         .is_boundary(`PU(i, j, k).neighbor_is_boundary[`NEIGHBOR_IDX_DOWN]),
                         .a_is_error_in(`PU(i, j, k).neighbor_is_error[`NEIGHBOR_IDX_DOWN]),
                         .b_is_error_in(),
-                        .is_error(`CORRECTION_UD(i, j, k)),
+                        .is_error(is_error_out),
                         .a_input_data(`SLICE_VEC(`PU(i, j, k).output_data, `NEIGHBOR_IDX_DOWN, EXPOSED_DATA_SIZE)),
                         .b_input_data(),
                         .a_output_data(`SLICE_VEC(`PU(i, j, k).input_data, `NEIGHBOR_IDX_DOWN, EXPOSED_DATA_SIZE)),
@@ -339,7 +351,8 @@ generate
                         .weight_in(2),
                         .weight_out(),
                         .boundary_condition_in(1),
-                        .boundary_condition_out()
+                        .boundary_condition_out(),
+                        .is_error_systolic_in(is_error_systolic_in)
                     );  
                 end else if (k < GRID_WIDTH_U) begin
                     neighbor_link_internal #(
@@ -355,7 +368,7 @@ generate
                         .is_boundary(`PU(i, j, k-1).neighbor_is_boundary[`NEIGHBOR_IDX_UP]),
                         .a_is_error_in(`PU(i, j, k-1).neighbor_is_error[`NEIGHBOR_IDX_UP]),
                         .b_is_error_in(`PU(i, j, k).neighbor_is_error[`NEIGHBOR_IDX_DOWN]),
-                        .is_error(`CORRECTION_UD(i, j, k)),
+                        .is_error(is_error_out),
                         .a_input_data(`SLICE_VEC(`PU(i, j, k-1).output_data, `NEIGHBOR_IDX_UP, EXPOSED_DATA_SIZE)),
                         .b_input_data(`SLICE_VEC(`PU(i, j, k).output_data, `NEIGHBOR_IDX_DOWN, EXPOSED_DATA_SIZE)),
                         .a_output_data(`SLICE_VEC(`PU(i, j, k-1).input_data, `NEIGHBOR_IDX_UP, EXPOSED_DATA_SIZE)),
@@ -363,7 +376,8 @@ generate
                         .weight_in(2),
                         .weight_out(),
                         .boundary_condition_in(0),
-                        .boundary_condition_out()
+                        .boundary_condition_out(),
+                        .is_error_systolic_in(is_error_systolic_in)
                     );
 
                     assign `PU(i, j, k).neighbor_fully_grown[`NEIGHBOR_IDX_DOWN] = `PU(i, j, k-1).neighbor_fully_grown[`NEIGHBOR_IDX_UP];
@@ -390,13 +404,59 @@ generate
                         .weight_in(2),
                         .weight_out(),
                         .boundary_condition_in(2),
-                        .boundary_condition_out()
+                        .boundary_condition_out(),
+                        .is_error_systolic_in(is_error_systolic_in)
                     );
                 end
             end
         end
     end
     
+endgenerate
+
+generate
+    for (k=0; k < GRID_WIDTH_U-1; k=k+1) begin: ns_k_extra
+        for (i=1; i < GRID_WIDTH_X; i=i+1) begin: ns_i_extra
+            for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: ns_j_extra
+                assign ns_k[k].ns_i[i].ns_j[j].is_error_systolic_in = ns_k[k+1].ns_i[i].ns_j[j].is_error_out;
+            end
+        end
+    end
+
+    for (k=0; k < GRID_WIDTH_U-1; k=k+1) begin: ew_k_extra
+        for (i=0; i < GRID_WIDTH_X; i=i+1) begin: ew_i_extra
+            for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: ew_j_extra
+                assign ew_k[k].ew_i[i].ew_j[j].is_error_systolic_in = ew_k[k+1].ew_i[i].ew_j[j].is_error_out;
+            end
+        end
+    end
+
+    for (k=0; k < GRID_WIDTH_U-1; k=k+1) begin: ud_k_extra
+        for (i=0; i < GRID_WIDTH_X; i=i+1) begin: ud_i_extra
+            for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: ud_j_extra
+                assign ud_k[k].ud_i[i].ud_j[j].is_error_systolic_in = ud_k[k+1].ud_i[i].ud_j[j].is_error_out;
+            end
+        end
+    end
+
+    for (i=1; i < GRID_WIDTH_X; i=i+1) begin: ns_i_output
+        for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: ns_j_output
+            assign `CORRECTION_NS(i,j) = ns_k[0].ns_i[i].ns_j[j].is_error_out;
+        end
+    end
+
+    for (i=0; i < GRID_WIDTH_X; i=i+1) begin: ew_i_output
+        for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: ew_j_output
+            assign `CORRECTION_EW(i,j) = ew_k[0].ew_i[i].ew_j[j].is_error_out;
+        end
+    end
+
+    for (i=0; i < GRID_WIDTH_X; i=i+1) begin: ud_i_output
+        for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: ud_j_output
+            assign `CORRECTION_UD(i,j) = ud_k[0].ud_i[i].ud_j[j].is_error_out;
+        end
+    end
+
 endgenerate
 
 endmodule
