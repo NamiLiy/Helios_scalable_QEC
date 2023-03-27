@@ -185,7 +185,7 @@ always@(posedge clk) begin
             end
         end else if(stage == STAGE_PEELING) begin
             if(~(|parent_vector)) begin
-                if(next_cluster_parity) begin // The cluster has even number of vertices
+                if(!next_cluster_parity) begin // The cluster has even number of vertices
                     odd <= 0;
                     odd_to_children <= 0;
                 end else begin // The cluster has odd number of vertices
