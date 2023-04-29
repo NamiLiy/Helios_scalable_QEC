@@ -35,6 +35,8 @@ localparam UD_ERROR_COUNT_PER_ROUND = GRID_WIDTH_X * GRID_WIDTH_Z;
 localparam CORRECTION_COUNT_PER_ROUND = NS_ERROR_COUNT_PER_ROUND + EW_ERROR_COUNT_PER_ROUND + UD_ERROR_COUNT_PER_ROUND;
 localparam EXPOSED_DATA_SIZE = ADDRESS_WIDTH + 1 + 1 + 1 + 1 + 3;
 
+localparam LINK_BIT_WIDTH = $clog2(MAX_WEIGHT + 1);
+
 input clk;
 input reset;
 input [PU_COUNT_PER_ROUND-1:0] measurements;
@@ -142,6 +144,21 @@ endgenerate
 `define CORRECTION_EW(i, j) correction[`CORR_INDEX_EW(i, j)]
 `define CORRECTION_UD(i, j) correction[`CORR_INDEX_UD(i, j)]
 
+// `define EDGE_INDEX(i,j) (i*GRID_WIDTH_Z + j)
+
+//localparam logic [31:0] weight_list [CORRECTION_COUNT_PER_ROUND] = {32'd9, 32'd9, 32'd9, 32'd8, 32'd9, 32'd9, 32'd8, 32'd9, 32'd9, 32'd9, 32'd10, 32'd9, 32'd9, 32'd9, 32'd9, 32'd10, 32'd10, 32'd9, 32'd9, 32'd9, 32'd10, 32'd10, 32'd9, 32'd9, 32'd9, 32'd10, 32'd9, 32'd9, 32'd9, 32'd9, 32'd10, 32'd9, 32'd9, 32'd11, 32'd9, 32'd11, 32'd8, 32'd8, 32'd9, 32'd9, 32'd10, 32'd10, 32'd10, 32'd9, 32'd11, 32'd8, 32'd9, 32'd11, 32'd8, 32'd9, 32'd9, 32'd9, 32'd11, 32'd9, 32'd9, 32'd9, 32'd10, 32'd9, 32'd9, 32'd9, 32'd9, 32'd8, 32'd10, 32'd8, 32'd8, 32'd9, 32'd10, 32'd9, 32'd16, 32'd9, 32'd9, 32'd10, 32'd10, 32'd9, 32'd8, 32'd11, 32'd9, 32'd11, 
+//32'd12, 32'd9, 32'd16, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd10, 32'd8, 32'd9, 32'd9, 32'd9, 32'd8, 32'd9, 32'd9, 32'd10, 32'd9, 32'd9, 32'd8, 32'd16, 32'd9, 32'd9, 32'd8, 32'd10, 32'd9, 32'd9, 32'd9, 32'd8, 32'd9, 32'd8, 32'd9, 32'd10, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd8, 32'd8, 32'd8, 32'd10, 32'd9, 32'd9, 32'd10, 32'd10, 32'd8, 32'd9, 32'd9, 32'd8, 32'd9, 32'd10, 32'd9, 32'd9, 32'd8, 32'd9, 32'd8, 32'd16, 32'd9, 32'd8, 32'd10, 32'd9, 32'd9, 32'd9, 32'd8, 32'd9, 32'd10, 32'd10, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 
+//32'd12, 32'd9, 32'd9, 32'd9, 32'd10, 32'd9, 32'd16, 32'd9, 32'd9, 32'd8, 32'd11, 32'd8, 32'd9, 32'd9, 32'd10, 32'd10, 32'd9, 32'd8, 32'd12, 32'd9, 32'd9, 32'd8, 32'd9, 32'd10, 32'd9, 32'd8, 32'd9, 32'd10, 32'd8, 32'd9, 32'd8, 32'd12, 32'd9, 32'd10, 32'd8, 32'd9, 32'd10, 32'd8, 32'd10, 32'd9, 32'd10, 32'd10, 32'd9, 32'd8, 32'd9, 32'd9, 32'd9, 32'd8, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd8, 32'd9, 32'd10, 32'd11, 32'd9, 32'd9, 32'd9, 32'd15, 32'd9, 32'd8, 32'd9, 32'd10, 32'd10, 32'd10, 32'd8, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd16, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd8, 32'd9, 32'd9};
+
+//`define WEIGHT_NS(i,j) weight_list[`CORR_INDEX_NS(i, j)]
+//`define WEIGHT_EW(i,j) weight_list[`CORR_INDEX_EW(i, j)]
+//`define WEIGHT_UD(i,j) weight_list[`CORR_INDEX_UD(i, j)]
+
+`define WEIGHT_NS(i,j) 2
+`define WEIGHT_EW(i,j) 2
+`define WEIGHT_UD(i,j) 2
+
+
 
 `define NEIGHBOR_LINK_INTERNAL_0(ai, aj, ak, bi, bj, bk, adirection, bdirection) \
     wire is_boundary; \
@@ -164,7 +181,7 @@ endgenerate
         .b_input_data(`SLICE_VEC(`PU(bi, bj, bk).output_data, bdirection, EXPOSED_DATA_SIZE)), \
         .a_output_data(`SLICE_VEC(`PU(ai, aj, ak).input_data, adirection, EXPOSED_DATA_SIZE)), \
         .b_output_data(`SLICE_VEC(`PU(bi, bj, bk).input_data, bdirection, EXPOSED_DATA_SIZE)), \
-        .weight_in(2), \
+        .weight_in(weight_in), \
         .weight_out(), \
         .boundary_condition_in(0), \
         .boundary_condition_out(), \
@@ -194,7 +211,7 @@ endgenerate
         .b_input_data(), \
         .a_output_data(`SLICE_VEC(`PU(ai, aj, ak).input_data, adirection, EXPOSED_DATA_SIZE)), \
         .b_output_data(), \
-        .weight_in(2), \
+        .weight_in(weight_in), \
         .weight_out(), \
         .boundary_condition_in(type), \
         .boundary_condition_out(), \
@@ -208,170 +225,19 @@ generate
             for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: ns_j
                 wire is_error_systolic_in;
                 wire is_error_out;
+                wire [LINK_BIT_WIDTH-1:0] weight_in;
                 if(i==0 && j < GRID_WIDTH_Z) begin // First row
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_NORTH, 2)
-                    // neighbor_link_internal #(
-                    //     .ADDRESS_WIDTH(ADDRESS_WIDTH),
-                    //     .MAX_WEIGHT(MAX_WEIGHT)
-                    // ) neighbor_link_NS (
-                    //     .clk(clk),
-                    //     .reset(reset),
-                    //     .global_stage(global_stage),
-                    //     .fully_grown(`PU(i, j, k).neighbor_fully_grown[`NEIGHBOR_IDX_NORTH]),
-                    //     .a_increase(`PU(i, j, k).neighbor_increase),
-                    //     .b_increase(),
-                    //     .is_boundary(`PU(i, j, k).neighbor_is_boundary[`NEIGHBOR_IDX_NORTH]),
-                    //     .a_is_error_in(`PU(i, j, k).neighbor_is_error[`NEIGHBOR_IDX_NORTH]),
-                    //     .b_is_error_in(),
-                    //     .is_error(),
-                    //     .a_input_data(`SLICE_VEC(`PU(i, j, k).output_data, `NEIGHBOR_IDX_NORTH, EXPOSED_DATA_SIZE)),
-                    //     .b_input_data(),
-                    //     .a_output_data(`SLICE_VEC(`PU(i, j, k).input_data, `NEIGHBOR_IDX_NORTH, EXPOSED_DATA_SIZE)),
-                    //     .b_output_data(),
-                    //     .weight_in(2),
-                    //     .weight_out(),
-                    //     .boundary_condition_in(2),
-                    //     .boundary_condition_out(),
-                    //     .is_error_systolic_in(is_error_systolic_in)
-
-                    // );
                 end else if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z) begin
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_SOUTH, 2)
-                    // neighbor_link_internal #(
-                    //     .ADDRESS_WIDTH(ADDRESS_WIDTH),
-                    //     .MAX_WEIGHT(MAX_WEIGHT)
-                    // ) neighbor_link_NS (
-                    //     .clk(clk),
-                    //     .reset(reset),
-                    //     .global_stage(global_stage),
-                    //     .fully_grown(`PU(i-1, j, k).neighbor_fully_grown[`NEIGHBOR_IDX_SOUTH]),
-                    //     .a_increase(`PU(i-1, j, k).neighbor_increase),
-                    //     .b_increase(),
-                    //     .is_boundary(`PU(i-1, j, k).neighbor_is_boundary[`NEIGHBOR_IDX_SOUTH]),
-                    //     .a_is_error_in(`PU(i-1, j, k).neighbor_is_error[`NEIGHBOR_IDX_SOUTH]),
-                    //     .b_is_error_in(),
-                    //     .is_error(),
-                    //     .a_input_data(`SLICE_VEC(`PU(i-1, j, k).output_data, `NEIGHBOR_IDX_SOUTH, EXPOSED_DATA_SIZE)),
-                    //     .b_input_data(),
-                    //     .a_output_data(`SLICE_VEC(`PU(i-1, j, k).input_data, `NEIGHBOR_IDX_SOUTH, EXPOSED_DATA_SIZE)),
-                    //     .b_output_data(),
-                    //     .weight_in(2),
-                    //     .weight_out(),
-                    //     .boundary_condition_in(2),
-                    //     .boundary_condition_out(),
-                    //     .is_error_systolic_in(is_error_systolic_in)
-                    // );  
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_SOUTH, 2)                   
                 end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0) begin // odd rows which are always internal
                     `NEIGHBOR_LINK_INTERNAL_0(i-1, j-1, k, i, j-1, k, `NEIGHBOR_IDX_SOUTH, `NEIGHBOR_IDX_NORTH)
-                    // neighbor_link_internal #(
-                    //     .ADDRESS_WIDTH(ADDRESS_WIDTH),
-                    //     .MAX_WEIGHT(MAX_WEIGHT)
-                    // ) neighbor_link_NS (
-                    //     .clk(clk),
-                    //     .reset(reset),
-                    //     .global_stage(global_stage),
-                    //     .fully_grown(`PU(i-1, j-1, k).neighbor_fully_grown[`NEIGHBOR_IDX_SOUTH]),
-                    //     .a_increase(`PU(i-1, j-1, k).neighbor_increase),
-                    //     .b_increase(`PU(i, j-1, k).neighbor_increase),
-                    //     .is_boundary(`PU(i-1, j-1, k).neighbor_is_boundary[`NEIGHBOR_IDX_SOUTH]),
-                    //     .a_is_error_in(`PU(i-1, j-1, k).neighbor_is_error[`NEIGHBOR_IDX_SOUTH]),
-                    //     .b_is_error_in(`PU(i, j-1, k).neighbor_is_error[`NEIGHBOR_IDX_NORTH]),
-                    //     .is_error(is_error_out),
-                    //     .a_input_data(`SLICE_VEC(`PU(i-1, j-1, k).output_data, `NEIGHBOR_IDX_SOUTH, EXPOSED_DATA_SIZE)),
-                    //     .b_input_data(`SLICE_VEC(`PU(i, j-1, k).output_data, `NEIGHBOR_IDX_NORTH, EXPOSED_DATA_SIZE)),
-                    //     .a_output_data(`SLICE_VEC(`PU(i-1, j-1, k).input_data, `NEIGHBOR_IDX_SOUTH, EXPOSED_DATA_SIZE)),
-                    //     .b_output_data(`SLICE_VEC(`PU(i, j-1, k).input_data, `NEIGHBOR_IDX_NORTH, EXPOSED_DATA_SIZE)),
-                    //     .weight_in(2),
-                    //     .weight_out(),
-                    //     .boundary_condition_in(0),
-                    //     .boundary_condition_out(),
-                    //     .is_error_systolic_in(is_error_systolic_in)
-                    // );
-
-                    // assign `PU(i, j-1, k).neighbor_fully_grown[`NEIGHBOR_IDX_NORTH] = `PU(i-1, j-1, k).neighbor_fully_grown[`NEIGHBOR_IDX_SOUTH];
-                    // assign `PU(i, j-1, k).neighbor_is_boundary[`NEIGHBOR_IDX_NORTH] = `PU(i-1, j-1, k).neighbor_is_boundary[`NEIGHBOR_IDX_SOUTH];
                 end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j == 0) begin // First element of even rows
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_NORTH, 2)
-                    // neighbor_link_internal #(
-                    //     .ADDRESS_WIDTH(ADDRESS_WIDTH),
-                    //     .MAX_WEIGHT(MAX_WEIGHT)
-                    // ) neighbor_link_NS (
-                    //     .clk(clk),
-                    //     .reset(reset),
-                    //     .global_stage(global_stage),
-                    //     .fully_grown(`PU(i, j, k).neighbor_fully_grown[`NEIGHBOR_IDX_NORTH]),
-                    //     .a_increase(`PU(i, j, k).neighbor_increase),
-                    //     .b_increase(),
-                    //     .is_boundary(`PU(i, j, k).neighbor_is_boundary[`NEIGHBOR_IDX_NORTH]),
-                    //     .a_is_error_in(`PU(i, j, k).neighbor_is_error[`NEIGHBOR_IDX_NORTH]),
-                    //     .b_is_error_in(),
-                    //     .is_error(),
-                    //     .a_input_data(`SLICE_VEC(`PU(i, j, k).output_data, `NEIGHBOR_IDX_NORTH, EXPOSED_DATA_SIZE)),
-                    //     .b_input_data(),
-                    //     .a_output_data(`SLICE_VEC(`PU(i, j, k).input_data, `NEIGHBOR_IDX_NORTH, EXPOSED_DATA_SIZE)),
-                    //     .b_output_data(),
-                    //     .weight_in(2),
-                    //     .weight_out(),
-                    //     .boundary_condition_in(2),
-                    //     .boundary_condition_out(),
-                    //     .is_error_systolic_in(is_error_systolic_in)
-
-                    // );
                 end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j == GRID_WIDTH_Z) begin // Last element of even rows
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j-1, k, `NEIGHBOR_IDX_SOUTH, 1)
-                    // neighbor_link_internal #(
-                    //     .ADDRESS_WIDTH(ADDRESS_WIDTH),
-                    //     .MAX_WEIGHT(MAX_WEIGHT)
-                    // ) neighbor_link_NS (
-                    //     .clk(clk),
-                    //     .reset(reset),
-                    //     .global_stage(global_stage),
-                    //     .fully_grown(`PU(i-1, j-1, k).neighbor_fully_grown[`NEIGHBOR_IDX_SOUTH]),
-                    //     .a_increase(`PU(i-1, j-1, k).neighbor_increase),
-                    //     .b_increase(),
-                    //     .is_boundary(`PU(i-1, j-1, k).neighbor_is_boundary[`NEIGHBOR_IDX_SOUTH]),
-                    //     .a_is_error_in(`PU(i-1, j-1, k).neighbor_is_error[`NEIGHBOR_IDX_SOUTH]),
-                    //     .b_is_error_in(),
-                    //     .is_error(),
-                    //     .a_input_data(`SLICE_VEC(`PU(i-1, j-1, k).output_data, `NEIGHBOR_IDX_SOUTH, EXPOSED_DATA_SIZE)),
-                    //     .b_input_data(),
-                    //     .a_output_data(`SLICE_VEC(`PU(i-1, j-1, k).input_data, `NEIGHBOR_IDX_SOUTH, EXPOSED_DATA_SIZE)),
-                    //     .b_output_data(),
-                    //     .weight_in(2),
-                    //     .weight_out(),
-                    //     .boundary_condition_in(1),
-                    //     .boundary_condition_out(),
-                    //     .is_error_systolic_in(is_error_systolic_in)
-                    // );
                 end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j > 0 && j < GRID_WIDTH_Z) begin // Middle elements of even rows
                     `NEIGHBOR_LINK_INTERNAL_0(i-1, j-1, k, i, j, k, `NEIGHBOR_IDX_SOUTH, `NEIGHBOR_IDX_NORTH)
-                    // neighbor_link_internal #(
-                    //     .ADDRESS_WIDTH(ADDRESS_WIDTH),
-                    //     .MAX_WEIGHT(MAX_WEIGHT)
-                    // ) neighbor_link_NS (
-                    //     .clk(clk),
-                    //     .reset(reset),
-                    //     .global_stage(global_stage),
-                    //     .fully_grown(`PU(i-1, j-1, k).neighbor_fully_grown[`NEIGHBOR_IDX_SOUTH]),
-                    //     .a_increase(`PU(i-1, j-1, k).neighbor_increase),
-                    //     .b_increase(`PU(i, j, k).neighbor_increase),
-                    //     .is_boundary(`PU(i-1, j-1, k).neighbor_is_boundary[`NEIGHBOR_IDX_SOUTH]),
-                    //     .a_is_error_in(`PU(i-1, j-1, k).neighbor_is_error[`NEIGHBOR_IDX_SOUTH]),
-                    //     .b_is_error_in(`PU(i, j, k).neighbor_is_error[`NEIGHBOR_IDX_NORTH]),
-                    //     .is_error(is_error_out),
-                    //     .a_input_data(`SLICE_VEC(`PU(i-1, j-1, k).output_data, `NEIGHBOR_IDX_SOUTH, EXPOSED_DATA_SIZE)),
-                    //     .b_input_data(`SLICE_VEC(`PU(i, j, k).output_data, `NEIGHBOR_IDX_NORTH, EXPOSED_DATA_SIZE)),
-                    //     .a_output_data(`SLICE_VEC(`PU(i-1, j-1, k).input_data, `NEIGHBOR_IDX_SOUTH, EXPOSED_DATA_SIZE)),
-                    //     .b_output_data(`SLICE_VEC(`PU(i, j, k).input_data, `NEIGHBOR_IDX_NORTH, EXPOSED_DATA_SIZE)),
-                    //     .weight_in(2),
-                    //     .weight_out(),
-                    //     .boundary_condition_in(0),
-                    //     .boundary_condition_out(),
-                    //     .is_error_systolic_in(is_error_systolic_in)
-                    // );
-
-                    // assign `PU(i, j, k).neighbor_fully_grown[`NEIGHBOR_IDX_NORTH] = `PU(i-1, j-1, k).neighbor_fully_grown[`NEIGHBOR_IDX_SOUTH];
-                    // assign `PU(i, j, k).neighbor_is_boundary[`NEIGHBOR_IDX_NORTH] = `PU(i-1, j-1, k).neighbor_is_boundary[`NEIGHBOR_IDX_SOUTH]; 
                 end
             end
         end
@@ -383,6 +249,8 @@ generate
             for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: ew_j
                 wire is_error_systolic_in;
                 wire is_error_out;
+                wire [LINK_BIT_WIDTH-1:0] weight_in;
+                assign weight_in = `WEIGHT_EW(i,j);
                 if(i==0 && j < GRID_WIDTH_Z) begin // First row
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_EAST, 2)
                 end else if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z) begin // Last row
@@ -408,6 +276,8 @@ generate
             for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: ud_j
                 wire is_error_systolic_in;
                 wire is_error_out;
+                wire [LINK_BIT_WIDTH-1:0] weight_in;
+                assign weight_in = `WEIGHT_UD(i,j);
                 if(k==0) begin
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_DOWN, 1)
                 end else if(k==GRID_WIDTH_U) begin
@@ -478,6 +348,45 @@ generate
             assign `CORRECTION_UD(i,j) = ud_k[0].ud_i[i].ud_j[j].is_error_out;
         end
     end
+
+    for (k=0; k < GRID_WIDTH_U; k=k+1) begin: ns_k_weight
+        for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: ns_i_weight
+            for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: ns_j_weight
+                if (i < GRID_WIDTH_X && i > 0 && j > 0) begin
+                    assign ns_k[k].ns_i[i].ns_j[j].weight_in = `WEIGHT_NS(i,j);
+                end else begin // Fake edges
+                    assign ns_k[k].ns_i[i].ns_j[j].weight_in = 2;
+                end
+            end
+        end
+    end
+
+    for (k=0; k < GRID_WIDTH_U; k=k+1) begin: ew_k_weight
+        for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: ew_i_weight
+            for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: ew_j_weight
+                if (i < GRID_WIDTH_X && i > 0 && j < GRID_WIDTH_Z) begin
+                    assign ew_k[k].ew_i[i].ew_j[j].weight_in = `WEIGHT_EW(i,j);
+                end else if (i == GRID_WIDTH_X-1 && j == GRID_WIDTH_Z) begin
+                    assign ew_k[k].ew_i[i].ew_j[j].weight_in = `WEIGHT_EW(i,j);
+                end else begin // Fake edges
+                    assign ew_k[k].ew_i[i].ew_j[j].weight_in = 2;
+                end
+            end
+        end
+    end
+
+    for (k=0; k <= GRID_WIDTH_U; k=k+1) begin: ud_k_weight
+        for (i=0; i < GRID_WIDTH_X; i=i+1) begin: ud_i_weight
+            for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: ud_j_weight
+                if(k < GRID_WIDTH_U) begin
+                    assign ud_k[k].ud_i[i].ud_j[j].weight_in = `WEIGHT_UD(i,j);
+                end else begin // Fake edges
+                    assign ud_k[k].ud_i[i].ud_j[j].weight_in = 2;
+                end
+            end
+        end
+    end
+
 
 endgenerate
 

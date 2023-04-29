@@ -155,14 +155,14 @@ always @(posedge clk) begin
                     if(ALIGNED_PU_PER_ROUND > 8) begin
                         measurements[ALIGNED_PU_PER_ROUND-9:0] <= measurements[ALIGNED_PU_PER_ROUND-1:8];
                     end
-                    messages_per_round_of_measurement <= messages_per_round_of_measurement + 8;
-                    if(messages_per_round_of_measurement + 8 >= PU_COUNT_PER_ROUND) begin
+                    messages_per_round_of_measurement <= messages_per_round_of_measurement + 1;
+                    if((messages_per_round_of_measurement + 1)*8 >= PU_COUNT_PER_ROUND) begin
                         global_stage <= STAGE_MEASUREMENT_LOADING;
                         delay_counter <= 0;
                         messages_per_round_of_measurement <= 0;
                         measurement_rounds <= measurement_rounds + 1;
                     end else begin
-                        messages_per_round_of_measurement <= messages_per_round_of_measurement + 8;
+                        messages_per_round_of_measurement <= messages_per_round_of_measurement + 1;
                     end
                 end
             end

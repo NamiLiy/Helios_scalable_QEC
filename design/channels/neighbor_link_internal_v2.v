@@ -128,7 +128,7 @@ always@(posedge clk) begin
 end
 
 assign fully_grown = growth >= weight_out;
-assign is_boundary = boundary_condition_out && fully_grown;
+assign is_boundary = (boundary_condition_out==1'b1) && fully_grown;
 
 assign a_output_data = (boundary_condition_out ==0)? b_input_data : 0;
 assign b_output_data = (boundary_condition_out ==0)? a_input_data : 0;
