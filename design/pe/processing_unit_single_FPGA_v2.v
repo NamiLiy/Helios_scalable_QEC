@@ -3,85 +3,94 @@
 // This PEs are written for Z type ancillas
 
 module processing_unit #(
-    parameter PER_DIM_BIT_WIDTH = 2,
-    parameter BOUNDARY_BIT_WIDTH = 2,
+    parameter ADDRESS_WIDTH = 6,
     parameter NEIGHBOR_COUNT = 6,
-    parameter ADDRESS = 0, // M,X,Z, address
-    parameter CODE_DISTANCE_X = 5,
-    parameter CODE_DISTANCE_Z = 4
+    parameter ADDRESS = 0 // M,X,Z, address
 ) (
     clk,
     reset,
     measurement,
+    measurement_out,
     global_stage,
 
     neighbor_fully_grown,
-    neighbor_root,
-    neighbor_parent_vector,
     neighbor_increase,
     neighbor_is_boundary,
     neighbor_is_error,
 
-    parent_odd,
-    parent_vector,
-
-    child_cluster_parity,
-    child_touching_boundary,
-
-    child_peeling_complete,
-    peeling_complete,
-    child_peeling_m, //measurement for peeling stage from children
-    peeling_m,
-    parent_peeling_parity_completed,
-    peeling_parity_completed,
-
-    cluster_parity,
-    cluster_touching_boundary,
+    input_data,
+    output_data,
 
     odd,
-    odd_to_children,
     root,
     busy
 );
 
 `include "../../parameters/parameters.sv"
 
-localparam ADDRESS_WIDTH = 3*PER_DIM_BIT_WIDTH;
-
+localparam EXPOSED_DATA_SIZE = ADDRESS_WIDTH + 1 + 1 + 1 + 1 + 3;
 
 input clk;
 input reset;
 input measurement;
+output measurement_out;
 input [STAGE_WIDTH-1:0] global_stage;
 
 input [NEIGHBOR_COUNT-1:0] neighbor_fully_grown;
-input [NEIGHBOR_COUNT*ADDRESS_WIDTH-1:0] neighbor_root;
-input [NEIGHBOR_COUNT-1:0] neighbor_parent_vector;
-input [NEIGHBOR_COUNT-1:0] neighbor_is_boundary;
 output neighbor_increase;
-
+input [NEIGHBOR_COUNT-1:0] neighbor_is_boundary;
 output [NEIGHBOR_COUNT-1:0] neighbor_is_error;
 
-input [NEIGHBOR_COUNT-1:0] parent_odd;
-input [NEIGHBOR_COUNT - 1:0] child_cluster_parity;
-input [NEIGHBOR_COUNT - 1:0] child_touching_boundary;
+input [NEIGHBOR_COUNT*EXPOSED_DATA_SIZE-1:0] input_data;
+output [NEIGHBOR_COUNT*EXPOSED_DATA_SIZE-1:0] output_data;
 
-input [NEIGHBOR_COUNT - 1:0] child_peeling_complete;
-output reg peeling_complete;
-input [NEIGHBOR_COUNT - 1:0] child_peeling_m;
-output reg peeling_m;
-
-output reg [NEIGHBOR_COUNT-1:0] parent_vector;
-output reg cluster_parity;
-output reg cluster_touching_boundary;
-
-input [NEIGHBOR_COUNT-1:0] parent_peeling_parity_completed;
-output reg peeling_parity_completed;
-
-output reg odd;
-output reg [NEIGHBOR_COUNT-1:0] odd_to_children;
 output reg [ADDRESS_WIDTH-1:0] root;
+output reg odd;
 output reg busy;
+
+wire [NEIGHBOR_COUNT*ADDRESS_WIDTH-1:0] neighbor_root;
+wire [NEIGHBOR_COUNT-1:0] neighbor_parent_vector;
+wire [NEIGHBOR_COUNT-1:0] parent_odd;
+wire [NEIGHBOR_COUNT - 1:0] child_cluster_parity;
+wire [NEIGHBOR_COUNT - 1:0] child_touching_boundary;
+wire [NEIGHBOR_COUNT - 1:0] child_peeling_complete;
+wire [NEIGHBOR_COUNT - 1:0] child_peeling_m;
+wire [NEIGHBOR_COUNT-1:0] parent_peeling_parity_completed;
+
+genvar i;
+generate
+for (i = 0; i < NEIGHBOR_COUNT; i=i+1) begin: input_2d
+    assign neighbor_root[(i+1)*ADDRESS_WIDTH-1 : i*ADDRESS_WIDTH] = input_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH-1 : i*EXPOSED_DATA_SIZE];
+    assign neighbor_parent_vector[i] = input_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 1 -1];
+    assign parent_odd[i] = input_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 2 -1];
+    assign child_cluster_parity[i] = input_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 3 -1];
+    assign child_touching_boundary[i] = input_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 4 -1];
+    assign child_peeling_complete[i] = input_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 5 -1];
+    assign child_peeling_m[i] = input_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 6 -1];
+    assign parent_peeling_parity_completed[i] = input_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 7 -1];
+end
+endgenerate
+
+reg [NEIGHBOR_COUNT-1:0] parent_vector;
+reg [NEIGHBOR_COUNT-1:0] odd_to_children;
+reg cluster_parity;
+reg cluster_touching_boundary;
+reg peeling_complete;
+reg peeling_m;
+reg peeling_parity_completed;
+
+generate
+for (i = 0; i < NEIGHBOR_COUNT; i=i+1) begin: output_2d
+    assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH-1 : i*EXPOSED_DATA_SIZE] = root ;
+    assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 1 -1]  = parent_vector[i];
+    assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 2 -1]  = odd_to_children[i];
+    assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 3 -1]  = cluster_parity;
+    assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 4 -1]  = cluster_touching_boundary;
+    assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 5 -1]  = peeling_complete;
+    assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 6 -1]  = peeling_m;
+    assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 7 -1]  = peeling_parity_completed;
+end
+endgenerate
 
 reg [STAGE_WIDTH - 1 : 0] stage;
 reg [STAGE_WIDTH - 1 : 0] last_stage;
@@ -106,6 +115,8 @@ always@(posedge clk) begin
         m <= measurement;
     end
 end
+
+assign measurement_out = m;
 
 // Increase growth during the growth stage
 assign neighbor_increase = odd && (stage == STAGE_GROW) && (last_stage != STAGE_GROW);
@@ -162,19 +173,19 @@ end
 always@(posedge clk) begin
     if(stage == STAGE_MEASUREMENT_LOADING) begin
         odd <= measurement;
-        odd_to_children <= measurement;
+        odd_to_children <= (measurement ? 6'h3f : 0);
     end else begin
         if (stage == STAGE_MERGE) begin
             if(|parent_vector) begin
                 odd <= |(parent_vector & parent_odd);
-                odd_to_children <= |(parent_vector & parent_odd);
+                odd_to_children <= (|(parent_vector & parent_odd) ? 6'h3f : 0);
             end else begin
                 odd <= next_cluster_parity & !next_cluster_touching_boundary;
-                odd_to_children <= next_cluster_parity & !next_cluster_touching_boundary;
+                odd_to_children <= ((next_cluster_parity & !next_cluster_touching_boundary) ? 6'h3f : 0);
             end
         end else if(stage == STAGE_PEELING) begin
             if(~(|parent_vector)) begin
-                if(next_cluster_parity) begin // The cluster has even number of vertices
+                if(!next_cluster_parity) begin // The cluster has even number of vertices
                     odd <= 0;
                     odd_to_children <= 0;
                 end else begin // The cluster has odd number of vertices

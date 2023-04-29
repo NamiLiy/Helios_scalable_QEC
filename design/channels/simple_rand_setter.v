@@ -25,7 +25,7 @@ input downstream_busy;
 
 
 parameter reset_threshold = 32'hb0000000; // This is around 30s
-parameter number_of_runs = 32'd10000;
+parameter number_of_runs = 32'd1000;
 reg [1:0] stage;
 reg [31:0] reset_counter;
 

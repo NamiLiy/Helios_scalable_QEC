@@ -15,14 +15,14 @@ import numpy
 import matplotlib.pyplot as plt
 
 period = 8
-file_names = ['3', '5', '7', '9', '11', '13', '17', '21']
+file_names = ['2', '4', '8', '16']
 
 for name in file_names:
     # open input file for reading
-    input_file = open('d_unexpanded_' + name +'.csv', 'r')
+    input_file = open('d13_unexpanded_weight_' + name +'.csv', 'r')
 
     # open output file for writing
-    f = open('d_expanded_' + name + '.csv', 'w')
+    f = open('d13_expanded_weight_' + name + '.csv', 'w')
     Lines = input_file.readlines()
 
     count = 0
@@ -35,7 +35,7 @@ for name in file_names:
         # for i in range (20):
         #     print(str(i) +" "+arr[i])
         cycles = atoi(arr[0])*10
-        count = round(atoi(arr[1])*0.6)
+        count = round(atoi(arr[1])*0.8)
         div = 20;
         count_div = count//div;
         # print(cycles,count,count_d_10);
