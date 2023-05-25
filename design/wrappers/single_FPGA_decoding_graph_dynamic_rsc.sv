@@ -110,16 +110,32 @@ generate
     end
 endgenerate
     
-    
+`define CORR_INDEX_NS(i, j) ((i-1)*(GRID_WIDTH_Z) + j-1)
+`define CORR_INDEX_EW(i, j) ((i-1)*(GRID_WIDTH_Z) + j + NS_ERROR_COUNT_PER_ROUND)
+`define CORR_INDEX_UD(i, j) (i*GRID_WIDTH_Z + j + NS_ERROR_COUNT_PER_ROUND + EW_ERROR_COUNT_PER_ROUND)
+
+
+`define CORRECTION_NS(i, j) correction[`CORR_INDEX_NS(i, j)]
+`define CORRECTION_EW(i, j) correction[`CORR_INDEX_EW(i, j)]
+`define CORRECTION_UD(i, j) correction[`CORR_INDEX_UD(i, j)]    
+
 generate
     for (k=GRID_WIDTH_U-1; k >= 0; k=k-1) begin: pu_k_extra
         for (i=0; i < GRID_WIDTH_X; i=i+1) begin: pu_i_extra
             for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: pu_j_extra
-                if(k==GRID_WIDTH_U-1) begin
-                    assign `PU(i, j, k).local_measurement = measurements[`INDEX_PLANAR(i,j)];
-                end else begin
-                    assign `PU(i, j, k).local_measurement = `PU(i, j, k+1).measurement_out;
-                end
+            
+            if(k==GRID_WIDTH_U-1) begin
+                assign `PU(i, j, k).local_measurement = measurements[`INDEX_PLANAR(i,j)];
+            end else if(k == GRID_WIDTH_U/2+1) begin
+                assign `PU(i, j, k).local_measurement = (global_stage == STAGE_STREAMING_CORRECTION) ? (`CORRECTION_UD(i+1, j+1) ^ `PU(i, j, GRID_WIDTH_U/2+1).measurement_out) : `PU(i, j, k+1).measurement_out;
+            end else begin
+                assign `PU(i, j, k).local_measurement = `PU(i, j, k+1).measurement_out;
+            end
+//            if(k==GRID_WIDTH_U-1) begin
+//                    assign `PU(i, j, k).local_measurement = measurements[`INDEX_PLANAR(i,j)];
+//                end else begin
+//                    assign `PU(i, j, k).local_measurement = `PU(i, j, k+1).measurement_out;
+//                end
             end
         end
     end
@@ -137,14 +153,6 @@ endgenerate
 `define SLICE_VEC(vec, idx, width) (vec[idx*width +: width])
 
 
-`define CORR_INDEX_NS(i, j) ((i-1)*(GRID_WIDTH_Z) + j-1)
-`define CORR_INDEX_EW(i, j) ((i-1)*(GRID_WIDTH_Z) + j + NS_ERROR_COUNT_PER_ROUND)
-`define CORR_INDEX_UD(i, j) (i*GRID_WIDTH_Z + j + NS_ERROR_COUNT_PER_ROUND + EW_ERROR_COUNT_PER_ROUND)
-
-
-`define CORRECTION_NS(i, j) correction[`CORR_INDEX_NS(i, j)]
-`define CORRECTION_EW(i, j) correction[`CORR_INDEX_EW(i, j)]
-`define CORRECTION_UD(i, j) correction[`CORR_INDEX_UD(i, j)]
 
 
 // `define EDGE_INDEX(i,j) (i*GRID_WIDTH_Z + j)
@@ -334,12 +342,6 @@ generate
     for (i=1; i < GRID_WIDTH_X; i=i+1) begin: ns_i_output
         for (j=1; j <= GRID_WIDTH_Z; j=j+1) begin: ns_j_output
             assign `CORRECTION_NS(i,j) = ns_k[0].ns_i[i].ns_j[j].is_error_out;     
-        end
-    end
-    
-    for(i=0; i< GRID_WIDTH_X; i=i+1) begin: x //new
-        for(j=0; j < GRID_WIDTH_Z; j=j+1) begin: y
-              assign `PU(i, j, GRID_WIDTH_U/2+1).local_measurement = `CORRECTION_NS(i+1, j+1) | `PU(i, j, GRID_WIDTH_U/2+1).measurement_out;
         end
     end
 

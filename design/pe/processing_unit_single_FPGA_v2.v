@@ -111,7 +111,7 @@ reg m;
 always@(posedge clk) begin
     if(reset) begin
         m <= 0;
-    end else if(stage == STAGE_MEASUREMENT_LOADING) begin
+    end else if(stage == STAGE_MEASUREMENT_LOADING || stage == STAGE_STREAMING_CORRECTION) begin
         m <= measurement;
     end
 end

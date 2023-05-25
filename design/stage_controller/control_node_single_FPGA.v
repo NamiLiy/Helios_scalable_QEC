@@ -214,12 +214,16 @@ always @(posedge clk) begin
             STAGE_PEELING: begin //4
                 if (delay_counter >= MAXIMUM_DELAY) begin
                     if(!busy) begin
-                        global_stage <= STAGE_RESULT_VALID;
+                        global_stage <= STAGE_STREAMING_CORRECTION;
                         delay_counter <= 0;
                     end
                 end else begin
                     delay_counter <= delay_counter + 1;
                 end
+            end
+            
+            STAGE_STREAMING_CORRECTION: begin
+                global_stage <= STAGE_RESULT_VALID;
             end
 
             STAGE_RESULT_VALID: begin //5
