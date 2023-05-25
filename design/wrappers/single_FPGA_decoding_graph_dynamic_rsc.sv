@@ -3,7 +3,7 @@
 module single_FPGA_decoding_graph_dynamic_rsc #(
     parameter GRID_WIDTH_X = 4,
     parameter GRID_WIDTH_Z = 1,
-    parameter GRID_WIDTH_U = 3,
+    parameter GRID_WIDTH_U = 5,
     parameter MAX_WEIGHT = 2 
 ) (
     clk,
@@ -14,7 +14,7 @@ module single_FPGA_decoding_graph_dynamic_rsc #(
     busy,
     global_stage,
     correction
-);
+ );
 
 `include "../../parameters/parameters.sv"
 
@@ -76,6 +76,7 @@ generate
                 wire odd;
                 wire [ADDRESS_WIDTH-1 : 0] root;
                 wire busy_PE;
+                
 
                 processing_unit #(
                     .ADDRESS_WIDTH(ADDRESS_WIDTH),
@@ -103,12 +104,13 @@ generate
                 assign `roots(i, j, k) = root;
                 assign `busy(i, j, k) = busy_PE;
                 assign `odd_clusters(i,j,k) = odd;
+              
             end
         end
     end
 endgenerate
     
-
+    
 generate
     for (k=GRID_WIDTH_U-1; k >= 0; k=k-1) begin: pu_k_extra
         for (i=0; i < GRID_WIDTH_X; i=i+1) begin: pu_i_extra
@@ -143,6 +145,7 @@ endgenerate
 `define CORRECTION_NS(i, j) correction[`CORR_INDEX_NS(i, j)]
 `define CORRECTION_EW(i, j) correction[`CORR_INDEX_EW(i, j)]
 `define CORRECTION_UD(i, j) correction[`CORR_INDEX_UD(i, j)]
+
 
 // `define EDGE_INDEX(i,j) (i*GRID_WIDTH_Z + j)
 
@@ -320,7 +323,6 @@ generate
         end
     end
 
-
     for (k=0; k < GRID_WIDTH_U-1; k=k+1) begin: ud_k_extra
         for (i=0; i < GRID_WIDTH_X; i=i+1) begin: ud_i_extra
             for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: ud_j_extra
@@ -331,7 +333,13 @@ generate
 
     for (i=1; i < GRID_WIDTH_X; i=i+1) begin: ns_i_output
         for (j=1; j <= GRID_WIDTH_Z; j=j+1) begin: ns_j_output
-            assign `CORRECTION_NS(i,j) = ns_k[0].ns_i[i].ns_j[j].is_error_out;
+            assign `CORRECTION_NS(i,j) = ns_k[0].ns_i[i].ns_j[j].is_error_out;     
+        end
+    end
+    
+    for(i=0; i< GRID_WIDTH_X; i=i+1) begin: x //new
+        for(j=0; j < GRID_WIDTH_Z; j=j+1) begin: y
+              assign `PU(i, j, GRID_WIDTH_U/2+1).local_measurement = `CORRECTION_NS(i+1, j+1) | `PU(i, j, GRID_WIDTH_U/2+1).measurement_out;
         end
     end
 
@@ -386,9 +394,7 @@ generate
             end
         end
     end
-
-
+    
 endgenerate
-
 endmodule
 

@@ -1,7 +1,9 @@
+//`timescale 1ns / 10ps //siona added
+
 module Helios_single_FPGA #(
     parameter GRID_WIDTH_X = 4,
     parameter GRID_WIDTH_Z = 1,
-    parameter GRID_WIDTH_U = 3,
+    parameter GRID_WIDTH_U = 5,
     parameter MAX_WEIGHT = 2
 ) (
     clk,
@@ -51,6 +53,7 @@ wire [CORRECTION_COUNT_PER_ROUND - 1 : 0] correction;
 wire [PU_COUNT_PER_ROUND-1:0] measurements;
 wire [PU_COUNT - 1 : 0] odd_clusters;
 wire [PU_COUNT - 1 : 0] busy;
+wire [GRID_WIDTH_Z-1:0] top_row_measurements;
 
 single_FPGA_decoding_graph_dynamic_rsc #( 
     .GRID_WIDTH_X(GRID_WIDTH_X),
@@ -66,7 +69,7 @@ single_FPGA_decoding_graph_dynamic_rsc #(
     .correction(correction),
     .busy(busy),
     .global_stage(global_stage)
-);
+    );
 
 unified_controller #( 
     .GRID_WIDTH_X(GRID_WIDTH_X),

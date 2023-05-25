@@ -1,3 +1,5 @@
+//`timescale 1ns / 10ps //siona added
+
 module serializer#(
     parameter HUB_FIFO_WIDTH = 32,
     parameter HUB_FIFO_PHYSICAL_WIDTH = 8 //this should exclude valid and ready or out of band signals

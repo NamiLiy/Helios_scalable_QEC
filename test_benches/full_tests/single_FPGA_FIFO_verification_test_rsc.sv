@@ -16,7 +16,7 @@ module verification_bench_single_FPGA_rsc;
 `include "../../parameters/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
-localparam CODE_DISTANCE = 19;                
+localparam CODE_DISTANCE = 5;       
 localparam CODE_DISTANCE_X = CODE_DISTANCE + 1;
 localparam CODE_DISTANCE_Z = (CODE_DISTANCE_X - 1)/2;
 
@@ -29,8 +29,7 @@ parameter MAX_WEIGHT = 2;
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
 localparam MEASUREMENT_ROUNDS = CODE_DISTANCE;
 
-
-localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
+localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS; //change to CODE_DISTANCE?
 
 localparam X_BIT_WIDTH = $clog2(GRID_WIDTH_X);
 localparam Z_BIT_WIDTH = $clog2(GRID_WIDTH_Z);
@@ -70,6 +69,7 @@ wire input_ready;
 wire [7:0] output_data;
 wire output_valid;
 reg output_ready;
+
 
 wire [7:0] input_data_fifo;
 wire input_valid_fifo;
@@ -235,9 +235,9 @@ always @(negedge clk) begin
         measurements = 0;
         if(input_open == 1) begin
             if (CODE_DISTANCE == 3) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_3_rsc.txt", "r");
+                input_file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_3_rsc.txt", "r");
             end else if (CODE_DISTANCE == 5) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_5_rsc.txt", "r");
+                input_file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_5_rsc.txt", "r");
             end else if (CODE_DISTANCE == 7) begin
                 input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_7_rsc.txt", "r");
             end else if (CODE_DISTANCE == 9) begin
@@ -264,7 +264,7 @@ always @(negedge clk) begin
                 syndrome_count = 0;
             end
         end
-        for (k=0 ;k <MEASUREMENT_ROUNDS; k++) begin
+        for (k=0 ;k <MEASUREMENT_ROUNDS; k++) begin           
             for (i=0 ;i <CODE_DISTANCE_X; i++) begin
                 for (j=0 ;j <CODE_DISTANCE_Z; j++) begin
                     if (input_eof == 0)begin 

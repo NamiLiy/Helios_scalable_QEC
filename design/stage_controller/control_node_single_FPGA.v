@@ -1,7 +1,7 @@
 module unified_controller #(
     parameter GRID_WIDTH_X = 4,
     parameter GRID_WIDTH_Z = 1,
-    parameter GRID_WIDTH_U = 3,
+    parameter GRID_WIDTH_U = 5,
     parameter ITERATION_COUNTER_WIDTH = 8,  // counts to 255 iterations
     parameter MAXIMUM_DELAY = 2
 ) (
@@ -62,6 +62,7 @@ output reg input_ready;
 output reg [7 : 0] output_data;
 output reg output_valid;
 input output_ready;
+
 
 reg result_valid;
 reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
@@ -151,7 +152,7 @@ always @(posedge clk) begin
 
             STAGE_MEASUREMENT_PREPARING: begin // 7
                 if (input_valid && input_ready) begin
-                    measurements[ALIGNED_PU_PER_ROUND-1:ALIGNED_PU_PER_ROUND-8] <= input_data;
+                        measurements[ALIGNED_PU_PER_ROUND-1:ALIGNED_PU_PER_ROUND-8] <= input_data;
                     if(ALIGNED_PU_PER_ROUND > 8) begin
                         measurements[ALIGNED_PU_PER_ROUND-9:0] <= measurements[ALIGNED_PU_PER_ROUND-1:8];
                     end
@@ -165,12 +166,19 @@ always @(posedge clk) begin
                         messages_per_round_of_measurement <= messages_per_round_of_measurement + 1;
                     end
                 end
+                
+//                if(global_stage_previous == STAGE_PEELING) begin //new
+//                    messages_per_round_of_measurement <= 0;
+//                    measurement_rounds <= 0;
+//                    delay_counter <= 0;
+//                    result_valid <= 1;;
+//                end
             end
 
             STAGE_MEASUREMENT_LOADING: begin
                 // Currently this is single cycle as only from external buffer happens.
                 // In future might need multiple
-                if(measurement_rounds < GRID_WIDTH_U) begin
+                if(measurement_rounds < GRID_WIDTH_U/2) begin //new
                     global_stage <= STAGE_MEASUREMENT_PREPARING;
                     delay_counter <= 0;
                     result_valid <= 0;
@@ -216,7 +224,7 @@ always @(posedge clk) begin
 
             STAGE_RESULT_VALID: begin //5
                 measurement_rounds <= measurement_rounds + 1;
-                if(measurement_rounds >= GRID_WIDTH_U - 1) begin
+                if(measurement_rounds >= GRID_WIDTH_U/2 - 1) begin
                     global_stage <= STAGE_IDLE;
                 end
                 delay_counter <= 0;
@@ -298,7 +306,7 @@ always @(posedge clk) begin
         output_message_counter <= 0;
     end else begin
         if(output_valid_d2 && output_ready) begin
-            if(output_message_counter >= ((CORRECTION_COUNT_PER_ROUND + 7)>>3)*GRID_WIDTH_U + 2) begin
+            if(output_message_counter >= ((CORRECTION_COUNT_PER_ROUND + 7)>>3)*(GRID_WIDTH_U/2) + 2) begin
                 output_message_counter <= 0;
             end else begin
                 output_message_counter <= output_message_counter + 1;
@@ -330,6 +338,7 @@ always@(*) begin
             output_ready_d2 = output_ready;
         end
     endcase
+   
 end
 
 endmodule
