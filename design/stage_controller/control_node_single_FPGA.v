@@ -256,11 +256,21 @@ always@(*) begin
     end
 end
 
+reg [STAGE_WIDTH - 1 : 0] stage;
+
+always@(posedge clk) begin //to synchronize stage with neighbor_link stage (one cycle behind global_stage)
+    if(reset) begin
+        stage <= STAGE_IDLE;
+    end else begin
+        stage <= global_stage;
+    end
+end
+
 always@(*) begin
     if (reset) begin
         output_fifo_valid = 0;
     end else begin 
-        if(global_stage == STAGE_RESULT_VALID) begin
+        if(stage == STAGE_RESULT_VALID) begin
             output_fifo_valid = 1;
         end else begin
             output_fifo_valid = 0;

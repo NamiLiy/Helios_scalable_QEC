@@ -58,6 +58,7 @@ genvar k;
 `define odd_clusters(i, j, k) odd_clusters[`INDEX(i, j, k)]
 `define busy(i, j, k) busy[`INDEX(i, j, k)]
 `define PU(i, j, k) pu_k[k].pu_i[i].pu_j[j]
+`define IS_STREAMING_WINDOW_BORDER(k) (k == GRID_WIDTH_U/2) ? 1 : 0
 
 generate
     for (k=GRID_WIDTH_U-1; k >= 0; k=k-1) begin: pu_k
@@ -76,12 +77,12 @@ generate
                 wire odd;
                 wire [ADDRESS_WIDTH-1 : 0] root;
                 wire busy_PE;
-                
-
+                                
                 processing_unit #(
                     .ADDRESS_WIDTH(ADDRESS_WIDTH),
                     .NEIGHBOR_COUNT(NEIGHBOR_COUNT),
-                    .ADDRESS(`ADDRESS(i,j,k))
+                    .ADDRESS(`ADDRESS(i,j,k)),
+                    .IS_STREAMING_WINDOW_BORDER(`IS_STREAMING_WINDOW_BORDER(k))
                 ) pu (
                     .clk(clk),
                     .reset(reset),
@@ -119,6 +120,17 @@ endgenerate
 `define CORRECTION_EW(i, j) correction[`CORR_INDEX_EW(i, j)]
 `define CORRECTION_UD(i, j) correction[`CORR_INDEX_UD(i, j)]    
 
+reg [STAGE_WIDTH - 1 : 0] stage; //new
+
+always@(posedge clk) begin
+    if(reset) begin
+        stage <= STAGE_IDLE;
+    end else begin
+        stage <= global_stage;
+    end
+end
+
+
 generate
     for (k=GRID_WIDTH_U-1; k >= 0; k=k-1) begin: pu_k_extra
         for (i=0; i < GRID_WIDTH_X; i=i+1) begin: pu_i_extra
@@ -127,15 +139,10 @@ generate
             if(k==GRID_WIDTH_U-1) begin
                 assign `PU(i, j, k).local_measurement = measurements[`INDEX_PLANAR(i,j)];
             end else if(k == GRID_WIDTH_U/2+1) begin
-                assign `PU(i, j, k).local_measurement = (global_stage == STAGE_STREAMING_CORRECTION) ? (`CORRECTION_UD(i+1, j+1) ^ `PU(i, j, GRID_WIDTH_U/2+1).measurement_out) : `PU(i, j, k+1).measurement_out;
+                assign `PU(i, j, k).local_measurement = (stage == STAGE_STREAMING_CORRECTION) ? (`CORRECTION_UD(i+1, j+1) ^ `PU(i, j, GRID_WIDTH_U/2+2).measurement_out) : `PU(i, j, k+1).measurement_out; //+1 or +2?
             end else begin
                 assign `PU(i, j, k).local_measurement = `PU(i, j, k+1).measurement_out;
             end
-//            if(k==GRID_WIDTH_U-1) begin
-//                    assign `PU(i, j, k).local_measurement = measurements[`INDEX_PLANAR(i,j)];
-//                end else begin
-//                    assign `PU(i, j, k).local_measurement = `PU(i, j, k+1).measurement_out;
-//                end
             end
         end
     end
@@ -292,7 +299,7 @@ generate
                 if(k==0) begin
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_DOWN, 1)
                 end else if(k==GRID_WIDTH_U) begin
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k-1, `NEIGHBOR_IDX_UP, 2)
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k-1, `NEIGHBOR_IDX_UP, 1)
                 end else if (k < GRID_WIDTH_U) begin
                     `NEIGHBOR_LINK_INTERNAL_0(i, j, k-1, i, j, k, `NEIGHBOR_IDX_UP, `NEIGHBOR_IDX_DOWN)
                 end

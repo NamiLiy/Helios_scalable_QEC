@@ -5,7 +5,8 @@
 module processing_unit #(
     parameter ADDRESS_WIDTH = 6,
     parameter NEIGHBOR_COUNT = 6,
-    parameter ADDRESS = 0 // M,X,Z, address
+    parameter ADDRESS = 0, // M,X,Z, address
+    parameter IS_STREAMING_WINDOW_BORDER = 0
 ) (
     clk,
     reset,
@@ -111,7 +112,7 @@ reg m;
 always@(posedge clk) begin
     if(reset) begin
         m <= 0;
-    end else if(stage == STAGE_MEASUREMENT_LOADING || stage == STAGE_STREAMING_CORRECTION) begin
+    end else if(stage == STAGE_MEASUREMENT_LOADING || stage == STAGE_STREAMING_CORRECTION && IS_STREAMING_WINDOW_BORDER) begin // @Siona : This line should be restricted based on the measurement round
         m <= measurement;
     end
 end
@@ -284,8 +285,9 @@ end
 
 reg [NEIGHBOR_COUNT-1:0] neighbor_is_error_internal;
 reg [NEIGHBOR_COUNT-1:0] neighbor_is_error_border;
+
 always@(*) begin
-    if(stage == STAGE_PEELING && !some_child_is_not_peeling_complete) begin
+    if(stage == STAGE_PEELING || stage == STAGE_STREAMING_CORRECTION && !some_child_is_not_peeling_complete) begin //NEW
         neighbor_is_error_internal = neighbor_parent_vector & child_peeling_m;
     end else begin
         neighbor_is_error_internal = 6'b0;
