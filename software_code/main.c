@@ -11,9 +11,9 @@ int max(int a, int b) {
 double normal_random(double mean, double std_dev);
 
 int main() {
-    int distance = 19;
-    double p = 0.0005;
-    int test_runs = 1000;
+    int distance = 3;
+    double p = 0.001;
+    int test_runs = 10;
 
     double mean, std_dev;
     mean = p;
@@ -26,10 +26,10 @@ int main() {
     int data_qubits = distance*distance;
     int m_error_per_round = (distance+1)*(distance-1)/2;
 
-    int data_errors[distance][distance][distance];
-    int m_errors[distance+1][distance+1][(distance-1)/2];
+    int data_errors[distance-1][distance][distance];
+    int m_errors[distance][distance+1][(distance-1)/2];
 
-    int syndrome [distance][distance+1][(distance-1)/2];
+    int syndrome [distance-1][distance+1][(distance-1)/2];
 
     int errors = 0;
     int syndrome_count = 0;
@@ -140,7 +140,7 @@ int main() {
     FILE *out_fp, *in_fp;
     int c;
     char filename[100];
-    sprintf(filename, "../test_benches/test_data/input_data_%d_rsc.txt", distance);
+    sprintf(filename, "../test_benches/test_data/input_data_%d_streaming.txt", distance);
     out_fp = fopen(filename, "wb");
     if (out_fp == NULL) {
         fprintf(stderr, "Can't open output file %s!\n", "output_3.txt");
@@ -148,7 +148,7 @@ int main() {
     }
 
     for (int t = 0; t < test_runs; t++) {
-        for (int k = 0; k < distance; k++) {
+        for (int k = 0; k < distance-1; k++) {
             double* values = next_random_values(rs);
             int count = 0;
             for (int i = 0; i < distance; i++) {
@@ -201,7 +201,7 @@ int main() {
         //     printf("\n");
         // }
 
-        for (int k = 0; k < distance; k++) {
+        for (int k = 0; k < distance-1; k++) {
             for (int i = 0; i < (distance + 1); i++) {
                 for (int j = 0; j < (distance-1)/2; j++) {
                     if(i==0){
@@ -223,7 +223,7 @@ int main() {
         }
 
         fprintf(out_fp, "%08X\n", t+1);
-        for (int k = 0; k < distance; k++) {
+        for (int k = 0; k < distance-1; k++) {
             for (int i = 0; i < distance+1; i++) {
                 for (int j = 0; j < (distance-1)/2; j++) {
                     fprintf(out_fp, "%08X\n", syndrome[k][i][j]);
