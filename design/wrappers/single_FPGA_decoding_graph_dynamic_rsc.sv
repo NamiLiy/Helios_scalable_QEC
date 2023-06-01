@@ -100,7 +100,8 @@ generate
 
                     .odd(odd),
                     .root(root),
-                    .busy(busy_PE)
+                    .busy(busy_PE),
+                    .has_correction(has_correction)
                 );
                 assign `roots(i, j, k) = root;
                 assign `busy(i, j, k) = busy_PE;
@@ -118,10 +119,12 @@ endgenerate
 
 `define CORRECTION_NS(i, j) correction[`CORR_INDEX_NS(i, j)]
 `define CORRECTION_EW(i, j) correction[`CORR_INDEX_EW(i, j)]
-`define CORRECTION_UD(i, j) correction[`CORR_INDEX_UD(i, j)]    
+`define CORRECTION_UD(i, j) correction[`CORR_INDEX_UD(i, j)]   
+   
 
-reg [STAGE_WIDTH - 1 : 0] stage; //new
+reg [STAGE_WIDTH - 1 : 0] stage;
 
+// new
 always@(posedge clk) begin
     if(reset) begin
         stage <= STAGE_IDLE;
@@ -139,7 +142,8 @@ generate
             if(k==GRID_WIDTH_U-1) begin
                 assign `PU(i, j, k).local_measurement = measurements[`INDEX_PLANAR(i,j)];
             end else if(k == GRID_WIDTH_U/2+1) begin
-                assign `PU(i, j, k).local_measurement = (stage == STAGE_STREAMING_CORRECTION) ? (`CORRECTION_UD(i+1, j+1) ^ `PU(i, j, GRID_WIDTH_U/2+2).measurement_out) : `PU(i, j, k+1).measurement_out; //+1 or +2?
+                assign `PU(i, j, k).has_correction = `CORRECTION_UD(i+1, j+1); //new, change from wire later
+                assign `PU(i, j, k).local_measurement = (stage == STAGE_STREAMING_CORRECTION) ? (`CORRECTION_UD(i+1, j+1) ^ `PU(i, j, k+1).measurement_out) : `PU(i, j, k+1).measurement_out;
             end else begin
                 assign `PU(i, j, k).local_measurement = `PU(i, j, k+1).measurement_out;
             end
@@ -235,7 +239,8 @@ endgenerate
         .boundary_condition_out(), \
         .is_error_systolic_in(is_error_systolic_in) \
     );
-
+    
+    
 generate
     // Generate North South neighbors
     for (k=0; k < GRID_WIDTH_U; k=k+1) begin: ns_k
@@ -288,6 +293,7 @@ generate
         end
     end
 
+
     // Generate UP DOWN link
     for (k=0; k <= GRID_WIDTH_U; k=k+1) begin: ud_k
         for (i=0; i < GRID_WIDTH_X; i=i+1) begin: ud_i
@@ -295,7 +301,9 @@ generate
                 wire is_error_systolic_in;
                 wire is_error_out;
                 wire [LINK_BIT_WIDTH-1:0] weight_in;
+                
                 assign weight_in = `WEIGHT_UD(i,j);
+                
                 if(k==0) begin
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_DOWN, 1)
                 end else if(k==GRID_WIDTH_U) begin

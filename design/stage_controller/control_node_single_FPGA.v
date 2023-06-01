@@ -166,13 +166,6 @@ always @(posedge clk) begin
                         messages_per_round_of_measurement <= messages_per_round_of_measurement + 1;
                     end
                 end
-                
-//                if(global_stage_previous == STAGE_PEELING) begin //new
-//                    messages_per_round_of_measurement <= 0;
-//                    measurement_rounds <= 0;
-//                    delay_counter <= 0;
-//                    result_valid <= 1;;
-//                end
             end
 
             STAGE_MEASUREMENT_LOADING: begin

@@ -12,7 +12,7 @@ double normal_random(double mean, double std_dev);
 
 int main() {
     int distance = 3;
-    double p = 0.001;
+    double p = 0.01;
     int test_runs = 10;
 
     double mean, std_dev;
@@ -27,7 +27,7 @@ int main() {
     int m_error_per_round = (distance+1)*(distance-1)/2;
 
     int data_errors[distance-1][distance][distance];
-    int m_errors[distance][distance+1][(distance-1)/2];
+    int m_errors[distance-1][distance+1][(distance-1)/2]; // changed first to -1
 
     int syndrome [distance-1][distance+1][(distance-1)/2];
 
