@@ -221,7 +221,7 @@ always @(posedge clk) begin
 
             STAGE_RESULT_VALID: begin //5
                 measurement_rounds <= measurement_rounds + 1;
-                if(measurement_rounds >= GRID_WIDTH_U/2 - 1) begin
+                if(measurement_rounds > GRID_WIDTH_U/2 - 1) begin //new
                     global_stage <= STAGE_IDLE;
                 end
                 delay_counter <= 0;
