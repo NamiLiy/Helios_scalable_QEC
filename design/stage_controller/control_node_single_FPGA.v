@@ -3,7 +3,8 @@ module unified_controller #(
     parameter GRID_WIDTH_Z = 1,
     parameter GRID_WIDTH_U = 5,
     parameter ITERATION_COUNTER_WIDTH = 8,  // counts to 255 iterations
-    parameter MAXIMUM_DELAY = 2
+    parameter MAXIMUM_DELAY = 2,
+    parameter STREAMING = 1 //new
 ) (
     clk,
     reset,
@@ -122,6 +123,16 @@ wire [CORRECTION_COUNT_PER_ROUND - 1 : 0] output_fifo_data_d;
 wire output_fifo_valid_d;
 wire output_fifo_ready_d;
 
+
+generate
+//`define MAX_MEASUREMENT_ROUNDS (STREAMING == 1) ? GRID_WIDTH_U/2 : GRID_WIDTH_U //NEW
+    wire [15:0] MAX_MEASUREMENT_ROUNDS;
+    if (STREAMING == 1) begin
+        assign MAX_MEASUREMENT_ROUNDS = GRID_WIDTH_U/2;
+    end else begin
+        assign MAX_MEASUREMENT_ROUNDS = GRID_WIDTH_U;
+    end
+
 always @(posedge clk) begin
     if (reset) begin
         global_stage <= STAGE_IDLE;
@@ -171,7 +182,7 @@ always @(posedge clk) begin
             STAGE_MEASUREMENT_LOADING: begin
                 // Currently this is single cycle as only from external buffer happens.
                 // In future might need multiple
-                if(measurement_rounds < GRID_WIDTH_U/2) begin //new
+                if(measurement_rounds < MAX_MEASUREMENT_ROUNDS) begin //new
                     global_stage <= STAGE_MEASUREMENT_PREPARING;
                     delay_counter <= 0;
                     result_valid <= 0;
@@ -207,7 +218,7 @@ always @(posedge clk) begin
             STAGE_PEELING: begin //4
                 if (delay_counter >= MAXIMUM_DELAY) begin
                     if(!busy) begin
-                        global_stage <= STAGE_STREAMING_CORRECTION;
+                        global_stage <= (STREAMING == 1) ? STAGE_STREAMING_CORRECTION : STAGE_RESULT_VALID;
                         delay_counter <= 0;
                     end
                 end else begin
@@ -221,7 +232,7 @@ always @(posedge clk) begin
 
             STAGE_RESULT_VALID: begin //5
                 measurement_rounds <= measurement_rounds + 1;
-                if(measurement_rounds > GRID_WIDTH_U/2 - 1) begin //new
+                if(measurement_rounds > ((STREAMING ==1) ? MAX_MEASUREMENT_ROUNDS - 1 : MAX_MEASUREMENT_ROUNDS)) begin //new
                     global_stage <= STAGE_IDLE;
                 end
                 delay_counter <= 0;
@@ -313,7 +324,7 @@ always @(posedge clk) begin
         output_message_counter <= 0;
     end else begin
         if(output_valid_d2 && output_ready) begin
-            if(output_message_counter >= ((CORRECTION_COUNT_PER_ROUND + 7)>>3)*(GRID_WIDTH_U/2) + 2) begin
+            if(output_message_counter >= ((CORRECTION_COUNT_PER_ROUND + 7)>>3)*(MAX_MEASUREMENT_ROUNDS) + 2) begin
                 output_message_counter <= 0;
             end else begin
                 output_message_counter <= output_message_counter + 1;
@@ -322,6 +333,7 @@ always @(posedge clk) begin
     end
 end
 
+endgenerate //new
 always@(*) begin
     case(output_message_counter)
         0: begin

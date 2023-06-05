@@ -4,7 +4,8 @@ module Helios_single_FPGA #(
     parameter GRID_WIDTH_X = 4,
     parameter GRID_WIDTH_Z = 1,
     parameter GRID_WIDTH_U = 5,
-    parameter MAX_WEIGHT = 2
+    parameter MAX_WEIGHT = 2,
+    parameter STREAMING = 1
 ) (
     clk,
     reset,
@@ -59,7 +60,8 @@ single_FPGA_decoding_graph_dynamic_rsc #(
     .GRID_WIDTH_X(GRID_WIDTH_X),
     .GRID_WIDTH_Z(GRID_WIDTH_Z),
     .GRID_WIDTH_U(GRID_WIDTH_U),
-    .MAX_WEIGHT(MAX_WEIGHT)
+    .MAX_WEIGHT(MAX_WEIGHT),
+    .STREAMING(STREAMING)
 ) decoding_graph_rsc (
     .clk(clk),
     .reset(reset),
@@ -76,7 +78,8 @@ unified_controller #(
     .GRID_WIDTH_Z(GRID_WIDTH_Z),
     .GRID_WIDTH_U(GRID_WIDTH_U),
     .ITERATION_COUNTER_WIDTH(8),
-    .MAXIMUM_DELAY(3)
+    .MAXIMUM_DELAY(3),
+    .STREAMING(STREAMING)
 ) controller (
     .clk(clk),
     .reset(reset),

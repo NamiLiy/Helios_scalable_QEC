@@ -16,7 +16,7 @@ module verification_bench_single_FPGA_rsc;
 `include "../../parameters/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
-localparam CODE_DISTANCE = 3;       
+localparam CODE_DISTANCE = 5;       
 localparam CODE_DISTANCE_X = CODE_DISTANCE + 1;
 localparam CODE_DISTANCE_Z = (CODE_DISTANCE_X - 1)/2;
 
@@ -24,7 +24,7 @@ parameter GRID_WIDTH_X = CODE_DISTANCE + 1;
 parameter GRID_WIDTH_Z = (CODE_DISTANCE_X - 1)/2;
 parameter GRID_WIDTH_U = CODE_DISTANCE*2-1;
 parameter MAX_WEIGHT = 2;
-
+parameter STREAMING = 0;
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
 localparam MEASUREMENT_ROUNDS = CODE_DISTANCE;
@@ -83,7 +83,8 @@ Helios_single_FPGA #(
     .GRID_WIDTH_X(GRID_WIDTH_X),
     .GRID_WIDTH_Z(GRID_WIDTH_Z),
     .GRID_WIDTH_U(GRID_WIDTH_U),
-    .MAX_WEIGHT(MAX_WEIGHT)
+    .MAX_WEIGHT(MAX_WEIGHT),
+    .STREAMING(STREAMING)
  ) decoder (
     .clk(clk),
     .reset(reset),
