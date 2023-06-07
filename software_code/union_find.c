@@ -323,8 +323,8 @@ void union_find (int syndrome[D][D+1][(D-1)/2]){
 
 int loadFileData(FILE* file, int (*array)[D][D+1][(D-1)/2]) {
     int test_id;
-    if (fscanf(file, "%1d", &test_id) != 1) {
-        printf("Error reading file.\n");
+    if (fscanf(file, "%x", &test_id) != 1) {
+        printf("Error reading file. No more test cases.\n");
         fclose(file);
         return -1;
     }
@@ -332,7 +332,7 @@ int loadFileData(FILE* file, int (*array)[D][D+1][(D-1)/2]) {
         for(int i=0; i< D + 1;i++){
             for(int j=0; j< (D-1)/2;j++){
                 int value;
-                if (fscanf(file, "%1d", &value) != 1) {
+                if (fscanf(file, "%x", &value) != 1) {
                     printf("Error reading file.\n");
                     fclose(file);
                     return -1;
@@ -341,7 +341,7 @@ int loadFileData(FILE* file, int (*array)[D][D+1][(D-1)/2]) {
             }
         }
     }
-    printf("Test id : %d loaded\n",test_id);
+    printf("Test id : %x loaded\n",test_id);
     return test_id;
 }
 
@@ -361,7 +361,7 @@ int main(){
     // load syndrome
     int distance = D;
     char filename[100];
-    sprintf(filename, "input_data_%d_rsc.txt", distance);
+    sprintf(filename, "../test_benches/test_data/input_data_%d_rsc.txt", distance);
     FILE* file = fopen(filename, "r");
     if (file == NULL) {
         printf("Error opening file %s.\n", filename);
@@ -369,7 +369,7 @@ int main(){
     }
 
     char output_filename[100];
-    sprintf(output_filename, "output_data_%d_rsc.txt", distance);
+    sprintf(output_filename, "../test_benches/test_data/output_data_%d_rsc.txt", distance);
     FILE* file_op = fopen(output_filename, "wb");
     if (file_op == NULL) {
         printf("Error opening file %s.\n", output_filename);
@@ -386,8 +386,6 @@ int main(){
         print_output(file_op, ret_val);
     }
 
-
-    fclose(file);
     fclose(file_op);
     return 0;
 }
