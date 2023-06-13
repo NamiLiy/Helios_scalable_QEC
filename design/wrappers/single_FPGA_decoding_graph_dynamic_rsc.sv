@@ -13,7 +13,8 @@ module single_FPGA_decoding_graph_dynamic_rsc #(
     roots,
     busy,
     global_stage,
-    correction
+    correction,
+    output_streaming_corrected_syndrome
  );
 
 `include "../../parameters/parameters.sv"
@@ -46,6 +47,8 @@ output [PU_COUNT - 1 : 0] odd_clusters;
 output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 output [PU_COUNT - 1 : 0] busy;
 output [CORRECTION_COUNT_PER_ROUND - 1 : 0] correction;
+
+output [GRID_WIDTH_Z*GRID_WIDTH_X -1: 0] output_streaming_corrected_syndrome;
 
 genvar i;
 genvar j;
@@ -144,6 +147,7 @@ generate
                 assign `PU(i, j, k).has_correction = ud_k[k].ud_i[i].ud_j[j].is_error_out; //new, change from wire later
 //                assign `PU(i, j, k).local_measurement = (stage == STAGE_STREAMING_CORRECTION) ? (`CORRECTION_UD(i+1, j+1) ^ `PU(i, j, k+1).measurement_out) : `PU(i, j, k+1).measurement_out;
                 assign `PU(i, j, k).local_measurement = (stage == STAGE_STREAMING_CORRECTION) ? (ud_k[k].ud_i[i].ud_j[j].is_error_out ^ `PU(i, j, k).measurement_out) : `PU(i, j, k+1).measurement_out;
+                assign output_streaming_corrected_syndrome[i*GRID_WIDTH_Z + j] = `PU(i, j, k).local_measurement; //check
             end else begin
                 assign `PU(i, j, k).local_measurement = `PU(i, j, k+1).measurement_out;
             end

@@ -52,7 +52,7 @@ generate
             if(!intermediate_out_valid_reg && mux_counter == 0) begin
                 intermediate_out_valid_reg <= wide_fifo_valid;
             end else if (intermediate_out_valid_reg && narrow_fifo_ready && mux_counter == MUX_MAX_VALUE-1) begin
-                intermediate_out_valid_reg <= wide_fifo_valid;
+                intermediate_out_valid_reg <= 0; //changed to get rid of multiple output_valids in one cycle
             end 
         end
     end

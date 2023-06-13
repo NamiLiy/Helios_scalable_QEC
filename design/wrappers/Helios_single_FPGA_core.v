@@ -13,7 +13,8 @@ module Helios_single_FPGA #(
     input_ready,
     output_data,
     output_valid,
-    output_ready
+    output_ready,
+    output_streaming_corrected_syndrome,
 
     // roots // A debug port. Do not use in the real implementation
 );
@@ -45,6 +46,8 @@ output [7 : 0] output_data;
 output output_valid;
 input output_ready;
 
+output [GRID_WIDTH_Z*GRID_WIDTH_X -1: 0] output_streaming_corrected_syndrome; //new
+
 wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 
 wire [STAGE_WIDTH-1:0] global_stage;
@@ -68,7 +71,8 @@ single_FPGA_decoding_graph_dynamic_rsc #(
     .roots(roots),
     .correction(correction),
     .busy(busy),
-    .global_stage(global_stage)
+    .global_stage(global_stage),
+    .output_streaming_corrected_syndrome(output_streaming_corrected_syndrome)
     );
 
 unified_controller #( 

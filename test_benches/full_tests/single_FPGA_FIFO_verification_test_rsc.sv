@@ -27,7 +27,7 @@ parameter MAX_WEIGHT = 2;
 
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
-localparam MEASUREMENT_ROUNDS = CODE_DISTANCE;
+localparam MEASUREMENT_ROUNDS = CODE_DISTANCE-1;
 
 localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS; //change to CODE_DISTANCE?
 
@@ -63,6 +63,7 @@ reg [`ALIGNED_PU_PER_ROUND*GRID_WIDTH_U-1:0] measurements;
 `define root_z(i, j, k) decoder.roots[ADDRESS_WIDTH*`INDEX(i, j, k) +: Z_BIT_WIDTH]
 `define root_u(i, j, k) decoder.roots[ADDRESS_WIDTH*`INDEX(i, j, k)+X_BIT_WIDTH+Z_BIT_WIDTH +: U_BIT_WIDTH]
 
+
 reg [7:0] input_data;
 reg input_valid;
 wire input_ready;
@@ -77,6 +78,7 @@ wire input_ready_fifo;
 wire [7:0] output_data_fifo;
 wire output_valid_fifo;
 wire output_ready_fifo;
+wire [GRID_WIDTH_Z*GRID_WIDTH_X -1: 0] output_streaming_corrected_syndrome;
 
 // instantiate
 Helios_single_FPGA #(
@@ -92,8 +94,8 @@ Helios_single_FPGA #(
     .input_ready(input_ready_fifo),
     .output_data(output_data_fifo),
     .output_valid(output_valid_fifo),
-    .output_ready(output_ready_fifo)
-    
+    .output_ready(output_ready_fifo),
+    .output_streaming_corrected_syndrome(output_streaming_corrected_syndrome)
     //.roots(roots)
 );
 
@@ -282,14 +284,42 @@ always @(negedge clk) begin
     end
 end
 
+`define syndrome_index(i, j) (i*GRID_WIDTH_Z + j)
+`define syndrome(i, j) output_streaming_corrected_syndrome[`syndrome_index(i,j)]
+
+integer file_root_op;
+integer file_syndrome_op;
+reg [7:0] test;
+
+assign file_root_op = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_3_roots.txt", "w");
+assign file_syndrome_op = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_3_syndrome.txt", "w");
+        
+        
+always@ (posedge clk) begin
+    if(loading_state == 3'b101 && !output_valid) begin      
+        for(k = 0; k < GRID_WIDTH_U; k++) begin
+            for(i = 0; i < GRID_WIDTH_X; i++) begin
+                for(j = 0; j < GRID_WIDTH_Z; j++) begin
+                    $fwrite (file_root_op, `root_u(i, j, k));
+                    $fwrite (file_root_op, `root_x(i, j, k));
+                    $fdisplay(file_root_op, `root_z(i, j, k));
+                    if(k == GRID_WIDTH_U/2) begin                    
+                        $fdisplay (file_syndrome_op, output_streaming_corrected_syndrome[i*GRID_WIDTH_Z + j]);
+                    end
+                end
+            end
+        end
+    end
+end
+
 
 // Output verification logic
 always @(posedge clk) begin
     if (loading_state == 3'b101 && !output_valid) begin // This is not becaus we wait until all messages are received
-        $display("%t\tTest case %d pass %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
-       /* if(open == 1) begin
+        // $display("%t\tTest case %d pass %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
+       if(open == 1) begin
             if (CODE_DISTANCE == 3) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_3_rsc.txt", "r");
+                file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_3_streaming.txt", "r");
             end else if (CODE_DISTANCE == 5) begin
                 file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_5_rsc.txt", "r");
             end else if (CODE_DISTANCE == 7) begin
@@ -344,7 +374,7 @@ always @(posedge clk) begin
             $display("%t\tTest case %d fail %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
             fail_count = fail_count + 1;
             $finish;
-        end*/
+        end //*/
     end
     if (input_eof == 1)begin
         total_count = pass_count + fail_count;
@@ -352,8 +382,10 @@ always @(posedge clk) begin
         $display("Total : %d",total_count);
         $display("Passed : %d",pass_count);
         $display("Failed : %d",fail_count);
-        $finish;
-    end
+        $fclose(file_root_op);
+        $fclose(file_syndrome_op);
+        $finish; 
+    end 
 end
 
 initial begin
