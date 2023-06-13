@@ -27,9 +27,9 @@ parameter MAX_WEIGHT = 2;
 
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
-localparam MEASUREMENT_ROUNDS = CODE_DISTANCE;
+localparam MEASUREMENT_ROUNDS = CODE_DISTANCE -1;
 
-localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS; //change to CODE_DISTANCE?
+localparam PU_COUNT = GRID_WIDTH_X * GRID_WIDTH_Z * GRID_WIDTH_U; //change to CODE_DISTANCE?
 
 localparam X_BIT_WIDTH = $clog2(GRID_WIDTH_X);
 localparam Z_BIT_WIDTH = $clog2(GRID_WIDTH_Z);
@@ -173,7 +173,7 @@ always @(posedge clk) begin
                 input_fifo_counter <= 0;
             end
             3'b11: begin
-                if (input_fifo_counter == (`BYTES_PER_ROUND*GRID_WIDTH_U-1)) begin
+                if (input_fifo_counter == (`BYTES_PER_ROUND*MEASUREMENT_ROUNDS)) begin
                     loading_state <= 3'b100;
                 end
                 input_fifo_counter <= input_fifo_counter + 1; 
@@ -235,7 +235,7 @@ always @(negedge clk) begin
         measurements = 0;
         if(input_open == 1) begin
             if (CODE_DISTANCE == 3) begin
-                input_file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_3_streaming.txt", "r");
+                input_file = $fopen ("/home/qblox/Downloads/Helios_scalable_QEC/test_benches/test_data/input_data_3_streaming.txt", "r");
             end else if (CODE_DISTANCE == 5) begin
                 input_file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_5_rsc.txt", "r");
             end else if (CODE_DISTANCE == 7) begin
@@ -264,7 +264,7 @@ always @(negedge clk) begin
                 syndrome_count = 0;
             end
         end
-        for (k=0 ;k <MEASUREMENT_ROUNDS - 1; k++) begin           
+        for (k=0 ;k <MEASUREMENT_ROUNDS; k++) begin           
             for (i=0 ;i <CODE_DISTANCE_X; i++) begin
                 for (j=0 ;j <CODE_DISTANCE_Z; j++) begin
                     if (input_eof == 0)begin 
