@@ -4,7 +4,7 @@
 #include <time.h>
 
 #define D 3
-#define TOTAL_MEASUREMENTS (D*2 - 1)
+#define TOTAL_MEASUREMENTS 84 //(D*2-1)
 
 struct Address {
     int k;
@@ -205,6 +205,15 @@ int verifyVerilogRoots(struct Node node_array[TOTAL_MEASUREMENTS][D+1][(D-1)/2])
                     fclose(file);
                     return -1;
                 }
+                // if (node_array[k][i][j].root.k > 4) {
+                //     if(node_array[k][i][j].root.k % 4 == 0) {
+                //         node_array[k][i][j].root.k = 3;
+                //     } else {
+                //         node_array[k][i][j].root.k = node_array[k][i][j].root.k % 4 - 1;
+                //     }
+                // }
+
+                
                 if(node_array[k][i][j].root.k == verilog_root_u && node_array[k][i][j].root.i == verilog_root_x && node_array[k][i][j].root.j == verilog_root_z) {
                     printf("roots match %d %d %d \n", node_array[k][i][j].root.k, node_array[k][i][j].root.j, node_array[k][i][j].root.i);
                 } else {
@@ -224,7 +233,6 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], FILE* syndrome_
     for(int k=0;k<TOTAL_MEASUREMENTS;k++){
         for(int i=0; i< (D+1);i++){
             for(int j=0; j<(D-1)/2;j++){
-                printf("syndrome: %d \n", syndrome[k][i][j]);
                 fprintf(syndrome_test_file, "%d \n", (syndrome)[k][i][j]);
                 node_array[k][i][j].parity = syndrome[k][i][j];
                 node_array[k][i][j].id.k = k;
@@ -357,7 +365,7 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], FILE* syndrome_
     }
 }
 
-int loadFileData(FILE* file, int (*array)[TOTAL_MEASUREMENTS][D+1][(D-1)/2]) {
+int loadFileData(FILE* file, int (*array)[TOTAL_MEASUREMENTS][D+1][(D-1)/2], FILE* syndrome_file) {
     for(int k=0;k<TOTAL_MEASUREMENTS;k++){
         for(int i=0; i< D + 1;i++){
             for(int j=0; j< (D-1)/2;j++){
@@ -367,9 +375,22 @@ int loadFileData(FILE* file, int (*array)[TOTAL_MEASUREMENTS][D+1][(D-1)/2]) {
                     fclose(file);
                     return -1;
                 }
-
+                if(value == 1) {
+                    printf("syndrome %d and k %d and synd %d \n", value, k, (*array)[k][i][j]);
+                }
+                if(k % 2 == 1) {
+                    int newMeasurement;
+                    if (fscanf(syndrome_file, "%d", &newMeasurement) != 1) {
+                        printf("Error reading file. No more syndrome corrections.\n");
+                    } else if (newMeasurement == 1){
+                        value = newMeasurement;
+                        printf("correction %d and k %d \n", value, k);
+                        
+                    }
+                }
 
                 (*array)[k][i][j] = value;
+                
 
             }
         }
@@ -416,14 +437,7 @@ int main(){
         return -1;
     }
 
-        // char filename[100];
-    // sprintf(filename, "../test_benches/test_data/input_data_%d_streaming_testing.txt", distance);
-    // FILE* file = fopen(filename, "r");
-    // if (file == NULL) {
-    //     printf("Error opening file %s.\n", filename);
-    //     return -1;
-    // }
-
+    //load syndrome
     char input_syndrome[100];
     sprintf(input_syndrome, "../test_benches/test_data/input_data_%d_streaming_testing.txt", D);
     FILE* input_syndrome_file = fopen(input_syndrome, "r");
@@ -432,31 +446,25 @@ int main(){
         return -1;
     }
 
-    while(1){
-        int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2];
-        int ret_val = loadFileData(input_syndrome_file, &syndrome);
-        if(ret_val < 0) {
-            break;
-        }
+    // while(1){
 
-
-        // modify for streaming measurement
+        //to skip first four syndrome values (that come from the garbage round in verilog)
         int newMeasurement;
-        for(int k = 2; k < 13; k++) {
-            for(int i = 0; i < D+1; i++) {
-                for(int j = 0; j < (D-1)/2; j++) {
-                    if (fscanf(syndrome_file, "%d", &newMeasurement) != 1) {
-                        printf("Error reading file. No more test cases.\n");
-                    }
-                    syndrome[k][i+4][j] = newMeasurement;
-                }
+        for(int i=0; i < 4; i++) {
+            if (fscanf(syndrome_file, "%d", &newMeasurement) != 1) {
+                printf("Error reading file. No more syndrome corrections.\n");
             }
         }
-
+        int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2];
+        int ret_val = loadFileData(input_syndrome_file, &syndrome, syndrome_file);
+        // if(ret_val < 0) {
+        //     break;
+        // }
 
         union_find(syndrome, syndrome_test_file);
         print_output(file_op, ret_val);
-    }
+
+    // }
     int a = verifyVerilogRoots(node_array);
     fclose(file_op);
     fclose(syndrome_file);
