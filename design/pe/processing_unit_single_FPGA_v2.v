@@ -25,7 +25,8 @@ module processing_unit #(
     odd,
     root,
     busy,
-    has_correction
+    has_correction,
+    output_streaming_corrected_syndrome
 );
 
 `include "../../parameters/parameters.sv"
@@ -51,6 +52,7 @@ output reg odd;
 output reg busy;
 
 input wire has_correction;
+output reg output_streaming_corrected_syndrome;
 
 wire [NEIGHBOR_COUNT*ADDRESS_WIDTH-1:0] neighbor_root;
 wire [NEIGHBOR_COUNT-1:0] neighbor_parent_vector;
@@ -117,6 +119,11 @@ always@(posedge clk) begin
         m <= 0;
     end else if(stage == STAGE_MEASUREMENT_LOADING || (stage == STAGE_STREAMING_CORRECTION && IS_STREAMING_WINDOW_BORDER && has_correction)) begin // @Siona : This line should be restricted based on the measurement round
         m <= measurement;
+    end
+    if(stage == STAGE_STREAMING_CORRECTION && IS_STREAMING_WINDOW_BORDER && has_correction) begin
+        output_streaming_corrected_syndrome <= 1;
+    end else if(stage != STAGE_RESULT_VALID && stage != STAGE_IDLE) begin
+        output_streaming_corrected_syndrome <= 0;
     end
 end
 

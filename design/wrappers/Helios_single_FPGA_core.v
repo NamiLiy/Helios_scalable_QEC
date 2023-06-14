@@ -46,7 +46,7 @@ output [7 : 0] output_data;
 output output_valid;
 input output_ready;
 
-output [GRID_WIDTH_Z*GRID_WIDTH_X -1: 0] output_streaming_corrected_syndrome; //new
+output [GRID_WIDTH_Z*GRID_WIDTH_X -1: 0]output_streaming_corrected_syndrome; //new
 
 wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 

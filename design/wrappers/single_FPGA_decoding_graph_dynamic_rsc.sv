@@ -80,6 +80,7 @@ generate
                 wire odd;
                 wire [ADDRESS_WIDTH-1 : 0] root;
                 wire busy_PE;
+                wire output_syndrome;
                                 
                 processing_unit #(
                     .ADDRESS_WIDTH(ADDRESS_WIDTH),
@@ -104,12 +105,16 @@ generate
                     .odd(odd),
                     .root(root),
                     .busy(busy_PE),
-                    .has_correction(has_correction)
+                    .has_correction(has_correction),
+                    .output_streaming_corrected_syndrome(output_syndrome)
                 );
                 assign `roots(i, j, k) = root;
                 assign `busy(i, j, k) = busy_PE;
                 assign `odd_clusters(i,j,k) = odd;
-              
+                
+                if(k == GRID_WIDTH_U/2) begin
+                    assign output_streaming_corrected_syndrome[i*GRID_WIDTH_Z + j] = output_syndrome;
+                end
             end
         end
     end
@@ -134,6 +139,7 @@ always@(posedge clk) begin
     end else begin
         stage <= global_stage;
     end
+    
 end
 
 
@@ -147,7 +153,7 @@ generate
                 assign `PU(i, j, k).has_correction = ud_k[k].ud_i[i].ud_j[j].is_error_out; //new, change from wire later
 //                assign `PU(i, j, k).local_measurement = (stage == STAGE_STREAMING_CORRECTION) ? (`CORRECTION_UD(i+1, j+1) ^ `PU(i, j, k+1).measurement_out) : `PU(i, j, k+1).measurement_out;
                 assign `PU(i, j, k).local_measurement = (stage == STAGE_STREAMING_CORRECTION) ? (ud_k[k].ud_i[i].ud_j[j].is_error_out ^ `PU(i, j, k).measurement_out) : `PU(i, j, k+1).measurement_out;
-                assign output_streaming_corrected_syndrome[i*GRID_WIDTH_Z + j] = `PU(i, j, k).local_measurement; //check
+//                assign output_streaming_corrected_syndrome[i*GRID_WIDTH_Z + j] = `PU(i, j, k).has_correction; //? `PU(i, j, k).local_measurement : 0; //check
             end else begin
                 assign `PU(i, j, k).local_measurement = `PU(i, j, k+1).measurement_out;
             end
