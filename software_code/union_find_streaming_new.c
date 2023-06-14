@@ -187,7 +187,7 @@ int verifyVerilogRoots(struct Node node_array[TOTAL_MEASUREMENTS][D+1][(D-1)/2])
     char filename[100];
     sprintf(filename, "../test_benches/test_data/output_data_%d_roots.txt", D);
     FILE* file = fopen(filename, "r");
-    
+
     if (file == NULL) {
         printf("Error opening roots file %s.\n", filename);
         return -1;
@@ -297,17 +297,17 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], FILE* syndrome_
 		        ver_edges[k][i][j].to_be_updated = 0;
                 if(k==0){ //left and right borders
                     ver_edges[k][i][j].is_boundary = 1;
-                    hor_edges[k][i][j].a.k = k;
-                    hor_edges[k][i][j].a.i = i;
-                    hor_edges[k][i][j].a.j = j;
+                    ver_edges[k][i][j].a.k = k;
+                    ver_edges[k][i][j].a.i = i;
+                    ver_edges[k][i][j].a.j = j;
                 } else {
                     ver_edges[k][i][j].is_boundary = 0;
-                    hor_edges[k][i][j].a.k = k-1;
-                    hor_edges[k][i][j].a.i = i;
-                    hor_edges[k][i][j].a.j = j;
-                    hor_edges[k][i][j].b.k = k;
-                    hor_edges[k][i][j].b.i = i;
-                    hor_edges[k][i][j].b.j = j;
+                    ver_edges[k][i][j].a.k = k-1;
+                    ver_edges[k][i][j].a.i = i;
+                    ver_edges[k][i][j].a.j = j;
+                    ver_edges[k][i][j].b.k = k;
+                    ver_edges[k][i][j].b.i = i;
+                    ver_edges[k][i][j].b.j = j;
                 }
 
             }
@@ -368,9 +368,9 @@ int loadFileData(FILE* file, int (*array)[TOTAL_MEASUREMENTS][D+1][(D-1)/2]) {
                     return -1;
                 }
 
-                
+
                 (*array)[k][i][j] = value;
-                
+
             }
         }
     }

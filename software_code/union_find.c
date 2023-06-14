@@ -261,17 +261,17 @@ void union_find (int syndrome[D][D+1][(D-1)/2]){
 		        ver_edges[k][i][j].to_be_updated = 0;
                 if(k==0){ //left and right borders
                     ver_edges[k][i][j].is_boundary = 1;
-                    hor_edges[k][i][j].a.k = k;
-                    hor_edges[k][i][j].a.i = i;
-                    hor_edges[k][i][j].a.j = j;
+                    ver_edges[k][i][j].a.k = k;
+                    ver_edges[k][i][j].a.i = i;
+                    ver_edges[k][i][j].a.j = j;
                 } else {
                     ver_edges[k][i][j].is_boundary = 0;
-                    hor_edges[k][i][j].a.k = k-1;
-                    hor_edges[k][i][j].a.i = i;
-                    hor_edges[k][i][j].a.j = j;
-                    hor_edges[k][i][j].b.k = k;
-                    hor_edges[k][i][j].b.i = i;
-                    hor_edges[k][i][j].b.j = j;
+                    ver_edges[k][i][j].a.k = k-1;
+                    ver_edges[k][i][j].a.i = i;
+                    ver_edges[k][i][j].a.j = j;
+                    ver_edges[k][i][j].b.k = k;
+                    ver_edges[k][i][j].b.i = i;
+                    ver_edges[k][i][j].b.j = j;
                 }
 
             }
@@ -361,7 +361,7 @@ int main(){
     // load syndrome
     int distance = D;
     char filename[100];
-    sprintf(filename, "../test_benches/test_data/input_data_%d_rsc.txt", distance);
+    sprintf(filename, "../test_benches/test_data/input_data_%d_streaming.txt", distance);
     FILE* file = fopen(filename, "r");
     if (file == NULL) {
         printf("Error opening file %s.\n", filename);
@@ -369,7 +369,7 @@ int main(){
     }
 
     char output_filename[100];
-    sprintf(output_filename, "../test_benches/test_data/output_data_%d_rsc.txt", distance);
+    sprintf(output_filename, "../test_benches/test_data/output_data_%d_streaming.txt", distance);
     FILE* file_op = fopen(output_filename, "wb");
     if (file_op == NULL) {
         printf("Error opening file %s.\n", output_filename);
