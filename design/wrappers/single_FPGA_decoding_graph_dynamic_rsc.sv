@@ -48,7 +48,7 @@ output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 output [PU_COUNT - 1 : 0] busy;
 output [CORRECTION_COUNT_PER_ROUND - 1 : 0] correction;
 
-output [GRID_WIDTH_Z*GRID_WIDTH_X -1: 0] output_streaming_corrected_syndrome;
+output [GRID_WIDTH_Z*GRID_WIDTH_X*GRID_WIDTH_U -1: 0] output_streaming_corrected_syndrome;
 
 genvar i;
 genvar j;
@@ -112,9 +112,9 @@ generate
                 assign `busy(i, j, k) = busy_PE;
                 assign `odd_clusters(i,j,k) = odd;
                 
-                if(k == GRID_WIDTH_U/2) begin
-                    assign output_streaming_corrected_syndrome[i*GRID_WIDTH_Z + j] = output_syndrome;
-                end
+                //if(k == GRID_WIDTH_U/2) begin
+                assign output_streaming_corrected_syndrome[i*GRID_WIDTH_Z + j + k*GRID_WIDTH_Z*GRID_WIDTH_X] = output_syndrome;
+                //end
             end
         end
     end
@@ -147,16 +147,15 @@ generate
     for (k=GRID_WIDTH_U-1; k >= 0; k=k-1) begin: pu_k_extra
         for (i=0; i < GRID_WIDTH_X; i=i+1) begin: pu_i_extra
             for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: pu_j_extra
-            if(k==GRID_WIDTH_U-1) begin
-                assign `PU(i, j, k).local_measurement = measurements[`INDEX_PLANAR(i,j)];
-            end else if(k == GRID_WIDTH_U/2) begin
-                assign `PU(i, j, k).has_correction = ud_k[k].ud_i[i].ud_j[j].is_error_out; //new, change from wire later
-//                assign `PU(i, j, k).local_measurement = (stage == STAGE_STREAMING_CORRECTION) ? (`CORRECTION_UD(i+1, j+1) ^ `PU(i, j, k+1).measurement_out) : `PU(i, j, k+1).measurement_out;
-                assign `PU(i, j, k).local_measurement = (stage == STAGE_STREAMING_CORRECTION) ? (ud_k[k].ud_i[i].ud_j[j].is_error_out ^ `PU(i, j, k).measurement_out) : `PU(i, j, k+1).measurement_out;
-//                assign output_streaming_corrected_syndrome[i*GRID_WIDTH_Z + j] = `PU(i, j, k).has_correction; //? `PU(i, j, k).local_measurement : 0; //check
-            end else begin
-                assign `PU(i, j, k).local_measurement = `PU(i, j, k+1).measurement_out;
-            end
+                if(k==GRID_WIDTH_U-1) begin
+                    assign `PU(i, j, k).local_measurement = measurements[`INDEX_PLANAR(i,j)];
+                end else if(k == GRID_WIDTH_U/2) begin
+                    assign `PU(i, j, k).has_correction = ud_k[k].ud_i[i].ud_j[j].is_error_out; //new, change from wire later
+    //                assign `PU(i, j, k).local_measurement = (stage == STAGE_STREAMING_CORRECTION) ? (`CORRECTION_UD(i+1, j+1) ^ `PU(i, j, k+1).measurement_out) : `PU(i, j, k+1).measurement_out;
+                    assign `PU(i, j, k).local_measurement = (stage == STAGE_STREAMING_CORRECTION) ? (ud_k[k].ud_i[i].ud_j[j].is_error_out ^ `PU(i, j, k).measurement_out) : `PU(i, j, k+1).measurement_out;
+                end else begin
+                    assign `PU(i, j, k).local_measurement = `PU(i, j, k+1).measurement_out;
+                end
             end
         end
     end

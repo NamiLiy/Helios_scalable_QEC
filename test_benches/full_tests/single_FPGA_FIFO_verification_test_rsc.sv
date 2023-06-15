@@ -79,7 +79,6 @@ wire input_ready_fifo;
 wire [7:0] output_data_fifo;
 wire output_valid_fifo;
 wire output_ready_fifo;
-wire [GRID_WIDTH_Z*GRID_WIDTH_X -1: 0] output_streaming_corrected_syndrome;
 
 // instantiate
 Helios_single_FPGA #(
@@ -95,8 +94,8 @@ Helios_single_FPGA #(
     .input_ready(input_ready_fifo),
     .output_data(output_data_fifo),
     .output_valid(output_valid_fifo),
-    .output_ready(output_ready_fifo),
-    .output_streaming_corrected_syndrome(output_streaming_corrected_syndrome)
+    .output_ready(output_ready_fifo)
+    //.output_streaming_corrected_syndrome(output_streaming_corrected_syndrome)
     //.roots(roots)
 );
 
@@ -301,9 +300,9 @@ always@ (posedge clk) begin
                     $fwrite (file_root_op, `root_u(i, j, k));
                     $fwrite (file_root_op, `root_x(i, j, k));
                     $fdisplay(file_root_op, (Z_BIT_WIDTH > 0) ? `root_z(i, j, k) : 0);
-                    if(k == GRID_WIDTH_U/2) begin                    
-                        $fdisplay (file_syndrome_op, output_streaming_corrected_syndrome[i*GRID_WIDTH_Z + j]);
-                    end
+                    //if(k == GRID_WIDTH_U/2) begin                    
+                    $fdisplay (file_syndrome_op, decoder.output_streaming_corrected_syndrome[i*GRID_WIDTH_Z + j + k*GRID_WIDTH_Z*GRID_WIDTH_X]);
+                    //end
                 end
             end
         end

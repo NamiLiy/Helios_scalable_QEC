@@ -117,13 +117,15 @@ reg m;
 always@(posedge clk) begin
     if(reset) begin
         m <= 0;
-    end else if(stage == STAGE_MEASUREMENT_LOADING || (stage == STAGE_STREAMING_CORRECTION && IS_STREAMING_WINDOW_BORDER && has_correction)) begin // @Siona : This line should be restricted based on the measurement round
+    end else if(stage == STAGE_MEASUREMENT_LOADING || (stage == STAGE_STREAMING_CORRECTION && IS_STREAMING_WINDOW_BORDER && has_correction)) begin 
         m <= measurement;
     end
-    if(stage == STAGE_STREAMING_CORRECTION && IS_STREAMING_WINDOW_BORDER && has_correction) begin
-        output_streaming_corrected_syndrome <= 1;
-    end else if(stage != STAGE_RESULT_VALID && stage != STAGE_IDLE) begin
-        output_streaming_corrected_syndrome <= 0;
+
+end
+
+always@(*) begin
+    if(stage == STAGE_STREAMING_CORRECTION) begin
+        output_streaming_corrected_syndrome <= (has_correction && IS_STREAMING_WINDOW_BORDER) ? measurement ^ m : m;
     end
 end
 
@@ -297,7 +299,7 @@ reg [NEIGHBOR_COUNT-1:0] neighbor_is_error_internal;
 reg [NEIGHBOR_COUNT-1:0] neighbor_is_error_border;
 
 always@(*) begin //new
-    if((stage == STAGE_PEELING || stage == STAGE_STREAMING_CORRECTION) && !some_child_is_not_peeling_complete) begin //NEW
+    if((stage == STAGE_PEELING || stage == STAGE_STREAMING_CORRECTION) && !some_child_is_not_peeling_complete) begin //NEW @Siona: Do you need the || here?
         neighbor_is_error_internal = neighbor_parent_vector & child_peeling_m;
     end else begin
         neighbor_is_error_internal = 6'b0;
@@ -305,7 +307,7 @@ always@(*) begin //new
 end
 
 always@(*) begin //new
-    if((stage == STAGE_PEELING || stage == STAGE_STREAMING_CORRECTION) && !some_child_is_not_peeling_complete && odd) begin //NEW
+    if((stage == STAGE_PEELING || stage == STAGE_STREAMING_CORRECTION) && !some_child_is_not_peeling_complete && odd) begin //NEW @Siona: Do you need the || here?
         casex (neighbor_is_boundary)
             6'b1xxxxx: neighbor_is_error_border = 6'b100000;
             6'b01xxxx: neighbor_is_error_border = 6'b010000;
