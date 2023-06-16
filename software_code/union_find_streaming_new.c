@@ -123,6 +123,18 @@ int update_boundary(struct Address a){
     return 0;
 }
 
+int validateRoots(int k, int i, int j) {
+    if(hor_edges[k][i][j].to_be_updated == 1 | ver_edges[k][i][j].to_be_updated == 1) {
+        while(hor_edges[k][i][j].a.i != ver_edges[k][i][j].a.i & hor_edges[k][i][j].a.j != ver_edges[k][i][j].a.j & hor_edges[k][i][j].a.k != ver_edges[k][i][j].a.k) {
+            merge_internal(hor_edges[k][i][j].a, hor_edges[k][i][j].b);
+            merge_internal(ver_edges[k][i][j].a, ver_edges[k][i][j].b);
+            printf("validating");
+        }
+    }
+    hor_edges[k][i][j].to_be_updated = 0;
+    ver_edges[k][i][j].to_be_updated = 0;
+}
+
 int merge_internal(struct Address a, struct Address b){
     struct Address root_a = get_root(a);
     struct Address root_b = get_root(b);
@@ -143,6 +155,10 @@ int merge_internal(struct Address a, struct Address b){
         node_array[root_b.k][root_b.i][root_b.j].root.k = root_a.k;
         node_array[root_b.k][root_b.i][root_b.j].root.i = root_a.i;
         node_array[root_b.k][root_b.i][root_b.j].root.j = root_a.j;
+
+        b.k = a.k;
+        b.j = a.j;
+        b.i = a.i;
     } else {
         // B has the lower root
         if(node_array[root_a.k][root_a.i][root_b.j].boundary == 1){
@@ -156,6 +172,10 @@ int merge_internal(struct Address a, struct Address b){
         node_array[root_a.k][root_a.i][root_a.j].root.k = root_b.k;
         node_array[root_a.k][root_a.i][root_a.j].root.i = root_b.i;
         node_array[root_a.k][root_a.i][root_a.j].root.j = root_b.j;
+
+        a.k = b.k;
+        a.j = b.j;
+        a.i = b.i;
     }
     return 0;
 }
@@ -164,7 +184,7 @@ int merge_internal(struct Address a, struct Address b){
 int merge(int k, int i, int j, int direction){
     if(direction ==0){
         if(hor_edges[k][i][j].to_be_updated == 1){
-            hor_edges[k][i][j].to_be_updated == 0;
+            //hor_edges[k][i][j].to_be_updated == 0;
             if(hor_edges[k][i][j].is_boundary == 1){
                 update_boundary(hor_edges[k][i][j].a);
             } else {
@@ -173,7 +193,7 @@ int merge(int k, int i, int j, int direction){
         }
     } else {
         if(ver_edges[k][i][j].to_be_updated == 1){
-            ver_edges[k][i][j].to_be_updated == 0;
+            //ver_edges[k][i][j].to_be_updated == 0;
             if(ver_edges[k][i][j].is_boundary == 1){
                 update_boundary(ver_edges[k][i][j].a);
             } else {
@@ -234,11 +254,11 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], FILE* syndrome_
 
 
     for(int k=0;k<TOTAL_MEASUREMENTS;k++){
-        for(int i=0; i< D;i++){
-            for(int j=0; j< D;j++){
+        for(int i=0; i< D+1;i++){
+            for(int j=0; j< (D-1)/2;j++){
 		        hor_edges[k][i][j].growth = 0;
 		        hor_edges[k][i][j].to_be_updated = 0;
-                if(j==0 || j== D - 1){ //left and right borders
+                if(i==0 || i== D){ //left and right borders
                     hor_edges[k][i][j].is_boundary = 1;
                     if(i%2==0 && j==0){
                         hor_edges[k][i][j].a.k = k;
@@ -265,14 +285,14 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], FILE* syndrome_
                         hor_edges[k][i][j].a.i = i;
                         hor_edges[k][i][j].a.j = (j-1)/2;
                         hor_edges[k][i][j].b.k = k;
-                        hor_edges[k][i][j].b.i = i+1;
+                        hor_edges[k][i][j].b.i = i-1;
                         hor_edges[k][i][j].b.j = j/2;
                     } else if((i%2==1 && j%2 == 1) || (i%2==0 && j%2 == 0)){
                         hor_edges[k][i][j].a.k = k;
                         hor_edges[k][i][j].a.i = i;
                         hor_edges[k][i][j].a.j = j/2;
                         hor_edges[k][i][j].b.k = k;
-                        hor_edges[k][i][j].b.i = i+1;
+                        hor_edges[k][i][j].b.i = i-1;
                         hor_edges[k][i][j].b.j = j/2;
                     }
                 }
@@ -310,8 +330,8 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], FILE* syndrome_
     while(change_occur == 1){
 	    change_occur = 0;
         for(int k=0;k<TOTAL_MEASUREMENTS;k++){
-            for(int i=0; i< D;i++){
-                for(int j=0; j< D;j++){
+            for(int i=0; i< D+1;i++){
+                for(int j=0; j< (D-1)/2;j++){
                     int grow_ret = grow(k,i,j,0); //horizontal_edge
                     change_occur = change_occur | grow_ret;
                 }
@@ -331,22 +351,45 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], FILE* syndrome_
 
 	    // Merge cycle
         for(int k=0;k<TOTAL_MEASUREMENTS;k++){
-            for(int i=0; i< D;i++){
-                for(int j=0; j< D;j++){
-                    merge(k,i,j,0); //horizontal_edge
-                }
-            }
-        }
-
-        for(int k=0;k<TOTAL_MEASUREMENTS;k++){
             for(int i=0; i< D + 1;i++){
                 for(int j=0; j< (D-1)/2;j++){
                     merge(k,i,j,1); //vertical_edge
                 }
             }
+        } 
+        
+        for(int k=0;k<TOTAL_MEASUREMENTS;k++){
+            for(int i=0; i< D+1;i++){
+                for(int j=0; j< (D-1)/2;j++){
+                    merge(k,i,j,0); //horizontal_edge
+                }
+            }
         }
+        
+
+        // validate
+        for(int k=0;k<TOTAL_MEASUREMENTS;k++){
+            for(int i=0; i< D+1;i++){
+                for(int j=0; j< (D-1)/2;j++){
+                    printf("validating  hor %d ver %d \n", hor_edges[k][i][j].to_be_updated, ver_edges[k][i][j].to_be_updated);
+                    validateRoots(k, i, j);
+                }
+            }
+        }
+
+        // for(int k=0;k<TOTAL_MEASUREMENTS;k++){
+        //     for(int i=0; i< D + 1;i++){
+        //         for(int j=0; j< (D-1)/2;j++){
+        //             //printf("validating ver and k %d upd %d \n", k, ver_edges[k][i][j].to_be_updated);
+        //             merge(k,i,j,1); //vertical_edge
+        //             ver_edges[k][i][j].to_be_updated == 0;
+        //         }
+        //     }
+        // }
     }
 }
+
+
 
 int loadFileData(FILE* file, int (*array)[TOTAL_MEASUREMENTS][D+1][(D-1)/2]) {
     // move down
