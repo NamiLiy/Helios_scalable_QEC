@@ -38,9 +38,6 @@ struct Edge hor_edges[TOTAL_MEASUREMENTS][D][D];
 struct Edge ver_edges[TOTAL_MEASUREMENTS][D+1][(D-1)/2];
 
 struct Address get_root(struct Address a){
-    if(count == 36) {
-        printf("k: %d and i: %d and j: %d \n", a.k, a.i, a.j);
-    }
     if(node_array[a.k][a.i][a.j].id.k == node_array[a.k][a.i][a.j].root.k &&
         node_array[a.k][a.i][a.j].id.i == node_array[a.k][a.i][a.j].root.i &&
         node_array[a.k][a.i][a.j].id.j == node_array[a.k][a.i][a.j].root.j){
