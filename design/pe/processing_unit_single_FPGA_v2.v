@@ -123,9 +123,9 @@ always@(posedge clk) begin
 
 end
 
-always@(*) begin
-    if(stage == STAGE_STREAMING_CORRECTION) begin
-        output_streaming_corrected_syndrome <= (has_correction && IS_STREAMING_WINDOW_BORDER) ? measurement ^ m : m;
+always@(posedge clk) begin
+    if(stage == STAGE_GROW) begin
+        output_streaming_corrected_syndrome <= (m == 1 | m == 0) ? m : 0; 
     end
 end
 

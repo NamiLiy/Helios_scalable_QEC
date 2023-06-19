@@ -123,18 +123,6 @@ int update_boundary(struct Address a){
     return 0;
 }
 
-// int validateRoots(int k, int i, int j) {
-//     if(hor_edges[k][i][j].to_be_updated == 1 | ver_edges[k][i][j].to_be_updated == 1) {
-//         while(hor_edges[k][i][j].a.i != ver_edges[k][i][j].a.i & hor_edges[k][i][j].a.j != ver_edges[k][i][j].a.j & hor_edges[k][i][j].a.k != ver_edges[k][i][j].a.k) {
-//             merge_internal(hor_edges[k][i][j].a, hor_edges[k][i][j].b);
-//             merge_internal(ver_edges[k][i][j].a, ver_edges[k][i][j].b);
-//             printf("validating");
-//         }
-//     }
-//     hor_edges[k][i][j].to_be_updated = 0;
-//     ver_edges[k][i][j].to_be_updated = 0;
-// }
-
 int merge_internal(struct Address a, struct Address b){
     struct Address root_a = get_root(a);
     struct Address root_b = get_root(b);
@@ -365,27 +353,6 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], FILE* syndrome_
                 }
             }
         }
-        
-
-        // validate
-        // for(int k=0;k<TOTAL_MEASUREMENTS;k++){
-        //     for(int i=0; i< D+1;i++){
-        //         for(int j=0; j< (D-1)/2;j++){
-        //             printf("validating  hor %d ver %d \n", hor_edges[k][i][j].to_be_updated, ver_edges[k][i][j].to_be_updated);
-        //             validateRoots(k, i, j);
-        //         }
-        //     }
-        // }
-
-        // for(int k=0;k<TOTAL_MEASUREMENTS;k++){
-        //     for(int i=0; i< D + 1;i++){
-        //         for(int j=0; j< (D-1)/2;j++){
-        //             //printf("validating ver and k %d upd %d \n", k, ver_edges[k][i][j].to_be_updated);
-        //             merge(k,i,j,1); //vertical_edge
-        //             ver_edges[k][i][j].to_be_updated == 0;
-        //         }
-        //     }
-        // }
     }
 }
 

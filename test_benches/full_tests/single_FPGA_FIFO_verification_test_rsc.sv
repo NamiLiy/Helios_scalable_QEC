@@ -293,7 +293,7 @@ assign file_syndrome_op = $fopen ("/home/helios/Helios_scalable_QEC/test_benches
         
         
 always@ (posedge clk) begin
-    if(loading_state == 3'b101 && !output_valid) begin      
+    if(decoder.controller.global_stage == STAGE_STREAMING_CORRECTION) begin      
         for(k = 0; k < GRID_WIDTH_U; k++) begin
             for(i = 0; i < GRID_WIDTH_X; i++) begin
                 for(j = 0; j < GRID_WIDTH_Z; j++) begin
