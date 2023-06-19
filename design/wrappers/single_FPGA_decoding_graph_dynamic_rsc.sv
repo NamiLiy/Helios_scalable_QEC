@@ -3,7 +3,7 @@
 module single_FPGA_decoding_graph_dynamic_rsc #(
     parameter GRID_WIDTH_X = 4,
     parameter GRID_WIDTH_Z = 1,
-    parameter GRID_WIDTH_U = 5,
+    parameter GRID_WIDTH_U = 3,
     parameter MAX_WEIGHT = 2, 
     parameter STREAMING = 1
 ) (
@@ -14,7 +14,8 @@ module single_FPGA_decoding_graph_dynamic_rsc #(
     roots,
     busy,
     global_stage,
-    correction
+    correction,
+    output_streaming_corrected_syndrome
  );
 
 `include "../../parameters/parameters.sv"
@@ -48,6 +49,8 @@ output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 output [PU_COUNT - 1 : 0] busy;
 output [CORRECTION_COUNT_PER_ROUND - 1 : 0] correction;
 
+output [GRID_WIDTH_Z*GRID_WIDTH_X*GRID_WIDTH_U -1: 0] output_streaming_corrected_syndrome;
+
 genvar i;
 genvar j;
 genvar k;
@@ -78,6 +81,7 @@ generate
                 wire odd;
                 wire [ADDRESS_WIDTH-1 : 0] root;
                 wire busy_PE;
+                wire output_syndrome;
                                 
                 processing_unit #(
                     .ADDRESS_WIDTH(ADDRESS_WIDTH),
@@ -102,12 +106,16 @@ generate
                     .odd(odd),
                     .root(root),
                     .busy(busy_PE),
-                    .has_correction(has_correction)
+                    .has_correction(has_correction),
+                    .output_streaming_corrected_syndrome(output_syndrome)
                 );
                 assign `roots(i, j, k) = root;
                 assign `busy(i, j, k) = busy_PE;
                 assign `odd_clusters(i,j,k) = odd;
-              
+                
+                //if(k == GRID_WIDTH_U/2) begin
+                assign output_streaming_corrected_syndrome[i*GRID_WIDTH_Z + j + k*GRID_WIDTH_Z*GRID_WIDTH_X] = output_syndrome;
+                //end
             end
         end
     end
@@ -132,6 +140,7 @@ always@(posedge clk) begin
     end else begin
         stage <= global_stage;
     end
+    
 end
 
 generate

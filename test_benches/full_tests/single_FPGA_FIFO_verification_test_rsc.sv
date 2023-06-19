@@ -22,14 +22,15 @@ localparam CODE_DISTANCE_Z = (CODE_DISTANCE_X - 1)/2;
 
 parameter GRID_WIDTH_X = CODE_DISTANCE + 1;
 parameter GRID_WIDTH_Z = (CODE_DISTANCE_X - 1)/2;
-parameter GRID_WIDTH_U = CODE_DISTANCE*2-1;
+parameter GRID_WIDTH_U = (STREAMING) ? CODE_DISTANCE*2-1 : CODE_DISTANCE;
 parameter MAX_WEIGHT = 2;
-parameter STREAMING = 1;
+parameter STREAMING = 0;
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
-localparam MEASUREMENT_ROUNDS = CODE_DISTANCE;
 
-localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS; //change to CODE_DISTANCE?
+localparam MEASUREMENT_ROUNDS = CODE_DISTANCE-1;
+
+localparam PU_COUNT = GRID_WIDTH_X * GRID_WIDTH_Z * GRID_WIDTH_U; //change to CODE_DISTANCE?
 
 localparam X_BIT_WIDTH = $clog2(GRID_WIDTH_X);
 localparam Z_BIT_WIDTH = $clog2(GRID_WIDTH_Z);
@@ -63,6 +64,7 @@ reg [`ALIGNED_PU_PER_ROUND*GRID_WIDTH_U-1:0] measurements;
 `define root_z(i, j, k) decoder.roots[ADDRESS_WIDTH*`INDEX(i, j, k) +: Z_BIT_WIDTH]
 `define root_u(i, j, k) decoder.roots[ADDRESS_WIDTH*`INDEX(i, j, k)+X_BIT_WIDTH+Z_BIT_WIDTH +: U_BIT_WIDTH]
 
+
 reg [7:0] input_data;
 reg input_valid;
 wire input_ready;
@@ -94,7 +96,7 @@ Helios_single_FPGA #(
     .output_data(output_data_fifo),
     .output_valid(output_valid_fifo),
     .output_ready(output_ready_fifo)
-    
+    //.output_streaming_corrected_syndrome(output_streaming_corrected_syndrome)
     //.roots(roots)
 );
 
@@ -174,7 +176,7 @@ always @(posedge clk) begin
                 input_fifo_counter <= 0;
             end
             3'b11: begin
-                if (input_fifo_counter == (`BYTES_PER_ROUND*GRID_WIDTH_U-1)) begin
+                if (input_fifo_counter == (`BYTES_PER_ROUND*MEASUREMENT_ROUNDS)) begin
                     loading_state <= 3'b100;
                 end
                 input_fifo_counter <= input_fifo_counter + 1; 
@@ -236,25 +238,25 @@ always @(negedge clk) begin
         measurements = 0;
         if(input_open == 1) begin
             if (CODE_DISTANCE == 3) begin
-                input_file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_3_streaming.txt", "r");
+               input_file = (STREAMING) ? $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_3_streaming.txt", "r") : $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_3_rsc.txt", "r");
             end else if (CODE_DISTANCE == 5) begin
-                input_file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_5_rsc.txt", "r");
+                input_file = (STREAMING) ? $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_5_streaming.txt", "r") : $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_5_rsc.txt", "r");
             end else if (CODE_DISTANCE == 7) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_7_rsc.txt", "r");
+                input_file = (STREAMING) ? $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_7_streaming.txt", "r") : $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_7_rsc.txt", "r");
             end else if (CODE_DISTANCE == 9) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_9_rsc.txt", "r");
+                input_file = (STREAMING) ? $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_9_streaming.txt", "r") : $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_9_rsc.txt", "r");
             end else if (CODE_DISTANCE == 11) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_11_rsc.txt", "r");
+                input_file = (STREAMING) ? $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_11_streaming.txt", "r") : $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_11_rsc.txt", "r");
             end else if (CODE_DISTANCE == 13) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_13_rsc.txt", "r");
+                input_file = (STREAMING) ? $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_13_streaming.txt", "r") : $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_13_rsc.txt", "r");
             end else if (CODE_DISTANCE == 15) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_15_rsc.txt", "r");
+                input_file = (STREAMING) ? $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_15_streaming.txt", "r") : $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_15_rsc.txt", "r");
             end else if (CODE_DISTANCE == 17) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_17_rsc.txt", "r");
+                input_file = (STREAMING) ? $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_17_streaming.txt", "r") : $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_17_rsc.txt", "r");
             end else if (CODE_DISTANCE == 19) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_19_rsc.txt", "r");
+                input_file = (STREAMING) ? $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_19_streaming.txt", "r") : $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_19_rsc.txt", "r");
             end else if (CODE_DISTANCE == 21) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_21_rsc.txt", "r");
+                input_file = (STREAMING) ? $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_21_streaming.txt", "r") : $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_21_rsc.txt", "r");
             end
             input_open = 0;
         end
@@ -265,7 +267,7 @@ always @(negedge clk) begin
                 syndrome_count = 0;
             end
         end
-        for (k=0 ;k <MEASUREMENT_ROUNDS - 1; k++) begin           
+        for (k=0 ;k <MEASUREMENT_ROUNDS; k++) begin           
             for (i=0 ;i <CODE_DISTANCE_X; i++) begin
                 for (j=0 ;j <CODE_DISTANCE_Z; j++) begin
                     if (input_eof == 0)begin 
@@ -283,69 +285,92 @@ always @(negedge clk) begin
     end
 end
 
+//streaming testing
+integer file_root_op;
+integer file_syndrome_op;
+
+assign file_root_op = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_3_roots.txt", "w");
+assign file_syndrome_op = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_3_syndrome.txt", "w");
+        
+        
+always@ (posedge clk) begin
+    if(decoder.controller.global_stage == STAGE_STREAMING_CORRECTION && STREAMING) begin      
+        for(k = 0; k < GRID_WIDTH_U; k++) begin
+            for(i = 0; i < GRID_WIDTH_X; i++) begin
+                for(j = 0; j < GRID_WIDTH_Z; j++) begin
+                    $fwrite (file_root_op, `root_u(i, j, k));
+                    $fwrite (file_root_op, `root_x(i, j, k));
+                    $fdisplay(file_root_op, (Z_BIT_WIDTH > 0) ? `root_z(i, j, k) : 0);
+                    $fdisplay (file_syndrome_op, decoder.output_streaming_corrected_syndrome[i*GRID_WIDTH_Z + j + k*GRID_WIDTH_Z*GRID_WIDTH_X]);
+                end
+            end
+        end
+    end
+end
+
 
 // Output verification logic
 always @(posedge clk) begin
     if (loading_state == 3'b101 && !output_valid) begin // This is not becaus we wait until all messages are received
-        $display("%t\tTest case %d pass %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
-       /* if(open == 1) begin
-            if (CODE_DISTANCE == 3) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_3_rsc.txt", "r");
-            end else if (CODE_DISTANCE == 5) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_5_rsc.txt", "r");
-            end else if (CODE_DISTANCE == 7) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_7_rsc.txt", "r");
-            end else if (CODE_DISTANCE == 9) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_9_rsc.txt", "r");
-            end else if (CODE_DISTANCE == 11) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_11_rsc.txt", "r");
-            end else if (CODE_DISTANCE == 13) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_13_rsc.txt", "r");
-            end 
-            open = 0;
-        end
-        if (eof == 0)begin 
-            $fscanf (file, "%h\n", test_case);
-            test_fail = 0;
-            eof = $feof(file);
-        end
-        for (k=0 ;k <MEASUREMENT_ROUNDS; k++) begin
-            for (i=0 ;i <CODE_DISTANCE_X; i++) begin
-                for (j=0 ;j <CODE_DISTANCE_Z; j++) begin
-                    if (eof == 0)begin 
-                        $fscanf (file, "%h\n", read_value);
-                        if(Z_BIT_WIDTH>0) begin
-                            expected_z = read_value[Z_BIT_WIDTH - 1:0];
-                        end else begin
-                            expected_z = 0;
-                        end
-                        expected_x = read_value[X_BIT_WIDTH - 1 + 8 :8];
-                        expected_u = read_value[U_BIT_WIDTH - 1 + 16 :16];
-                        eof = $feof(file);
-                        test_fail = 0;
-                        if(Z_BIT_WIDTH>0) begin
-                            if (expected_u != `root_u(i, j, k) || expected_x != `root_x(i, j, k) || expected_z != `root_z(i, j, k)) begin
-                                $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d)" , $time, k, i ,j, `root_u(i, j, k), `root_x(i, j, k), `root_z(i, j, k), expected_u, expected_x, expected_z);
-                                test_fail = 1;
-                            end
-                        end else begin
-                            if (expected_u != `root_u(i, j, k) || expected_x != `root_x(i, j, k)) begin
-                                $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d)" , $time, k, i ,j, `root_u(i, j, k), `root_x(i, j, k), 0, expected_u, expected_x, expected_z);
-                                test_fail = 1;
-                            end
-                        end
-                    end
-                end
-            end
-        end
-        if (!test_fail) begin
-            $display("%t\tTest case %d pass %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
-            pass_count = pass_count + 1;
-        end else begin
-            $display("%t\tTest case %d fail %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
-            fail_count = fail_count + 1;
-            $finish;
-        end*/
+        // $display("%t\tTest case %d pass %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
+//       if(open == 1) begin
+//            if (CODE_DISTANCE == 3) begin
+//                file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_3_rsc.txt", "r");
+//            end else if (CODE_DISTANCE == 5) begin
+//                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_5_rsc.txt", "r");
+//            end else if (CODE_DISTANCE == 7) begin
+//                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_7_rsc.txt", "r");
+//            end else if (CODE_DISTANCE == 9) begin
+//                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_9_rsc.txt", "r");
+//            end else if (CODE_DISTANCE == 11) begin
+//                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_11_rsc.txt", "r");
+//            end else if (CODE_DISTANCE == 13) begin
+//                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_13_rsc.txt", "r");
+//            end 
+//            open = 0;
+//        end
+//        if (eof == 0)begin 
+//            $fscanf (file, "%h\n", test_case);
+//            test_fail = 0;
+//            eof = $feof(file);
+//        end
+//        for (k=0 ;k <MEASUREMENT_ROUNDS; k++) begin
+//            for (i=0 ;i <CODE_DISTANCE_X; i++) begin
+//                for (j=0 ;j <CODE_DISTANCE_Z; j++) begin
+//                    if (eof == 0)begin 
+//                        $fscanf (file, "%h\n", read_value);
+//                        if(Z_BIT_WIDTH>0) begin
+//                            expected_z = read_value[Z_BIT_WIDTH - 1:0];
+//                        end else begin
+//                            expected_z = 0;
+//                        end
+//                        expected_x = read_value[X_BIT_WIDTH - 1 + 8 :8];
+//                        expected_u = read_value[U_BIT_WIDTH - 1 + 16 :16];
+//                        eof = $feof(file);
+//                        test_fail = 0;
+//                        if(Z_BIT_WIDTH>0) begin
+//                            if (expected_u != `root_u(i, j, k) || expected_x != `root_x(i, j, k) || expected_z != `root_z(i, j, k)) begin
+//                                $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d)" , $time, k, i ,j, `root_u(i, j, k), `root_x(i, j, k), `root_z(i, j, k), expected_u, expected_x, expected_z);
+//                                test_fail = 1;
+//                            end
+//                        end else begin
+//                            if (expected_u != `root_u(i, j, k) || expected_x != `root_x(i, j, k)) begin
+//                                $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d)" , $time, k, i ,j, `root_u(i, j, k), `root_x(i, j, k), 0, expected_u, expected_x, expected_z);
+//                                test_fail = 1;
+//                            end
+//                        end
+//                    end
+//                end
+//            end
+//        end
+//        if (!test_fail) begin
+//            $display("%t\tTest case %d pass %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
+//            pass_count = pass_count + 1;
+//        end else begin
+//            $display("%t\tTest case %d fail %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
+//            fail_count = fail_count + 1;
+//            $finish;
+//        end //*/
     end
     if (input_eof == 1)begin
         total_count = pass_count + fail_count;
@@ -353,8 +378,10 @@ always @(posedge clk) begin
         $display("Total : %d",total_count);
         $display("Passed : %d",pass_count);
         $display("Failed : %d",fail_count);
-        $finish;
-    end
+        $fclose(file_root_op);
+        $fclose(file_syndrome_op);
+        $finish; 
+    end 
 end
 
 initial begin
