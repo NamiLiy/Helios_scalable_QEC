@@ -29,7 +29,7 @@ struct RandomSeeds* init_random_seeds(int num_seeds) {
     // srand();
     for (int i = 0; i < num_seeds; i++) {
         rs->seeds[i] = rand();
-        printf("%d, ", rs->seeds[i]);
+        //printf("%d, ", rs->seeds[i]);
         rs->values[i] = 0.0;
     }
 
