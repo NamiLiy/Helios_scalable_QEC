@@ -128,24 +128,9 @@ int merge_internal(struct Address a, struct Address b){
     struct Address root_a = get_root(a);
     struct Address root_b = get_root(b);
     if(root_a.k == root_b.k && root_a.i == root_b.i && root_a.j == root_b.j){
-        // if((a.k == 1 & a.i == 2 && a.j == 0) | (b.k == 1 & b.i == 2 & b.j == 0)) {
-        //     printf(" index a %d %d %d and root b %d %d %d \n", a.k, a.i, a.j, b.k, b.i, b.j);
-        //     printf("nodes a %d %d %d and root b %d %d %d \n", node_array[root_a.k][root_a.i][root_a.j].root.k, node_array[root_a.k][root_a.i][root_a.j].root.i, node_array[root_a.k][root_a.i][root_a.j].root.j, node_array[b.k][b.i][b.j].root.k, node_array[b.k][b.i][b.j].root.i, node_array[b.k][b.i][b.j].root.j);
-        // }
-        
         // They are the same cluster. No merge
         return 0;
     }
-
-    // if(node_array[a.k][a.i][a.j].root.k == node_array[b.k][b.i][b.j].root.k && node_array[a.k][a.i][a.j].root.i == node_array[b.k][b.i][b.j].root.i && node_array[a.k][a.i][a.j].root.j == node_array[b.k][b.i][b.j].root.j){
-    //     if((a.k == 1 & a.i == 2 && a.j == 0) | (b.k == 1 & b.i == 2 & b.j == 0)) {
-    //         printf(" index a %d %d %d and root b %d %d %d \n", a.k, a.i, a.j, b.k, b.i, b.j);
-    //         printf("nodes a %d %d %d and root b %d %d %d \n", node_array[root_a.k][root_a.i][root_a.j].root.k, node_array[root_a.k][root_a.i][root_a.j].root.i, node_array[root_a.k][root_a.i][root_a.j].root.j, node_array[b.k][b.i][b.j].root.k, node_array[b.k][b.i][b.j].root.i, node_array[b.k][b.i][b.j].root.j);
-    //     }
-        
-    //     // They are the same cluster. No merge
-    //     return 0;
-    // }
 
     if(root_a.k < root_b.k || (root_a.k == root_b.k && root_a.i < root_b.i) || (root_a.k == root_b.k && root_a.i == root_b.i && root_a.j < root_b.j)){
         // A has a lower root
