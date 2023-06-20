@@ -24,7 +24,7 @@ parameter GRID_WIDTH_X = CODE_DISTANCE + 1;
 parameter GRID_WIDTH_Z = (CODE_DISTANCE_X - 1)/2;
 parameter GRID_WIDTH_U = (STREAMING) ? CODE_DISTANCE*2-1 : CODE_DISTANCE;
 parameter MAX_WEIGHT = 2;
-parameter STREAMING = 0;
+parameter STREAMING = 1;
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
 

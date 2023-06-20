@@ -128,9 +128,24 @@ int merge_internal(struct Address a, struct Address b){
     struct Address root_a = get_root(a);
     struct Address root_b = get_root(b);
     if(root_a.k == root_b.k && root_a.i == root_b.i && root_a.j == root_b.j){
+        // if((a.k == 1 & a.i == 2 && a.j == 0) | (b.k == 1 & b.i == 2 & b.j == 0)) {
+        //     printf(" index a %d %d %d and root b %d %d %d \n", a.k, a.i, a.j, b.k, b.i, b.j);
+        //     printf("nodes a %d %d %d and root b %d %d %d \n", node_array[root_a.k][root_a.i][root_a.j].root.k, node_array[root_a.k][root_a.i][root_a.j].root.i, node_array[root_a.k][root_a.i][root_a.j].root.j, node_array[b.k][b.i][b.j].root.k, node_array[b.k][b.i][b.j].root.i, node_array[b.k][b.i][b.j].root.j);
+        // }
+        
         // They are the same cluster. No merge
         return 0;
     }
+
+    // if(node_array[a.k][a.i][a.j].root.k == node_array[b.k][b.i][b.j].root.k && node_array[a.k][a.i][a.j].root.i == node_array[b.k][b.i][b.j].root.i && node_array[a.k][a.i][a.j].root.j == node_array[b.k][b.i][b.j].root.j){
+    //     if((a.k == 1 & a.i == 2 && a.j == 0) | (b.k == 1 & b.i == 2 & b.j == 0)) {
+    //         printf(" index a %d %d %d and root b %d %d %d \n", a.k, a.i, a.j, b.k, b.i, b.j);
+    //         printf("nodes a %d %d %d and root b %d %d %d \n", node_array[root_a.k][root_a.i][root_a.j].root.k, node_array[root_a.k][root_a.i][root_a.j].root.i, node_array[root_a.k][root_a.i][root_a.j].root.j, node_array[b.k][b.i][b.j].root.k, node_array[b.k][b.i][b.j].root.i, node_array[b.k][b.i][b.j].root.j);
+    //     }
+        
+    //     // They are the same cluster. No merge
+    //     return 0;
+    // }
 
     if(root_a.k < root_b.k || (root_a.k == root_b.k && root_a.i < root_b.i) || (root_a.k == root_b.k && root_a.i == root_b.i && root_a.j < root_b.j)){
         // A has a lower root
@@ -142,13 +157,10 @@ int merge_internal(struct Address a, struct Address b){
         } else {
             node_array[root_a.k][root_a.i][root_a.j].parity = node_array[root_a.k][root_a.i][root_a.j].parity ^ node_array[root_b.k][root_b.i][root_b.j].parity;
         }
+
         node_array[root_b.k][root_b.i][root_b.j].root.k = root_a.k;
         node_array[root_b.k][root_b.i][root_b.j].root.i = root_a.i;
         node_array[root_b.k][root_b.i][root_b.j].root.j = root_a.j;
-
-        b.k = a.k;
-        b.j = a.j;
-        b.i = a.i;
     } else {
         // B has the lower root
         if(node_array[root_a.k][root_a.i][root_b.j].boundary == 1){
@@ -159,13 +171,10 @@ int merge_internal(struct Address a, struct Address b){
         } else {
             node_array[root_b.k][root_b.i][root_b.j].parity = node_array[root_b.k][root_b.i][root_b.j].parity ^ node_array[root_a.k][root_a.i][root_a.j].parity;
         }
+
         node_array[root_a.k][root_a.i][root_a.j].root.k = root_b.k;
         node_array[root_a.k][root_a.i][root_a.j].root.i = root_b.i;
         node_array[root_a.k][root_a.i][root_a.j].root.j = root_b.j;
-
-        a.k = b.k;
-        a.j = b.j;
-        a.i = b.i;
     }
 
     return 0;
@@ -175,7 +184,7 @@ int merge_internal(struct Address a, struct Address b){
 int merge(int k, int i, int j, int direction){
     if(direction ==0){
         if(hor_edges[k][i][j].to_be_updated == 1){
-            hor_edges[k][i][j].to_be_updated == 0;
+          //  hor_edges[k][i][j].to_be_updated == 0;
             if(hor_edges[k][i][j].is_boundary == 1){
                 update_boundary(hor_edges[k][i][j].a);
             } else {
@@ -184,7 +193,7 @@ int merge(int k, int i, int j, int direction){
         }
     } else {
         if(ver_edges[k][i][j].to_be_updated == 1){
-            ver_edges[k][i][j].to_be_updated == 0;
+           // ver_edges[k][i][j].to_be_updated == 0;
             if(ver_edges[k][i][j].is_boundary == 1){
                 update_boundary(ver_edges[k][i][j].a);
             } else {
@@ -208,11 +217,17 @@ void verifyVerilogRoots(FILE* file, struct Node node_array[TOTAL_MEASUREMENTS][D
                     printf("Error reading file. No more test cases.\n");
                     
                 }
+
+                struct Address a;
+                a.k = k;
+                a.i = i;
+                a.j = j;
+                struct Address root = get_root(a);
                 
-                if(node_array[k][i][j].root.k == verilog_root_u && node_array[k][i][j].root.i == verilog_root_x && node_array[k][i][j].root.j == verilog_root_z) {
-                   printf("roots match %d %d %d \n", node_array[k][i][j].root.k, node_array[k][i][j].root.j, node_array[k][i][j].root.i);
+                if(root.k == verilog_root_u && root.i == verilog_root_x && root.j == verilog_root_z) {
+                   printf("roots match %d %d %d \n", root.k, root.j, root.i);
                 } else {
-                    printf("fail expected: %d %d %d got %d %d %d \n", node_array[k][i][j].root.k, node_array[k][i][j].root.j, node_array[k][i][j].root.i, verilog_root_u, verilog_root_z, verilog_root_x);
+                    printf("fail expected: %d %d %d got %d %d %d \n", root.k, root.j, root.i, verilog_root_u, verilog_root_z, verilog_root_x);
                 }
             }
         }
@@ -344,7 +359,6 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], FILE* syndrome_
         for(int k=0;k<TOTAL_MEASUREMENTS;k++){
             for(int i=0; i< D + 1;i++){
                 for(int j=0; j< (D-1)/2;j++){
-
                     merge(k,i,j,1); //vertical_edge
                 }
             }
@@ -357,6 +371,7 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], FILE* syndrome_
                 }
             }
         }
+
     }
 }
 
