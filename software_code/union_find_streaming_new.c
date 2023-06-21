@@ -203,21 +203,17 @@ void verifyVerilogRoots(FILE* file, struct Node node_array[TOTAL_MEASUREMENTS][D
 
                 }
 
-<<<<<<< HEAD
                 struct Address a;
                 a.k = k;
                 a.i = i;
                 a.j = j;
                 struct Address root = get_root(a);
-                
+
                 if(root.k == verilog_root_u && root.i == verilog_root_x && root.j == verilog_root_z) {
-                   printf("roots match %d %d %d \n", root.k, root.j, root.i);
-=======
-                if(node_array[k][i][j].root.k == verilog_root_u && node_array[k][i][j].root.i == verilog_root_x && node_array[k][i][j].root.j == verilog_root_z) {
-                   // printf("roots match %d %d %d \n", node_array[k][i][j].root.k, node_array[k][i][j].root.j, node_array[k][i][j].root.i);
->>>>>>> 636e5a3b6ee81bf85b9532276faae51073dd9dba
+                //    printf("roots match %d %d %d \n", root.k, root.j, root.i);
+                ;
                 } else {
-                    printf("fail expected: %d %d %d got %d %d %d \n", root.k, root.j, root.i, verilog_root_u, verilog_root_z, verilog_root_x);
+                    printf("fail expected: %d %d %d got %d %d %d \n", root.k, root.i, root.j, verilog_root_u, verilog_root_x, verilog_root_z);
                 }
             }
         }
@@ -281,15 +277,15 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], FILE* syndrome_
                         hor_edges[k][i][j].a.i = i;
                         hor_edges[k][i][j].a.j = (j-1)/2;
                         hor_edges[k][i][j].b.k = k;
-                        hor_edges[k][i][j].b.i = i-1;
+                        hor_edges[k][i][j].b.i = i+1;
                         hor_edges[k][i][j].b.j = j/2;
                     } else if((i%2==1 && j%2 == 1) || (i%2==0 && j%2 == 0)){
                         hor_edges[k][i][j].a.k = k;
                         hor_edges[k][i][j].a.i = i;
                         hor_edges[k][i][j].a.j = j/2;
                         hor_edges[k][i][j].b.k = k;
-                        hor_edges[k][i][j].b.i = i-1;
-                        hor_edges[k][i][j].b.j = j/2;
+                        hor_edges[k][i][j].b.i = i+1;
+                        hor_edges[k][i][j].b.j = j/2 - 1;
                     }
                 }
                 hor_edges[k][i][j].to_be_updated = 0;
