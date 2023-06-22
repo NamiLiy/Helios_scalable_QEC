@@ -13,7 +13,8 @@ module single_FPGA_decoding_graph_dynamic_rsc #(
     roots,
     busy,
     global_stage,
-    correction
+    correction,
+    erasure
 );
 
 `include "../../parameters/parameters.sv"
@@ -46,6 +47,7 @@ output [PU_COUNT - 1 : 0] odd_clusters;
 output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 output [PU_COUNT - 1 : 0] busy;
 output [CORRECTION_COUNT_PER_ROUND - 1 : 0] correction;
+input [GRID_WIDTH_U*(GRID_WIDTH_U)*(GRID_WIDTH_U)-1 : 0] erasure;
 
 genvar i;
 genvar j;
@@ -185,7 +187,8 @@ endgenerate
         .weight_out(), \
         .boundary_condition_in(0), \
         .boundary_condition_out(), \
-        .is_error_systolic_in(is_error_systolic_in) \
+        .is_error_systolic_in(is_error_systolic_in), \
+        .erased(erased) \
     );\
     assign `PU(ai, aj, ak).neighbor_fully_grown[adirection] = fully_grown;\
     assign `PU(bi, bj, bk).neighbor_fully_grown[bdirection] = fully_grown;\
@@ -215,8 +218,13 @@ endgenerate
         .weight_out(), \
         .boundary_condition_in(type), \
         .boundary_condition_out(), \
-        .is_error_systolic_in(is_error_systolic_in) \
+        .is_error_systolic_in(is_error_systolic_in), \
+        .erased(erased) \
     );
+
+
+`define NS_ERASURE_INDEX (GRID_WIDTH_U*GRID_WIDTH_X*GRID_WIDTH_Z)
+`define EW_ERASURE_INDEX ((GRID_WIDTH_U*GRID_WIDTH_X*GRID_WIDTH_Z)+(GRID_WIDTH_U*GRID_WIDTH_X*GRID_WIDTH_Z))
 
 generate
     // Generate North South neighbors
@@ -226,6 +234,8 @@ generate
                 wire is_error_systolic_in;
                 wire is_error_out;
                 wire [LINK_BIT_WIDTH-1:0] weight_in;
+                wire erased;
+                assign erased = (erasure[i*(GRID_WIDTH_U) + j + k*(GRID_WIDTH_U)*(GRID_WIDTH_U)]);
                 if(i==0 && j < GRID_WIDTH_Z) begin // First row
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_NORTH, 2)
                 end else if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z) begin
@@ -250,6 +260,8 @@ generate
                 wire is_error_systolic_in;
                 wire is_error_out;
                 wire [LINK_BIT_WIDTH-1:0] weight_in;
+                wire erased;
+                assign erased = (erasure[i*(GRID_WIDTH_U) + j + k*(GRID_WIDTH_U)*(GRID_WIDTH_U) + `NS_ERASURE_INDEX]);
                 assign weight_in = `WEIGHT_EW(i,j);
                 if(i==0 && j < GRID_WIDTH_Z) begin // First row
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_EAST, 2)

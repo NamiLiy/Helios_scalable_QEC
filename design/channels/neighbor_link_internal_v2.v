@@ -32,7 +32,9 @@ module neighbor_link_internal #(
     is_error_systolic_in,
 
     weight_out,
-    boundary_condition_out
+    boundary_condition_out,
+    
+    erased
 );
 
 `include "../../parameters/parameters.sv"
@@ -49,7 +51,7 @@ input a_increase;
 input b_increase;
 
 output is_boundary;
-
+input erased;
 input a_is_error_in;
 input b_is_error_in;
 output reg is_error;
@@ -96,7 +98,7 @@ always@(posedge clk) begin
         if(global_stage == STAGE_MEASUREMENT_LOADING) begin
                 growth <= 0;
         end else begin
-            growth <= growth_new;
+            growth <= (erased == 1) ? weight_out : growth_new; //new;
         end 
     end
 end

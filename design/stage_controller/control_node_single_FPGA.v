@@ -20,7 +20,8 @@ module unified_controller #(
     odd_clusters_PE,
     measurements,
     correction,
-    global_stage
+    global_stage,
+    erasure
 );
 
 `include "../../parameters/parameters.sv"
@@ -38,6 +39,8 @@ localparam ALIGNED_PU_PER_ROUND = (BYTES_PER_ROUND << 3);
 localparam PU_COUNT_PER_ROUND = GRID_WIDTH_X * GRID_WIDTH_Z;
 localparam PU_COUNT = PU_COUNT_PER_ROUND * GRID_WIDTH_U;
 
+localparam ERASURE_COUNT_PER_ROUND = GRID_WIDTH_U*GRID_WIDTH_U;
+
 localparam NS_ERROR_COUNT_PER_ROUND = (GRID_WIDTH_X-1) * GRID_WIDTH_Z;
 localparam EW_ERROR_COUNT_PER_ROUND = (GRID_WIDTH_X-1) * GRID_WIDTH_Z + 1;
 localparam UD_ERROR_COUNT_PER_ROUND = GRID_WIDTH_X * GRID_WIDTH_Z;
@@ -53,6 +56,7 @@ reg [STAGE_WIDTH-1:0] global_stage_previous;
 input [PU_COUNT - 1 : 0]  odd_clusters_PE;
 input [PU_COUNT - 1 : 0]  busy_PE;
 output reg [ALIGNED_PU_PER_ROUND-1:0] measurements;
+output reg [GRID_WIDTH_U*GRID_WIDTH_U*GRID_WIDTH_U-1:0] erasure;
 input [CORRECTION_COUNT_PER_ROUND-1:0] correction;
 
 input [7 : 0] input_data;
@@ -112,6 +116,7 @@ reg [DELAY_COUNTER_WIDTH-1:0] delay_counter;
 
 reg [15:0] messages_per_round_of_measurement;
 reg [15:0] measurement_rounds;
+reg [15:0] erasure_measurement_rounds;
 
 wire [CORRECTION_COUNT_PER_ROUND - 1 : 0] output_fifo_data;
 reg output_fifo_valid;
@@ -174,10 +179,30 @@ always @(posedge clk) begin
                     global_stage <= STAGE_MEASUREMENT_PREPARING;
                     delay_counter <= 0;
                     result_valid <= 0;
+                end else if(erasure_measurement_rounds < GRID_WIDTH_U * 2) begin
+                    global_stage <= STAGE_ERASURE_LOADING;
                 end else begin
                     global_stage <= STAGE_GROW;
                     delay_counter <= 0;
                     result_valid <= 0;
+                end
+            end
+            
+            STAGE_ERASURE_LOADING: begin //NEW
+                if (input_valid && input_ready) begin
+                    erasure[ALIGNED_PU_PER_ROUND-1:ALIGNED_PU_PER_ROUND-8] <= input_data;
+                    if(ALIGNED_PU_PER_ROUND > 8) begin
+                        erasure[ALIGNED_PU_PER_ROUND-9:0] <= erasure[ALIGNED_PU_PER_ROUND-1:8];
+                    end
+                    messages_per_round_of_measurement <= messages_per_round_of_measurement + 1;
+                    if((messages_per_round_of_measurement + 1)*8 >= ERASURE_COUNT_PER_ROUND) begin
+                        global_stage <= STAGE_MEASUREMENT_LOADING;
+                        delay_counter <= 0;
+                        messages_per_round_of_measurement <= 0;
+                        measurement_rounds <= measurement_rounds + 1;
+                    end else begin
+                        messages_per_round_of_measurement <= messages_per_round_of_measurement + 1;
+                    end
                 end
             end
 

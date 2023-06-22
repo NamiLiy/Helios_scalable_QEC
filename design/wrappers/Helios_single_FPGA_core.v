@@ -11,7 +11,8 @@ module Helios_single_FPGA #(
     input_ready,
     output_data,
     output_valid,
-    output_ready
+    output_ready,
+    erasure
 
     // roots // A debug port. Do not use in the real implementation
 );
@@ -42,6 +43,7 @@ output input_ready;
 output [7 : 0] output_data;
 output output_valid;
 input output_ready;
+input [GRID_WIDTH_U*(GRID_WIDTH_U)*(GRID_WIDTH_U)-1 : 0] erasure;
 
 wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 
@@ -65,7 +67,8 @@ single_FPGA_decoding_graph_dynamic_rsc #(
     .roots(roots),
     .correction(correction),
     .busy(busy),
-    .global_stage(global_stage)
+    .global_stage(global_stage),
+    .erasure(erasure)
 );
 
 unified_controller #( 
