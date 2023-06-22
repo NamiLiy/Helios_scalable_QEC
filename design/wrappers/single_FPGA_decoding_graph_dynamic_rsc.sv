@@ -223,8 +223,8 @@ endgenerate
     );
 
 
-`define NS_ERASURE_INDEX (GRID_WIDTH_U*GRID_WIDTH_X*GRID_WIDTH_Z)
-`define EW_ERASURE_INDEX ((GRID_WIDTH_U*GRID_WIDTH_X*GRID_WIDTH_Z)+(GRID_WIDTH_U*GRID_WIDTH_X*GRID_WIDTH_Z))
+`define NS_ERASURE_INDEX(i, j, k) ((i*2) + j + k*(GRID_WIDTH_U)*(GRID_WIDTH_U))
+`define EW_ERASURE_INDEX(i, j, k) ((i*2+1) + j + k*(GRID_WIDTH_U)*(GRID_WIDTH_U))
 
 generate
     // Generate North South neighbors
@@ -235,7 +235,7 @@ generate
                 wire is_error_out;
                 wire [LINK_BIT_WIDTH-1:0] weight_in;
                 wire erased;
-                assign erased = (erasure[i*(GRID_WIDTH_U) + j + k*(GRID_WIDTH_U)*(GRID_WIDTH_U)]);
+                assign erased = (erasure[`NS_ERASURE_INDEX(i, j, k)]);
                 if(i==0 && j < GRID_WIDTH_Z) begin // First row
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_NORTH, 2)
                 end else if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z) begin
@@ -261,7 +261,7 @@ generate
                 wire is_error_out;
                 wire [LINK_BIT_WIDTH-1:0] weight_in;
                 wire erased;
-                assign erased = (erasure[i*(GRID_WIDTH_U) + j + k*(GRID_WIDTH_U)*(GRID_WIDTH_U) + `NS_ERASURE_INDEX]);
+                assign erased = (erasure[`EW_ERASURE_INDEX(i, j, k)]);
                 assign weight_in = `WEIGHT_EW(i,j);
                 if(i==0 && j < GRID_WIDTH_Z) begin // First row
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_EAST, 2)

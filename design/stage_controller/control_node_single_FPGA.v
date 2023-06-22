@@ -162,7 +162,7 @@ always @(posedge clk) begin
                     end
                     messages_per_round_of_measurement <= messages_per_round_of_measurement + 1;
                     if((messages_per_round_of_measurement + 1)*8 >= PU_COUNT_PER_ROUND) begin
-                        global_stage <= STAGE_MEASUREMENT_LOADING;
+                        global_stage <= STAGE_MEASUREMENT_LOADING;  
                         delay_counter <= 0;
                         messages_per_round_of_measurement <= 0;
                         measurement_rounds <= measurement_rounds + 1;
