@@ -207,7 +207,7 @@ void verifyVerilogRoots(FILE* file, struct Node node_array[TOTAL_MEASUREMENTS][D
                 a.k = k;
                 a.i = i;
                 a.j = j;
-                struct Address root = get_root(a);
+                struct Address root = get_root(a);       
 
                 if(root.k == verilog_root_u && root.i == verilog_root_x && root.j == verilog_root_z) {
                 //    printf("roots match %d %d %d \n", root.k, root.j, root.i);
@@ -300,6 +300,20 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], FILE* syndrome_
                         }
                         
                     }
+
+                    // if(i%2 == 0 && j %2 == 1) {
+                    //     hor_edges[k][i][j].a.j = j/2;
+                    //     hor_edges[k][i][j].b.j = j/2;
+                    // } else if (i%2 == 0 && j%2 == 0) {
+                    //     hor_edges[k][i][j].a.j = j/2;
+                    //     hor_edges[k][i][j].b.j = j/2-1;
+                    // } else if(i%2 == 1 && j%2 == 0) {
+                    //     hor_edges[k][i][j].a.j = j/2-1;
+                    //     hor_edges[k][i][j].b.j = j/2;
+                    // } else if(i%2 == 1 && j%2 == 1) {
+                    //     hor_edges[k][i][j].a.j = j/2-1;
+                    //     hor_edges[k][i][j].b.j = j/2;
+                    // }
                 }
                 hor_edges[k][i][j].to_be_updated = 0;
             }
