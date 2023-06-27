@@ -16,7 +16,7 @@ module verification_bench_single_FPGA_rsc;
 `include "../../parameters/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
-localparam CODE_DISTANCE = 3;       
+localparam CODE_DISTANCE = 5;       
 localparam CODE_DISTANCE_X = CODE_DISTANCE + 1;
 localparam CODE_DISTANCE_Z = (CODE_DISTANCE_X - 1)/2;
 
@@ -28,7 +28,7 @@ parameter STREAMING = 1;
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
-localparam MEASUREMENT_ROUNDS = CODE_DISTANCE-1;
+localparam MEASUREMENT_ROUNDS = (STREAMING) ? CODE_DISTANCE-1 : CODE_DISTANCE;
 
 localparam PU_COUNT = GRID_WIDTH_X * GRID_WIDTH_Z * GRID_WIDTH_U; //change to CODE_DISTANCE?
 
@@ -289,8 +289,8 @@ end
 integer file_root_op;
 integer file_syndrome_op;
 
-assign file_root_op = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_3_roots.txt", "w");
-assign file_syndrome_op = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_3_syndrome.txt", "w");
+assign file_root_op = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_5_roots.txt", "w");
+assign file_syndrome_op = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_5_syndrome.txt", "w");
         
         
 always@ (posedge clk) begin

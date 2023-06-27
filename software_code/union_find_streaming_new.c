@@ -3,7 +3,7 @@
 #include <math.h>
 #include <time.h>
 
-#define D 7
+#define D 5
 #define TOTAL_MEASUREMENTS (D*2-1)
 #define MEASUREMENT_ROUNDS 2
 int count;
@@ -60,7 +60,7 @@ int grow(int k, int i, int j, int direction){
     int grow_ret = 0;
     if(direction == 0){
         if(hor_edges[k][i][j].is_boundary == 1){
-            int is_odd = get_parity(hor_edges[k][i][j].a);          
+            int is_odd = get_parity(hor_edges[k][i][j].a);
             if (is_odd && hor_edges[k][i][j].growth < 2) {
                 hor_edges[k][i][j].growth = hor_edges[k][i][j].growth + 1;
                 grow_ret = 1;
@@ -201,7 +201,7 @@ void verifyVerilogRoots(FILE* file, struct Node node_array[TOTAL_MEASUREMENTS][D
             for(int j = 0; j < (D-1)/2; j++) {
                 if (fscanf(file, "%1d %1d %d", &verilog_root_z, &verilog_root_x, &verilog_root_u) != 3) {
                     printf("Error reading file. No more test cases.\n");
-                    
+
                 }
 
                 struct Address a;
@@ -216,6 +216,7 @@ void verifyVerilogRoots(FILE* file, struct Node node_array[TOTAL_MEASUREMENTS][D
                 } else{
                     printf("fail expected: %d %d %d got %d %d %d \n", root.k, root.i, root.j, verilog_root_u, verilog_root_x, verilog_root_z);
                 }
+                
             }
         }
     }
@@ -251,7 +252,7 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], FILE* syndrome_
             for(int j=0; j< D;j++){
 		        hor_edges[k][i][j].growth = 0;
 		        hor_edges[k][i][j].to_be_updated = 0;
-                if(i==0 || i== D){ //left and right borders
+                if(j==0 || j== D-1){ //left and right borders
                     hor_edges[k][i][j].is_boundary = 1;
                     hor_edges[k][i][j].a.k = k;
                     if(i%2==0 && j==0){
@@ -303,17 +304,17 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], FILE* syndrome_
             for(int j=0; j< (D-1)/2;j++){
 		        ver_edges[k][i][j].growth = 0;
 		        ver_edges[k][i][j].to_be_updated = 0;
-                if(k==0){ //left and right borders
+                if(k==(TOTAL_MEASUREMENTS-1)){ //Topmost measurement round is an open border
                     ver_edges[k][i][j].is_boundary = 1;
                     ver_edges[k][i][j].a.k = k;
                     ver_edges[k][i][j].a.i = i;
                     ver_edges[k][i][j].a.j = j;
                 } else {
                     ver_edges[k][i][j].is_boundary = 0;
-                    ver_edges[k][i][j].a.k = k-1;
+                    ver_edges[k][i][j].a.k = k;
                     ver_edges[k][i][j].a.i = i;
                     ver_edges[k][i][j].a.j = j;
-                    ver_edges[k][i][j].b.k = k;
+                    ver_edges[k][i][j].b.k = k+1;
                     ver_edges[k][i][j].b.i = i;
                     ver_edges[k][i][j].b.j = j;
                 }
@@ -353,8 +354,8 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], FILE* syndrome_
                     merge(k,i,j,1); //vertical_edge
                 }
             }
-        } 
-        
+        }
+
         for(int k=0;k<TOTAL_MEASUREMENTS;k++){
             for(int i=0; i< D;i++){
                 for(int j=0; j< D;j++){
@@ -379,7 +380,7 @@ int loadFileData(FILE* file, int (*array)[TOTAL_MEASUREMENTS][D+1][(D-1)/2]) {
                     return -1;
                 }
 
-                (*array)[k][i][j] = value;                                
+                (*array)[k][i][j] = value;
 
             }
         }
@@ -435,7 +436,7 @@ int main(){
         printf("Error opening syndrome file %s.\n", syndrome_filename);
         return -1;
     }
-        
+
     count = 1;
     while(1){
         printf("count %d \n", count);
@@ -449,9 +450,9 @@ int main(){
         union_find(syndrome, syndrome_test_file);
         print_output(file_op, ret_val);
         verifyVerilogRoots(roots_file, node_array);
-        
+
     }
-    
+
     fclose(file_op);
     // fclose(syndrome_file);
     fclose(syndrome_test_file);
