@@ -211,7 +211,7 @@ void union_find (int syndrome[D][D+1][(D-1)/2]){
             for(int j=0; j< D;j++){
 		        hor_edges[k][i][j].growth = 0;
 		        hor_edges[k][i][j].to_be_updated = 0;
-                if(j==0 || j== D - 1){ //left and right borders
+                if(j==0 || j== D-1){ //left and right borders
                     hor_edges[k][i][j].is_boundary = 1;
                     if(i%2==0 && j==0){
                         hor_edges[k][i][j].a.k = k;
@@ -246,7 +246,7 @@ void union_find (int syndrome[D][D+1][(D-1)/2]){
                         hor_edges[k][i][j].a.j = j/2;
                         hor_edges[k][i][j].b.k = k;
                         hor_edges[k][i][j].b.i = i+1;
-                        hor_edges[k][i][j].b.j = j/2;
+                        hor_edges[k][i][j].b.j = j/2 - 1;
                     }
                 }
                 hor_edges[k][i][j].to_be_updated = 0;

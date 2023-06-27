@@ -3,7 +3,7 @@
 module single_FPGA_decoding_graph_dynamic_rsc #(
     parameter GRID_WIDTH_X = 4,
     parameter GRID_WIDTH_Z = 1,
-    parameter GRID_WIDTH_U = 3,
+    parameter GRID_WIDTH_U = 5,
     parameter MAX_WEIGHT = 2, 
     parameter STREAMING = 1
 ) (
@@ -82,7 +82,7 @@ generate
                 wire [ADDRESS_WIDTH-1 : 0] root;
                 wire busy_PE;
                 wire output_syndrome;
-                                
+
                 processing_unit #(
                     .ADDRESS_WIDTH(ADDRESS_WIDTH),
                     .NEIGHBOR_COUNT(NEIGHBOR_COUNT),
@@ -112,7 +112,7 @@ generate
                 assign `roots(i, j, k) = root;
                 assign `busy(i, j, k) = busy_PE;
                 assign `odd_clusters(i,j,k) = odd;
-                
+
                 //if(k == GRID_WIDTH_U/2) begin
                 assign output_streaming_corrected_syndrome[i*GRID_WIDTH_Z + j + k*GRID_WIDTH_Z*GRID_WIDTH_X] = output_syndrome;
                 //end
@@ -120,7 +120,7 @@ generate
         end
     end
 endgenerate
-    
+
 `define CORR_INDEX_NS(i, j) ((i-1)*(GRID_WIDTH_Z) + j-1)
 `define CORR_INDEX_EW(i, j) ((i-1)*(GRID_WIDTH_Z) + j + NS_ERROR_COUNT_PER_ROUND)
 `define CORR_INDEX_UD(i, j) (i*GRID_WIDTH_Z + j + NS_ERROR_COUNT_PER_ROUND + EW_ERROR_COUNT_PER_ROUND)
@@ -128,8 +128,8 @@ endgenerate
 
 `define CORRECTION_NS(i, j) correction[`CORR_INDEX_NS(i, j)]
 `define CORRECTION_EW(i, j) correction[`CORR_INDEX_EW(i, j)]
-`define CORRECTION_UD(i, j) correction[`CORR_INDEX_UD(i, j)]   
-   
+`define CORRECTION_UD(i, j) correction[`CORR_INDEX_UD(i, j)]
+
 
 reg [STAGE_WIDTH - 1 : 0] stage;
 
@@ -140,7 +140,7 @@ always@(posedge clk) begin
     end else begin
         stage <= global_stage;
     end
-    
+
 end
 
 generate
@@ -163,7 +163,7 @@ generate
 endgenerate
 
 `define NEIGHBOR_IDX_NORTH 0 // In RSC North means North West
-`define NEIGHBOR_IDX_SOUTH 1 
+`define NEIGHBOR_IDX_SOUTH 1
 `define NEIGHBOR_IDX_WEST 2
 `define NEIGHBOR_IDX_EAST 3
 `define NEIGHBOR_IDX_DOWN 4
@@ -177,8 +177,8 @@ endgenerate
 
 // `define EDGE_INDEX(i,j) (i*GRID_WIDTH_Z + j)
 
-//localparam logic [31:0] weight_list [CORRECTION_COUNT_PER_ROUND] = {32'd9, 32'd9, 32'd9, 32'd8, 32'd9, 32'd9, 32'd8, 32'd9, 32'd9, 32'd9, 32'd10, 32'd9, 32'd9, 32'd9, 32'd9, 32'd10, 32'd10, 32'd9, 32'd9, 32'd9, 32'd10, 32'd10, 32'd9, 32'd9, 32'd9, 32'd10, 32'd9, 32'd9, 32'd9, 32'd9, 32'd10, 32'd9, 32'd9, 32'd11, 32'd9, 32'd11, 32'd8, 32'd8, 32'd9, 32'd9, 32'd10, 32'd10, 32'd10, 32'd9, 32'd11, 32'd8, 32'd9, 32'd11, 32'd8, 32'd9, 32'd9, 32'd9, 32'd11, 32'd9, 32'd9, 32'd9, 32'd10, 32'd9, 32'd9, 32'd9, 32'd9, 32'd8, 32'd10, 32'd8, 32'd8, 32'd9, 32'd10, 32'd9, 32'd16, 32'd9, 32'd9, 32'd10, 32'd10, 32'd9, 32'd8, 32'd11, 32'd9, 32'd11, 
-//32'd12, 32'd9, 32'd16, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd10, 32'd8, 32'd9, 32'd9, 32'd9, 32'd8, 32'd9, 32'd9, 32'd10, 32'd9, 32'd9, 32'd8, 32'd16, 32'd9, 32'd9, 32'd8, 32'd10, 32'd9, 32'd9, 32'd9, 32'd8, 32'd9, 32'd8, 32'd9, 32'd10, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd8, 32'd8, 32'd8, 32'd10, 32'd9, 32'd9, 32'd10, 32'd10, 32'd8, 32'd9, 32'd9, 32'd8, 32'd9, 32'd10, 32'd9, 32'd9, 32'd8, 32'd9, 32'd8, 32'd16, 32'd9, 32'd8, 32'd10, 32'd9, 32'd9, 32'd9, 32'd8, 32'd9, 32'd10, 32'd10, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 
+//localparam logic [31:0] weight_list [CORRECTION_COUNT_PER_ROUND] = {32'd9, 32'd9, 32'd9, 32'd8, 32'd9, 32'd9, 32'd8, 32'd9, 32'd9, 32'd9, 32'd10, 32'd9, 32'd9, 32'd9, 32'd9, 32'd10, 32'd10, 32'd9, 32'd9, 32'd9, 32'd10, 32'd10, 32'd9, 32'd9, 32'd9, 32'd10, 32'd9, 32'd9, 32'd9, 32'd9, 32'd10, 32'd9, 32'd9, 32'd11, 32'd9, 32'd11, 32'd8, 32'd8, 32'd9, 32'd9, 32'd10, 32'd10, 32'd10, 32'd9, 32'd11, 32'd8, 32'd9, 32'd11, 32'd8, 32'd9, 32'd9, 32'd9, 32'd11, 32'd9, 32'd9, 32'd9, 32'd10, 32'd9, 32'd9, 32'd9, 32'd9, 32'd8, 32'd10, 32'd8, 32'd8, 32'd9, 32'd10, 32'd9, 32'd16, 32'd9, 32'd9, 32'd10, 32'd10, 32'd9, 32'd8, 32'd11, 32'd9, 32'd11,
+//32'd12, 32'd9, 32'd16, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd10, 32'd8, 32'd9, 32'd9, 32'd9, 32'd8, 32'd9, 32'd9, 32'd10, 32'd9, 32'd9, 32'd8, 32'd16, 32'd9, 32'd9, 32'd8, 32'd10, 32'd9, 32'd9, 32'd9, 32'd8, 32'd9, 32'd8, 32'd9, 32'd10, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd8, 32'd8, 32'd8, 32'd10, 32'd9, 32'd9, 32'd10, 32'd10, 32'd8, 32'd9, 32'd9, 32'd8, 32'd9, 32'd10, 32'd9, 32'd9, 32'd8, 32'd9, 32'd8, 32'd16, 32'd9, 32'd8, 32'd10, 32'd9, 32'd9, 32'd9, 32'd8, 32'd9, 32'd10, 32'd10, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9,
 //32'd12, 32'd9, 32'd9, 32'd9, 32'd10, 32'd9, 32'd16, 32'd9, 32'd9, 32'd8, 32'd11, 32'd8, 32'd9, 32'd9, 32'd10, 32'd10, 32'd9, 32'd8, 32'd12, 32'd9, 32'd9, 32'd8, 32'd9, 32'd10, 32'd9, 32'd8, 32'd9, 32'd10, 32'd8, 32'd9, 32'd8, 32'd12, 32'd9, 32'd10, 32'd8, 32'd9, 32'd10, 32'd8, 32'd10, 32'd9, 32'd10, 32'd10, 32'd9, 32'd8, 32'd9, 32'd9, 32'd9, 32'd8, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd8, 32'd9, 32'd10, 32'd11, 32'd9, 32'd9, 32'd9, 32'd15, 32'd9, 32'd8, 32'd9, 32'd10, 32'd10, 32'd10, 32'd8, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd16, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd9, 32'd8, 32'd9, 32'd9};
 
 //`define WEIGHT_NS(i,j) weight_list[`CORR_INDEX_NS(i, j)]
@@ -248,8 +248,8 @@ endgenerate
         .boundary_condition_out(), \
         .is_error_systolic_in(is_error_systolic_in) \
     );
-    
-    
+
+
 generate
     // Generate North South neighbors
     for (k=0; k < GRID_WIDTH_U; k=k+1) begin: ns_k
@@ -261,7 +261,7 @@ generate
                 if(i==0 && j < GRID_WIDTH_Z) begin // First row
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_NORTH, 2)
                 end else if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z) begin
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_SOUTH, 2)                   
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_SOUTH, 2)
                 end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0) begin // odd rows which are always internal
                     `NEIGHBOR_LINK_INTERNAL_0(i-1, j-1, k, i, j-1, k, `NEIGHBOR_IDX_SOUTH, `NEIGHBOR_IDX_NORTH)
                 end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j == 0) begin // First element of even rows
@@ -310,11 +310,11 @@ generate
                 wire is_error_systolic_in;
                 wire is_error_out;
                 wire [LINK_BIT_WIDTH-1:0] weight_in;
-                
+
                 assign weight_in = `WEIGHT_UD(i,j);
-                
+
                 if(k==0) begin
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_DOWN, 1)
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_DOWN, 2)
                 end else if(k==GRID_WIDTH_U) begin
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k-1, `NEIGHBOR_IDX_UP, 1)
                 end else if (k < GRID_WIDTH_U) begin
@@ -323,14 +323,14 @@ generate
             end
         end
     end
-    
+
 endgenerate
 
 generate
     for (k=0; k < GRID_WIDTH_U-1; k=k+1) begin: ns_k_extra
         for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: ns_i_extra
             for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: ns_j_extra
-                if (i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0) begin // odd rows 
+                if (i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0) begin // odd rows
                     assign ns_k[k].ns_i[i].ns_j[j].is_error_systolic_in = ns_k[k+1].ns_i[i].ns_j[j].is_error_out;
                 end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j > 0) begin // Even rows
                     assign ns_k[k].ns_i[i].ns_j[j].is_error_systolic_in = ns_k[k+1].ns_i[i].ns_j[j].is_error_out;
@@ -365,7 +365,7 @@ generate
 
     for (i=1; i < GRID_WIDTH_X; i=i+1) begin: ns_i_output
         for (j=1; j <= GRID_WIDTH_Z; j=j+1) begin: ns_j_output
-            assign `CORRECTION_NS(i,j) = ns_k[0].ns_i[i].ns_j[j].is_error_out;     
+            assign `CORRECTION_NS(i,j) = ns_k[0].ns_i[i].ns_j[j].is_error_out;
         end
     end
 
@@ -420,7 +420,7 @@ generate
             end
         end
     end
-    
+
 endgenerate
 endmodule
 

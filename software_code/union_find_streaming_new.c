@@ -3,7 +3,7 @@
 #include <math.h>
 #include <time.h>
 
-#define D 3
+#define D 7
 #define TOTAL_MEASUREMENTS (D*2-1)
 #define MEASUREMENT_ROUNDS 2
 int count;
@@ -115,6 +115,7 @@ int grow(int k, int i, int j, int direction){
             }
         }
     }
+    return grow_ret;
 }
 
 int update_boundary(struct Address a){
@@ -169,7 +170,7 @@ int merge_internal(struct Address a, struct Address b){
 int merge(int k, int i, int j, int direction){
     if(direction ==0){
         if(hor_edges[k][i][j].to_be_updated == 1){
-          //  hor_edges[k][i][j].to_be_updated == 0;
+           hor_edges[k][i][j].to_be_updated == 0;
             if(hor_edges[k][i][j].is_boundary == 1){
                 update_boundary(hor_edges[k][i][j].a);
             } else {
@@ -178,7 +179,7 @@ int merge(int k, int i, int j, int direction){
         }
     } else {
         if(ver_edges[k][i][j].to_be_updated == 1){
-           // ver_edges[k][i][j].to_be_updated == 0;
+           ver_edges[k][i][j].to_be_updated == 0;
             if(ver_edges[k][i][j].is_boundary == 1){
                 update_boundary(ver_edges[k][i][j].a);
             } else {
@@ -198,7 +199,7 @@ void verifyVerilogRoots(FILE* file, struct Node node_array[TOTAL_MEASUREMENTS][D
     for(int k = 0; k < TOTAL_MEASUREMENTS; k++) {
         for(int i = 0; i < D+1; i++) {
             for(int j = 0; j < (D-1)/2; j++) {
-                if (fscanf(file, "%1d %1d %1d", &verilog_root_u, &verilog_root_x, &verilog_root_z) != 3) {
+                if (fscanf(file, "%1d %1d %d", &verilog_root_z, &verilog_root_x, &verilog_root_u) != 3) {
                     printf("Error reading file. No more test cases.\n");
                     
                 }
@@ -208,11 +209,12 @@ void verifyVerilogRoots(FILE* file, struct Node node_array[TOTAL_MEASUREMENTS][D
                 a.i = i;
                 a.j = j;
                 struct Address root = get_root(a);
-                
+
                 if(root.k == verilog_root_u && root.i == verilog_root_x && root.j == verilog_root_z) {
-                   printf("roots match %d %d %d \n", root.k, root.j, root.i);
-                } else {
-                    printf("fail expected: %d %d %d got %d %d %d \n", root.k, root.j, root.i, verilog_root_u, verilog_root_z, verilog_root_x);
+                //    printf("roots match %d %d %d \n", root.k, root.i, root.j);
+                ;
+                } else{
+                    printf("fail expected: %d %d %d got %d %d %d \n", root.k, root.i, root.j, verilog_root_u, verilog_root_x, verilog_root_z);
                 }
             }
         }
@@ -251,39 +253,43 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], FILE* syndrome_
 		        hor_edges[k][i][j].to_be_updated = 0;
                 if(i==0 || i== D){ //left and right borders
                     hor_edges[k][i][j].is_boundary = 1;
+                    hor_edges[k][i][j].a.k = k;
                     if(i%2==0 && j==0){
-                        hor_edges[k][i][j].a.k = k;
                         hor_edges[k][i][j].a.i = i;
                         hor_edges[k][i][j].a.j = 0;
                     } else if(i%2==1 && j==0){
-                        hor_edges[k][i][j].a.k = k;
                         hor_edges[k][i][j].a.i = i+1;
                         hor_edges[k][i][j].a.j = 0;
                     } else if(i%2==0 && j==D - 1){
-                        hor_edges[k][i][j].a.k = k;
                         hor_edges[k][i][j].a.i = i+1;
-                        hor_edges[k][i][j].a.j = (j/2) - 1;
+                        hor_edges[k][i][j].a.j = j/2 - 1;
                     } else if(i%2==1 && j==D - 1){
-                        hor_edges[k][i][j].a.k = k;
                         hor_edges[k][i][j].a.i = i;
-                        hor_edges[k][i][j].a.j = (j/2) - 1;
+                        hor_edges[k][i][j].a.j = j/2 - 1;
                     }
-
                 } else {
                     hor_edges[k][i][j].is_boundary = 0;
-                    if((i%2==0 && j%2 == 1) || (i%2==1 && j%2 == 0)){
-                        hor_edges[k][i][j].a.k = k;
-                        hor_edges[k][i][j].a.i = i;
-                        hor_edges[k][i][j].a.j = (j-1)/2;
-                        hor_edges[k][i][j].b.k = k;
-                        hor_edges[k][i][j].b.i = i-1;
-                        hor_edges[k][i][j].b.j = j/2;
-                    } else if((i%2==1 && j%2 == 1) || (i%2==0 && j%2 == 0)){
-                        hor_edges[k][i][j].a.k = k;
+                    hor_edges[k][i][j].a.k = k;
+                    hor_edges[k][i][j].b.k = k;
+                    if(i%2==0 && j%2 == 0){
                         hor_edges[k][i][j].a.i = i;
                         hor_edges[k][i][j].a.j = j/2;
-                        hor_edges[k][i][j].b.k = k;
-                        hor_edges[k][i][j].b.i = i-1;
+                        hor_edges[k][i][j].b.i = i+1;
+                        hor_edges[k][i][j].b.j = j/2 - 1;
+                    } else if (i%2==0 && j%2 == 1){
+                        hor_edges[k][i][j].a.i = i;
+                        hor_edges[k][i][j].a.j = j/2;
+                        hor_edges[k][i][j].b.i = i+1;
+                        hor_edges[k][i][j].b.j = j/2;
+                    } else if (i%2==1 && j%2 == 0){
+                        hor_edges[k][i][j].a.i = i;
+                        hor_edges[k][i][j].a.j = j/2  - 1;
+                        hor_edges[k][i][j].b.i = i+1;
+                        hor_edges[k][i][j].b.j = j/2;
+                    } else if (i%2==1 && j%2 == 1) {
+                        hor_edges[k][i][j].a.i = i;
+                        hor_edges[k][i][j].a.j = j/2;
+                        hor_edges[k][i][j].b.i = i+1;
                         hor_edges[k][i][j].b.j = j/2;
                     }
                 }

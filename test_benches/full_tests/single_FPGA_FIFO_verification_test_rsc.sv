@@ -298,9 +298,9 @@ always@ (posedge clk) begin
         for(k = 0; k < GRID_WIDTH_U; k++) begin
             for(i = 0; i < GRID_WIDTH_X; i++) begin
                 for(j = 0; j < GRID_WIDTH_Z; j++) begin
-                    $fwrite (file_root_op, `root_u(i, j, k));
+                    $fwrite (file_root_op, (Z_BIT_WIDTH > 0) ? `root_z(i, j, k) : 0);
                     $fwrite (file_root_op, `root_x(i, j, k));
-                    $fdisplay(file_root_op, (Z_BIT_WIDTH > 0) ? `root_z(i, j, k) : 0);
+                    $fdisplay(file_root_op, `root_u(i, j, k));
                     $fdisplay (file_syndrome_op, decoder.output_streaming_corrected_syndrome[i*GRID_WIDTH_Z + j + k*GRID_WIDTH_Z*GRID_WIDTH_X]);
                 end
             end
