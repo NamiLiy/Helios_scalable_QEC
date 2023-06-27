@@ -115,6 +115,7 @@ int grow(int k, int i, int j, int direction){
             }
         }
     }
+    return grow_ret;
 }
 
 int update_boundary(struct Address a){
