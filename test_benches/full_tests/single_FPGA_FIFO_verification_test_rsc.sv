@@ -16,7 +16,7 @@ module verification_bench_single_FPGA_rsc;
 `include "../../parameters/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
-localparam CODE_DISTANCE = 3;       
+localparam CODE_DISTANCE = 7;       
 localparam CODE_DISTANCE_X = CODE_DISTANCE + 1;
 localparam CODE_DISTANCE_Z = (CODE_DISTANCE_X - 1)/2;
 
@@ -239,9 +239,9 @@ always @(negedge clk) begin
             if (CODE_DISTANCE == 3) begin
                 input_file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_3_streaming.txt", "r");
             end else if (CODE_DISTANCE == 5) begin
-                input_file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_5_rsc.txt", "r");
+                input_file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_5_streaming.txt", "r");
             end else if (CODE_DISTANCE == 7) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_7_rsc.txt", "r");
+                input_file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_7_streaming.txt", "r");
             end else if (CODE_DISTANCE == 9) begin
                 input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_9_rsc.txt", "r");
             end else if (CODE_DISTANCE == 11) begin
@@ -288,8 +288,8 @@ integer file_root_op;
 integer file_syndrome_op;
 reg [7:0] test;
 
-assign file_root_op = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_3_roots.txt", "w");
-assign file_syndrome_op = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_3_syndrome.txt", "w");
+assign file_root_op = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_7_roots.txt", "w");
+assign file_syndrome_op = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_7_syndrome.txt", "w");
         
         
 always@ (posedge clk) begin
@@ -297,9 +297,9 @@ always@ (posedge clk) begin
         for(k = 0; k < GRID_WIDTH_U; k++) begin
             for(i = 0; i < GRID_WIDTH_X; i++) begin
                 for(j = 0; j < GRID_WIDTH_Z; j++) begin
-                    $fwrite (file_root_op, `root_u(i, j, k));
+                    $fwrite (file_root_op, (Z_BIT_WIDTH > 0) ? `root_z(i, j, k) : 0);
                     $fwrite (file_root_op, `root_x(i, j, k));
-                    $fdisplay(file_root_op, (Z_BIT_WIDTH > 0) ? `root_z(i, j, k) : 0);
+                    $fdisplay(file_root_op, `root_u(i, j, k));
                     //if(k == GRID_WIDTH_U/2) begin                    
                     $fdisplay (file_syndrome_op, decoder.output_streaming_corrected_syndrome[i*GRID_WIDTH_Z + j + k*GRID_WIDTH_Z*GRID_WIDTH_X]);
                     //end

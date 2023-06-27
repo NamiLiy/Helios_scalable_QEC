@@ -3,7 +3,7 @@
 #include <math.h>
 #include <time.h>
 
-#define D 3
+#define D 7
 #define TOTAL_MEASUREMENTS (D*2-1)
 #define MEASUREMENT_ROUNDS 2
 int count;
@@ -199,7 +199,7 @@ void verifyVerilogRoots(FILE* file, struct Node node_array[TOTAL_MEASUREMENTS][D
     for(int k = 0; k < TOTAL_MEASUREMENTS; k++) {
         for(int i = 0; i < D+1; i++) {
             for(int j = 0; j < (D-1)/2; j++) {
-                if (fscanf(file, "%1d %1d %1d", &verilog_root_u, &verilog_root_x, &verilog_root_z) != 3) {
+                if (fscanf(file, "%1d %1d %d", &verilog_root_z, &verilog_root_x, &verilog_root_u) != 3) {
                     printf("Error reading file. No more test cases.\n");
 
                 }
@@ -211,7 +211,7 @@ void verifyVerilogRoots(FILE* file, struct Node node_array[TOTAL_MEASUREMENTS][D
                 struct Address root = get_root(a);
 
                 if(root.k == verilog_root_u && root.i == verilog_root_x && root.j == verilog_root_z) {
-                //    printf("roots match %d %d %d \n", root.k, root.j, root.i);
+                //    printf("roots match %d %d %d \n", root.k, root.i, root.j);
                 ;
                 } else{
                     printf("fail expected: %d %d %d got %d %d %d \n", root.k, root.i, root.j, verilog_root_u, verilog_root_x, verilog_root_z);
