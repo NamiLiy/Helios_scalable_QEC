@@ -314,9 +314,9 @@ generate
                 assign weight_in = `WEIGHT_UD(i,j);
 
                 if(k==0) begin
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_DOWN, 2)
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_DOWN, ((STREAMING) ? 2 : 1))
                 end else if(k==GRID_WIDTH_U) begin
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k-1, `NEIGHBOR_IDX_UP, 1)
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k-1, `NEIGHBOR_IDX_UP, ((STREAMING) ? 1 : 2))
                 end else if (k < GRID_WIDTH_U) begin
                     `NEIGHBOR_LINK_INTERNAL_0(i, j, k-1, i, j, k, `NEIGHBOR_IDX_UP, `NEIGHBOR_IDX_DOWN)
                 end
