@@ -47,7 +47,7 @@ output [PU_COUNT - 1 : 0] odd_clusters;
 output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 output [PU_COUNT - 1 : 0] busy;
 output [CORRECTION_COUNT_PER_ROUND - 1 : 0] correction;
-input [GRID_WIDTH_U*(GRID_WIDTH_U)*(GRID_WIDTH_U)-1 : 0] erasure;
+input [7 : 0] erasure;
 
 genvar i;
 genvar j;
@@ -188,7 +188,8 @@ endgenerate
         .boundary_condition_in(0), \
         .boundary_condition_out(), \
         .is_error_systolic_in(is_error_systolic_in), \
-        .erased(erased) \
+        .erased(erased), \
+        .erased_out(erased_out) \
     );\
     assign `PU(ai, aj, ak).neighbor_fully_grown[adirection] = fully_grown;\
     assign `PU(bi, bj, bk).neighbor_fully_grown[bdirection] = fully_grown;\
@@ -219,12 +220,13 @@ endgenerate
         .boundary_condition_in(type), \
         .boundary_condition_out(), \
         .is_error_systolic_in(is_error_systolic_in), \
-        .erased(erased) \
+        .erased(erased), \
+        .erased_out(erased_out) \
     );
 
 
-`define NS_ERASURE_INDEX(i, j, k) ((i*2) + j + k*(GRID_WIDTH_U)*(GRID_WIDTH_U))
-`define EW_ERASURE_INDEX(i, j, k) ((i*2+1) + j + k*(GRID_WIDTH_U)*(GRID_WIDTH_U))
+`define NS_ERASURE_INDEX(i, j, k) (i*GRID_WIDTH_Z + j + k*(GRID_WIDTH_U)*(GRID_WIDTH_U))
+`define EW_ERASURE_INDEX(i, j, k) (`NS_ERASURE_INDEX(i, j, k) + GRID_WIDTH_U)
 
 generate
     // Generate North South neighbors
@@ -235,7 +237,7 @@ generate
                 wire is_error_out;
                 wire [LINK_BIT_WIDTH-1:0] weight_in;
                 wire erased;
-                assign erased = (erasure[`NS_ERASURE_INDEX(i, j, k)]);
+                wire erased_out;
                 if(i==0 && j < GRID_WIDTH_Z) begin // First row
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_NORTH, 2)
                 end else if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z) begin
@@ -261,7 +263,7 @@ generate
                 wire is_error_out;
                 wire [LINK_BIT_WIDTH-1:0] weight_in;
                 wire erased;
-                assign erased = (erasure[`EW_ERASURE_INDEX(i, j, k)]);
+                wire erased_out;
                 assign weight_in = `WEIGHT_EW(i,j);
                 if(i==0 && j < GRID_WIDTH_Z) begin // First row
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_EAST, 2)
@@ -289,6 +291,7 @@ generate
                 wire is_error_systolic_in;
                 wire is_error_out;
                 wire [LINK_BIT_WIDTH-1:0] weight_in;
+                wire erased;
                 assign weight_in = `WEIGHT_UD(i,j);
                 if(k==0) begin
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_DOWN, 1)
@@ -366,8 +369,14 @@ generate
             for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: ns_j_weight
                 if (i < GRID_WIDTH_X && i > 0 && j > 0) begin
                     assign ns_k[k].ns_i[i].ns_j[j].weight_in = `WEIGHT_NS(i,j);
+                    if(k == GRID_WIDTH_U-1) begin
+                        assign ns_k[k].ns_i[i].ns_j[j].erased = erasure[i-1];
+                    end else begin
+                        assign ns_k[k].ns_i[i].ns_j[j].erased = ns_k[k+1].ns_i[i].ns_j[j].erased_out;
+                    end
                 end else begin // Fake edges
                     assign ns_k[k].ns_i[i].ns_j[j].weight_in = 2;
+                    assign ns_k[k].ns_i[i].ns_j[j].erased = 0;
                 end
             end
         end
@@ -378,10 +387,21 @@ generate
             for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: ew_j_weight
                 if (i < GRID_WIDTH_X && i > 0 && j < GRID_WIDTH_Z) begin
                     assign ew_k[k].ew_i[i].ew_j[j].weight_in = `WEIGHT_EW(i,j);
+                    if(k == GRID_WIDTH_U-1) begin
+                        assign ew_k[k].ew_i[i].ew_j[j].erased = erasure[i + j + 3];
+                    end else begin
+                        assign ew_k[k].ew_i[i].ew_j[j].erased = ns_k[k+1].ns_i[i].ns_j[j].erased_out;
+                    end
                 end else if (i == GRID_WIDTH_X-1 && j == GRID_WIDTH_Z) begin
                     assign ew_k[k].ew_i[i].ew_j[j].weight_in = `WEIGHT_EW(i,j);
+                    if(k == GRID_WIDTH_U-1) begin
+                        assign ew_k[k].ew_i[i].ew_j[j].erased = erasure[i + j + 3];
+                    end else begin
+                        assign ew_k[k].ew_i[i].ew_j[j].erased = ns_k[k+1].ns_i[i].ns_j[j].erased_out;
+                    end
                 end else begin // Fake edges
                     assign ew_k[k].ew_i[i].ew_j[j].weight_in = 2;
+                    assign ew_k[k].ew_i[i].ew_j[j].erased = 0;
                 end
             end
         end
@@ -390,6 +410,7 @@ generate
     for (k=0; k <= GRID_WIDTH_U; k=k+1) begin: ud_k_weight
         for (i=0; i < GRID_WIDTH_X; i=i+1) begin: ud_i_weight
             for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: ud_j_weight
+                assign ud_k[k].ud_i[i].ud_j[j].erased = 0;
                 if(k < GRID_WIDTH_U) begin
                     assign ud_k[k].ud_i[i].ud_j[j].weight_in = `WEIGHT_UD(i,j);
                 end else begin // Fake edges

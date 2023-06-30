@@ -34,7 +34,8 @@ module neighbor_link_internal #(
     weight_out,
     boundary_condition_out,
     
-    erased
+    erased,
+    erased_out
 );
 
 `include "../../parameters/parameters.sv"
@@ -52,6 +53,7 @@ input b_increase;
 
 output is_boundary;
 input erased;
+output reg erased_out;
 input a_is_error_in;
 input b_is_error_in;
 output reg is_error;
@@ -96,7 +98,7 @@ always@(posedge clk) begin
         growth <= 0;
     end else begin
         if(global_stage == STAGE_MEASUREMENT_LOADING) begin
-                growth <= 0;
+            growth <= 0;
         end else begin
             growth <= (erased == 1) ? weight_out : growth_new; //new;
         end 
@@ -139,10 +141,13 @@ always@(posedge clk) begin
     if(reset) begin
         weight_out <= 0;
         boundary_condition_out <= 0;
+        erased_out <= 0;
     end else begin
         if(global_stage == STAGE_PARAMETERS_LOADING) begin
             weight_out <= weight_in;
             boundary_condition_out <= boundary_condition_in;
+        end else if(global_stage == STAGE_ERASURE_LOADING) begin
+            erased_out <= erased;
         end
     end
 end
