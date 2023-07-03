@@ -137,7 +137,7 @@ min_val_less_8x_with_index #(
 );
 
 always@(posedge clk) begin
-    if(stage == STAGE_MEASUREMENT_LOADING) begin
+    if(stage == STAGE_MEASUREMENT_LOADING || global_stage == STAGE_ERASURE_LOADING) begin
         root <= ADDRESS;
         parent_vector <= 0;
     end else begin
@@ -238,7 +238,7 @@ always@(posedge clk) begin
     if(reset) begin
         peeling_parity_completed <= 0;
     end else begin
-        if (stage == STAGE_MEASUREMENT_LOADING) begin
+        if (stage == STAGE_MEASUREMENT_LOADING || global_stage == STAGE_ERASURE_LOADING) begin
             peeling_parity_completed <= 0;
         end else if(stage == STAGE_PEELING) begin
             if(~(|parent_vector)) begin
@@ -257,7 +257,7 @@ always@(posedge clk) begin
     if(reset) begin
         peeling_complete <= 0;
     end else begin
-        if (stage == STAGE_MEASUREMENT_LOADING) begin
+        if (stage == STAGE_MEASUREMENT_LOADING || global_stage == STAGE_ERASURE_LOADING) begin
             peeling_complete <= 0;
         end else begin
             if(stage == STAGE_PEELING) begin

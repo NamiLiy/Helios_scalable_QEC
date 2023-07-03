@@ -21,7 +21,8 @@ module unified_controller #(
     measurements,
     correction,
     global_stage,
-    erasure
+    erasure,
+    previous_global_stage
 );
 
 `include "../../parameters/parameters.sv"
@@ -57,6 +58,7 @@ input [PU_COUNT - 1 : 0]  odd_clusters_PE;
 input [PU_COUNT - 1 : 0]  busy_PE;
 output reg [ALIGNED_PU_PER_ROUND-1:0] measurements;
 output reg [7:0] erasure;
+output reg [STAGE_WIDTH-1:0] previous_global_stage;
 input [CORRECTION_COUNT_PER_ROUND-1:0] correction;
 
 input [7 : 0] input_data;
@@ -147,6 +149,7 @@ always @(posedge clk) begin
                         measurement_rounds <= 0;
                     end
                 end 
+                previous_global_stage <= STAGE_IDLE;
             end
 
             STAGE_PARAMETERS_LOADING: begin // 6
@@ -246,6 +249,7 @@ always @(posedge clk) begin
 
             STAGE_RESULT_VALID: begin //5
                 measurement_rounds <= measurement_rounds + 1;
+                previous_global_stage <= STAGE_RESULT_VALID; //new
                 if(measurement_rounds >= GRID_WIDTH_U - 1) begin
                     global_stage <= STAGE_IDLE;
                 end

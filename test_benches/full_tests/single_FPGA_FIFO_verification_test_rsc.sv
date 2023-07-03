@@ -318,6 +318,25 @@ always @(negedge clk) begin
     end
 end
 
+//output verification logic
+integer file_root_op;
+reg [7:0] test;
+
+assign file_root_op = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_3_roots.txt", "w");        
+        
+always@ (posedge clk) begin
+    if(decoder.controller.global_stage == STAGE_RESULT_VALID && decoder.previous_global_stage != STAGE_RESULT_VALID) begin      
+        for(k = 0; k < GRID_WIDTH_U; k++) begin
+            for(i = 0; i < GRID_WIDTH_X; i++) begin
+                for(j = 0; j < GRID_WIDTH_Z; j++) begin
+                    $fwrite (file_root_op, (Z_BIT_WIDTH > 0) ? `root_z(i, j, k) : 0);
+                    $fwrite (file_root_op, `root_x(i, j, k));
+                    $fdisplay(file_root_op, `root_u(i, j, k));
+                end
+            end
+        end
+    end
+end
 
 // Output verification logic
 always @(posedge clk) begin
@@ -388,6 +407,7 @@ always @(posedge clk) begin
         $display("Total : %d",total_count);
         $display("Passed : %d",pass_count);
         $display("Failed : %d",fail_count);
+        $fclose(file_root_op);
         $finish;
     end
 end

@@ -43,11 +43,12 @@ output input_ready;
 output [7 : 0] output_data;
 output output_valid;
 input output_ready;
-input [7 : 0] erasure;
+input [GRID_WIDTH_U*GRID_WIDTH_U-2 : 0] erasure;
 
 wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 
 wire [STAGE_WIDTH-1:0] global_stage;
+wire [STAGE_WIDTH-1:0] previous_global_stage;
 wire [CORRECTION_COUNT_PER_ROUND - 1 : 0] correction;
 
 wire [PU_COUNT_PER_ROUND-1:0] measurements;
@@ -91,7 +92,8 @@ unified_controller #(
     .global_stage(global_stage),
     .measurements(measurements),
     .correction(correction),
-    .erasure(erasure)
+    .erasure(erasure),
+    .previous_global_stage(previous_global_stage)
 );
 
 endmodule
