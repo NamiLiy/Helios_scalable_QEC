@@ -57,7 +57,7 @@ reg [STAGE_WIDTH-1:0] global_stage_previous;
 input [PU_COUNT - 1 : 0]  odd_clusters_PE;
 input [PU_COUNT - 1 : 0]  busy_PE;
 output reg [ALIGNED_PU_PER_ROUND-1:0] measurements;
-output reg [7:0] erasure;
+output reg [GRID_WIDTH_U*GRID_WIDTH_U-(GRID_WIDTH_U-1):0] erasure;
 output reg [STAGE_WIDTH-1:0] previous_global_stage;
 input [CORRECTION_COUNT_PER_ROUND-1:0] correction;
 
@@ -198,9 +198,13 @@ always @(posedge clk) begin
             
             STAGE_ERASURE_LOADING: begin //NEW
                 if (input_valid && input_ready) begin
-                    erasure[ALIGNED_PU_PER_ROUND-1:ALIGNED_PU_PER_ROUND-8] <= input_data;
-                    if(ALIGNED_PU_PER_ROUND > 8) begin
-                        erasure[ALIGNED_PU_PER_ROUND-9:0] <= erasure[ALIGNED_PU_PER_ROUND-1:8];
+//                    erasure[ALIGNED_PU_PER_ROUND-1:ALIGNED_PU_PER_ROUND-8] <= input_data;
+//                    if(ALIGNED_PU_PER_ROUND > 8) begin
+//                        erasure[ALIGNED_PU_PER_ROUND-9:0] <= erasure[ALIGNED_PU_PER_ROUND-1:8];
+//                    end
+                    erasure[21:21-8] <= input_data;
+                    if(21 > 8) begin
+                        erasure[21-9:0] <= erasure[21:8];
                     end
                     erasure_messages_per_round_of_measurement <= erasure_messages_per_round_of_measurement + 1;
                     if((erasure_messages_per_round_of_measurement + 1)*8 >= ERASURE_COUNT_PER_ROUND) begin

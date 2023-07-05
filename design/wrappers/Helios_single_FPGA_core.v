@@ -43,7 +43,7 @@ output input_ready;
 output [7 : 0] output_data;
 output output_valid;
 input output_ready;
-input [GRID_WIDTH_U*GRID_WIDTH_U-2 : 0] erasure;
+input [GRID_WIDTH_U*GRID_WIDTH_U-(GRID_WIDTH_U-1) : 0] erasure;
 
 wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 
