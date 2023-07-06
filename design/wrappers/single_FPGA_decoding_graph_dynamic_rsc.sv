@@ -47,7 +47,7 @@ output [PU_COUNT - 1 : 0] odd_clusters;
 output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 output [PU_COUNT - 1 : 0] busy;
 output [CORRECTION_COUNT_PER_ROUND - 1 : 0] correction;
-input [GRID_WIDTH_U*GRID_WIDTH_U-(GRID_WIDTH_U-1) : 0] erasure;
+input [GRID_WIDTH_U*GRID_WIDTH_U-1 : 0] erasure;
 
 genvar i;
 genvar j;
@@ -384,7 +384,7 @@ generate
                 if (i < GRID_WIDTH_X && i > 0 && j > 0) begin
                     assign ns_k[k].ns_i[i].ns_j[j].weight_in = `WEIGHT_NS(i,j);
                     if(k == GRID_WIDTH_U-1) begin
-                        assign ns_k[k].ns_i[i].ns_j[j].erased = erasure[i-1];
+                        assign ns_k[k].ns_i[i].ns_j[j].erased = erasure[(i-1)*GRID_WIDTH_Z + (j-1)];
                     end else begin
                         assign ns_k[k].ns_i[i].ns_j[j].erased = ns_k[k+1].ns_i[i].ns_j[j].erased_out;
                     end
@@ -402,14 +402,14 @@ generate
                 if (i < GRID_WIDTH_X && i > 0 && j < GRID_WIDTH_Z) begin
                     assign ew_k[k].ew_i[i].ew_j[j].weight_in = `WEIGHT_EW(i,j);
                     if(k == GRID_WIDTH_U-1) begin
-                        assign ew_k[k].ew_i[i].ew_j[j].erased = erasure[i-1 + j + GRID_WIDTH_U+1];
+                        assign ew_k[k].ew_i[i].ew_j[j].erased = erasure[(i-1)*GRID_WIDTH_Z + (j-1) + (GRID_WIDTH_Z*GRID_WIDTH_X-GRID_WIDTH_Z)];
                     end else begin
                         assign ew_k[k].ew_i[i].ew_j[j].erased = ew_k[k+1].ew_i[i].ew_j[j].erased_out;
                     end
                 end else if (i == GRID_WIDTH_X-1 && j == GRID_WIDTH_Z) begin
                     assign ew_k[k].ew_i[i].ew_j[j].weight_in = `WEIGHT_EW(i,j);
                     if(k == GRID_WIDTH_U-1) begin
-                        assign ew_k[k].ew_i[i].ew_j[j].erased = erasure[i-1 + j + GRID_WIDTH_U+1]; //CHECK OFFSET
+                        assign ew_k[k].ew_i[i].ew_j[j].erased = erasure[(i-1)*GRID_WIDTH_Z + (j-1) + (GRID_WIDTH_Z*GRID_WIDTH_X-GRID_WIDTH_Z)]; //CHECK OFFSET
                     end else begin
                         assign ew_k[k].ew_i[i].ew_j[j].erased = ew_k[k+1].ew_i[i].ew_j[j].erased_out;
                     end

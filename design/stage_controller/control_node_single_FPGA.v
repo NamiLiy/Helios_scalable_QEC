@@ -37,10 +37,13 @@ localparam ADDRESS_WIDTH = X_BIT_WIDTH + Z_BIT_WIDTH + U_BIT_WIDTH;
 localparam BYTES_PER_ROUND = ((GRID_WIDTH_X * GRID_WIDTH_Z  + 7) >> 3);
 localparam ALIGNED_PU_PER_ROUND = (BYTES_PER_ROUND << 3);
 
+localparam ERASURE_BYTES_PER_ROUND = ((GRID_WIDTH_U * GRID_WIDTH_U -(GRID_WIDTH_U-1)  + 7) >> 3);
+localparam ALIGNED_ERASURES_PER_ROUND = GRID_WIDTH_U*GRID_WIDTH_U-1;
+
 localparam PU_COUNT_PER_ROUND = GRID_WIDTH_X * GRID_WIDTH_Z;
 localparam PU_COUNT = PU_COUNT_PER_ROUND * GRID_WIDTH_U;
 
-localparam ERASURE_COUNT_PER_ROUND = GRID_WIDTH_U*GRID_WIDTH_U-2;
+localparam ERASURE_COUNT_PER_ROUND = GRID_WIDTH_U*GRID_WIDTH_U-(GRID_WIDTH_U-1);
 
 localparam NS_ERROR_COUNT_PER_ROUND = (GRID_WIDTH_X-1) * GRID_WIDTH_Z;
 localparam EW_ERROR_COUNT_PER_ROUND = (GRID_WIDTH_X-1) * GRID_WIDTH_Z + 1;
@@ -57,7 +60,7 @@ reg [STAGE_WIDTH-1:0] global_stage_previous;
 input [PU_COUNT - 1 : 0]  odd_clusters_PE;
 input [PU_COUNT - 1 : 0]  busy_PE;
 output reg [ALIGNED_PU_PER_ROUND-1:0] measurements;
-output reg [GRID_WIDTH_U*GRID_WIDTH_U-(GRID_WIDTH_U-1):0] erasure;
+output reg [GRID_WIDTH_U*GRID_WIDTH_U-1:0] erasure;
 output reg [STAGE_WIDTH-1:0] previous_global_stage;
 input [CORRECTION_COUNT_PER_ROUND-1:0] correction;
 
@@ -202,9 +205,9 @@ always @(posedge clk) begin
 //                    if(ALIGNED_PU_PER_ROUND > 8) begin
 //                        erasure[ALIGNED_PU_PER_ROUND-9:0] <= erasure[ALIGNED_PU_PER_ROUND-1:8];
 //                    end
-                    erasure[21:21-8] <= input_data;
-                    if(21 > 8) begin
-                        erasure[21-9:0] <= erasure[21:8];
+                    erasure[ALIGNED_ERASURES_PER_ROUND-1:ALIGNED_ERASURES_PER_ROUND-8] <= input_data;
+                    if(ALIGNED_ERASURES_PER_ROUND > 8) begin
+                        erasure[ALIGNED_ERASURES_PER_ROUND-9:0] <= erasure[ALIGNED_ERASURES_PER_ROUND-1:8];
                     end
                     erasure_messages_per_round_of_measurement <= erasure_messages_per_round_of_measurement + 1;
                     if((erasure_messages_per_round_of_measurement + 1)*8 >= ERASURE_COUNT_PER_ROUND) begin

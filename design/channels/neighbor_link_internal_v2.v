@@ -137,6 +137,20 @@ assign is_boundary = (boundary_condition_out==1'b1) && fully_grown;
 assign a_output_data = (boundary_condition_out ==0)? b_input_data : 0;
 assign b_output_data = (boundary_condition_out ==0)? a_input_data : 0;
 
+reg [STAGE_WIDTH - 1 : 0] stage;
+reg [STAGE_WIDTH - 1 : 0] last_stage;
+
+// stage is always equal to global_stage
+always@(posedge clk) begin
+    if(reset) begin
+        stage <= STAGE_IDLE;
+        last_stage <= STAGE_IDLE;
+    end else begin
+        stage <= global_stage;
+        last_stage <= stage;
+    end
+end
+
 always@(posedge clk) begin
     if(reset) begin
         weight_out <= 0;
@@ -146,7 +160,7 @@ always@(posedge clk) begin
         if(global_stage == STAGE_PARAMETERS_LOADING) begin
             weight_out <= weight_in;
             boundary_condition_out <= boundary_condition_in;
-        end else if(global_stage == STAGE_ERASURE_LOADING) begin
+        end else if(stage == STAGE_MEASUREMENT_LOADING && last_stage == STAGE_ERASURE_LOADING) begin
             erased_out <= erased;
         end
     end
