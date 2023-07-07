@@ -97,10 +97,10 @@ always@(posedge clk) begin
     if(reset) begin
         growth <= 0;
     end else begin
-        if(global_stage == STAGE_MEASUREMENT_LOADING || global_stage == STAGE_ERASURE_LOADING) begin
+        if(global_stage == STAGE_MEASUREMENT_LOADING) begin
             growth <= 0;
         end else begin
-            growth <= (erased == 1) ? weight_out : growth_new; //new;
+            growth <= (erased_out == 1) ? weight_out : growth_new; //new;
         end 
     end
 end
@@ -160,7 +160,7 @@ always@(posedge clk) begin
         if(global_stage == STAGE_PARAMETERS_LOADING) begin
             weight_out <= weight_in;
             boundary_condition_out <= boundary_condition_in;
-        end else if(stage == STAGE_MEASUREMENT_LOADING && last_stage == STAGE_ERASURE_LOADING) begin
+        end else if(global_stage == STAGE_MEASUREMENT_LOADING && stage == STAGE_ERASURE_LOADING) begin
             erased_out <= erased;
         end
     end

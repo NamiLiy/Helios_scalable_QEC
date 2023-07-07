@@ -78,6 +78,7 @@ generate
                 wire odd;
                 wire [ADDRESS_WIDTH-1 : 0] root;
                 wire busy_PE;
+                wire [NEIGHBOR_COUNT-1:0] erased;
 
                 processing_unit #(
                     .ADDRESS_WIDTH(ADDRESS_WIDTH),
@@ -100,7 +101,8 @@ generate
 
                     .odd(odd),
                     .root(root),
-                    .busy(busy_PE)
+                    .busy(busy_PE),
+                    .erased(erased)
                 );
                 assign `roots(i, j, k) = root;
                 assign `busy(i, j, k) = busy_PE;
@@ -194,7 +196,9 @@ endgenerate
     assign `PU(ai, aj, ak).neighbor_fully_grown[adirection] = fully_grown;\
     assign `PU(bi, bj, bk).neighbor_fully_grown[bdirection] = fully_grown;\
     assign `PU(ai, aj, ak).neighbor_is_boundary[adirection] = is_boundary;\
-    assign `PU(bi, bj, bk).neighbor_is_boundary[bdirection] = is_boundary;
+    assign `PU(bi, bj, bk).neighbor_is_boundary[bdirection] = is_boundary; \
+    assign `PU(ai, aj, ak).erased[adirection] = erased_out; \
+    assign `PU(bi, bj, bk).erased[bdirection] = erased_out;
 
 `define NEIGHBOR_LINK_INTERNAL_SINGLE(ai, aj, ak, adirection, type) \
     neighbor_link_internal #( \
@@ -222,11 +226,8 @@ endgenerate
         .is_error_systolic_in(is_error_systolic_in), \
         .erased(erased), \
         .erased_out(erased_out) \
-    );
-
-
-`define NS_ERASURE_INDEX(i, j, k) (i*GRID_WIDTH_Z + j + k*(GRID_WIDTH_U)*(GRID_WIDTH_U))
-`define EW_ERASURE_INDEX(i, j, k) (`NS_ERASURE_INDEX(i, j, k) + GRID_WIDTH_U)
+    ); \
+    assign `PU(ai, aj, ak).erased[adirection] = erased_out;    
 
 generate
     // Generate North South neighbors
@@ -292,6 +293,7 @@ generate
                 wire is_error_out;
                 wire [LINK_BIT_WIDTH-1:0] weight_in;
                 wire erased;
+                wire erased_out;
                 assign weight_in = `WEIGHT_UD(i,j);
                 if(k==0) begin
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_DOWN, 1)
@@ -456,6 +458,7 @@ generate
                 end else begin // Fake edges
                     assign ud_k[k].ud_i[i].ud_j[j].weight_in = 2;
                 end
+                assign ud_k[k].ud_i[i].ud_j[j].erased = 0;
             end
         end
     end

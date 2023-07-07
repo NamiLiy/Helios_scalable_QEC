@@ -38,7 +38,7 @@ localparam BYTES_PER_ROUND = ((GRID_WIDTH_X * GRID_WIDTH_Z  + 7) >> 3);
 localparam ALIGNED_PU_PER_ROUND = (BYTES_PER_ROUND << 3);
 
 localparam ERASURE_BYTES_PER_ROUND = ((GRID_WIDTH_U * GRID_WIDTH_U -(GRID_WIDTH_U-1)  + 7) >> 3);
-localparam ALIGNED_ERASURES_PER_ROUND = GRID_WIDTH_U*GRID_WIDTH_U-1;
+localparam ALIGNED_ERASURES_PER_ROUND = (ERASURE_BYTES_PER_ROUND << 3);
 
 localparam PU_COUNT_PER_ROUND = GRID_WIDTH_X * GRID_WIDTH_Z;
 localparam PU_COUNT = PU_COUNT_PER_ROUND * GRID_WIDTH_U;
@@ -60,7 +60,7 @@ reg [STAGE_WIDTH-1:0] global_stage_previous;
 input [PU_COUNT - 1 : 0]  odd_clusters_PE;
 input [PU_COUNT - 1 : 0]  busy_PE;
 output reg [ALIGNED_PU_PER_ROUND-1:0] measurements;
-output reg [GRID_WIDTH_U*GRID_WIDTH_U-1:0] erasure;
+output reg [ALIGNED_ERASURES_PER_ROUND-1:0] erasure;
 output reg [STAGE_WIDTH-1:0] previous_global_stage;
 input [CORRECTION_COUNT_PER_ROUND-1:0] correction;
 
@@ -193,7 +193,7 @@ always @(posedge clk) begin
                     delay_counter <= 0;
                     result_valid <= 0;
                 end else begin
-                    global_stage <= STAGE_GROW;
+                    global_stage <= STAGE_MERGE;
                     delay_counter <= 0;
                     result_valid <= 0;
                 end
@@ -201,10 +201,6 @@ always @(posedge clk) begin
             
             STAGE_ERASURE_LOADING: begin //NEW
                 if (input_valid && input_ready) begin
-//                    erasure[ALIGNED_PU_PER_ROUND-1:ALIGNED_PU_PER_ROUND-8] <= input_data;
-//                    if(ALIGNED_PU_PER_ROUND > 8) begin
-//                        erasure[ALIGNED_PU_PER_ROUND-9:0] <= erasure[ALIGNED_PU_PER_ROUND-1:8];
-//                    end
                     erasure[ALIGNED_ERASURES_PER_ROUND-1:ALIGNED_ERASURES_PER_ROUND-8] <= input_data;
                     if(ALIGNED_ERASURES_PER_ROUND > 8) begin
                         erasure[ALIGNED_ERASURES_PER_ROUND-9:0] <= erasure[ALIGNED_ERASURES_PER_ROUND-1:8];

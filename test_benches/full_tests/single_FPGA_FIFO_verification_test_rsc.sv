@@ -16,7 +16,7 @@ module verification_bench_single_FPGA_rsc;
 `include "../../parameters/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
-localparam CODE_DISTANCE = 3;                
+localparam CODE_DISTANCE = 5;                
 localparam CODE_DISTANCE_X = CODE_DISTANCE + 1;
 localparam CODE_DISTANCE_Z = (CODE_DISTANCE_X - 1)/2;
 
@@ -54,11 +54,11 @@ wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 `define ALIGNED_PU_PER_ROUND (`BYTES_PER_ROUND << 3)
 
 `define ERASURE_BYTES_PER_ROUND ((GRID_WIDTH_U * GRID_WIDTH_U -(GRID_WIDTH_U-1)  + 7) >> 3)
-`define ALIGNED_ERASURES_PER_ROUND (`BYTES_PER_ROUND << 3)
+`define ALIGNED_ERASURES_PER_ROUND (`ERASURE_BYTES_PER_ROUND << 3)
 
 
 reg [`ALIGNED_PU_PER_ROUND*GRID_WIDTH_U-1:0] measurements;
-reg [MEASUREMENT_ROUNDS*CODE_DISTANCE*CODE_DISTANCE-1:0] erasure;
+reg [MEASUREMENT_ROUNDS*`ALIGNED_ERASURES_PER_ROUND-1:0] erasure;
 
 `define INDEX(i, j, k) (i * CODE_DISTANCE_Z + j + k * CODE_DISTANCE_Z*CODE_DISTANCE_X)
 `define PADDED_INDEX(i, j, k) (i * CODE_DISTANCE_Z + j + k * `ALIGNED_PU_PER_ROUND)
@@ -70,7 +70,8 @@ reg [MEASUREMENT_ROUNDS*CODE_DISTANCE*CODE_DISTANCE-1:0] erasure;
 `define root_u(i, j, k) decoder.roots[ADDRESS_WIDTH*`INDEX(i, j, k)+X_BIT_WIDTH+Z_BIT_WIDTH +: U_BIT_WIDTH]
 
 
-`define erasure(i, j, k) erasure[i*CODE_DISTANCE + j + k*CODE_DISTANCE*CODE_DISTANCE]
+`define erasure(i, j, k) erasure[i*CODE_DISTANCE + j + k*`ALIGNED_ERASURES_PER_ROUND]
+`define E(i, j) (i == GRID_WIDTH_U-1 && j > 0) ? 0 : 1
 
 reg [7:0] input_data;
 reg input_valid;
@@ -304,17 +305,18 @@ always @(negedge clk) begin
             $fscanf (erasure_file, "%h\n", test_case);
             erasure_eof = $feof(erasure_file);
         end
-
+        
+        
         for(k=0; k < MEASUREMENT_ROUNDS; k++) begin
             for(i=0; i < CODE_DISTANCE; i++) begin
                 for(j=0; j < CODE_DISTANCE; j++) begin
-                    if (erasure_eof == 0)begin 
+                    if (erasure_eof == 0 && `E(i, j))begin 
                         $fscanf (erasure_file, "%h\n", input_read_value);
                         `erasure(i, j, k) = input_read_value;
                         if(input_read_value != 0) begin
                             $display("input read value is %d with k %d i %d j %d", input_read_value, k, i, j);
                         end
-                        $display("erasure %d", `ALIGNED_ERASURES_PER_ROUND);
+                        $display("aligned %d and bytes %d", `ALIGNED_ERASURES_PER_ROUND, `ERASURE_BYTES_PER_ROUND);
                     end
                 end
             end
@@ -328,7 +330,7 @@ end
 integer file_root_op;
 reg [7:0] test;
 
-assign file_root_op = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_3_roots.txt", "w");        
+assign file_root_op = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_5_roots.txt", "w");        
         
 always@ (posedge clk) begin
     if(decoder.controller.global_stage == STAGE_RESULT_VALID && decoder.previous_global_stage != STAGE_RESULT_VALID) begin      

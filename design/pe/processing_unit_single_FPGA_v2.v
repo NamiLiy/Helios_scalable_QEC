@@ -23,7 +23,8 @@ module processing_unit #(
 
     odd,
     root,
-    busy
+    busy,
+    erased
 );
 
 `include "../../parameters/parameters.sv"
@@ -43,6 +44,8 @@ output [NEIGHBOR_COUNT-1:0] neighbor_is_error;
 
 input [NEIGHBOR_COUNT*EXPOSED_DATA_SIZE-1:0] input_data;
 output [NEIGHBOR_COUNT*EXPOSED_DATA_SIZE-1:0] output_data;
+
+input [NEIGHBOR_COUNT-1:0] erased;
 
 output reg [ADDRESS_WIDTH-1:0] root;
 output reg odd;
@@ -150,9 +153,9 @@ always@(posedge clk) begin
     end
 end
 
-// Calculate the sub-tree parity and sub_tree touching boundary
+// Calculate the sub-tree parity and sub_tree touching boundary 
 
-wire next_cluster_parity = (^(neighbor_parent_vector & child_cluster_parity)) ^ m;
+wire next_cluster_parity = ((^(neighbor_parent_vector & child_cluster_parity)) ^ m);
 wire next_cluster_touching_boundary = (|(neighbor_parent_vector & child_touching_boundary)) | (|neighbor_is_boundary);
 
 always@(posedge clk) begin
