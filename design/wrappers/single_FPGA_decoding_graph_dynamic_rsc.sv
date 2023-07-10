@@ -404,7 +404,7 @@ generate
                 if (i < GRID_WIDTH_X && i > 0 && j < GRID_WIDTH_Z) begin
                     assign ew_k[k].ew_i[i].ew_j[j].weight_in = `WEIGHT_EW(i,j);
                     if(k == GRID_WIDTH_U-1) begin
-                        assign ew_k[k].ew_i[i].ew_j[j].erased = erasure[(i-1)*GRID_WIDTH_Z + (j-1) + (GRID_WIDTH_Z*GRID_WIDTH_X-GRID_WIDTH_Z)];
+                        assign ew_k[k].ew_i[i].ew_j[j].erased = erasure[(i-1)*GRID_WIDTH_Z + (j) + (GRID_WIDTH_Z*GRID_WIDTH_X-GRID_WIDTH_Z)];
                     end else begin
                         assign ew_k[k].ew_i[i].ew_j[j].erased = ew_k[k+1].ew_i[i].ew_j[j].erased_out;
                     end

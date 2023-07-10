@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <limits.h>
+#include <stdio.h>
 
 struct RandomSeeds {
     int num_seeds;
