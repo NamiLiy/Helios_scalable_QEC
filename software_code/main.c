@@ -11,7 +11,7 @@ int max(int a, int b) {
 double normal_random(double mean, double std_dev);
 
 int main() {
-    int distance = 7;
+    int distance = 5;
     double p = 0.0005;
     int test_runs = 1000;
 

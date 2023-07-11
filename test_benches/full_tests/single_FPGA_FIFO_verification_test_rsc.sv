@@ -16,7 +16,7 @@ module verification_bench_single_FPGA_rsc;
 `include "../../parameters/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
-localparam CODE_DISTANCE = 7;                
+localparam CODE_DISTANCE = 5;                
 localparam CODE_DISTANCE_X = CODE_DISTANCE + 1;
 localparam CODE_DISTANCE_Z = (CODE_DISTANCE_X - 1)/2;
 
@@ -331,7 +331,7 @@ end
 integer file_root_op;
 reg [7:0] test;
 
-assign file_root_op = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_7_roots.txt", "w");        
+assign file_root_op = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_5_roots.txt", "w");        
         
 always@ (posedge clk) begin
     if(decoder.controller.global_stage == STAGE_RESULT_VALID && decoder.previous_global_stage != STAGE_RESULT_VALID) begin      

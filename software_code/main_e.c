@@ -11,7 +11,7 @@ int max(int a, int b) {
 double normal_random(double mean, double std_dev);
 
 int main() {
-    int distance = 7;
+    int distance = 5;
     double p = 0.0005;
     int test_runs = 1000;
 
@@ -293,7 +293,7 @@ double normal_random(double mean, double std_dev)
     double u1 = (double)rand() / RAND_MAX;
     double u2 = (double)rand() / RAND_MAX;
 
-    double z = sqrt(-2.0 * log(u1)) * cos(2.0 * 3.14 * u2);
+    double z = sqrt(-2.0 * log(u1)) * cos(2.0 * M_PI * u2);
 
     return mean + std_dev * z;
 }
