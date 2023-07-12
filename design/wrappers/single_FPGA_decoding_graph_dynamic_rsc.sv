@@ -4,7 +4,8 @@ module single_FPGA_decoding_graph_dynamic_rsc #(
     parameter GRID_WIDTH_X = 4,
     parameter GRID_WIDTH_Z = 1,
     parameter GRID_WIDTH_U = 3,
-    parameter MAX_WEIGHT = 2 
+    parameter MAX_WEIGHT = 2,
+    parameter ERASURE = 1
 ) (
     clk,
     reset,
@@ -78,7 +79,6 @@ generate
                 wire odd;
                 wire [ADDRESS_WIDTH-1 : 0] root;
                 wire busy_PE;
-                wire [NEIGHBOR_COUNT-1:0] erased;
 
                 processing_unit #(
                     .ADDRESS_WIDTH(ADDRESS_WIDTH),
@@ -101,8 +101,7 @@ generate
 
                     .odd(odd),
                     .root(root),
-                    .busy(busy_PE),
-                    .erased(erased)
+                    .busy(busy_PE)
                 );
                 assign `roots(i, j, k) = root;
                 assign `busy(i, j, k) = busy_PE;
@@ -169,7 +168,8 @@ endgenerate
     wire fully_grown; \
     neighbor_link_internal #( \
         .ADDRESS_WIDTH(ADDRESS_WIDTH), \
-        .MAX_WEIGHT(MAX_WEIGHT) \
+        .MAX_WEIGHT(MAX_WEIGHT), \
+        .ERASURE(ERASURE) \
     ) neighbor_link ( \
         .clk(clk), \
         .reset(reset), \
@@ -196,14 +196,13 @@ endgenerate
     assign `PU(ai, aj, ak).neighbor_fully_grown[adirection] = fully_grown;\
     assign `PU(bi, bj, bk).neighbor_fully_grown[bdirection] = fully_grown;\
     assign `PU(ai, aj, ak).neighbor_is_boundary[adirection] = is_boundary;\
-    assign `PU(bi, bj, bk).neighbor_is_boundary[bdirection] = is_boundary; \
-    assign `PU(ai, aj, ak).erased[adirection] = erased_out; \
-    assign `PU(bi, bj, bk).erased[bdirection] = erased_out;
+    assign `PU(bi, bj, bk).neighbor_is_boundary[bdirection] = is_boundary;
 
 `define NEIGHBOR_LINK_INTERNAL_SINGLE(ai, aj, ak, adirection, type) \
     neighbor_link_internal #( \
         .ADDRESS_WIDTH(ADDRESS_WIDTH), \
-        .MAX_WEIGHT(MAX_WEIGHT) \
+        .MAX_WEIGHT(MAX_WEIGHT), \
+        .ERASURE(ERASURE) \
     ) neighbor_link ( \
         .clk(clk), \
         .reset(reset), \
@@ -226,9 +225,8 @@ endgenerate
         .is_error_systolic_in(is_error_systolic_in), \
         .erased(erased), \
         .erased_out(erased_out) \
-    ); \
-    assign `PU(ai, aj, ak).erased[adirection] = erased_out;    
-
+    ); 
+    
 generate
     // Generate North South neighbors
     for (k=0; k < GRID_WIDTH_U; k=k+1) begin: ns_k
@@ -366,19 +364,6 @@ generate
         end
     end
 
-//    for (k=0; k < GRID_WIDTH_U; k=k+1) begin: ns_k_weight
-//        for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: ns_i_weight
-//            for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: ns_j_weight
-//                if (i < GRID_WIDTH_X && i > 0 && j > 0) begin
-//                    assign ns_k[k].ns_i[i].ns_j[j].weight_in = `WEIGHT_NS(i,j);
-//                end else begin // Fake edges
-//                    assign ns_k[k].ns_i[i].ns_j[j].weight_in = 2;
-//                    assign ns_k[k].ns_i[i].ns_j[j].erased = 0;
-//                end
-//            end
-//        end
-//    end
-
 
     for (k=GRID_WIDTH_U-1; k >=0; k=k-1) begin: ns_k_weight
         for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: ns_i_weight
@@ -386,9 +371,9 @@ generate
                 if (i < GRID_WIDTH_X && i > 0 && j > 0) begin
                     assign ns_k[k].ns_i[i].ns_j[j].weight_in = `WEIGHT_NS(i,j);
                     if(k == GRID_WIDTH_U-1) begin
-                        assign ns_k[k].ns_i[i].ns_j[j].erased = erasure[(i-1)*GRID_WIDTH_Z + (j-1)];
+                        assign ns_k[k].ns_i[i].ns_j[j].erased = (ERASURE) ? erasure[(i-1)*GRID_WIDTH_Z + (j-1)] : 0;
                     end else begin
-                        assign ns_k[k].ns_i[i].ns_j[j].erased = ns_k[k+1].ns_i[i].ns_j[j].erased_out;
+                        assign ns_k[k].ns_i[i].ns_j[j].erased = (ERASURE) ? ns_k[k+1].ns_i[i].ns_j[j].erased_out : 0;
                     end
                 end else begin // Fake edges
                     assign ns_k[k].ns_i[i].ns_j[j].weight_in = 2;
@@ -404,16 +389,16 @@ generate
                 if (i < GRID_WIDTH_X && i > 0 && j < GRID_WIDTH_Z) begin
                     assign ew_k[k].ew_i[i].ew_j[j].weight_in = `WEIGHT_EW(i,j);
                     if(k == GRID_WIDTH_U-1) begin
-                        assign ew_k[k].ew_i[i].ew_j[j].erased = erasure[(i-1)*GRID_WIDTH_Z + (j) + (GRID_WIDTH_Z*GRID_WIDTH_X-GRID_WIDTH_Z)];
+                        assign ew_k[k].ew_i[i].ew_j[j].erased = (ERASURE) ? erasure[(i-1)*GRID_WIDTH_Z + (j) + (GRID_WIDTH_Z*GRID_WIDTH_X-GRID_WIDTH_Z)] : 0;
                     end else begin
-                        assign ew_k[k].ew_i[i].ew_j[j].erased = ew_k[k+1].ew_i[i].ew_j[j].erased_out;
+                        assign ew_k[k].ew_i[i].ew_j[j].erased = (ERASURE) ? ew_k[k+1].ew_i[i].ew_j[j].erased_out : 0;
                     end
                 end else if (i == GRID_WIDTH_X-1 && j == GRID_WIDTH_Z) begin
                     assign ew_k[k].ew_i[i].ew_j[j].weight_in = `WEIGHT_EW(i,j);
                     if(k == GRID_WIDTH_U-1) begin
-                        assign ew_k[k].ew_i[i].ew_j[j].erased = erasure[(i-1)*GRID_WIDTH_Z + (j-1) + (GRID_WIDTH_Z*GRID_WIDTH_X-GRID_WIDTH_Z)]; //CHECK OFFSET
+                        assign ew_k[k].ew_i[i].ew_j[j].erased = (ERASURE) ? erasure[(i-1)*GRID_WIDTH_Z + (j-1) + (GRID_WIDTH_Z*GRID_WIDTH_X-GRID_WIDTH_Z)] : 0; //CHECK OFFSET
                     end else begin
-                        assign ew_k[k].ew_i[i].ew_j[j].erased = ew_k[k+1].ew_i[i].ew_j[j].erased_out;
+                        assign ew_k[k].ew_i[i].ew_j[j].erased = (ERASURE) ? ew_k[k+1].ew_i[i].ew_j[j].erased_out : 0;
                     end
                 end else begin // Fake edges
                     assign ew_k[k].ew_i[i].ew_j[j].weight_in = 2;
@@ -422,37 +407,10 @@ generate
             end
         end
     end
-    
-    
-//    for (k=0; k < GRID_WIDTH_U; k=k+1) begin: ew_k_weight
-//        for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: ew_i_weight
-//            for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: ew_j_weight
-//                if (i < GRID_WIDTH_X && i > 0 && j < GRID_WIDTH_Z) begin
-//                    assign ew_k[k].ew_i[i].ew_j[j].weight_in = `WEIGHT_EW(i,j);
-//                    if(k == GRID_WIDTH_U-1) begin
-//                        assign ew_k[k].ew_i[i].ew_j[j].erased = erasure[i-1 + j + 3];
-//                    end else begin
-//                        assign ew_k[k].ew_i[i].ew_j[j].erased = ew_k[k+1].ew_i[i].ew_j[j].erased_out;
-//                    end
-//                end else if (i == GRID_WIDTH_X-1 && j == GRID_WIDTH_Z) begin
-//                    assign ew_k[k].ew_i[i].ew_j[j].weight_in = `WEIGHT_EW(i,j);
-//                    if(k == GRID_WIDTH_U-1) begin
-//                        assign ew_k[k].ew_i[i].ew_j[j].erased = erasure[i-1 + j + 3];
-//                    end else begin
-//                        assign ew_k[k].ew_i[i].ew_j[j].erased = ew_k[k+1].ew_i[i].ew_j[j].erased_out;
-//                    end
-//                end else begin // Fake edges
-//                    assign ew_k[k].ew_i[i].ew_j[j].weight_in = 2;
-//                    assign ew_k[k].ew_i[i].ew_j[j].erased = 0;
-//                end
-//            end
-//        end
-//    end
 
     for (k=0; k <= GRID_WIDTH_U; k=k+1) begin: ud_k_weight
         for (i=0; i < GRID_WIDTH_X; i=i+1) begin: ud_i_weight
             for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: ud_j_weight
-                assign ud_k[k].ud_i[i].ud_j[j].erased = 0;
                 if(k < GRID_WIDTH_U) begin
                     assign ud_k[k].ud_i[i].ud_j[j].weight_in = `WEIGHT_UD(i,j);
                 end else begin // Fake edges

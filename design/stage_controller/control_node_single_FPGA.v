@@ -3,7 +3,8 @@ module unified_controller #(
     parameter GRID_WIDTH_Z = 1,
     parameter GRID_WIDTH_U = 3,
     parameter ITERATION_COUNTER_WIDTH = 8,  // counts to 255 iterations
-    parameter MAXIMUM_DELAY = 2
+    parameter MAXIMUM_DELAY = 2,
+    parameter ERASURE = 1
 ) (
     clk,
     reset,
@@ -188,7 +189,7 @@ always @(posedge clk) begin
                     result_valid <= 0;
                     erasure_messages_per_round_of_measurement <= 0;
                     erasure_measurement_rounds <= 0;
-                end else if(erasure_measurement_rounds < (GRID_WIDTH_U) && !(measurement_rounds < GRID_WIDTH_U)) begin
+                end else if(ERASURE && erasure_measurement_rounds < (GRID_WIDTH_U) && !(measurement_rounds < GRID_WIDTH_U)) begin
                     global_stage <= STAGE_ERASURE_LOADING;
                     delay_counter <= 0;
                     result_valid <= 0;

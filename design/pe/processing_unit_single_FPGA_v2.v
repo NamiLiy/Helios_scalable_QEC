@@ -23,8 +23,7 @@ module processing_unit #(
 
     odd,
     root,
-    busy,
-    erased
+    busy
 );
 
 `include "../../parameters/parameters.sv"
@@ -44,8 +43,6 @@ output [NEIGHBOR_COUNT-1:0] neighbor_is_error;
 
 input [NEIGHBOR_COUNT*EXPOSED_DATA_SIZE-1:0] input_data;
 output [NEIGHBOR_COUNT*EXPOSED_DATA_SIZE-1:0] output_data;
-
-input [NEIGHBOR_COUNT-1:0] erased;
 
 output reg [ADDRESS_WIDTH-1:0] root;
 output reg odd;

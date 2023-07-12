@@ -11,12 +11,12 @@
 // root_of_0,1
 // .......
 
-module verification_bench_single_FPGA_rsc;
+module verification_bench_single_FPGA_erasure_rsc;
 
 `include "../../parameters/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
-localparam CODE_DISTANCE = 3;                
+localparam CODE_DISTANCE = 7;                
 localparam CODE_DISTANCE_X = CODE_DISTANCE + 1;
 localparam CODE_DISTANCE_Z = (CODE_DISTANCE_X - 1)/2;
 
@@ -24,7 +24,7 @@ parameter GRID_WIDTH_X = CODE_DISTANCE + 1;
 parameter GRID_WIDTH_Z = (CODE_DISTANCE_X - 1)/2;
 parameter GRID_WIDTH_U = CODE_DISTANCE;
 parameter MAX_WEIGHT = 2;
-parameter ERASURE = 0;
+parameter ERASURE = 1;
 
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
@@ -54,7 +54,12 @@ wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 `define BYTES_PER_ROUND ((CODE_DISTANCE_X * CODE_DISTANCE_Z  + 7) >> 3)
 `define ALIGNED_PU_PER_ROUND (`BYTES_PER_ROUND << 3)
 
+`define ERASURE_BYTES_PER_ROUND ((GRID_WIDTH_U * GRID_WIDTH_U -(GRID_WIDTH_U-1)  + 7) >> 3)
+`define ALIGNED_ERASURES_PER_ROUND (`ERASURE_BYTES_PER_ROUND << 3)
+
+
 reg [`ALIGNED_PU_PER_ROUND*GRID_WIDTH_U-1:0] measurements;
+reg [MEASUREMENT_ROUNDS*`ALIGNED_ERASURES_PER_ROUND-1:0] erasure;
 
 `define INDEX(i, j, k) (i * CODE_DISTANCE_Z + j + k * CODE_DISTANCE_Z*CODE_DISTANCE_X)
 `define PADDED_INDEX(i, j, k) (i * CODE_DISTANCE_Z + j + k * `ALIGNED_PU_PER_ROUND)
@@ -64,6 +69,10 @@ reg [`ALIGNED_PU_PER_ROUND*GRID_WIDTH_U-1:0] measurements;
 `define root_x(i, j, k) decoder.roots[ADDRESS_WIDTH*`INDEX(i, j, k)+Z_BIT_WIDTH +: X_BIT_WIDTH]
 `define root_z(i, j, k) decoder.roots[ADDRESS_WIDTH*`INDEX(i, j, k) +: Z_BIT_WIDTH]
 `define root_u(i, j, k) decoder.roots[ADDRESS_WIDTH*`INDEX(i, j, k)+X_BIT_WIDTH+Z_BIT_WIDTH +: U_BIT_WIDTH]
+
+
+`define erasure(i, j, k) erasure[i*CODE_DISTANCE + j + k*`ALIGNED_ERASURES_PER_ROUND]
+`define E(i, j) (i == GRID_WIDTH_U-1 && j > 0) ? 0 : 1
 
 reg [7:0] input_data;
 reg input_valid;
@@ -134,11 +143,12 @@ reg valid_delayed = 0;
 integer i;
 integer j;
 integer k;
-integer file, input_file;
+integer file, input_file, erasure_file;
 reg open = 1;
 reg input_open = 1;
 reg eof = 0;
 reg input_eof = 0;
+reg erasure_eof = 0;
 reg [31:0] read_value, test_case, input_read_value;
 reg [X_BIT_WIDTH-1 : 0] expected_x;
 reg [Z_BIT_WIDTH-1 : 0] expected_z;
@@ -152,6 +162,7 @@ reg [31:0] total_count;
 
 reg [2:0] loading_state;
 reg [31:0] input_fifo_counter;
+reg [31:0] erasure_fifo_counter;
 
 reg new_round_start;
 reg [31:0] cycle_counter;
@@ -176,9 +187,16 @@ always @(posedge clk) begin
             end
             3'b11: begin
                 if (input_fifo_counter == (`BYTES_PER_ROUND*GRID_WIDTH_U-1)) begin
-                    loading_state <= 3'b100;
+                    loading_state <= 3'b111;
                 end
                 input_fifo_counter <= input_fifo_counter + 1; 
+                erasure_fifo_counter <= 0;
+            end
+            3'b111 : begin //new
+                if(erasure_fifo_counter == (`ERASURE_BYTES_PER_ROUND*GRID_WIDTH_U-1)) begin //CHECK WHAT IS THE ERASURE BOUND HERE
+                    loading_state <= 3'b100;
+                end
+                erasure_fifo_counter <= erasure_fifo_counter + 1;
             end
             3'b100: begin
                 if(output_valid == 1) begin
@@ -218,6 +236,9 @@ always@(*) begin
     end else if (loading_state == 3'b11) begin
         input_valid = 1;
         input_data = measurements[input_fifo_counter*8 +: 8];
+    end else if (loading_state == 3'b111) begin
+        input_valid = 1;
+        input_data = erasure[erasure_fifo_counter*8 +: 8]; //new
     end else begin
         input_valid = 0;
     end
@@ -235,27 +256,38 @@ end
 always @(negedge clk) begin
     if (loading_state == 3'b10) begin
         measurements = 0;
+        erasure = 0;
         if(input_open == 1) begin
             if (CODE_DISTANCE == 3) begin
                 input_file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_3_rsc.txt", "r");
+                erasure_file = $fopen("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_erasure_3_rsc.txt", "r");
             end else if (CODE_DISTANCE == 5) begin
                 input_file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_5_rsc.txt", "r");
+                erasure_file = $fopen("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_erasure_5_rsc.txt", "r");
             end else if (CODE_DISTANCE == 7) begin
                 input_file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_7_rsc.txt", "r");
+                erasure_file = $fopen("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_erasure_7_rsc.txt", "r");
             end else if (CODE_DISTANCE == 9) begin
                 input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_9_rsc.txt", "r");
+                erasure_file = $fopen("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_erasure_9_rsc.txt", "r");
             end else if (CODE_DISTANCE == 11) begin
                 input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_11_rsc.txt", "r");
+                erasure_file = $fopen("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_erasure_11_rsc.txt", "r");
             end else if (CODE_DISTANCE == 13) begin
                 input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_13_rsc.txt", "r");
+                erasure_file = $fopen("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_erasure_13_rsc.txt", "r");
             end else if (CODE_DISTANCE == 15) begin
                 input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_15_rsc.txt", "r");
+                erasure_file = $fopen("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_erasure_15_rsc.txt", "r");
             end else if (CODE_DISTANCE == 17) begin
                 input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_17_rsc.txt", "r");
+                erasure_file = $fopen("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_erasure_17_rsc.txt", "r");
             end else if (CODE_DISTANCE == 19) begin
                 input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_19_rsc.txt", "r");
+                erasure_file = $fopen("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_erasure_19_rsc.txt", "r");
             end else if (CODE_DISTANCE == 21) begin
                 input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_21_rsc.txt", "r");
+                erasure_file = $fopen("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_erasure_21_rsc.txt", "r");
             end
             input_open = 0;
         end
@@ -279,13 +311,34 @@ always @(negedge clk) begin
                 end
             end
         end
+        
+        if (erasure_eof == 0)begin 
+            $fscanf (erasure_file, "%h\n", test_case);
+            erasure_eof = $feof(erasure_file);
+        end
+        
+        
+        for(k=0; k < MEASUREMENT_ROUNDS; k++) begin
+            for(i=0; i < CODE_DISTANCE; i++) begin
+                for(j=0; j < CODE_DISTANCE; j++) begin
+                    if (erasure_eof == 0 && `E(i, j))begin 
+                        $fscanf (erasure_file, "%h\n", input_read_value);
+                        `erasure(i, j, k) = input_read_value;
+                        if(input_read_value != 0) begin
+                            $display("input read value is %d with k %d i %d j %d", input_read_value, k, i, j);
+                        end
+                    end
+                end
+            end
+        end
     end else begin
         new_round_start = 0;
     end
 end
 
+//output verification logic
 integer file_root_op;
-assign file_root_op = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_3_roots.txt", "w");        
+assign file_root_op = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_7_roots.txt", "w");        
         
 always@ (posedge clk) begin
     if(decoder.controller.global_stage == STAGE_RESULT_VALID && decoder.previous_global_stage != STAGE_RESULT_VALID) begin      
@@ -300,7 +353,6 @@ always@ (posedge clk) begin
         end
     end
 end
-
 
 // Output verification logic
 always @(posedge clk) begin
@@ -371,6 +423,7 @@ always @(posedge clk) begin
         $display("Total : %d",total_count);
         $display("Passed : %d",pass_count);
         $display("Failed : %d",fail_count);
+        $fclose(file_root_op);
         $finish;
     end
 end

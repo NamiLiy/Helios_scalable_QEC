@@ -2,7 +2,8 @@ module Helios_single_FPGA #(
     parameter GRID_WIDTH_X = 4,
     parameter GRID_WIDTH_Z = 1,
     parameter GRID_WIDTH_U = 3,
-    parameter MAX_WEIGHT = 2
+    parameter MAX_WEIGHT = 2,
+    parameter ERASURE = 1
 ) (
     clk,
     reset,
@@ -59,7 +60,8 @@ single_FPGA_decoding_graph_dynamic_rsc #(
     .GRID_WIDTH_X(GRID_WIDTH_X),
     .GRID_WIDTH_Z(GRID_WIDTH_Z),
     .GRID_WIDTH_U(GRID_WIDTH_U),
-    .MAX_WEIGHT(MAX_WEIGHT)
+    .MAX_WEIGHT(MAX_WEIGHT),
+    .ERASURE(ERASURE)
 ) decoding_graph_rsc (
     .clk(clk),
     .reset(reset),
@@ -77,7 +79,8 @@ unified_controller #(
     .GRID_WIDTH_Z(GRID_WIDTH_Z),
     .GRID_WIDTH_U(GRID_WIDTH_U),
     .ITERATION_COUNTER_WIDTH(8),
-    .MAXIMUM_DELAY(3)
+    .MAXIMUM_DELAY(3),
+    .ERASURE(ERASURE)
 ) controller (
     .clk(clk),
     .reset(reset),
