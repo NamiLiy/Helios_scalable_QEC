@@ -16,7 +16,7 @@ module verification_bench_single_FPGA_rsc;
 `include "../../parameters/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
-localparam CODE_DISTANCE = 19;                
+localparam CODE_DISTANCE = 3;                
 localparam CODE_DISTANCE_X = CODE_DISTANCE + 1;
 localparam CODE_DISTANCE_Z = (CODE_DISTANCE_X - 1)/2;
 
@@ -235,7 +235,7 @@ always @(negedge clk) begin
         measurements = 0;
         if(input_open == 1) begin
             if (CODE_DISTANCE == 3) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_3_rsc.txt", "r");
+                input_file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_3_rsc_test.txt", "r");
             end else if (CODE_DISTANCE == 5) begin
                 input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_5_rsc.txt", "r");
             end else if (CODE_DISTANCE == 7) begin
