@@ -313,7 +313,9 @@ generate
                 wire [LINK_BIT_WIDTH-1:0] weight_in;
                 if(i==0 && j < GRID_WIDTH_Z) begin // First row
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_DIAG_NORTH, 2)
-                end else if (k == GRID_WIDTH_U-1  && j < GRID_WIDTH_Z) begin
+                end else if (k == 0  && i % 2 == 1 && j < GRID_WIDTH_Z) begin
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_DIAG_NORTH, 2)
+                end else if (k == GRID_WIDTH_U-1  && i % 2 == 1 && j == 0) begin
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_DIAG_SOUTH, 2)
                 end else if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z) begin
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_DIAG_SOUTH, 2)                   
@@ -323,7 +325,7 @@ generate
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_DIAG_NORTH, 2)
                 end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j == GRID_WIDTH_Z) begin // Last element of even rows
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j-1, k, `NEIGHBOR_IDX_DIAG_SOUTH, 2)
-                end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j > 0 && j < GRID_WIDTH_Z) begin // Middle elements of even rows
+                end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j > 0 && j < GRID_WIDTH_Z && k < GRID_WIDTH_U-1) begin // Middle elements of even rows
                     `NEIGHBOR_LINK_INTERNAL_0(i-1, j-1, k, i, j, k+1, `NEIGHBOR_IDX_DIAG_SOUTH, `NEIGHBOR_IDX_DIAG_NORTH)
                 end
             end
@@ -338,8 +340,10 @@ generate
                 wire [LINK_BIT_WIDTH-1:0] weight_in;
                 if(i==0 && j < GRID_WIDTH_Z) begin // First row
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_DIAG_EAST, 2)
-                end else if (k == GRID_WIDTH_U-1  && j < GRID_WIDTH_Z) begin
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_DIAG_WEST, 2)
+                end else if (k == 0  && i < GRID_WIDTH_X && i % 2 == 0 && j == GRID_WIDTH_Z) begin
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j-1, k, `NEIGHBOR_IDX_DIAG_EAST, 2)
+                end else if (k == GRID_WIDTH_U-1  && i < GRID_WIDTH_X && i%2 == 0 && i > 0 && j == GRID_WIDTH_Z) begin
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j-1, k, `NEIGHBOR_IDX_DIAG_WEST, 2)
                 end else if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z) begin // Last row
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_DIAG_WEST, 2)
                 end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j < GRID_WIDTH_Z && k < GRID_WIDTH_U-1) begin // even rows which are always internal
@@ -350,7 +354,7 @@ generate
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j-1, k, `NEIGHBOR_IDX_DIAG_EAST, 2)
                 end else if(i == GRID_WIDTH_X -1 && j == GRID_WIDTH_Z) begin // Last element of last odd row
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j-1, k, `NEIGHBOR_IDX_DIAG_EAST, 2)
-                end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0 && j < GRID_WIDTH_Z) begin // Middle elements of odd rows
+                end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0 && j < GRID_WIDTH_Z && k < GRID_WIDTH_U-1) begin // Middle elements of odd rows
                     `NEIGHBOR_LINK_INTERNAL_0(i, j-1, k+1, i-1, j, k, `NEIGHBOR_IDX_DIAG_EAST, `NEIGHBOR_IDX_DIAG_WEST)
                 end
             end
@@ -423,7 +427,7 @@ generate
         end
     end
     
-    for (k=0; k < GRID_WIDTH_U-2; k=k+1) begin: diag_ew_k_extra
+    for (k=0; k < GRID_WIDTH_U-1; k=k+1) begin: diag_ew_k_extra
         for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: diag_ew_i_extra
             for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: diag_ew_j_extra
                 if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j < GRID_WIDTH_Z) begin // even rows which are always internal
@@ -543,7 +547,7 @@ generate
         end
     end
     
-    for (k=0; k < GRID_WIDTH_U-1; k=k+1) begin: diag_ew_k_weight
+    for (k=0; k < GRID_WIDTH_U; k=k+1) begin: diag_ew_k_weight
         for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: diag_ew_i_weight
             for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: diag_ew_j_weight
                 if (i < GRID_WIDTH_X && i > 0 && j < GRID_WIDTH_Z) begin
