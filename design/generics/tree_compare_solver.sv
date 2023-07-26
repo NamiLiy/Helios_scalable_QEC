@@ -6,7 +6,7 @@
 
 module tree_compare_solver #(
     parameter DATA_WIDTH = 8,  // width of data to be compared
-    parameter CHANNEL_COUNT = 6  // number of channels to be compared
+    parameter CHANNEL_COUNT = 10  // number of channels to be compared
 ) (
     input wire [DATA_WIDTH-1:0] default_value,
     input wire [(DATA_WIDTH * CHANNEL_COUNT)-1:0] values,
@@ -67,7 +67,7 @@ endmodule
 
 module min_val_with_index #(
     parameter DATA_WIDTH = 8,  // width of data to be compared
-    parameter CHANNEL_COUNT = 8  // number of channels to be compared
+    parameter CHANNEL_COUNT = 10  // number of channels to be compared
 ) (
   input [DATA_WIDTH-1:0] val1, 
   input [DATA_WIDTH-1:0] val2,
@@ -158,7 +158,7 @@ endmodule
 
 module min_val_8x_with_index #(
     parameter DATA_WIDTH = 8,  // width of data to be compared
-    parameter CHANNEL_COUNT = 8  // number of channels to be compared
+    parameter CHANNEL_COUNT = 10  // number of channels to be compared
 ) (
     input [8*DATA_WIDTH-1:0] val, 
     input [8*CHANNEL_COUNT - 1 :0] valid,
@@ -203,6 +203,53 @@ module min_val_8x_with_index #(
 
 endmodule
 
+module min_val_8x_twice #(
+    parameter DATA_WIDTH = 8,  // width of data to be compared
+    parameter CHANNEL_COUNT = 10  // number of channels to be compared
+) (
+    input [16*DATA_WIDTH-1:0] val, 
+    input [16*CHANNEL_COUNT - 1 :0] valid,
+    output [DATA_WIDTH-1:0] min_val,
+    output [16*CHANNEL_COUNT - 1 :0] min_valid
+);
+
+    wire [2*DATA_WIDTH-1:0] min_val_1;
+    wire [16*CHANNEL_COUNT - 1 :0] min_valid_1;
+
+    min_val_8x_with_index #(
+        .DATA_WIDTH(DATA_WIDTH),
+        .CHANNEL_COUNT(CHANNEL_COUNT)
+    ) min_val_8x_with_index_1 (
+        .val(val[0*8*DATA_WIDTH+8*DATA_WIDTH-1:0*8*DATA_WIDTH]),
+        .valid(valid[0*8*CHANNEL_COUNT+8*CHANNEL_COUNT-1:0*8*CHANNEL_COUNT]),
+        .min_val(min_val_1[0*DATA_WIDTH+DATA_WIDTH-1:0*DATA_WIDTH]),
+        .min_valid(min_valid_1[0*8*CHANNEL_COUNT+8*CHANNEL_COUNT-1:0*8*CHANNEL_COUNT])
+    );
+
+    min_val_8x_with_index #(
+        .DATA_WIDTH(DATA_WIDTH),
+        .CHANNEL_COUNT(CHANNEL_COUNT)
+    ) min_val_8x_with_index_2 (
+        .val(val[1*8*DATA_WIDTH+8*DATA_WIDTH-1:1*8*DATA_WIDTH]),
+        .valid(valid[1*8*CHANNEL_COUNT+8*CHANNEL_COUNT-1:1*8*CHANNEL_COUNT]),
+        .min_val(min_val_1[1*DATA_WIDTH+DATA_WIDTH-1:1*DATA_WIDTH]),
+        .min_valid(min_valid_1[1*8*CHANNEL_COUNT+8*CHANNEL_COUNT-1:1*8*CHANNEL_COUNT])
+    );
+
+    min_val_with_index #(
+        .DATA_WIDTH(DATA_WIDTH),
+        .CHANNEL_COUNT(8*CHANNEL_COUNT)
+    ) min_val_with_index_4 (
+        .val1(min_val_1[0*DATA_WIDTH+DATA_WIDTH-1:0*DATA_WIDTH]),
+        .val2(min_val_1[1*DATA_WIDTH+DATA_WIDTH-1:1*DATA_WIDTH]),
+        .valid1(min_valid_1[0*CHANNEL_COUNT+8*CHANNEL_COUNT-1:0*CHANNEL_COUNT]),
+        .valid2(min_valid_1[8*CHANNEL_COUNT+8*CHANNEL_COUNT-1:8*CHANNEL_COUNT]),
+        .valid(min_valid),
+        .min_val(min_val)
+    );
+
+endmodule
+
 module min_val_less_8x_with_index #(
     parameter DATA_WIDTH = 8,  // width of data to be compared
     parameter CHANNEL_COUNT = 6  // number of channels to be compared
@@ -213,7 +260,7 @@ module min_val_less_8x_with_index #(
     output wire [CHANNEL_COUNT-1:0] output_valids
 );
 
-parameter ALL_EXPAND_COUNT = 8;
+parameter ALL_EXPAND_COUNT = 16;
 
 wire [ALL_EXPAND_COUNT-1:0] expanded_valids;
 wire [(DATA_WIDTH * ALL_EXPAND_COUNT)-1:0] expanded_values;
@@ -238,16 +285,15 @@ end
 endgenerate
 
 
-min_val_8x_with_index #(
+min_val_8x_twice #(
     .DATA_WIDTH(DATA_WIDTH),
     .CHANNEL_COUNT(1)
-) min_val_8x_with_index_1 (
+) min_val_8x_twice_1 (
     .val(expanded_values),
     .valid(expanded_valids),
     .min_val(result),
     .min_valid(output_expanded_valids)
 );
-
 
 endmodule
 
