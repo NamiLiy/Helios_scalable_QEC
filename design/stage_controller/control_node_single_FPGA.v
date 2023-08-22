@@ -20,7 +20,8 @@ module unified_controller #(
     odd_clusters_PE,
     measurements,
     correction,
-    global_stage
+    global_stage,
+    previous_global_stage
 );
 
 `include "../../parameters/parameters.sv"
@@ -66,6 +67,8 @@ output reg [7 : 0] output_data;
 output reg output_valid;
 input output_ready;
 
+output wire [STAGE_WIDTH-1:0] previous_global_stage;
+assign previous_global_stage = global_stage_previous;
 reg result_valid;
 reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
 reg [31:0] cycle_counter;

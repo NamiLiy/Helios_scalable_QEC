@@ -54,6 +54,7 @@ wire [CORRECTION_COUNT_PER_ROUND - 1 : 0] correction;
 wire [PU_COUNT_PER_ROUND-1:0] measurements;
 wire [PU_COUNT - 1 : 0] odd_clusters;
 wire [PU_COUNT - 1 : 0] busy;
+wire [STAGE_WIDTH -1 : 0] previous_global_stage;
 
 single_FPGA_decoding_graph_dynamic_rsc #( 
     .GRID_WIDTH_X(GRID_WIDTH_X),
@@ -90,7 +91,8 @@ unified_controller #(
     .odd_clusters_PE(odd_clusters),
     .global_stage(global_stage),
     .measurements(measurements),
-    .correction(correction)
+    .correction(correction),
+    .previous_global_stage(previous_global_stage)
 );
 
 endmodule

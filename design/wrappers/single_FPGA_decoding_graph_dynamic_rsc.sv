@@ -361,6 +361,7 @@ generate
         end
     end
     
+    //TRACE FOR D=9
     for (k=0; k < GRID_WIDTH_U; k=k+1) begin: diag_hook_k
         for (i=0; i < GRID_WIDTH_X; i=i+1) begin: diag_hook_i
             for (j=0; j < GRID_WIDTH_Z*2; j=j+1) begin: diag_hook_j
@@ -369,11 +370,32 @@ generate
                 wire [LINK_BIT_WIDTH-1:0] weight_in;
                 if (i > 0 && i < GRID_WIDTH_X-1 && j < GRID_WIDTH_Z && j > 0 && k < GRID_WIDTH_U-1) begin
                     `NEIGHBOR_LINK_INTERNAL_0(i, j-1, k, i, j, k+1, `NEIGHBOR_IDX_HOOK_RIGHT, `NEIGHBOR_IDX_HOOK_LEFT);
-                end else if (j % 2 == 0) begin
+                end else if ((i == 0 || i == GRID_WIDTH_X-1) && j % 2 == 0) begin
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, (j - j/2), k, `NEIGHBOR_IDX_HOOK_LEFT, 2);
-                end else begin
+                end else if ((i == 0 || i == GRID_WIDTH_X-1) && j % 2 == 1) begin
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, (j - (j/2 + 1)), k, `NEIGHBOR_IDX_HOOK_RIGHT, 2);
+                end else if (j == 0) begin
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_HOOK_LEFT, 2);
+                end else if (j == GRID_WIDTH_Z) begin
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j-1, k, `NEIGHBOR_IDX_HOOK_RIGHT, 2);
+                end else if (k == 0 && j > GRID_WIDTH_Z) begin
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, (j % 2) + (j/2 - 1), k, `NEIGHBOR_IDX_HOOK_LEFT, 2);
+                end else if (k == GRID_WIDTH_U-1 && j > GRID_WIDTH_Z) begin
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, (j % 2) + (j/2 - 2), k, `NEIGHBOR_IDX_HOOK_RIGHT, 2);
                 end
+//                 end else if (GRID_WIDTH_U > 3 && GRID_WIDTH_Z % 2 > 0 && j == GRID_WIDTH_Z && i > 0 && i < GRID_WIDTH_X-1 && k < GRID_WIDTH_U-1) begin
+//                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, (j - (j/2 + 1)), k, `NEIGHBOR_IDX_HOOK_LEFT, 2);
+////                end else if (k == GRID_WIDTH_U-1 && j % 2 == 0 && j > GRID_WIDTH_Z) begin
+////                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, (j - j/2), k, `NEIGHBOR_IDX_HOOK_LEFT, 2);
+////                end else if (j % 2 == 0 && i == 0) begin
+////                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, (j - j/2), k, `NEIGHBOR_IDX_HOOK_LEFT, 2);
+//                end else if (j % 2 == 0 && (i == 0 || i == GRID_WIDTH_X-1) && (j == 0 || j >= GRID_WIDTH_Z)) begin
+//                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, (j - j/2), k, `NEIGHBOR_IDX_HOOK_LEFT, 2);
+//                end else if (j % 2 == 0 && (k == 0 || k == GRID_WIDTH_U-1)) begin
+//                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, (j - j/2), k, `NEIGHBOR_IDX_HOOK_LEFT, 2);
+//                end else if (j % 2 == 1) begin
+//                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, (j - (j/2 + 1)), k, `NEIGHBOR_IDX_HOOK_RIGHT, 2);
+//                end
             end
         end
     end
