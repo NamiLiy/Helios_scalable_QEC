@@ -3,7 +3,7 @@
 #include <math.h>
 #include <time.h>
 
-#define D 5
+#define D 3
 
 struct Address {
     int k;
@@ -36,7 +36,7 @@ struct Node node_array[D][D+1][(D-1)/2];
 struct Edge hor_edges[D][D][D];
 struct Edge ver_edges[D][D+1][(D-1)/2];
 struct Edge diag_edges[D-1][D][D-2];
-struct Edge hook_edges[D-1][D-2][(D-1)/2 - 1];
+struct Edge hook_edges[D-1][D-1][(D-1)/2 - 1];
 
 struct Address get_root(struct Address a){
     if(node_array[a.k][a.i][a.j].id.k == node_array[a.k][a.i][a.j].root.k &&
@@ -101,17 +101,21 @@ int grow(int k, int i, int j, int direction){
         } else {
             int is_odd = get_parity(ver_edges[k][i][j].a);
             if (is_odd && ver_edges[k][i][j].growth < 2) {
-                diag_edges[k][i][j].growth = ver_edges[k][i][j].growth + 1;
+                ver_edges[k][i][j].growth = ver_edges[k][i][j].growth + 1;
                 grow_ret = 1;
                 if(ver_edges[k][i][j].growth == 2){
                     ver_edges[k][i][j].to_be_updated = 1;
                 }
             }
             is_odd = get_parity(ver_edges[k][i][j].b);
-            if (is_odd && diag_edges[k][i][j].growth < 2) {
+            if (is_odd && ver_edges[k][i][j].growth < 2) {
                 ver_edges[k][i][j].growth = ver_edges[k][i][j].growth + 1;
                 grow_ret = 1;
+                if(ver_edges[k][i][j].growth == 2){
+                    ver_edges[k][i][j].to_be_updated = 1;
+                }
             }
+            
         }
     } else if (direction == 2) {
         int is_odd = get_parity(diag_edges[k][i][j].a);
@@ -255,9 +259,9 @@ void verifyVerilogRoots(FILE* file, struct Node node_array[D][D+1][(D-1)/2]) {
                 struct Address root = get_root(a);
 
                 if(root.k == verilog_root_u && root.i == verilog_root_x && root.j == verilog_root_z) {
-                   printf("roots match %d %d %d \n", root.k, root.i, root.j);
+                //    printf("roots match %d %d %d \n", root.k, root.i, root.j);
                 ;
-                } else{
+                } else {
                     printf("fail expected: %d %d %d got %d %d %d \n", root.k, root.i, root.j, verilog_root_u, verilog_root_x, verilog_root_z);
                 }
             }
@@ -345,7 +349,7 @@ void union_find (int syndrome[D][D+1][(D-1)/2]){
 
     //hook edges
     for(int k=0;k<D-1;k++){
-        for(int i=0; i< D-1;i++){
+        for(int i=0; i < D-1;i++){
             for(int j=0; j< (D-1)/2 -1;j++){
                 hook_edges[k][i][j].growth = 0;
 		        hook_edges[k][i][j].to_be_updated = 0;
@@ -378,7 +382,7 @@ void union_find (int syndrome[D][D+1][(D-1)/2]){
                     diag_edges[k][i][j].a.j = j - j/2;
                     diag_edges[k][i][j].b.j = j - (j/2+1);
                 } else if (j % 2 == 1 && i % 2 == 1) {
-                    diag_edges[k][i][j].a.j = j-1;
+                    diag_edges[k][i][j].a.j = j/2;
                     diag_edges[k][i][j].b.j = j - j/2;
                 }
                 // printf("%d %d %d and %d %d %d\n", diag_edges[k][i][j].a.k, diag_edges[k][i][j].a.i, diag_edges[k][i][j].a.j, diag_edges[k][i][j].b.k, diag_edges[k][i][j].b.i, diag_edges[k][i][j].b.j);
@@ -504,6 +508,9 @@ int loadFileData(FILE* file, int (*array)[D][D+1][(D-1)/2]) {
                     return -1;
                 }
                 (*array)[k][i][j] = value;
+                if(count == 311 && value == 1) {
+                    printf("syndrome %d %d %d \n", k, i, j);
+                }
             }
         }
     }
@@ -533,7 +540,7 @@ int main(){
     // load syndrome
     int distance = D;
     char filename[100];
-    sprintf(filename, "../test_benches/test_data/input_data_%d_rsc_test.txt", distance);
+    sprintf(filename, "../test_benches/test_data/input_data_%d_rsc.txt", distance);
     FILE* file = fopen(filename, "r");
     if (file == NULL) {
         printf("Error opening file %s.\n", filename);
