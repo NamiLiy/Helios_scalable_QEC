@@ -4,7 +4,8 @@ module single_FPGA_decoding_graph_dynamic_rsc #(
     parameter GRID_WIDTH_X = 4,
     parameter GRID_WIDTH_Z = 1,
     parameter GRID_WIDTH_U = 3,
-    parameter MAX_WEIGHT = 2 
+    parameter MAX_WEIGHT = 2,
+    parameter CIRCUIT_NOISE = 1
 ) (
     clk,
     reset,
@@ -320,13 +321,13 @@ generate
                 end else if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z && k < GRID_WIDTH_U-1) begin
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_DIAG_SOUTH, 2)                   
                 end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0 && k < GRID_WIDTH_U-1) begin // odd rows which are always internal
-                    `NEIGHBOR_LINK_INTERNAL_0(i-1, j-1, k, i, j-1, k+1, `NEIGHBOR_IDX_DIAG_SOUTH, `NEIGHBOR_IDX_DIAG_NORTH)
+                    `NEIGHBOR_LINK_INTERNAL_0(i-1, j-1, k, i, j-1, k+1, `NEIGHBOR_IDX_DIAG_SOUTH, ((CIRCUIT_NOISE) ? `NEIGHBOR_IDX_DIAG_NORTH: 2))
                 end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j == 0 && k < GRID_WIDTH_U) begin // First element of even rows
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_DIAG_NORTH, 2)
                 end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j == GRID_WIDTH_Z && k < GRID_WIDTH_U-1) begin // Last element of even rows
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j-1, k, `NEIGHBOR_IDX_DIAG_SOUTH, 2)
                 end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j > 0 && j < GRID_WIDTH_Z && k < GRID_WIDTH_U-1) begin // Middle elements of even rows
-                    `NEIGHBOR_LINK_INTERNAL_0(i-1, j-1, k, i, j, k+1, `NEIGHBOR_IDX_DIAG_SOUTH, `NEIGHBOR_IDX_DIAG_NORTH)
+                    `NEIGHBOR_LINK_INTERNAL_0(i-1, j-1, k, i, j, k+1, `NEIGHBOR_IDX_DIAG_SOUTH, ((CIRCUIT_NOISE) ? `NEIGHBOR_IDX_DIAG_NORTH: 2))
                 end
             end
         end
@@ -347,7 +348,7 @@ generate
                 end else if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z && k < GRID_WIDTH_U-1) begin // Last row
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_DIAG_WEST, 2)
                 end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j < GRID_WIDTH_Z && k < GRID_WIDTH_U-1) begin // even rows which are always internal
-                    `NEIGHBOR_LINK_INTERNAL_0(i, j, k+1, i-1, j, k, `NEIGHBOR_IDX_DIAG_EAST, `NEIGHBOR_IDX_DIAG_WEST)
+                    `NEIGHBOR_LINK_INTERNAL_0(i, j, k+1, i-1, j, k, `NEIGHBOR_IDX_DIAG_EAST, ((CIRCUIT_NOISE) ? `NEIGHBOR_IDX_DIAG_WEST: 2))
                 end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j == 0 && k < GRID_WIDTH_U) begin // First element of odd rows
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_DIAG_WEST, 2)
                 end else if(i < GRID_WIDTH_X -1 && i > 0 && i%2 == 1 && j == GRID_WIDTH_Z && k < GRID_WIDTH_U) begin // Last element of odd rows excluding last row
@@ -355,7 +356,7 @@ generate
                 end else if(i == GRID_WIDTH_X -1 && j == GRID_WIDTH_Z && k < GRID_WIDTH_U) begin // Last element of last odd row
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j-1, k, `NEIGHBOR_IDX_DIAG_EAST, 2)
                 end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0 && j < GRID_WIDTH_Z && k < GRID_WIDTH_U-1) begin // Middle elements of odd rows
-                    `NEIGHBOR_LINK_INTERNAL_0(i, j-1, k+1, i-1, j, k, `NEIGHBOR_IDX_DIAG_EAST, `NEIGHBOR_IDX_DIAG_WEST)
+                    `NEIGHBOR_LINK_INTERNAL_0(i, j-1, k+1, i-1, j, k, `NEIGHBOR_IDX_DIAG_EAST, ((CIRCUIT_NOISE) ? `NEIGHBOR_IDX_DIAG_WEST: 2))
                 end
             end
         end
@@ -369,7 +370,7 @@ generate
                 wire is_error_out;
                 wire [LINK_BIT_WIDTH-1:0] weight_in;
                 if (i > 0 && i < GRID_WIDTH_X-1 && j < GRID_WIDTH_Z && j > 0 && k < GRID_WIDTH_U-1) begin
-                    `NEIGHBOR_LINK_INTERNAL_0(i, j-1, k, i, j, k+1, `NEIGHBOR_IDX_HOOK_RIGHT, `NEIGHBOR_IDX_HOOK_LEFT);
+                    `NEIGHBOR_LINK_INTERNAL_0(i, j-1, k, i, j, k+1, `NEIGHBOR_IDX_HOOK_RIGHT, ((CIRCUIT_NOISE) ? `NEIGHBOR_IDX_HOOK_LEFT: 2));
                 end else if ((i == 0 || i == GRID_WIDTH_X-1) && j % 2 == 0) begin
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, (j - j/2), k, `NEIGHBOR_IDX_HOOK_LEFT, 2);
                 end else if ((i == 0 || i == GRID_WIDTH_X-1) && j % 2 == 1) begin
@@ -383,19 +384,6 @@ generate
                 end else if (k == GRID_WIDTH_U-1 && j > GRID_WIDTH_Z) begin
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, (j % 2) + (j/2 - 2), k, `NEIGHBOR_IDX_HOOK_RIGHT, 2);
                 end
-//                 end else if (GRID_WIDTH_U > 3 && GRID_WIDTH_Z % 2 > 0 && j == GRID_WIDTH_Z && i > 0 && i < GRID_WIDTH_X-1 && k < GRID_WIDTH_U-1) begin
-//                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, (j - (j/2 + 1)), k, `NEIGHBOR_IDX_HOOK_LEFT, 2);
-////                end else if (k == GRID_WIDTH_U-1 && j % 2 == 0 && j > GRID_WIDTH_Z) begin
-////                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, (j - j/2), k, `NEIGHBOR_IDX_HOOK_LEFT, 2);
-////                end else if (j % 2 == 0 && i == 0) begin
-////                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, (j - j/2), k, `NEIGHBOR_IDX_HOOK_LEFT, 2);
-//                end else if (j % 2 == 0 && (i == 0 || i == GRID_WIDTH_X-1) && (j == 0 || j >= GRID_WIDTH_Z)) begin
-//                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, (j - j/2), k, `NEIGHBOR_IDX_HOOK_LEFT, 2);
-//                end else if (j % 2 == 0 && (k == 0 || k == GRID_WIDTH_U-1)) begin
-//                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, (j - j/2), k, `NEIGHBOR_IDX_HOOK_LEFT, 2);
-//                end else if (j % 2 == 1) begin
-//                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, (j - (j/2 + 1)), k, `NEIGHBOR_IDX_HOOK_RIGHT, 2);
-//                end
             end
         end
     end
