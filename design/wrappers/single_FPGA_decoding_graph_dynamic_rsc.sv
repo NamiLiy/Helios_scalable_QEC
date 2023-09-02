@@ -28,7 +28,7 @@ localparam ADDRESS_WIDTH = X_BIT_WIDTH + Z_BIT_WIDTH + U_BIT_WIDTH;
 
 localparam PU_COUNT_PER_ROUND = GRID_WIDTH_X * GRID_WIDTH_Z;
 localparam PU_COUNT = PU_COUNT_PER_ROUND * GRID_WIDTH_U;
-localparam NEIGHBOR_COUNT = 12;
+localparam NEIGHBOR_COUNT = (CIRCUIT_NOISE) ? 12 : 6;
 
 localparam NS_ERROR_COUNT_PER_ROUND = (GRID_WIDTH_X-1) * GRID_WIDTH_Z;
 localparam EW_ERROR_COUNT_PER_ROUND = (GRID_WIDTH_X-1) * GRID_WIDTH_Z + 1;
@@ -305,84 +305,86 @@ generate
         end
     end
     
+    if(CIRCUIT_NOISE) begin
     // Generate DIAGONAL NS link
-    for (k=0; k <= GRID_WIDTH_U+1; k=k+1) begin: diag_ns_k
-        for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: diag_ns_i
-            for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: diag_ns_j
-                wire is_error_systolic_in;
-                wire is_error_out;
-                wire [LINK_BIT_WIDTH-1:0] weight_in;
-                if(k == GRID_WIDTH_U && j < GRID_WIDTH_Z && i < GRID_WIDTH_X) begin
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, 0, `NEIGHBOR_IDX_DIAG_NORTH, 2)
-                end else if(i==0 && j < GRID_WIDTH_Z && k < GRID_WIDTH_U) begin // First row
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_DIAG_NORTH, 2)
-                end else if (k == GRID_WIDTH_U+1 && i < GRID_WIDTH_X && j < GRID_WIDTH_Z) begin
-                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, GRID_WIDTH_U-1, `NEIGHBOR_IDX_DIAG_SOUTH, 2)
-                end else if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z && k < GRID_WIDTH_U-1) begin
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_DIAG_SOUTH, 2)                   
-                end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0 && k < GRID_WIDTH_U-1) begin // odd rows which are always internal
-                    `NEIGHBOR_LINK_INTERNAL_0(i-1, j-1, k, i, j-1, k+1, `NEIGHBOR_IDX_DIAG_SOUTH, ((CIRCUIT_NOISE) ? `NEIGHBOR_IDX_DIAG_NORTH: 2))
-                end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j == 0 && k < GRID_WIDTH_U) begin // First element of even rows
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_DIAG_NORTH, 2)
-                end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j == GRID_WIDTH_Z && k < GRID_WIDTH_U-1) begin // Last element of even rows
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j-1, k, `NEIGHBOR_IDX_DIAG_SOUTH, 2)
-                end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j > 0 && j < GRID_WIDTH_Z && k < GRID_WIDTH_U-1) begin // Middle elements of even rows
-                    `NEIGHBOR_LINK_INTERNAL_0(i-1, j-1, k, i, j, k+1, `NEIGHBOR_IDX_DIAG_SOUTH, ((CIRCUIT_NOISE) ? `NEIGHBOR_IDX_DIAG_NORTH: 2))
+        for (k=0; k <= GRID_WIDTH_U+1; k=k+1) begin: diag_ns_k
+            for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: diag_ns_i
+                for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: diag_ns_j
+                    wire is_error_systolic_in;
+                    wire is_error_out;
+                    wire [LINK_BIT_WIDTH-1:0] weight_in;
+                    if(k == GRID_WIDTH_U && j < GRID_WIDTH_Z && i < GRID_WIDTH_X) begin
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, 0, `NEIGHBOR_IDX_DIAG_NORTH, 2)
+                    end else if(i==0 && j < GRID_WIDTH_Z && k < GRID_WIDTH_U) begin // First row
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_DIAG_NORTH, 2)
+                    end else if (k == GRID_WIDTH_U+1 && i < GRID_WIDTH_X && j < GRID_WIDTH_Z) begin
+                         `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, GRID_WIDTH_U-1, `NEIGHBOR_IDX_DIAG_SOUTH, 2)
+                    end else if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z && k < GRID_WIDTH_U-1) begin
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_DIAG_SOUTH, 2)                   
+                    end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0 && k < GRID_WIDTH_U-1) begin // odd rows which are always internal
+                        `NEIGHBOR_LINK_INTERNAL_0(i-1, j-1, k, i, j-1, k+1, `NEIGHBOR_IDX_DIAG_SOUTH, `NEIGHBOR_IDX_DIAG_NORTH)
+                    end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j == 0 && k < GRID_WIDTH_U) begin // First element of even rows
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_DIAG_NORTH, 2)
+                    end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j == GRID_WIDTH_Z && k < GRID_WIDTH_U-1) begin // Last element of even rows
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j-1, k, `NEIGHBOR_IDX_DIAG_SOUTH, 2)
+                    end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j > 0 && j < GRID_WIDTH_Z && k < GRID_WIDTH_U-1) begin // Middle elements of even rows
+                        `NEIGHBOR_LINK_INTERNAL_0(i-1, j-1, k, i, j, k+1, `NEIGHBOR_IDX_DIAG_SOUTH, `NEIGHBOR_IDX_DIAG_NORTH)
+                    end
                 end
             end
         end
-    end
-    
-    for (k=0; k <= GRID_WIDTH_U+1; k=k+1) begin: diag_ew_k
-        for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: diag_ew_i 
-            for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: diag_ew_j
-                wire is_error_systolic_in;
-                wire is_error_out;
-                wire [LINK_BIT_WIDTH-1:0] weight_in;
-                if(k == GRID_WIDTH_U && j < GRID_WIDTH_Z && i < GRID_WIDTH_X) begin
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, 0, `NEIGHBOR_IDX_DIAG_EAST, 2)
-                end else if(i==0 && j < GRID_WIDTH_Z && k < GRID_WIDTH_U) begin // First row
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_DIAG_EAST, 2)
-                end else if (k == GRID_WIDTH_U+1 && i < GRID_WIDTH_X && j < GRID_WIDTH_Z) begin
-                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, GRID_WIDTH_U-1, `NEIGHBOR_IDX_DIAG_WEST, 2)
-                end else if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z && k < GRID_WIDTH_U-1) begin // Last row
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_DIAG_WEST, 2)
-                end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j < GRID_WIDTH_Z && k < GRID_WIDTH_U-1) begin // even rows which are always internal
-                    `NEIGHBOR_LINK_INTERNAL_0(i, j, k+1, i-1, j, k, `NEIGHBOR_IDX_DIAG_EAST, ((CIRCUIT_NOISE) ? `NEIGHBOR_IDX_DIAG_WEST: 2))
-                end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j == 0 && k < GRID_WIDTH_U) begin // First element of odd rows
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_DIAG_WEST, 2)
-                end else if(i < GRID_WIDTH_X -1 && i > 0 && i%2 == 1 && j == GRID_WIDTH_Z && k < GRID_WIDTH_U) begin // Last element of odd rows excluding last row
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j-1, k, `NEIGHBOR_IDX_DIAG_EAST, 2)
-                end else if(i == GRID_WIDTH_X -1 && j == GRID_WIDTH_Z && k < GRID_WIDTH_U) begin // Last element of last odd row
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j-1, k, `NEIGHBOR_IDX_DIAG_EAST, 2)
-                end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0 && j < GRID_WIDTH_Z && k < GRID_WIDTH_U-1) begin // Middle elements of odd rows
-                    `NEIGHBOR_LINK_INTERNAL_0(i, j-1, k+1, i-1, j, k, `NEIGHBOR_IDX_DIAG_EAST, ((CIRCUIT_NOISE) ? `NEIGHBOR_IDX_DIAG_WEST: 2))
+        
+        for (k=0; k <= GRID_WIDTH_U+1; k=k+1) begin: diag_ew_k
+            for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: diag_ew_i 
+                for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: diag_ew_j
+                    wire is_error_systolic_in;
+                    wire is_error_out;
+                    wire [LINK_BIT_WIDTH-1:0] weight_in;
+                    if(k == GRID_WIDTH_U && j < GRID_WIDTH_Z && i < GRID_WIDTH_X) begin
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, 0, `NEIGHBOR_IDX_DIAG_EAST, 2)
+                    end else if(i==0 && j < GRID_WIDTH_Z && k < GRID_WIDTH_U) begin // First row
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_DIAG_EAST, 2)
+                    end else if (k == GRID_WIDTH_U+1 && i < GRID_WIDTH_X && j < GRID_WIDTH_Z) begin
+                         `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, GRID_WIDTH_U-1, `NEIGHBOR_IDX_DIAG_WEST, 2)
+                    end else if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z && k < GRID_WIDTH_U-1) begin // Last row
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_DIAG_WEST, 2)
+                    end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j < GRID_WIDTH_Z && k < GRID_WIDTH_U-1) begin // even rows which are always internal
+                        `NEIGHBOR_LINK_INTERNAL_0(i, j, k+1, i-1, j, k, `NEIGHBOR_IDX_DIAG_EAST, ((CIRCUIT_NOISE) ? `NEIGHBOR_IDX_DIAG_WEST: 2))
+                    end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j == 0 && k < GRID_WIDTH_U) begin // First element of odd rows
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_DIAG_WEST, 2)
+                    end else if(i < GRID_WIDTH_X -1 && i > 0 && i%2 == 1 && j == GRID_WIDTH_Z && k < GRID_WIDTH_U) begin // Last element of odd rows excluding last row
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j-1, k, `NEIGHBOR_IDX_DIAG_EAST, 2)
+                    end else if(i == GRID_WIDTH_X -1 && j == GRID_WIDTH_Z && k < GRID_WIDTH_U) begin // Last element of last odd row
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j-1, k, `NEIGHBOR_IDX_DIAG_EAST, 2)
+                    end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0 && j < GRID_WIDTH_Z && k < GRID_WIDTH_U-1) begin // Middle elements of odd rows
+                        `NEIGHBOR_LINK_INTERNAL_0(i, j-1, k+1, i-1, j, k, `NEIGHBOR_IDX_DIAG_EAST, ((CIRCUIT_NOISE) ? `NEIGHBOR_IDX_DIAG_WEST: 2))
+                    end
                 end
             end
         end
-    end
-    
-    //TRACE FOR D=9
-    for (k=0; k < GRID_WIDTH_U; k=k+1) begin: diag_hook_k
-        for (i=0; i < GRID_WIDTH_X; i=i+1) begin: diag_hook_i
-            for (j=0; j < GRID_WIDTH_Z*2; j=j+1) begin: diag_hook_j
-                wire is_error_systolic_in;
-                wire is_error_out;
-                wire [LINK_BIT_WIDTH-1:0] weight_in;
-                if (i > 0 && i < GRID_WIDTH_X-1 && j < GRID_WIDTH_Z && j > 0 && k < GRID_WIDTH_U-1) begin
-                    `NEIGHBOR_LINK_INTERNAL_0(i, j-1, k, i, j, k+1, `NEIGHBOR_IDX_HOOK_RIGHT, ((CIRCUIT_NOISE) ? `NEIGHBOR_IDX_HOOK_LEFT: 2));
-                end else if ((i == 0 || i == GRID_WIDTH_X-1) && j % 2 == 0) begin
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, (j - j/2), k, `NEIGHBOR_IDX_HOOK_LEFT, 2);
-                end else if ((i == 0 || i == GRID_WIDTH_X-1) && j % 2 == 1) begin
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, (j - (j/2 + 1)), k, `NEIGHBOR_IDX_HOOK_RIGHT, 2);
-                end else if (j == 0) begin
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_HOOK_LEFT, 2);
-                end else if (j == GRID_WIDTH_Z) begin
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j-1, k, `NEIGHBOR_IDX_HOOK_RIGHT, 2);
-                end else if (k == 0 && j > GRID_WIDTH_Z) begin
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, (j % 2) + (j/2 - 1), k, `NEIGHBOR_IDX_HOOK_LEFT, 2);
-                end else if (k == GRID_WIDTH_U-1 && j > GRID_WIDTH_Z) begin
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, (j % 2) + (j/2 - 2), k, `NEIGHBOR_IDX_HOOK_RIGHT, 2);
+        
+        //TRACE FOR D=9
+        for (k=0; k < GRID_WIDTH_U; k=k+1) begin: diag_hook_k
+            for (i=0; i < GRID_WIDTH_X; i=i+1) begin: diag_hook_i
+                for (j=0; j < GRID_WIDTH_Z*2; j=j+1) begin: diag_hook_j
+                    wire is_error_systolic_in;
+                    wire is_error_out;
+                    wire [LINK_BIT_WIDTH-1:0] weight_in;
+                    if (i > 0 && i < GRID_WIDTH_X-1 && j < GRID_WIDTH_Z && j > 0 && k < GRID_WIDTH_U-1) begin
+                        `NEIGHBOR_LINK_INTERNAL_0(i, j-1, k, i, j, k+1, `NEIGHBOR_IDX_HOOK_RIGHT, ((CIRCUIT_NOISE) ? `NEIGHBOR_IDX_HOOK_LEFT: 2));
+                    end else if ((i == 0 || i == GRID_WIDTH_X-1) && j % 2 == 0) begin
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i, (j - j/2), k, `NEIGHBOR_IDX_HOOK_LEFT, 2);
+                    end else if ((i == 0 || i == GRID_WIDTH_X-1) && j % 2 == 1) begin
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i, (j - (j/2 + 1)), k, `NEIGHBOR_IDX_HOOK_RIGHT, 2);
+                    end else if (j == 0) begin
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_HOOK_LEFT, 2);
+                    end else if (j == GRID_WIDTH_Z) begin
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j-1, k, `NEIGHBOR_IDX_HOOK_RIGHT, 2);
+                    end else if (k == 0 && j > GRID_WIDTH_Z) begin
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i, (j % 2) + (j/2 - 1), k, `NEIGHBOR_IDX_HOOK_LEFT, 2);
+                    end else if (k == GRID_WIDTH_U-1 && j > GRID_WIDTH_Z) begin
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i, (j % 2) + (j/2 - 2), k, `NEIGHBOR_IDX_HOOK_RIGHT, 2);
+                    end
                 end
             end
         end
@@ -428,41 +430,43 @@ generate
         end
     end
     
-    for (k=0; k < GRID_WIDTH_U-1; k=k+1) begin: diag_ns_k_extra
-        for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: diag_ns_i_extra
-            for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: diag_ns_j_extra
-                if (i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0) begin // odd rows 
-                    assign diag_ns_k[k].diag_ns_i[i].diag_ns_j[j].is_error_systolic_in = diag_ns_k[k+1].diag_ns_i[i].diag_ns_j[j].is_error_out;
-                end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j > 0) begin // Even rows
-                    assign diag_ns_k[k].diag_ns_i[i].diag_ns_j[j].is_error_systolic_in = diag_ns_k[k+1].diag_ns_i[i].diag_ns_j[j].is_error_out;
+    if(CIRCUIT_NOISE) begin
+        for (k=0; k < GRID_WIDTH_U-1; k=k+1) begin: diag_ns_k_extra
+            for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: diag_ns_i_extra
+                for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: diag_ns_j_extra
+                    if (i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0) begin // odd rows 
+                        assign diag_ns_k[k].diag_ns_i[i].diag_ns_j[j].is_error_systolic_in = diag_ns_k[k+1].diag_ns_i[i].diag_ns_j[j].is_error_out;
+                    end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j > 0) begin // Even rows
+                        assign diag_ns_k[k].diag_ns_i[i].diag_ns_j[j].is_error_systolic_in = diag_ns_k[k+1].diag_ns_i[i].diag_ns_j[j].is_error_out;
+                    end
                 end
             end
         end
-    end
-    
-    for (k=0; k < GRID_WIDTH_U-1; k=k+1) begin: diag_ew_k_extra
-        for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: diag_ew_i_extra
-            for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: diag_ew_j_extra
-                if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j < GRID_WIDTH_Z) begin // even rows which are always internal
-                    assign diag_ew_k[k].diag_ew_i[i].diag_ew_j[j].is_error_systolic_in = diag_ew_k[k+1].diag_ew_i[i].diag_ew_j[j].is_error_out;
-                end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j == 0) begin // First element of odd rows
-                    assign diag_ew_k[k].diag_ew_i[i].diag_ew_j[j].is_error_systolic_in = diag_ew_k[k+1].diag_ew_i[i].diag_ew_j[j].is_error_out;
-                end else if(i == GRID_WIDTH_X -1 && j == GRID_WIDTH_Z) begin // Last element of last odd row
-                    assign diag_ew_k[k].diag_ew_i[i].diag_ew_j[j].is_error_systolic_in = diag_ew_k[k+1].diag_ew_i[i].diag_ew_j[j].is_error_out;
-                end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0 && j < GRID_WIDTH_Z) begin // Middle elements of odd rows
-                    assign diag_ew_k[k].diag_ew_i[i].diag_ew_j[j].is_error_systolic_in = diag_ew_k[k+1].diag_ew_i[i].diag_ew_j[j].is_error_out;
+        
+        for (k=0; k < GRID_WIDTH_U-1; k=k+1) begin: diag_ew_k_extra
+            for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: diag_ew_i_extra
+                for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: diag_ew_j_extra
+                    if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j < GRID_WIDTH_Z) begin // even rows which are always internal
+                        assign diag_ew_k[k].diag_ew_i[i].diag_ew_j[j].is_error_systolic_in = diag_ew_k[k+1].diag_ew_i[i].diag_ew_j[j].is_error_out;
+                    end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j == 0) begin // First element of odd rows
+                        assign diag_ew_k[k].diag_ew_i[i].diag_ew_j[j].is_error_systolic_in = diag_ew_k[k+1].diag_ew_i[i].diag_ew_j[j].is_error_out;
+                    end else if(i == GRID_WIDTH_X -1 && j == GRID_WIDTH_Z) begin // Last element of last odd row
+                        assign diag_ew_k[k].diag_ew_i[i].diag_ew_j[j].is_error_systolic_in = diag_ew_k[k+1].diag_ew_i[i].diag_ew_j[j].is_error_out;
+                    end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0 && j < GRID_WIDTH_Z) begin // Middle elements of odd rows
+                        assign diag_ew_k[k].diag_ew_i[i].diag_ew_j[j].is_error_systolic_in = diag_ew_k[k+1].diag_ew_i[i].diag_ew_j[j].is_error_out;
+                    end
                 end
             end
         end
-    end
-    
-    for (k=0; k < GRID_WIDTH_U-1; k=k+1) begin: diag_hook_k_extra
-        for (i=0; i < GRID_WIDTH_X; i=i+1) begin: diag_hook_i_extra
-            for (j=0; j < GRID_WIDTH_Z*2; j=j+1) begin: diag_hook_j_extra
-                if (i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0) begin // odd rows 
-                    assign diag_hook_k[k].diag_hook_i[i].diag_hook_j[j].is_error_systolic_in = diag_hook_k[k+1].diag_hook_i[i].diag_hook_j[j].is_error_out;
-                end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j > 0) begin // Even rows
-                    assign diag_hook_k[k].diag_hook_i[i].diag_hook_j[j].is_error_systolic_in = diag_hook_k[k+1].diag_hook_i[i].diag_hook_j[j].is_error_out;
+        
+        for (k=0; k < GRID_WIDTH_U-1; k=k+1) begin: diag_hook_k_extra
+            for (i=0; i < GRID_WIDTH_X; i=i+1) begin: diag_hook_i_extra
+                for (j=0; j < GRID_WIDTH_Z*2; j=j+1) begin: diag_hook_j_extra
+                    if (i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0) begin // odd rows 
+                        assign diag_hook_k[k].diag_hook_i[i].diag_hook_j[j].is_error_systolic_in = diag_hook_k[k+1].diag_hook_i[i].diag_hook_j[j].is_error_out;
+                    end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j > 0) begin // Even rows
+                        assign diag_hook_k[k].diag_hook_i[i].diag_hook_j[j].is_error_systolic_in = diag_hook_k[k+1].diag_hook_i[i].diag_hook_j[j].is_error_out;
+                    end
                 end
             end
         end
@@ -488,29 +492,31 @@ generate
         end
     end
     
-    for (i=1; i < GRID_WIDTH_X; i=i+1) begin: diag_ns_i_output
-        for (j=1; j <= GRID_WIDTH_Z; j=j+1) begin: diag_ns_j_output
-            if (i % 2 == 1) begin
-                assign `CORRECTION_DIAG_NS(i,j-(i/2)) = diag_ns_k[0].diag_ns_i[i].diag_ns_j[j].is_error_out;
-            end else if (i % 2 == 0 && j < GRID_WIDTH_Z) begin
-                assign `CORRECTION_DIAG_NS(i,j - ((i-1)/2)) = diag_ns_k[0].diag_ns_i[i].diag_ns_j[j].is_error_out;
+    if(CIRCUIT_NOISE) begin
+        for (i=1; i < GRID_WIDTH_X; i=i+1) begin: diag_ns_i_output
+            for (j=1; j <= GRID_WIDTH_Z; j=j+1) begin: diag_ns_j_output
+                if (i % 2 == 1) begin
+                    assign `CORRECTION_DIAG_NS(i,j-(i/2)) = diag_ns_k[0].diag_ns_i[i].diag_ns_j[j].is_error_out;
+                end else if (i % 2 == 0 && j < GRID_WIDTH_Z) begin
+                    assign `CORRECTION_DIAG_NS(i,j - ((i-1)/2)) = diag_ns_k[0].diag_ns_i[i].diag_ns_j[j].is_error_out;
+                end
             end
         end
-    end
-    
-    for (i=1; i < GRID_WIDTH_X; i=i+1) begin: diag_ew_i_output
-        for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: diag_ew_j_output
-            if (i % 2 == 0) begin
-                assign `CORRECTION_DIAG_EW(i,j - ((i-1)/2)) = diag_ew_k[0].diag_ew_i[i].diag_ew_j[j].is_error_out;
-            end else if (i % 2 == 1 && j > 0) begin
-                assign `CORRECTION_DIAG_EW(i,(j-(i/2))) = diag_ew_k[0].diag_ew_i[i].diag_ew_j[j].is_error_out;  
+        
+        for (i=1; i < GRID_WIDTH_X; i=i+1) begin: diag_ew_i_output
+            for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: diag_ew_j_output
+                if (i % 2 == 0) begin
+                    assign `CORRECTION_DIAG_EW(i,j - ((i-1)/2)) = diag_ew_k[0].diag_ew_i[i].diag_ew_j[j].is_error_out;
+                end else if (i % 2 == 1 && j > 0) begin
+                    assign `CORRECTION_DIAG_EW(i,(j-(i/2))) = diag_ew_k[0].diag_ew_i[i].diag_ew_j[j].is_error_out;  
+                end
             end
         end
-    end
-    
-    for (i=1; i < GRID_WIDTH_X-1; i=i+1) begin: diag_hook_i_output
-        for (j=1; j < GRID_WIDTH_Z; j=j+1) begin: diag_hook_j_output
-            assign `CORRECTION_DIAG_HOOK(i,j) = diag_hook_k[0].diag_hook_i[i].diag_hook_j[j].is_error_out;  
+        
+        for (i=1; i < GRID_WIDTH_X-1; i=i+1) begin: diag_hook_i_output
+            for (j=1; j < GRID_WIDTH_Z; j=j+1) begin: diag_hook_j_output
+                assign `CORRECTION_DIAG_HOOK(i,j) = diag_hook_k[0].diag_hook_i[i].diag_hook_j[j].is_error_out;  
+            end
         end
     end
 
@@ -552,39 +558,41 @@ generate
         end
     end
     
-    for (k=0; k <= GRID_WIDTH_U+1; k=k+1) begin: diag_ns_k_weight
-        for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: diag_ns_i_weight
-            for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: diag_ns_j_weight
-                if (i < GRID_WIDTH_X && i > 0 && j > 0 && k < GRID_WIDTH_U) begin
-                    assign diag_ns_k[k].diag_ns_i[i].diag_ns_j[j].weight_in = `WEIGHT_NS(i,j);
-                end else begin // Fake edges
-                    assign diag_ns_k[k].diag_ns_i[i].diag_ns_j[j].weight_in = 2;
+    if(CIRCUIT_NOISE) begin
+        for (k=0; k <= GRID_WIDTH_U+1; k=k+1) begin: diag_ns_k_weight
+            for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: diag_ns_i_weight
+                for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: diag_ns_j_weight
+                    if (i < GRID_WIDTH_X && i > 0 && j > 0 && k < GRID_WIDTH_U) begin
+                        assign diag_ns_k[k].diag_ns_i[i].diag_ns_j[j].weight_in = `WEIGHT_NS(i,j);
+                    end else begin // Fake edges
+                        assign diag_ns_k[k].diag_ns_i[i].diag_ns_j[j].weight_in = 2;
+                    end
                 end
             end
         end
-    end
-    
-    for (k=0; k <= GRID_WIDTH_U+1; k=k+1) begin: diag_ew_k_weight
-        for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: diag_ew_i_weight
-            for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: diag_ew_j_weight
-                if (i < GRID_WIDTH_X && i > 0 && j < GRID_WIDTH_Z && k < GRID_WIDTH_U) begin
-                    assign diag_ew_k[k].diag_ew_i[i].diag_ew_j[j].weight_in = `WEIGHT_EW(i,j);
-                end else if (i == GRID_WIDTH_X-1 && j == GRID_WIDTH_Z && k < GRID_WIDTH_U) begin
-                    assign diag_ew_k[k].diag_ew_i[i].diag_ew_j[j].weight_in = `WEIGHT_EW(i,j);
-                end else begin // Fake edges
-                    assign diag_ew_k[k].diag_ew_i[i].diag_ew_j[j].weight_in = 2;
+        
+        for (k=0; k <= GRID_WIDTH_U+1; k=k+1) begin: diag_ew_k_weight
+            for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: diag_ew_i_weight
+                for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: diag_ew_j_weight
+                    if (i < GRID_WIDTH_X && i > 0 && j < GRID_WIDTH_Z && k < GRID_WIDTH_U) begin
+                        assign diag_ew_k[k].diag_ew_i[i].diag_ew_j[j].weight_in = `WEIGHT_EW(i,j);
+                    end else if (i == GRID_WIDTH_X-1 && j == GRID_WIDTH_Z && k < GRID_WIDTH_U) begin
+                        assign diag_ew_k[k].diag_ew_i[i].diag_ew_j[j].weight_in = `WEIGHT_EW(i,j);
+                    end else begin // Fake edges
+                        assign diag_ew_k[k].diag_ew_i[i].diag_ew_j[j].weight_in = 2;
+                    end
                 end
             end
         end
-    end
-    
-    for (k=0; k < GRID_WIDTH_U; k=k+1) begin: diag_hook_k_weight
-        for (i=0; i < GRID_WIDTH_X; i=i+1) begin: diag_hook_i_weight
-            for (j=0; j < GRID_WIDTH_Z*2; j=j+1) begin: diag_hook_j_weight
-                if(i > 0 && i < GRID_WIDTH_X-1 && j < GRID_WIDTH_Z && j > 0 && k < GRID_WIDTH_U-1) begin
-                    assign diag_hook_k[k].diag_hook_i[i].diag_hook_j[j].weight_in = `WEIGHT_UD(i,j);
-                end else begin // Fake edges
-                    assign diag_hook_k[k].diag_hook_i[i].diag_hook_j[j].weight_in = 2;
+        
+        for (k=0; k < GRID_WIDTH_U; k=k+1) begin: diag_hook_k_weight
+            for (i=0; i < GRID_WIDTH_X; i=i+1) begin: diag_hook_i_weight
+                for (j=0; j < GRID_WIDTH_Z*2; j=j+1) begin: diag_hook_j_weight
+                    if(i > 0 && i < GRID_WIDTH_X-1 && j < GRID_WIDTH_Z && j > 0 && k < GRID_WIDTH_U-1) begin
+                        assign diag_hook_k[k].diag_hook_i[i].diag_hook_j[j].weight_in = `WEIGHT_UD(i,j);
+                    end else begin // Fake edges
+                        assign diag_hook_k[k].diag_hook_i[i].diag_hook_j[j].weight_in = 2;
+                    end
                 end
             end
         end
