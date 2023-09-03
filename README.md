@@ -29,16 +29,35 @@ It may or may not work in other versions of Vivado.
 This project is tested on ZCU106 development board only.
 Running on other FPGA boards require modifications on pin assignments and block deisgn generation.
 
-### Build project
+### Helios single FPGA version
 
-#### Simple vivado project
+#### Build project
 
 ```sh
 cd scripts
 vivado total.tcl
 ```
 
-#### Complete Helios project
+#### Run simulation
+
+1) Compile software input and verification files. Set the distance accordingly in the software files
+```sh
+cd software_code
+gcc main.c random_seeds.c -o input_gen
+gcc union_find.c -o uf -lm
+```
+2) Generate software input and verification files
+```sh
+./input_gen
+./uf
+```
+3) Run the vivado simulation. Set the distance accordingly and modify the paths in the single_FPGA_FIFO_verification_test_rsc.sv to point to correct files
+
+    
+
+### Helios multi-FPGA version
+
+Note : This section is under construction....
 
 Modify the content in build_scripts/user_configuration.py to change the configuration of Helios.
 Currently supported parameters : codeDistance (X and Z), Helios tree stucture of control nodes, physical bit width of interconnect between control nodes, laency of interconnect (for latency estimations)
