@@ -16,7 +16,7 @@ module verification_bench_single_FPGA_rsc;
 `include "../../parameters/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
-localparam CODE_DISTANCE = 19;                
+localparam CODE_DISTANCE = 5;                
 localparam CODE_DISTANCE_X = CODE_DISTANCE + 1;
 localparam CODE_DISTANCE_Z = (CODE_DISTANCE_X - 1)/2;
 
@@ -286,8 +286,8 @@ end
 // Output verification logic
 always @(posedge clk) begin
     if (loading_state == 3'b101 && !output_valid) begin // This is not becaus we wait until all messages are received
-        $display("%t\tTest case %d pass %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
-       /* if(open == 1) begin
+//       $display("%t\tTest case %d pass %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
+       if(open == 1) begin
             if (CODE_DISTANCE == 3) begin
                 file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_3_rsc.txt", "r");
             end else if (CODE_DISTANCE == 5) begin
@@ -321,7 +321,6 @@ always @(posedge clk) begin
                         expected_x = read_value[X_BIT_WIDTH - 1 + 8 :8];
                         expected_u = read_value[U_BIT_WIDTH - 1 + 16 :16];
                         eof = $feof(file);
-                        test_fail = 0;
                         if(Z_BIT_WIDTH>0) begin
                             if (expected_u != `root_u(i, j, k) || expected_x != `root_x(i, j, k) || expected_z != `root_z(i, j, k)) begin
                                 $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d)" , $time, k, i ,j, `root_u(i, j, k), `root_x(i, j, k), `root_z(i, j, k), expected_u, expected_x, expected_z);
@@ -344,7 +343,7 @@ always @(posedge clk) begin
             $display("%t\tTest case %d fail %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
             fail_count = fail_count + 1;
             $finish;
-        end*/
+        end
     end
     if (input_eof == 1)begin
         total_count = pass_count + fail_count;
