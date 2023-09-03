@@ -285,7 +285,10 @@ generate
             end
         end
     end
-
+    
+//    if(TEST == 1) begin
+//        assign `PU(0, 0, 0).measurement = 1;
+//    end
     // Generate UP DOWN link
     for (k=0; k <= GRID_WIDTH_U; k=k+1) begin: ud_k
         for (i=0; i < GRID_WIDTH_X; i=i+1) begin: ud_i
@@ -305,7 +308,7 @@ generate
         end
     end
     
-    if(CIRCUIT_NOISE) begin
+    if(CIRCUIT_NOISE == 1) begin
     // Generate DIAGONAL NS link
         for (k=0; k <= GRID_WIDTH_U+1; k=k+1) begin: diag_ns_k
             for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: diag_ns_i
@@ -371,7 +374,7 @@ generate
                     wire is_error_out;
                     wire [LINK_BIT_WIDTH-1:0] weight_in;
                     if (i > 0 && i < GRID_WIDTH_X-1 && j < GRID_WIDTH_Z && j > 0 && k < GRID_WIDTH_U-1) begin
-                        `NEIGHBOR_LINK_INTERNAL_0(i, j-1, k, i, j, k+1, `NEIGHBOR_IDX_HOOK_RIGHT, ((CIRCUIT_NOISE) ? `NEIGHBOR_IDX_HOOK_LEFT: 2));
+                        `NEIGHBOR_LINK_INTERNAL_0(i, j-1, k, i, j, k+1, `NEIGHBOR_IDX_HOOK_RIGHT, `NEIGHBOR_IDX_HOOK_LEFT);
                     end else if ((i == 0 || i == GRID_WIDTH_X-1) && j % 2 == 0) begin
                         `NEIGHBOR_LINK_INTERNAL_SINGLE(i, (j - j/2), k, `NEIGHBOR_IDX_HOOK_LEFT, 2);
                     end else if ((i == 0 || i == GRID_WIDTH_X-1) && j % 2 == 1) begin
@@ -492,7 +495,7 @@ generate
         end
     end
     
-    if(CIRCUIT_NOISE) begin
+    if(CIRCUIT_NOISE == 1) begin
         for (i=1; i < GRID_WIDTH_X; i=i+1) begin: diag_ns_i_output
             for (j=1; j <= GRID_WIDTH_Z; j=j+1) begin: diag_ns_j_output
                 if (i % 2 == 1) begin

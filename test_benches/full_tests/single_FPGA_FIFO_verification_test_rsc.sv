@@ -24,7 +24,7 @@ parameter GRID_WIDTH_X = CODE_DISTANCE + 1;
 parameter GRID_WIDTH_Z = (CODE_DISTANCE_X - 1)/2;
 parameter GRID_WIDTH_U = CODE_DISTANCE;
 parameter MAX_WEIGHT = 2;
-parameter CIRCUIT_NOISE = 0;
+parameter CIRCUIT_NOISE = 1;
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
 localparam MEASUREMENT_ROUNDS = CODE_DISTANCE;
