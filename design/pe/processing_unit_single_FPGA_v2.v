@@ -5,7 +5,7 @@
 module processing_unit #(
     parameter ADDRESS_WIDTH = 6,
     parameter NEIGHBOR_COUNT = 6,
-    parameter ADDRESS = 0 // M,X,Z, address
+    parameter NUM_CONTEXTS = 2
 ) (
     clk,
     reset,
@@ -17,6 +17,8 @@ module processing_unit #(
     neighbor_increase,
     neighbor_is_boundary,
     neighbor_is_error,
+
+    input_address, // M,X,Z, address
 
     input_data,
     output_data,
@@ -44,6 +46,8 @@ output [NEIGHBOR_COUNT-1:0] neighbor_is_error;
 input [NEIGHBOR_COUNT*EXPOSED_DATA_SIZE-1:0] input_data;
 output [NEIGHBOR_COUNT*EXPOSED_DATA_SIZE-1:0] output_data;
 
+input [ADDRESS_WIDTH-1:0] input_address;
+
 output reg [ADDRESS_WIDTH-1:0] root;
 output reg odd;
 output reg busy;
@@ -56,6 +60,17 @@ wire [NEIGHBOR_COUNT - 1:0] child_touching_boundary;
 wire [NEIGHBOR_COUNT - 1:0] child_peeling_complete;
 wire [NEIGHBOR_COUNT - 1:0] child_peeling_m;
 wire [NEIGHBOR_COUNT-1:0] parent_peeling_parity_completed;
+
+wire peeling_m_mem;
+wire peeling_complete_mem;
+wire peeling_parity_completed_mem;
+wire cluster_touching_boundary_mem;
+wire cluster_parity_mem;
+wire [NEIGHBOR_COUNT - 1:0] odd_to_children_mem;
+wire [NEIGHBOR_COUNT - 1:0] parent_vector_mem;
+wire [ADDRESS_WIDTH-1:0] root_mem;
+wire odd_mem;
+wire m_mem;
 
 genvar i;
 generate
@@ -113,6 +128,8 @@ always@(posedge clk) begin
         m <= 0;
     end else if(stage == STAGE_MEASUREMENT_LOADING) begin
         m <= measurement;
+    end else if(stage == STAGE_READ_FROM_MEM) begin
+        m <= m_mem;
     end
 end
 
@@ -138,7 +155,7 @@ min_val_less_8x_with_index #(
 
 always@(posedge clk) begin
     if(stage == STAGE_MEASUREMENT_LOADING) begin
-        root <= ADDRESS;
+        root <= input_address;
         parent_vector <= 0;
     end else begin
         if (stage == STAGE_MERGE) begin
@@ -146,6 +163,9 @@ always@(posedge clk) begin
                 root <= result_from_root_comparator;
                 parent_vector <= valid_from_root_comparator;
             end
+        end else if(stage == STAGE_READ_FROM_MEM) begin
+            root <= root_mem;
+            parent_vector <= parent_vector_mem;
         end
     end
 end
@@ -163,6 +183,9 @@ always@(posedge clk) begin
         if (stage == STAGE_MERGE) begin
             cluster_parity <= next_cluster_parity;
             cluster_touching_boundary <= next_cluster_touching_boundary;
+        end else if(stage == STAGE_READ_FROM_MEM) begin
+            cluster_parity <= cluster_parity_mem;
+            cluster_touching_boundary <= cluster_touching_boundary_mem;
         end
     end
 end
@@ -227,6 +250,9 @@ always@(posedge clk) begin
                     odd_to_children <= 0;
                 end
             end
+        end else if(stage == STAGE_READ_FROM_MEM) begin
+            odd <= odd_mem;
+            odd_to_children <= odd_to_children_mem;
         end
     end
 end
@@ -246,6 +272,8 @@ always@(posedge clk) begin
             end else begin
                 peeling_parity_completed <= |(parent_vector & parent_peeling_parity_completed);
             end
+        end else if(stage == STAGE_READ_FROM_MEM) begin
+            peeling_parity_completed <= peeling_parity_completed_mem;
         end
     end
 end
@@ -259,6 +287,8 @@ always@(posedge clk) begin
     end else begin
         if (stage == STAGE_MEASUREMENT_LOADING) begin
             peeling_complete <= 0;
+        end else if(stage == STAGE_READ_FROM_MEM) begin
+            peeling_complete <= peeling_complete_mem;
         end else begin
             if(stage == STAGE_PEELING) begin
                 peeling_complete <= !some_child_is_not_peeling_complete;
@@ -272,7 +302,9 @@ always@(posedge clk) begin
     if(reset) begin
         peeling_m <= 0;
     end else begin
-        if (stage == STAGE_PEELING && last_stage != STAGE_PEELING) begin
+        if(stage == STAGE_READ_FROM_MEM) begin
+            peeling_m <= peeling_m_mem;
+        end else if (stage == STAGE_PEELING && last_stage != STAGE_PEELING) begin
             peeling_m <= m;
         end else begin
             if(stage == STAGE_PEELING && !some_child_is_not_peeling_complete) begin
@@ -311,6 +343,7 @@ end
 assign neighbor_is_error = neighbor_is_error_internal | neighbor_is_error_border;
 
 // Calculate busy
+// Todo: We need to modify this to the multi-FPGA case
 always@(posedge clk) begin
     if(reset) begin
         busy <= 0;
@@ -332,6 +365,56 @@ always@(posedge clk) begin
         end
     end
 end
+
+reg write_to_mem;
+reg [3:0] mem_rw_address;
+wire [35:0] data_from_memory;
+wire [35:0] data_to_memory;
+
+blk_mem_gen_0 PE_mem (
+    .clka(clk),            // Clock input
+    //.rsta(reset),            // Reset input (active high)
+    .ena(1'b1),              // Enable input
+    .wea(write_to_mem),            // Write Enable input (0 to 0)
+    .addra(mem_rw_address),     // Address input (3 downto 0)
+    .dina(data_to_memory),      // Data input (35 downto 0)
+    .douta(data_from_memory)   // Data output (35 downto 0)
+);
+
+//logic to calulate the address to write to memory
+always@(posedge clk) begin
+    if(reset) begin
+        mem_rw_address <= 0;
+    end else begin
+        if (stage == STAGE_MEASUREMENT_PREPARING) begin
+            mem_rw_address <= 0;
+        end else if (stage == STAGE_WRITE_TO_MEM) begin
+            if(mem_rw_address < NUM_CONTEXTS -1) begin
+                mem_rw_address <= mem_rw_address + 1;
+            end else begin
+                mem_rw_address <= 0;
+            end
+        end
+    end
+end
+
+always@(*) begin
+    if(reset) begin
+        write_to_mem = 0;
+    end else begin
+        if (stage == STAGE_WRITE_TO_MEM) begin
+            write_to_mem = 1;
+        end else begin
+            write_to_mem = 0;
+        end
+    end
+end
+
+//logic to data write to memory
+assign data_to_memory = {peeling_m, peeling_complete, peeling_parity_completed, cluster_touching_boundary, cluster_parity, odd_to_children, parent_vector, root, odd, m};
+
+//logic to read data from memory
+assign {peeling_m_mem, peeling_complete_mem, peeling_parity_completed_mem, cluster_touching_boundary_mem, cluster_parity_mem, odd_to_children_mem, parent_vector_mem, root_mem, odd_mem, m_mem} = data_from_memory;
             
 
 endmodule

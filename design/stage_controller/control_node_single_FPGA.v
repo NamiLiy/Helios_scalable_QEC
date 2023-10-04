@@ -3,7 +3,8 @@ module unified_controller #(
     parameter GRID_WIDTH_Z = 1,
     parameter GRID_WIDTH_U = 3,
     parameter ITERATION_COUNTER_WIDTH = 8,  // counts to 255 iterations
-    parameter MAXIMUM_DELAY = 2
+    parameter MAXIMUM_DELAY = 2,
+    parameter NUM_CONTEXTS = 2
 ) (
     clk,
     reset,
@@ -81,7 +82,7 @@ always @(posedge clk) begin
     end else begin
         if (global_stage == STAGE_MEASUREMENT_LOADING) begin
             cycle_counter <= 1;
-        end else if (global_stage == STAGE_GROW || global_stage == STAGE_MERGE || global_stage == STAGE_PEELING) begin
+        end else if (global_stage == STAGE_GROW || global_stage == STAGE_MERGE || global_stage == STAGE_PEELING || global_stage == STAGE_READ_FROM_MEM || global_stage == STAGE_WRITE_TO_MEM ) begin
             cycle_counter <= cycle_counter + 1;
         end
     end
@@ -107,7 +108,7 @@ always @(posedge clk) begin
     end
 end
 
-localparam DELAY_COUNTER_WIDTH = $clog2(MAXIMUM_DELAY + 1);
+localparam DELAY_COUNTER_WIDTH = $clog2(MAXIMUM_DELAY + 2);
 reg [DELAY_COUNTER_WIDTH-1:0] delay_counter;
 
 reg [15:0] messages_per_round_of_measurement;
@@ -120,6 +121,11 @@ wire output_fifo_ready;
 wire [CORRECTION_COUNT_PER_ROUND - 1 : 0] output_fifo_data_d;
 wire output_fifo_valid_d;
 wire output_fifo_ready_d;
+
+reg [NUM_CONTEXTS -1 : 0] unsynced_merge;
+reg [NUM_CONTEXTS -1 : 0] odd_clusters_in_context;
+localparam CONTEXT_COUNTER_WIDTH = $clog2(NUM_CONTEXTS + 1);
+reg [CONTEXT_COUNTER_WIDTH-1:0] current_context; 
 
 always @(posedge clk) begin
     if (reset) begin
@@ -165,6 +171,9 @@ always @(posedge clk) begin
                         messages_per_round_of_measurement <= messages_per_round_of_measurement + 1;
                     end
                 end
+                current_context <= 0;
+                unsynced_merge <= 0;
+                odd_clusters_in_context <= 0;
             end
 
             STAGE_MEASUREMENT_LOADING: begin
@@ -188,15 +197,21 @@ always @(posedge clk) begin
             end
 
             STAGE_MERGE: begin //3
-                if (delay_counter >= MAXIMUM_DELAY) begin
+                if (delay_counter == MAXIMUM_DELAY) begin // for this iteration this context is done
                     if(!busy) begin
-                        if(!odd_clusters) begin
-                            global_stage <= STAGE_PEELING;
-                            delay_counter <= 0;
-                        end else begin
-                            global_stage <= STAGE_GROW;
-                            delay_counter <= 0;
-                        end
+                        delay_counter <= 0;
+                        global_stage <= STAGE_WRITE_TO_MEM;
+                        unsynced_merge[current_context] <= 1'b0;
+                        odd_clusters_in_context[current_context] <= odd_clusters;  
+                    end else begin
+                        delay_counter <= delay_counter + 1;
+                        unsynced_merge[current_context] <= 1'b1;
+                    end
+                end else if (delay_counter > MAXIMUM_DELAY) begin
+                    if(!busy) begin
+                        delay_counter <= 0;
+                        global_stage <= STAGE_WRITE_TO_MEM;
+                        odd_clusters_in_context[current_context] <= odd_clusters;
                     end
                 end else begin
                     delay_counter <= delay_counter + 1;
@@ -223,7 +238,32 @@ always @(posedge clk) begin
                 result_valid <= 1;
             end
 
+            STAGE_WRITE_TO_MEM: begin //1
+                global_stage <= STAGE_READ_FROM_MEM;
+            end
 
+            STAGE_READ_FROM_MEM: begin //8
+                if (delay_counter == 2) begin
+                    delay_counter <= 0;
+                    if(current_context < NUM_CONTEXTS -1 ) begin
+                        global_stage <= STAGE_MERGE;
+                        current_context <= current_context + 1;
+                    end else begin
+                        current_context <= 0;
+                        if(|unsynced_merge == 1'b0) begin // everybody is synced
+                            if(|odd_clusters_in_context == 1'b0) begin // everybody is even
+                                global_stage <= STAGE_PEELING;
+                            end else begin // somebody is odd
+                                global_stage <= STAGE_GROW;
+                            end
+                        end else begin
+                            global_stage <= STAGE_MERGE;
+                        end
+                    end
+                end else begin
+                    delay_counter <= delay_counter + 1;
+                end
+            end
             
             default: begin
                 global_stage <= STAGE_IDLE;

@@ -79,8 +79,7 @@ generate
 
                 processing_unit #(
                     .ADDRESS_WIDTH(ADDRESS_WIDTH),
-                    .NEIGHBOR_COUNT(NEIGHBOR_COUNT),
-                    .ADDRESS(`ADDRESS(i,j,k))
+                    .NEIGHBOR_COUNT(NEIGHBOR_COUNT)
                 ) pu (
                     .clk(clk),
                     .reset(reset),
@@ -95,6 +94,7 @@ generate
 
                     .input_data(input_data),
                     .output_data(output_data),
+                    .input_address(`ADDRESS(i, j, k)),
 
                     .odd(odd),
                     .root(root),
