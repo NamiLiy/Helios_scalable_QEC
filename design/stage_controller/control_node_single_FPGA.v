@@ -125,13 +125,16 @@ wire output_fifo_ready_d;
 reg [NUM_CONTEXTS -1 : 0] unsynced_merge;
 reg [NUM_CONTEXTS -1 : 0] odd_clusters_in_context;
 localparam CONTEXT_COUNTER_WIDTH = $clog2(NUM_CONTEXTS + 1);
-reg [CONTEXT_COUNTER_WIDTH-1:0] current_context; 
+reg [CONTEXT_COUNTER_WIDTH-1:0] current_context;
+
+reg growing_incomplete;
 
 always @(posedge clk) begin
     if (reset) begin
         global_stage <= STAGE_IDLE;
         delay_counter <= 0;
         result_valid <= 0;
+        growing_incomplete <= 0;
     end else begin
         case (global_stage)
             STAGE_IDLE: begin // 0
@@ -194,6 +197,7 @@ always @(posedge clk) begin
                 global_stage <= STAGE_MERGE;
                 delay_counter <= 0;
                 measurement_rounds <= 0;
+                growing_incomplete <= 1;
             end
 
             STAGE_MERGE: begin //3
@@ -246,10 +250,15 @@ always @(posedge clk) begin
                 if (delay_counter == 2) begin
                     delay_counter <= 0;
                     if(current_context < NUM_CONTEXTS -1 ) begin
-                        global_stage <= STAGE_MERGE;
+                        if(growing_incomplete == 1'b1) begin
+                            global_stage <= STAGE_GROW;
+                        end else begin
+                            global_stage <= STAGE_MERGE;
+                        end
                         current_context <= current_context + 1;
                     end else begin
                         current_context <= 0;
+                        growing_incomplete <= 0;
                         if(|unsynced_merge == 1'b0) begin // everybody is synced
                             if(|odd_clusters_in_context == 1'b0) begin // everybody is even
                                 global_stage <= STAGE_PEELING;
