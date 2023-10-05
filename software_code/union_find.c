@@ -10,6 +10,7 @@ struct Address {
     int k;
     int i;
     int j;
+    int is_boundary_address;
 };
 
 struct Node {
@@ -39,7 +40,10 @@ struct Address get_root(struct Address a){
     if(node_array[a.k][a.i][a.j].id.k == node_array[a.k][a.i][a.j].root.k &&
         node_array[a.k][a.i][a.j].id.i == node_array[a.k][a.i][a.j].root.i &&
         node_array[a.k][a.i][a.j].id.j == node_array[a.k][a.i][a.j].root.j){
-            struct Address ret = {a.k,a.i,a.j};
+            struct Address ret = {node_array[a.k][a.i][a.j].id.k,
+                                    node_array[a.k][a.i][a.j].id.i,
+                                    node_array[a.k][a.i][a.j].id.j,
+                                    node_array[a.k][a.i][a.j].id.is_boundary_address};
             return ret;
     }  else {
         return get_root(node_array[a.k][a.i][a.j].root);
@@ -131,7 +135,10 @@ int merge_internal(struct Address a, struct Address b){
         return 0;
     }
 
-    if(root_a.k < root_b.k || (root_a.k == root_b.k && root_a.i < root_b.i) || (root_a.k == root_b.k && root_a.i == root_b.i && root_a.j < root_b.j)){
+    if(root_a.is_boundary_address < root_b.is_boundary_address ||
+        (root_a.is_boundary_address == root_b.is_boundary_address  && root_a.k < root_b.k) || 
+        (root_a.is_boundary_address == root_b.is_boundary_address  && root_a.k == root_b.k && root_a.i < root_b.i) || 
+        (root_a.is_boundary_address == root_b.is_boundary_address && root_a.k == root_b.k && root_a.i == root_b.i && root_a.j < root_b.j)){
         // A has a lower root
         if(node_array[root_b.k][root_b.i][root_b.j].boundary == 1){
             node_array[root_a.k][root_a.i][root_a.j].parity = 0;
@@ -145,6 +152,7 @@ int merge_internal(struct Address a, struct Address b){
         node_array[root_b.k][root_b.i][root_b.j].root.k = root_a.k;
         node_array[root_b.k][root_b.i][root_b.j].root.i = root_a.i;
         node_array[root_b.k][root_b.i][root_b.j].root.j = root_a.j;
+        node_array[root_b.k][root_b.i][root_b.j].root.is_boundary_address = root_a.is_boundary_address;
     } else {
         // B has the lower root
         if(node_array[root_a.k][root_a.i][root_b.j].boundary == 1){
@@ -159,6 +167,7 @@ int merge_internal(struct Address a, struct Address b){
         node_array[root_a.k][root_a.i][root_a.j].root.k = root_b.k;
         node_array[root_a.k][root_a.i][root_a.j].root.i = root_b.i;
         node_array[root_a.k][root_a.i][root_a.j].root.j = root_b.j;
+        node_array[root_a.k][root_a.i][root_a.j].root.is_boundary_address = root_b.is_boundary_address;
     }
 
     return 0;
@@ -203,6 +212,14 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2]){
                 node_array[k][i][j].root.k = k;
                 node_array[k][i][j].root.i = i;
                 node_array[k][i][j].root.j = j;
+                if(k==0 || (i%2==0 && j==0) || (i%2==1 && j==(D-1)/2 - 1)){
+                    node_array[k][i][j].id.is_boundary_address = 0;
+                    node_array[k][i][j].root.is_boundary_address = 0;
+                }
+                else {
+                    node_array[k][i][j].id.is_boundary_address = 1;
+                    node_array[k][i][j].root.is_boundary_address = 1;
+                }
                 node_array[k][i][j].boundary = 0;
             }
         }

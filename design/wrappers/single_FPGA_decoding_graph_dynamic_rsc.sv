@@ -24,6 +24,7 @@ localparam X_BIT_WIDTH = $clog2(GRID_WIDTH_X);
 localparam Z_BIT_WIDTH = $clog2(GRID_WIDTH_Z);
 localparam U_BIT_WIDTH = $clog2(GRID_WIDTH_U);
 localparam ADDRESS_WIDTH = X_BIT_WIDTH + Z_BIT_WIDTH + U_BIT_WIDTH;
+localparam ADDRESS_WIDTH_WITH_B = ADDRESS_WIDTH + 1;
 
 localparam PU_COUNT_PER_ROUND = GRID_WIDTH_X * GRID_WIDTH_Z;
 localparam PU_COUNT = PU_COUNT_PER_ROUND * GRID_WIDTH_U;
@@ -33,7 +34,7 @@ localparam NS_ERROR_COUNT_PER_ROUND = (GRID_WIDTH_X-1) * GRID_WIDTH_Z;
 localparam EW_ERROR_COUNT_PER_ROUND = (GRID_WIDTH_X-1) * GRID_WIDTH_Z + 1;
 localparam UD_ERROR_COUNT_PER_ROUND = GRID_WIDTH_X * GRID_WIDTH_Z;
 localparam CORRECTION_COUNT_PER_ROUND = NS_ERROR_COUNT_PER_ROUND + EW_ERROR_COUNT_PER_ROUND + UD_ERROR_COUNT_PER_ROUND;
-localparam EXPOSED_DATA_SIZE = ADDRESS_WIDTH + 1 + 1 + 1 + 1 + 3;
+localparam EXPOSED_DATA_SIZE = ADDRESS_WIDTH_WITH_B + 1 + 1 + 1 + 1 + 3;
 
 localparam LINK_BIT_WIDTH = $clog2(MAX_WEIGHT + 1);
 
@@ -58,6 +59,7 @@ genvar k;
 `define odd_clusters(i, j, k) odd_clusters[`INDEX(i, j, k)]
 `define busy(i, j, k) busy[`INDEX(i, j, k)]
 `define PU(i, j, k) pu_k[k].pu_i[i].pu_j[j]
+`define ADDRESS_BOUNDARY(i,j,k) ((k==0 || (j==0 && i%2==0)|| (j==(GRID_WIDTH_Z-1) && i%2==1)) ? `ADDRESS(i,j,k) : (`ADDRESS(i,j,k)+ (1'b1<<ADDRESS_WIDTH)))
 
 generate
     for (k=GRID_WIDTH_U-1; k >= 0; k=k-1) begin: pu_k
@@ -78,7 +80,7 @@ generate
                 wire busy_PE;
 
                 processing_unit #(
-                    .ADDRESS_WIDTH(ADDRESS_WIDTH),
+                    .ADDRESS_WIDTH(ADDRESS_WIDTH_WITH_B),
                     .NEIGHBOR_COUNT(NEIGHBOR_COUNT)
                 ) pu (
                     .clk(clk),
@@ -94,13 +96,13 @@ generate
 
                     .input_data(input_data),
                     .output_data(output_data),
-                    .input_address(`ADDRESS(i, j, k)),
+                    .input_address(`ADDRESS_BOUNDARY(i,j,k)),
 
                     .odd(odd),
                     .root(root),
                     .busy(busy_PE)
                 );
-                assign `roots(i, j, k) = root;
+                assign `roots(i, j, k) = root[ADDRESS_WIDTH-1:0];
                 assign `busy(i, j, k) = busy_PE;
                 assign `odd_clusters(i,j,k) = odd;
             end
@@ -164,7 +166,7 @@ endgenerate
     wire is_boundary; \
     wire fully_grown; \
     neighbor_link_internal #( \
-        .ADDRESS_WIDTH(ADDRESS_WIDTH), \
+        .ADDRESS_WIDTH(ADDRESS_WIDTH_WITH_B), \
         .MAX_WEIGHT(MAX_WEIGHT) \
     ) neighbor_link ( \
         .clk(clk), \
@@ -194,7 +196,7 @@ endgenerate
 
 `define NEIGHBOR_LINK_INTERNAL_SINGLE(ai, aj, ak, adirection, type) \
     neighbor_link_internal #( \
-        .ADDRESS_WIDTH(ADDRESS_WIDTH), \
+        .ADDRESS_WIDTH(ADDRESS_WIDTH_WITH_B), \
         .MAX_WEIGHT(MAX_WEIGHT) \
     ) neighbor_link ( \
         .clk(clk), \
