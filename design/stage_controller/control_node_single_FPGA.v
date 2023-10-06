@@ -50,7 +50,7 @@ input clk;
 input reset;
 output reg [STAGE_WIDTH-1:0] global_stage;
 reg [STAGE_WIDTH-1:0] global_stage_previous;
-
+reg [STAGE_WIDTH-1:0] global_stage_d;
 input [PU_COUNT - 1 : 0]  odd_clusters_PE;
 input [PU_COUNT - 1 : 0]  busy_PE;
 output reg [ALIGNED_PU_PER_ROUND-1:0] measurements;
@@ -74,6 +74,15 @@ reg odd_clusters;
 always@(posedge clk) begin
     busy <= |busy_PE;
     odd_clusters <= |odd_clusters_PE;
+end
+
+// global_stage_d delayed logic
+always @(posedge clk) begin
+    if (reset) begin
+        global_stage_d <= STAGE_IDLE;
+    end else begin
+        global_stage_d <= global_stage;
+    end
 end
 
 always @(posedge clk) begin
@@ -297,7 +306,7 @@ always@(*) begin
     if (reset) begin
         output_fifo_valid = 0;
     end else begin 
-        if(global_stage == STAGE_RESULT_VALID) begin
+        if(global_stage_d == STAGE_RESULT_VALID) begin
             output_fifo_valid = 1;
         end else begin
             output_fifo_valid = 0;

@@ -98,7 +98,7 @@ generate
 for (i = 0; i < NEIGHBOR_COUNT; i=i+1) begin: output_2d
     assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH-1 : i*EXPOSED_DATA_SIZE] = root ;
     assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 1 -1]  = parent_vector[i];
-    assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 2 -1]  = odd_to_children[i];
+    assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 2 -1]  = odd;
     assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 3 -1]  = cluster_parity;
     assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 4 -1]  = cluster_touching_boundary;
     assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 5 -1]  = peeling_complete;
@@ -205,140 +205,37 @@ end
 
 // Calculate cluster odd if you are the root.
 // If not pass parents odd data
-// This function also passes odd infomration to children for peeling purposes
 always@(posedge clk) begin
     if(stage == STAGE_MEASUREMENT_LOADING) begin
         odd <= measurement;
-        odd_to_children <= (measurement ? 6'h3f : 0);
     end else begin
         if (stage == STAGE_MERGE) begin
             if(|parent_vector) begin
                 odd <= |(parent_vector & parent_odd);
-                odd_to_children <= (|(parent_vector & parent_odd) ? 6'h3f : 0);
             end else begin
                 odd <= next_cluster_parity & !next_cluster_touching_boundary;
-                odd_to_children <= ((next_cluster_parity & !next_cluster_touching_boundary) ? 6'h3f : 0);
-            end
-        end else if(stage == STAGE_PEELING) begin
-            if(~(|parent_vector)) begin
-                if(!next_cluster_parity) begin // The cluster has even number of vertices
-                    odd <= 0;
-                    odd_to_children <= 0;
-                end else begin // The cluster has odd number of vertices
-                    if(|neighbor_is_boundary) begin // I am the boundary
-                        odd <= 1;
-                        odd_to_children <= 0;
-                    end else begin // I am not the boundary
-                        odd <= 1;
-                        casex (neighbor_parent_vector & child_touching_boundary)
-                            6'b1xxxxx: odd_to_children <= 6'b100000;
-                            6'b01xxxx: odd_to_children <= 6'b010000;
-                            6'b001xxx: odd_to_children <= 6'b001000;
-                            6'b0001xx: odd_to_children <= 6'b000100;
-                            6'b00001x: odd_to_children <= 6'b000010;
-                            6'b000001: odd_to_children <= 6'b000001;
-                            default: odd_to_children <= 0;
-                        endcase
-                    end
-                end
-            end else begin
-                if(|(parent_vector & parent_odd)) begin //My parent is odd
-                    if(|neighbor_is_boundary) begin // I am the boundary
-                        odd <= 1;
-                        odd_to_children <= 0;
-                    end else begin // I am not the boundary
-                        odd <= 0;
-                        casex (neighbor_parent_vector & child_touching_boundary)
-                            6'b1xxxxx: odd_to_children <= 6'b100000;
-                            6'b01xxxx: odd_to_children <= 6'b010000;
-                            6'b001xxx: odd_to_children <= 6'b001000;
-                            6'b0001xx: odd_to_children <= 6'b000100;
-                            6'b00001x: odd_to_children <= 6'b000010;
-                            6'b000001: odd_to_children <= 6'b000001;
-                            default: odd_to_children <= 0;
-                        endcase
-                    end
-                end else begin  //My parent is not odd
-                    odd <= 0;
-                    odd_to_children <= 0;
-                end
             end
         end else if(stage == STAGE_READ_FROM_MEM) begin
             odd <= odd_mem;
-            odd_to_children <= odd_to_children_mem;
         end
     end
 end
 
 // Peeling logic.
 
-// Calculate peeling_parity complete
-always@(posedge clk) begin
-    if(reset) begin
-        peeling_parity_completed <= 0;
-    end else begin
-        if (stage == STAGE_MEASUREMENT_LOADING) begin
-            peeling_parity_completed <= 0;
-        end else if(stage == STAGE_PEELING) begin
-            if(~(|parent_vector)) begin
-                peeling_parity_completed <= 1;
-            end else begin
-                peeling_parity_completed <= |(parent_vector & parent_peeling_parity_completed);
-            end
-        end else if(stage == STAGE_READ_FROM_MEM) begin
-            peeling_parity_completed <= peeling_parity_completed_mem;
-        end
-    end
-end
-
-// Calculate peeling complete
-wire some_child_is_not_peeling_complete = (|(neighbor_parent_vector & (~child_peeling_complete))) || ~peeling_parity_completed;
-
-always@(posedge clk) begin
-    if(reset) begin
-        peeling_complete <= 0;
-    end else begin
-        if (stage == STAGE_MEASUREMENT_LOADING) begin
-            peeling_complete <= 0;
-        end else if(stage == STAGE_READ_FROM_MEM) begin
-            peeling_complete <= peeling_complete_mem;
-        end else begin
-            if(stage == STAGE_PEELING) begin
-                peeling_complete <= !some_child_is_not_peeling_complete;
-            end
-        end
-    end
-end
-
-// If peeling complete, absorb children's m while marking the errors
-always@(posedge clk) begin
-    if(reset) begin
-        peeling_m <= 0;
-    end else begin
-        if(stage == STAGE_READ_FROM_MEM) begin
-            peeling_m <= peeling_m_mem;
-        end else if (stage == STAGE_PEELING && last_stage != STAGE_PEELING) begin
-            peeling_m <= m;
-        end else begin
-            if(stage == STAGE_PEELING && !some_child_is_not_peeling_complete) begin
-                peeling_m <= m ^ (^(neighbor_parent_vector & child_peeling_m)) ^ odd;
-            end
-        end
-    end
-end
-
 reg [NEIGHBOR_COUNT-1:0] neighbor_is_error_internal;
 reg [NEIGHBOR_COUNT-1:0] neighbor_is_error_border;
 always@(*) begin
-    if(stage == STAGE_PEELING && !some_child_is_not_peeling_complete) begin
-        neighbor_is_error_internal = neighbor_parent_vector & child_peeling_m;
+    if(stage == STAGE_PEELING && cluster_parity == 1'b1) begin
+    // We only connect the root to the boundary. Odd clusters always have root at the boundary 
+        neighbor_is_error_internal = parent_vector;
     end else begin
         neighbor_is_error_internal = 6'b0;
     end
 end
 
 always@(*) begin
-    if(stage == STAGE_PEELING && !some_child_is_not_peeling_complete && odd) begin
+    if(stage == STAGE_PEELING &&  !(|parent_vector) && next_cluster_parity) begin
         casex (neighbor_is_boundary)
             6'b1xxxxx: neighbor_is_error_border = 6'b100000;
             6'b01xxxx: neighbor_is_error_border = 6'b010000;
@@ -356,7 +253,7 @@ end
 assign neighbor_is_error = neighbor_is_error_internal | neighbor_is_error_border;
 
 // Calculate busy
-// Todo: We need to modify this to the multi-FPGA case
+// Todo: We need to simplify this to the multi-FPGA case
 always@(posedge clk) begin
     if(reset) begin
         busy <= 0;
@@ -373,9 +270,6 @@ always@(posedge clk) begin
             end else begin
                 busy <= 0;
             end
-        end else if (stage == STAGE_PEELING) begin
-            // busy <= !peeling_complete;
-            busy <= some_child_is_not_peeling_complete;
         end
     end
 end
