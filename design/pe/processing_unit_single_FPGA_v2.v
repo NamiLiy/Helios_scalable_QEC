@@ -30,7 +30,7 @@ module processing_unit #(
 
 `include "../../parameters/parameters.sv"
 
-localparam EXPOSED_DATA_SIZE = ADDRESS_WIDTH + 1 + 1 + 1 + 1 + 3;
+localparam EXPOSED_DATA_SIZE = ADDRESS_WIDTH + 1 + 1 + 1;
 
 input clk;
 input reset;
@@ -56,17 +56,8 @@ wire [NEIGHBOR_COUNT*ADDRESS_WIDTH-1:0] neighbor_root;
 wire [NEIGHBOR_COUNT-1:0] neighbor_parent_vector;
 wire [NEIGHBOR_COUNT-1:0] parent_odd;
 wire [NEIGHBOR_COUNT - 1:0] child_cluster_parity;
-wire [NEIGHBOR_COUNT - 1:0] child_touching_boundary;
-wire [NEIGHBOR_COUNT - 1:0] child_peeling_complete;
-wire [NEIGHBOR_COUNT - 1:0] child_peeling_m;
-wire [NEIGHBOR_COUNT-1:0] parent_peeling_parity_completed;
 
-wire peeling_m_mem;
-wire peeling_complete_mem;
-wire peeling_parity_completed_mem;
-wire cluster_touching_boundary_mem;
 wire cluster_parity_mem;
-wire [NEIGHBOR_COUNT - 1:0] odd_to_children_mem;
 wire [NEIGHBOR_COUNT - 1:0] parent_vector_mem;
 wire [ADDRESS_WIDTH-1:0] root_mem;
 wire odd_mem;
@@ -79,20 +70,11 @@ for (i = 0; i < NEIGHBOR_COUNT; i=i+1) begin: input_2d
     assign neighbor_parent_vector[i] = input_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 1 -1];
     assign parent_odd[i] = input_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 2 -1];
     assign child_cluster_parity[i] = input_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 3 -1];
-    assign child_touching_boundary[i] = input_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 4 -1];
-    assign child_peeling_complete[i] = input_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 5 -1];
-    assign child_peeling_m[i] = input_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 6 -1];
-    assign parent_peeling_parity_completed[i] = input_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 7 -1];
 end
 endgenerate
 
 reg [NEIGHBOR_COUNT-1:0] parent_vector;
-reg [NEIGHBOR_COUNT-1:0] odd_to_children;
 reg cluster_parity;
-reg cluster_touching_boundary;
-reg peeling_complete;
-reg peeling_m;
-reg peeling_parity_completed;
 
 generate
 for (i = 0; i < NEIGHBOR_COUNT; i=i+1) begin: output_2d
@@ -100,10 +82,6 @@ for (i = 0; i < NEIGHBOR_COUNT; i=i+1) begin: output_2d
     assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 1 -1]  = parent_vector[i];
     assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 2 -1]  = odd;
     assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 3 -1]  = cluster_parity;
-    assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 4 -1]  = cluster_touching_boundary;
-    assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 5 -1]  = peeling_complete;
-    assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 6 -1]  = peeling_m;
-    assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 7 -1]  = peeling_parity_completed;
 end
 endgenerate
 
@@ -186,19 +164,16 @@ end
 // Calculate the sub-tree parity and sub_tree touching boundary
 
 wire next_cluster_parity = (^(neighbor_parent_vector & child_cluster_parity)) ^ m;
-wire next_cluster_touching_boundary = (|(neighbor_parent_vector & child_touching_boundary)) | (|neighbor_is_boundary);
+wire next_cluster_touching_boundary = (|neighbor_is_boundary);
 
 always@(posedge clk) begin
     if(stage == STAGE_MEASUREMENT_LOADING) begin
         cluster_parity <= measurement;
-        cluster_touching_boundary <= 0;
     end else begin
         if (stage == STAGE_MERGE) begin
             cluster_parity <= next_cluster_parity;
-            cluster_touching_boundary <= next_cluster_touching_boundary;
         end else if(stage == STAGE_READ_FROM_MEM) begin
             cluster_parity <= cluster_parity_mem;
-            cluster_touching_boundary <= cluster_touching_boundary_mem;
         end
     end
 end
@@ -262,10 +237,9 @@ always@(posedge clk) begin
             if( ((|valid_from_root_comparator) && result_from_root_comparator < root) ||
                     (root_modified < root) ||
                  next_cluster_parity != cluster_parity ||
-                 next_cluster_touching_boundary != cluster_touching_boundary ||
                  (|(parent_vector) & (|(parent_vector & parent_odd) != odd)) ||
                  (~|(parent_vector) && ((next_cluster_parity & !next_cluster_touching_boundary) != odd))
-            )  begin
+            )begin
                 busy <= 1;
             end else begin
                 busy <= 0;
@@ -319,10 +293,10 @@ always@(*) begin
 end
 
 //logic to data write to memory
-assign data_to_memory = {peeling_m, peeling_complete, peeling_parity_completed, cluster_touching_boundary, cluster_parity, odd_to_children, parent_vector, root, odd, m};
+assign data_to_memory = {cluster_parity, parent_vector, root, odd, m};
 
 //logic to read data from memory
-assign {peeling_m_mem, peeling_complete_mem, peeling_parity_completed_mem, cluster_touching_boundary_mem, cluster_parity_mem, odd_to_children_mem, parent_vector_mem, root_mem, odd_mem, m_mem} = data_from_memory;
+assign {cluster_parity_mem, parent_vector_mem, root_mem, odd_mem, m_mem} = data_from_memory;
             
 
 endmodule
