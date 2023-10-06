@@ -59,7 +59,7 @@ genvar k;
 `define odd_clusters(i, j, k) odd_clusters[`INDEX(i, j, k)]
 `define busy(i, j, k) busy[`INDEX(i, j, k)]
 `define PU(i, j, k) pu_k[k].pu_i[i].pu_j[j]
-`define ADDRESS_BOUNDARY(i,j,k) ((k==0 || (j==0 && i%2==0)|| (j==(GRID_WIDTH_Z-1) && i%2==1)) ? `ADDRESS(i,j,k) : (`ADDRESS(i,j,k)+ (1'b1<<ADDRESS_WIDTH)))
+`define ADDRESS_BOUNDARY(i,j,k) ((`ADDRESS(i,j,k)+ (1'b1<<ADDRESS_WIDTH)))
 
 generate
     for (k=GRID_WIDTH_U-1; k >= 0; k=k-1) begin: pu_k

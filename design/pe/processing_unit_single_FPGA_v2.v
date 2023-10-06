@@ -15,7 +15,7 @@ module processing_unit #(
 
     neighbor_fully_grown,
     neighbor_increase,
-    neighbor_is_boundary,
+    neighbor_is_boundary, //This indicates the PE is connected by a fully grown link to a boundary
     neighbor_is_error,
 
     input_address, // M,X,Z, address
@@ -153,15 +153,28 @@ min_val_less_8x_with_index #(
     .output_valids(valid_from_root_comparator)
 );
 
+// Calculate the next root and parent vector
+reg [ADDRESS_WIDTH - 1 : 0] root_modified;
+always@(*) begin
+    root_modified = root;
+    if(|(neighbor_is_boundary)) begin
+        root_modified[ADDRESS_WIDTH-2 : 0] = input_address[ADDRESS_WIDTH-2 : 0];
+        root_modified[ADDRESS_WIDTH-1] = 0;
+    end
+end
+
 always@(posedge clk) begin
     if(stage == STAGE_MEASUREMENT_LOADING) begin
         root <= input_address;
         parent_vector <= 0;
     end else begin
         if (stage == STAGE_MERGE) begin
-            if( (|valid_from_root_comparator) && result_from_root_comparator < root) begin
+            if( (|valid_from_root_comparator) && result_from_root_comparator < root_modified && result_from_root_comparator < root) begin
                 root <= result_from_root_comparator;
                 parent_vector <= valid_from_root_comparator;
+            end else if (root_modified < root) begin
+                root <= root_modified;
+                parent_vector <= 0;
             end
         end else if(stage == STAGE_READ_FROM_MEM) begin
             root <= root_mem;
@@ -350,6 +363,7 @@ always@(posedge clk) begin
     end else begin
         if (stage == STAGE_MERGE) begin
             if( ((|valid_from_root_comparator) && result_from_root_comparator < root) ||
+                    (root_modified < root) ||
                  next_cluster_parity != cluster_parity ||
                  next_cluster_touching_boundary != cluster_touching_boundary ||
                  (|(parent_vector) & (|(parent_vector & parent_odd) != odd)) ||

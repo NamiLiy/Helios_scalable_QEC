@@ -122,8 +122,23 @@ int grow(int k, int i, int j, int direction){
 
 int update_boundary(struct Address a){
     struct Address root = get_root(a);
-    node_array[root.k][root.i][root.j].parity = 0;
-    node_array[root.k][root.i][root.j].boundary = 1;
+    if( root.is_boundary_address == 1 ||
+        (root.is_boundary_address == 0  && a.k < root.k) || 
+        (root.is_boundary_address == 0  && a.k == root.k && a.i < root.i) || 
+        (root.is_boundary_address == 0 && a.k == root.k && a.i == root.i && a.j < root.j)){
+            // This node should now be the root
+            node_array[root.k][root.i][root.j].root.k = a.k;
+            node_array[root.k][root.i][root.j].root.i = a.i;
+            node_array[root.k][root.i][root.j].root.j = a.j;
+
+            node_array[a.k][a.i][a.j].parity = 0;
+            node_array[a.k][a.i][a.j].boundary = 1;
+            node_array[a.k][a.i][a.j].root.k = a.k;
+            node_array[a.k][a.i][a.j].root.i = a.i;
+            node_array[a.k][a.i][a.j].root.j = a.j;
+            node_array[a.k][a.i][a.j].root.is_boundary_address = 0;
+            node_array[a.k][a.i][a.j].id.is_boundary_address = 0;
+    }
     return 0;
 }
 
@@ -209,17 +224,11 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2]){
                 node_array[k][i][j].id.k = k;
                 node_array[k][i][j].id.i = i;
                 node_array[k][i][j].id.j = j;
+                node_array[k][i][j].id.is_boundary_address = 1;
                 node_array[k][i][j].root.k = k;
                 node_array[k][i][j].root.i = i;
                 node_array[k][i][j].root.j = j;
-                if(k==0 || (i%2==0 && j==0) || (i%2==1 && j==(D-1)/2 - 1)){
-                    node_array[k][i][j].id.is_boundary_address = 0;
-                    node_array[k][i][j].root.is_boundary_address = 0;
-                }
-                else {
-                    node_array[k][i][j].id.is_boundary_address = 1;
-                    node_array[k][i][j].root.is_boundary_address = 1;
-                }
+                node_array[k][i][j].root.is_boundary_address = 1;
                 node_array[k][i][j].boundary = 0;
             }
         }
