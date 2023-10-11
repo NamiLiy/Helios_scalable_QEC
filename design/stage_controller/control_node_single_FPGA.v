@@ -159,7 +159,7 @@ reg [NUM_CONTEXTS -1 : 0] odd_clusters_in_context;
 localparam CONTEXT_COUNTER_WIDTH = $clog2(NUM_CONTEXTS + 1);
 reg [CONTEXT_COUNTER_WIDTH-1:0] current_context;
 
-reg growing_incomplete;
+reg growing_incomplete; //Todo : In an optimized version use this. For the current version I'm not using it.
 
 always @(posedge clk) begin
     if (reset) begin
@@ -228,7 +228,8 @@ always @(posedge clk) begin
             end
 
             STAGE_GROW: begin //2
-                global_stage <= STAGE_MERGE;
+                global_stage <= STAGE_WRITE_TO_MEM;
+                global_stage_saved <= STAGE_GROW;
                 delay_counter <= 0;
                 measurement_rounds <= 0;
                 growing_incomplete <= 1;
@@ -307,17 +308,20 @@ always @(posedge clk) begin
                     delay_counter <= 0;
                     if(current_context < NUM_CONTEXTS -1 ) begin
                         if(global_stage_saved == STAGE_MERGE) begin
-                            if(growing_incomplete == 1'b1) begin
-                                global_stage <= STAGE_GROW;
-                            end else begin
-                                global_stage <= STAGE_MERGE;
-                            end
+                            // if(growing_incomplete == 1'b1) begin
+                            //     global_stage <= STAGE_GROW;
+                            // end else begin
+                            //     global_stage <= STAGE_MERGE;
+                            // end
+                            global_stage <= STAGE_MERGE;
                         end else if(global_stage_saved == STAGE_MEASUREMENT_LOADING) begin
                             global_stage <= STAGE_MEASUREMENT_PREPARING;
                         end else if(global_stage_saved == STAGE_PEELING) begin
                             global_stage <= STAGE_PEELING;
                         end else if(global_stage_saved == STAGE_RESULT_VALID) begin
                             global_stage <= STAGE_RESULT_VALID;
+                        end else if(global_stage_saved == STAGE_GROW) begin
+                            global_stage <= STAGE_GROW;
                         end
                         current_context <= current_context + 1;
                     end else begin
@@ -339,6 +343,8 @@ always @(posedge clk) begin
                             global_stage <= STAGE_RESULT_VALID;
                         end else if(global_stage_saved == STAGE_RESULT_VALID) begin
                             global_stage <= STAGE_IDLE;
+                        end else if(global_stage_saved == STAGE_GROW) begin
+                            global_stage <= STAGE_MERGE;
                         end
                     end
                 end else begin

@@ -33,7 +33,8 @@ module neighbor_link_internal #(
     is_error_systolic_in,
 
     weight_out,
-    boundary_condition_out
+    boundary_condition_out,
+    local_context_switch
 );
 
 `include "../../parameters/parameters.sv"
@@ -63,6 +64,7 @@ output [EXPOSED_DATA_SIZE-1:0] b_output_data;
 input [LINK_BIT_WIDTH-1:0] weight_in;
 input [1:0] boundary_condition_in;
 input is_error_systolic_in;
+input local_context_switch;
 
 output reg [LINK_BIT_WIDTH-1:0] weight_out;
 output reg [1:0] boundary_condition_out;
@@ -199,7 +201,7 @@ always@(posedge clk) begin
     if(reset) begin
         mem_rw_address <= 0;
     end else begin
-        if (stage == STAGE_WRITE_TO_MEM) begin
+        if (stage == STAGE_WRITE_TO_MEM  && local_context_switch == 1'b0) begin
             if(mem_rw_address < NUM_CONTEXTS -1) begin
                 mem_rw_address <= mem_rw_address + 1;
             end else begin
@@ -221,10 +223,21 @@ always@(*) begin
     end
 end
 
+// reg last_context_switch_is_local;
+// always@(posedge clk) begin
+//     if(reset) begin
+//         last_context_switch_is_local <= 0;
+//     end else begin
+//         if (stage == STAGE_WRITE_TO_MEM) begin
+//             last_context_switch_is_local <= local_context_switch;
+//         end
+//     end
+// end
+
 //logic to data write to memory
 assign data_to_memory = {growth,is_error};
 
-assign {growth_mem,is_error_mem} = data_from_memory;
+assign {growth_mem,is_error_mem} = (local_context_switch) ? {growth, is_error} : data_from_memory;
 
 endmodule
 

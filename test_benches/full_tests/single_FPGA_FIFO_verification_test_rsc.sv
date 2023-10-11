@@ -276,7 +276,7 @@ always @(negedge clk) begin
                     if (input_eof == 0)begin 
                         $fscanf (input_file, "%h\n", input_read_value);
                         `measurements(i, j, k) = input_read_value;
-                        if (input_read_value == 1 && k != PHYSICAL_GRID_WIDTH_U) begin //This is to avoid duplication in the border PEs
+                        if (input_read_value == 1 && k != 2*PHYSICAL_GRID_WIDTH_U-1) begin //This is to avoid duplication in the border PEs
                             syndrome_count = syndrome_count + 1;
                         end
                     end

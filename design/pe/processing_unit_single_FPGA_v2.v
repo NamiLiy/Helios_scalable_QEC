@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 
 // This PEs are written for Z type ancillas
-
+// Todo : Local context switch can be potentially removed.
 module processing_unit #(
     parameter ADDRESS_WIDTH = 6,
     parameter NEIGHBOR_COUNT = 6,
