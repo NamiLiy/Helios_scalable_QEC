@@ -338,7 +338,7 @@ always @(posedge clk) begin
 
                         if(Z_BIT_WIDTH>0) begin
                             if (expected_u != `root_u(i, j, k) || expected_x != `root_x(i, j, k) || expected_z != `root_z(i, j, k)) begin
-                                $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d)" , $time, context_k, i ,j, `root_u(i, j, k), `root_x(i, j, k), `root_z(i, j, k), expected_u, expected_x, expected_z);
+                                //$display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d)" , $time, context_k, i ,j, `root_u(i, j, k), `root_x(i, j, k), `root_z(i, j, k), expected_u, expected_x, expected_z);
                                 test_fail = 1;
                             end
                         end else begin
@@ -360,7 +360,7 @@ always @(posedge clk) begin
             end else begin
                 $display("%t\tTest case %d fail %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
                 fail_count = fail_count + 1;
-                $finish;
+                //$finish;
             end
         end
     end
