@@ -4,7 +4,8 @@ module single_FPGA_decoding_graph_dynamic_rsc #(
     parameter GRID_WIDTH_X = 4,
     parameter GRID_WIDTH_Z = 1,
     parameter GRID_WIDTH_U = 3,
-    parameter MAX_WEIGHT = 2 
+    parameter MAX_WEIGHT = 2,
+    parameter NUM_CONTEXTS = 2 
 ) (
     clk,
     reset,
@@ -26,8 +27,9 @@ localparam U_BIT_WIDTH = $clog2(GRID_WIDTH_U);
 localparam ADDRESS_WIDTH = X_BIT_WIDTH + Z_BIT_WIDTH + U_BIT_WIDTH;
 localparam ADDRESS_WIDTH_WITH_B = ADDRESS_WIDTH + 1;
 
+localparam PHYSICAL_GRID_WIDTH_U = GRID_WIDTH_U / NUM_CONTEXTS + 1;
 localparam PU_COUNT_PER_ROUND = GRID_WIDTH_X * GRID_WIDTH_Z;
-localparam PU_COUNT = PU_COUNT_PER_ROUND * GRID_WIDTH_U;
+localparam PU_COUNT = PU_COUNT_PER_ROUND * PHYSICAL_GRID_WIDTH_U;
 localparam NEIGHBOR_COUNT = 6;
 
 localparam NS_ERROR_COUNT_PER_ROUND = (GRID_WIDTH_X-1) * GRID_WIDTH_Z;
@@ -52,6 +54,32 @@ genvar i;
 genvar j;
 genvar k;
 
+//logic to calulate the context_stage
+reg[3:0] context_stage;
+always@(posedge clk) begin
+    if(reset) begin
+        context_stage <= 0;
+    end else begin
+        if (global_stage == STAGE_WRITE_TO_MEM) begin
+            if(context_stage < NUM_CONTEXTS -1) begin
+                context_stage <= context_stage + 1;
+            end else begin
+                context_stage <= 0;
+            end
+        end
+    end
+end
+
+//context_stage delayed
+reg[3:0] context_stage_delayed;
+always@(posedge clk) begin
+    if(reset) begin
+        context_stage_delayed <= 0;
+    end else begin
+        context_stage_delayed <= context_stage;
+    end
+end
+
 `define INDEX(i, j, k) (i * GRID_WIDTH_Z + j + k * GRID_WIDTH_Z*GRID_WIDTH_X)
 `define INDEX_PLANAR(i, j) (i * GRID_WIDTH_Z + j)
 `define ADDRESS(i,j,k) ( (k<< (X_BIT_WIDTH + Z_BIT_WIDTH)) + (i<< Z_BIT_WIDTH) + j)
@@ -60,15 +88,16 @@ genvar k;
 `define busy(i, j, k) busy[`INDEX(i, j, k)]
 `define PU(i, j, k) pu_k[k].pu_i[i].pu_j[j]
 `define ADDRESS_BOUNDARY(i,j,k) ((`ADDRESS(i,j,k)+ (1'b1<<ADDRESS_WIDTH)))
+`define NUM_CONTEXTS_OF_PE(i,j,k) ((k==PHYSICAL_GRID_WIDTH_U-1) ? 1 : NUM_CONTEXTS) 
 
 generate
-    for (k=GRID_WIDTH_U-1; k >= 0; k=k-1) begin: pu_k
+    for (k=PHYSICAL_GRID_WIDTH_U-1; k >= 0; k=k-1) begin: pu_k
         for (i=0; i < GRID_WIDTH_X; i=i+1) begin: pu_i
             for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: pu_j
                 wire local_measurement;
                 wire measurement_out;
                 wire [NEIGHBOR_COUNT-1:0] neighbor_fully_grown;
-                wire neighbor_increase;
+                wire [NEIGHBOR_COUNT-1:0] neighbor_increase;
                 wire [NEIGHBOR_COUNT-1:0] neighbor_is_boundary;
                 wire [NEIGHBOR_COUNT-1:0] neighbor_is_error;
 
@@ -79,9 +108,29 @@ generate
                 wire [ADDRESS_WIDTH-1 : 0] root;
                 wire busy_PE;
 
+                reg [ADDRESS_WIDTH_WITH_B-1:0] address_global;
+                wire local_context_switch;
+                always@(*) begin
+                    address_global[Z_BIT_WIDTH-1:0] = j;
+                    address_global[X_BIT_WIDTH+Z_BIT_WIDTH-1:Z_BIT_WIDTH] = i;
+                    address_global[ADDRESS_WIDTH_WITH_B-1:ADDRESS_WIDTH] = 1'b1;
+                    if(context_stage_delayed%2 == 0) begin
+                        address_global[ADDRESS_WIDTH-1:X_BIT_WIDTH+Z_BIT_WIDTH] = k;
+                    end else begin
+                        address_global[ADDRESS_WIDTH-1:X_BIT_WIDTH+Z_BIT_WIDTH] = 2*PHYSICAL_GRID_WIDTH_U - k - 2;
+                    end
+                end
+
+                if(k==PHYSICAL_GRID_WIDTH_U-1) begin
+                    assign local_context_switch = 1'b1;
+                end else begin
+                    assign local_context_switch = 1'b0;
+                end
+
                 processing_unit #(
                     .ADDRESS_WIDTH(ADDRESS_WIDTH_WITH_B),
-                    .NEIGHBOR_COUNT(NEIGHBOR_COUNT)
+                    .NEIGHBOR_COUNT(NEIGHBOR_COUNT),
+                    .NUM_CONTEXTS(`NUM_CONTEXTS_OF_PE(i,j,k))
                 ) pu (
                     .clk(clk),
                     .reset(reset),
@@ -96,7 +145,8 @@ generate
 
                     .input_data(input_data),
                     .output_data(output_data),
-                    .input_address(`ADDRESS_BOUNDARY(i,j,k)),
+                    .input_address(address_global),
+                    .local_context_switch(local_context_switch),
 
                     .odd(odd),
                     .root(root),
@@ -112,10 +162,10 @@ endgenerate
     
 
 generate
-    for (k=GRID_WIDTH_U-1; k >= 0; k=k-1) begin: pu_k_extra
+    for (k=PHYSICAL_GRID_WIDTH_U-1; k >= 0; k=k-1) begin: pu_k_extra
         for (i=0; i < GRID_WIDTH_X; i=i+1) begin: pu_i_extra
             for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: pu_j_extra
-                if(k==GRID_WIDTH_U-1) begin
+                if(k==PHYSICAL_GRID_WIDTH_U-1) begin
                     assign `PU(i, j, k).local_measurement = measurements[`INDEX_PLANAR(i,j)];
                 end else begin
                     assign `PU(i, j, k).local_measurement = `PU(i, j, k+1).measurement_out;
@@ -167,14 +217,14 @@ endgenerate
     wire fully_grown; \
     neighbor_link_internal #( \
         .ADDRESS_WIDTH(ADDRESS_WIDTH_WITH_B), \
-        .MAX_WEIGHT(MAX_WEIGHT) \
+        .MAX_WEIGHT(2) \
     ) neighbor_link ( \
         .clk(clk), \
         .reset(reset), \
         .global_stage(global_stage), \
         .fully_grown(fully_grown), \
-        .a_increase(`PU(ai, aj, ak).neighbor_increase), \
-        .b_increase(`PU(bi, bj, bk).neighbor_increase), \
+        .a_increase(`PU(ai, aj, ak).neighbor_increase[adirection]), \
+        .b_increase(`PU(bi, bj, bk).neighbor_increase[bdirection]), \
         .is_boundary(is_boundary), \
         .a_is_error_in(`PU(ai, aj, ak).neighbor_is_error[adirection]), \
         .b_is_error_in(`PU(bi, bj, bk).neighbor_is_error[bdirection]), \
@@ -183,7 +233,7 @@ endgenerate
         .b_input_data(`SLICE_VEC(`PU(bi, bj, bk).output_data, bdirection, EXPOSED_DATA_SIZE)), \
         .a_output_data(`SLICE_VEC(`PU(ai, aj, ak).input_data, adirection, EXPOSED_DATA_SIZE)), \
         .b_output_data(`SLICE_VEC(`PU(bi, bj, bk).input_data, bdirection, EXPOSED_DATA_SIZE)), \
-        .weight_in(weight_in), \
+        .weight_in(2), \
         .weight_out(), \
         .boundary_condition_in(0), \
         .boundary_condition_out(), \
@@ -197,13 +247,13 @@ endgenerate
 `define NEIGHBOR_LINK_INTERNAL_SINGLE(ai, aj, ak, adirection, type) \
     neighbor_link_internal #( \
         .ADDRESS_WIDTH(ADDRESS_WIDTH_WITH_B), \
-        .MAX_WEIGHT(MAX_WEIGHT) \
+        .MAX_WEIGHT(2) \
     ) neighbor_link ( \
         .clk(clk), \
         .reset(reset), \
         .global_stage(global_stage), \
         .fully_grown(`PU(ai, aj, ak).neighbor_fully_grown[adirection]), \
-        .a_increase(`PU(ai, aj, ak).neighbor_increase), \
+        .a_increase(`PU(ai, aj, ak).neighbor_increase[adirection]), \
         .b_increase(), \
         .is_boundary(`PU(ai, aj, ak).neighbor_is_boundary[adirection]), \
         .a_is_error_in(`PU(ai, aj, ak).neighbor_is_error[adirection]), \
@@ -213,7 +263,7 @@ endgenerate
         .b_input_data(), \
         .a_output_data(`SLICE_VEC(`PU(ai, aj, ak).input_data, adirection, EXPOSED_DATA_SIZE)), \
         .b_output_data(), \
-        .weight_in(weight_in), \
+        .weight_in(2), \
         .weight_out(), \
         .boundary_condition_in(type), \
         .boundary_condition_out(), \
@@ -222,7 +272,7 @@ endgenerate
 
 generate
     // Generate North South neighbors
-    for (k=0; k < GRID_WIDTH_U; k=k+1) begin: ns_k
+    for (k=0; k < PHYSICAL_GRID_WIDTH_U; k=k+1) begin: ns_k
         for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: ns_i
             for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: ns_j
                 wire is_error_systolic_in;
@@ -246,7 +296,7 @@ generate
     end
 
     // Generate East West neighbors
-    for (k=0; k < GRID_WIDTH_U; k=k+1) begin: ew_k
+    for (k=0; k < PHYSICAL_GRID_WIDTH_U; k=k+1) begin: ew_k
         for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: ew_i
             for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: ew_j
                 wire is_error_systolic_in;
@@ -273,18 +323,31 @@ generate
     end
 
     // Generate UP DOWN link
-    for (k=0; k <= GRID_WIDTH_U; k=k+1) begin: ud_k
+    for (k=0; k <= PHYSICAL_GRID_WIDTH_U; k=k+1) begin: ud_k
         for (i=0; i < GRID_WIDTH_X; i=i+1) begin: ud_i
             for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: ud_j
                 wire is_error_systolic_in;
                 wire is_error_out;
                 wire [LINK_BIT_WIDTH-1:0] weight_in;
+                reg [3:0] type_for_boundary_links;
+                always@(*) begin 
+                    if(k==0) begin
+                        if(context_stage%2 == 0)
+                            type_for_boundary_links = 3'b1;
+                        else
+                            type_for_boundary_links = 3'b10;
+                    end else if(k==PHYSICAL_GRID_WIDTH_U) begin
+                        type_for_boundary_links = 3'b10;
+                    end else begin
+                        type_for_boundary_links = 3'b10; //not needed actually
+                    end
+                end
                 assign weight_in = `WEIGHT_UD(i,j);
                 if(k==0) begin
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_DOWN, 1)
-                end else if(k==GRID_WIDTH_U) begin
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k-1, `NEIGHBOR_IDX_UP, 2)
-                end else if (k < GRID_WIDTH_U) begin
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_DOWN, type_for_boundary_links)
+                end else if(k==PHYSICAL_GRID_WIDTH_U) begin
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k-1, `NEIGHBOR_IDX_UP, type_for_boundary_links)
+                end else if (k < PHYSICAL_GRID_WIDTH_U) begin
                     `NEIGHBOR_LINK_INTERNAL_0(i, j, k-1, i, j, k, `NEIGHBOR_IDX_UP, `NEIGHBOR_IDX_DOWN)
                 end
             end
@@ -294,7 +357,7 @@ generate
 endgenerate
 
 generate
-    for (k=0; k < GRID_WIDTH_U-1; k=k+1) begin: ns_k_extra
+    for (k=0; k < PHYSICAL_GRID_WIDTH_U-1; k=k+1) begin: ns_k_extra
         for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: ns_i_extra
             for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: ns_j_extra
                 if (i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0) begin // odd rows 
@@ -306,7 +369,7 @@ generate
         end
     end
 
-    for (k=0; k < GRID_WIDTH_U - 1; k=k+1) begin: ew_k_extra
+    for (k=0; k < PHYSICAL_GRID_WIDTH_U - 1; k=k+1) begin: ew_k_extra
         for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: ew_i_extra
             for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: ew_j_extra
                 if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j < GRID_WIDTH_Z) begin // even rows which are always internal
@@ -323,7 +386,7 @@ generate
     end
 
 
-    for (k=0; k < GRID_WIDTH_U-1; k=k+1) begin: ud_k_extra
+    for (k=0; k < PHYSICAL_GRID_WIDTH_U-1; k=k+1) begin: ud_k_extra
         for (i=0; i < GRID_WIDTH_X; i=i+1) begin: ud_i_extra
             for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: ud_j_extra
                 assign ud_k[k].ud_i[i].ud_j[j].is_error_systolic_in = ud_k[k+1].ud_i[i].ud_j[j].is_error_out;
@@ -351,7 +414,7 @@ generate
         end
     end
 
-    for (k=0; k < GRID_WIDTH_U; k=k+1) begin: ns_k_weight
+    for (k=0; k < PHYSICAL_GRID_WIDTH_U; k=k+1) begin: ns_k_weight
         for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: ns_i_weight
             for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: ns_j_weight
                 if (i < GRID_WIDTH_X && i > 0 && j > 0) begin
@@ -363,7 +426,7 @@ generate
         end
     end
 
-    for (k=0; k < GRID_WIDTH_U; k=k+1) begin: ew_k_weight
+    for (k=0; k < PHYSICAL_GRID_WIDTH_U; k=k+1) begin: ew_k_weight
         for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: ew_i_weight
             for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: ew_j_weight
                 if (i < GRID_WIDTH_X && i > 0 && j < GRID_WIDTH_Z) begin
@@ -377,10 +440,10 @@ generate
         end
     end
 
-    for (k=0; k <= GRID_WIDTH_U; k=k+1) begin: ud_k_weight
+    for (k=0; k <= PHYSICAL_GRID_WIDTH_U; k=k+1) begin: ud_k_weight
         for (i=0; i < GRID_WIDTH_X; i=i+1) begin: ud_i_weight
             for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: ud_j_weight
-                if(k < GRID_WIDTH_U) begin
+                if(k < PHYSICAL_GRID_WIDTH_U) begin
                     assign ud_k[k].ud_i[i].ud_j[j].weight_in = `WEIGHT_UD(i,j);
                 end else begin // Fake edges
                     assign ud_k[k].ud_i[i].ud_j[j].weight_in = 2;

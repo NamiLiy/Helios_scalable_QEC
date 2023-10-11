@@ -37,13 +37,16 @@ localparam BYTES_PER_ROUND = ((GRID_WIDTH_X * GRID_WIDTH_Z  + 7) >> 3);
 localparam ALIGNED_PU_PER_ROUND = (BYTES_PER_ROUND << 3);
 
 localparam PU_COUNT_PER_ROUND = GRID_WIDTH_X * GRID_WIDTH_Z;
-localparam PU_COUNT = PU_COUNT_PER_ROUND * GRID_WIDTH_U;
+localparam PHYSICAL_GRID_WIDTH_U = GRID_WIDTH_U / NUM_CONTEXTS + 1;
+localparam PU_COUNT = PU_COUNT_PER_ROUND * PHYSICAL_GRID_WIDTH_U;
 
 localparam NS_ERROR_COUNT_PER_ROUND = (GRID_WIDTH_X-1) * GRID_WIDTH_Z;
 localparam EW_ERROR_COUNT_PER_ROUND = (GRID_WIDTH_X-1) * GRID_WIDTH_Z + 1;
 localparam UD_ERROR_COUNT_PER_ROUND = GRID_WIDTH_X * GRID_WIDTH_Z;
 localparam CORRECTION_COUNT_PER_ROUND = NS_ERROR_COUNT_PER_ROUND + EW_ERROR_COUNT_PER_ROUND + UD_ERROR_COUNT_PER_ROUND;
 
+localparam BORDER_MASK_MSB = PU_COUNT - 1;
+localparam BORDER_MASK_LSB = PU_COUNT_PER_ROUND * (PHYSICAL_GRID_WIDTH_U- 1);
 
 
 input clk;
@@ -51,6 +54,7 @@ input reset;
 output reg [STAGE_WIDTH-1:0] global_stage;
 reg [STAGE_WIDTH-1:0] global_stage_previous;
 reg [STAGE_WIDTH-1:0] global_stage_d;
+reg [STAGE_WIDTH-1:0] global_stage_saved;
 input [PU_COUNT - 1 : 0]  odd_clusters_PE;
 input [PU_COUNT - 1 : 0]  busy_PE;
 output reg [ALIGNED_PU_PER_ROUND-1:0] measurements;
@@ -70,10 +74,12 @@ reg [31:0] cycle_counter;
 
 reg busy;
 reg odd_clusters;
+reg border_busy;
 
 always@(posedge clk) begin
     busy <= |busy_PE;
     odd_clusters <= |odd_clusters_PE;
+    border_busy <= |(busy_PE[BORDER_MASK_MSB : BORDER_MASK_LSB]);
 end
 
 // global_stage_d delayed logic
@@ -85,13 +91,30 @@ always @(posedge clk) begin
     end
 end
 
+reg cycle_counter_on;
+reg cycle_counter_reset;
+
 always @(posedge clk) begin
     if (reset) begin
+        cycle_counter_on <= 0;
+        cycle_counter_reset <= 0;
         cycle_counter <= 0;
     end else begin
-        if (global_stage == STAGE_MEASUREMENT_LOADING) begin
-            cycle_counter <= 1;
-        end else if (global_stage == STAGE_GROW || global_stage == STAGE_MERGE || global_stage == STAGE_PEELING || global_stage == STAGE_READ_FROM_MEM || global_stage == STAGE_WRITE_TO_MEM ) begin
+        if (global_stage == STAGE_GROW && current_context == 0) begin
+            cycle_counter_on <= 1;
+        end else if (global_stage == STAGE_RESULT_VALID && current_context == 0) begin
+            cycle_counter_on <= 0;
+        end
+
+        if (global_stage == STAGE_GROW && current_context == 0) begin
+            cycle_counter_reset <= 1;
+        end else begin
+            cycle_counter_reset <= 0;
+        end
+
+        if(cycle_counter_reset) begin
+            cycle_counter <= 2; // to account for propagation time from controller to PEs 
+        end else if(cycle_counter_on) begin
             cycle_counter <= cycle_counter + 1;
         end
     end
@@ -158,7 +181,8 @@ always @(posedge clk) begin
                         result_valid <= 0;
                         measurement_rounds <= 0;
                     end
-                end 
+                end
+                current_context <= 0; 
             end
 
             STAGE_PARAMETERS_LOADING: begin // 6
@@ -183,7 +207,6 @@ always @(posedge clk) begin
                         messages_per_round_of_measurement <= messages_per_round_of_measurement + 1;
                     end
                 end
-                current_context <= 0;
                 unsynced_merge <= 0;
                 odd_clusters_in_context <= 0;
             end
@@ -191,12 +214,14 @@ always @(posedge clk) begin
             STAGE_MEASUREMENT_LOADING: begin
                 // Currently this is single cycle as only from external buffer happens.
                 // In future might need multiple
-                if(measurement_rounds < GRID_WIDTH_U) begin
+                if(measurement_rounds < PHYSICAL_GRID_WIDTH_U) begin
                     global_stage <= STAGE_MEASUREMENT_PREPARING;
                     delay_counter <= 0;
                     result_valid <= 0;
                 end else begin
-                    global_stage <= STAGE_GROW;
+                    global_stage_saved <= STAGE_MEASUREMENT_LOADING;
+                    global_stage <= STAGE_WRITE_TO_MEM;
+                    measurement_rounds <= 0;
                     delay_counter <= 0;
                     result_valid <= 0;
                 end
@@ -210,29 +235,48 @@ always @(posedge clk) begin
             end
 
             STAGE_MERGE: begin //3
-                if (delay_counter == MAXIMUM_DELAY) begin // for this iteration this context is done
+                if (delay_counter >= MAXIMUM_DELAY) begin
                     if(!busy) begin
                         delay_counter <= 0;
                         global_stage <= STAGE_WRITE_TO_MEM;
-                        unsynced_merge[current_context] <= 1'b0;
+                        global_stage_saved <= STAGE_MERGE;
                         odd_clusters_in_context[current_context] <= odd_clusters;  
-                    end else begin
-                        delay_counter <= delay_counter + 1;
-                        unsynced_merge[current_context] <= 1'b1;
                     end
-                end else if (delay_counter > MAXIMUM_DELAY) begin
-                    if(!busy) begin
-                        delay_counter <= 0;
-                        global_stage <= STAGE_WRITE_TO_MEM;
-                        odd_clusters_in_context[current_context] <= odd_clusters;
+                    if(border_busy) begin
+                        unsynced_merge[current_context] <= 1'b1;
                     end
                 end else begin
                     delay_counter <= delay_counter + 1;
+                    unsynced_merge[current_context] <= 1'b0;
                 end
+
+
+                // if (delay_counter == MAXIMUM_DELAY) begin // for this iteration this context is done
+                //     if(!busy) begin
+                //         delay_counter <= 0;
+                //         global_stage <= STAGE_WRITE_TO_MEM;
+                //         global_stage_saved <= STAGE_MERGE;
+                //         unsynced_merge[current_context] <= 1'b0;
+                //         odd_clusters_in_context[current_context] <= odd_clusters;  
+                //     end else begin
+                //         delay_counter <= delay_counter + 1;
+                //         unsynced_merge[current_context] <= 1'b1;
+                //     end
+                // end else if (delay_counter > MAXIMUM_DELAY) begin
+                //     if(!busy) begin
+                //         delay_counter <= 0;
+                //         global_stage <= STAGE_WRITE_TO_MEM;
+                //         global_stage_saved <= STAGE_MERGE;
+                //         odd_clusters_in_context[current_context] <= odd_clusters;
+                //     end
+                // end else begin
+                //     delay_counter <= delay_counter + 1;
+                // end
             end           
 
             STAGE_PEELING: begin //4
-                global_stage <= STAGE_RESULT_VALID;
+                global_stage <= STAGE_WRITE_TO_MEM;
+                global_stage_saved <= STAGE_PEELING;
                 // if (delay_counter >= 1) begin
                 //     if(!busy) begin
                 //         global_stage <= STAGE_RESULT_VALID;
@@ -245,8 +289,10 @@ always @(posedge clk) begin
 
             STAGE_RESULT_VALID: begin //5
                 measurement_rounds <= measurement_rounds + 1;
-                if(measurement_rounds >= GRID_WIDTH_U - 1) begin
-                    global_stage <= STAGE_IDLE;
+                if(measurement_rounds >= PHYSICAL_GRID_WIDTH_U - 1) begin
+                    global_stage_saved <= STAGE_RESULT_VALID;
+                    global_stage <= STAGE_WRITE_TO_MEM;
+                    measurement_rounds <= 0;
                 end
                 delay_counter <= 0;
                 result_valid <= 1;
@@ -260,23 +306,39 @@ always @(posedge clk) begin
                 if (delay_counter == 2) begin
                     delay_counter <= 0;
                     if(current_context < NUM_CONTEXTS -1 ) begin
-                        if(growing_incomplete == 1'b1) begin
-                            global_stage <= STAGE_GROW;
-                        end else begin
-                            global_stage <= STAGE_MERGE;
+                        if(global_stage_saved == STAGE_MERGE) begin
+                            if(growing_incomplete == 1'b1) begin
+                                global_stage <= STAGE_GROW;
+                            end else begin
+                                global_stage <= STAGE_MERGE;
+                            end
+                        end else if(global_stage_saved == STAGE_MEASUREMENT_LOADING) begin
+                            global_stage <= STAGE_MEASUREMENT_PREPARING;
+                        end else if(global_stage_saved == STAGE_PEELING) begin
+                            global_stage <= STAGE_PEELING;
+                        end else if(global_stage_saved == STAGE_RESULT_VALID) begin
+                            global_stage <= STAGE_RESULT_VALID;
                         end
                         current_context <= current_context + 1;
                     end else begin
                         current_context <= 0;
                         growing_incomplete <= 0;
-                        if(|unsynced_merge == 1'b0) begin // everybody is synced
-                            if(|odd_clusters_in_context == 1'b0) begin // everybody is even
-                                global_stage <= STAGE_PEELING;
-                            end else begin // somebody is odd
-                                global_stage <= STAGE_GROW;
+                        if(global_stage_saved == STAGE_MERGE) begin
+                            if(|unsynced_merge == 1'b0) begin // everybody is synced
+                                if(|odd_clusters_in_context == 1'b0) begin // everybody is even
+                                    global_stage <= STAGE_PEELING;
+                                end else begin // somebody is odd
+                                    global_stage <= STAGE_GROW;
+                                end
+                            end else begin
+                                global_stage <= STAGE_MERGE;
                             end
-                        end else begin
-                            global_stage <= STAGE_MERGE;
+                        end else if(global_stage_saved == STAGE_MEASUREMENT_LOADING) begin
+                            global_stage <= STAGE_GROW;
+                        end else if(global_stage_saved == STAGE_PEELING) begin
+                            global_stage <= STAGE_RESULT_VALID;
+                        end else if(global_stage_saved == STAGE_RESULT_VALID) begin
+                            global_stage <= STAGE_IDLE;
                         end
                     end
                 end else begin
@@ -357,7 +419,7 @@ always @(posedge clk) begin
         output_message_counter <= 0;
     end else begin
         if(output_valid_d2 && output_ready) begin
-            if(output_message_counter >= ((CORRECTION_COUNT_PER_ROUND + 7)>>3)*GRID_WIDTH_U + 2) begin
+            if(output_message_counter >= ((CORRECTION_COUNT_PER_ROUND + 7)>>3)*PHYSICAL_GRID_WIDTH_U*NUM_CONTEXTS + 2) begin
                 output_message_counter <= 0;
             end else begin
                 output_message_counter <= output_message_counter + 1;

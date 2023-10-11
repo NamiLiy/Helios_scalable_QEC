@@ -160,18 +160,20 @@ always@(posedge clk) begin
         weight_out <= 0;
         boundary_condition_out <= 0;
     end else begin
-        if(stage == STAGE_PARAMETERS_LOADING) begin
-            weight_out <= weight_in;
-            boundary_condition_out <= boundary_condition_in;
-        end else if(stage == STAGE_READ_FROM_MEM) begin
-            //boundary_condition_out <= boundary_condition_mem;
-            //Todo : Temporary hack to debug
-            if(mem_rw_address != 0) begin
-                boundary_condition_out <= 2;
-            end else begin
-                boundary_condition_out <= boundary_condition_mem;
-            end
-        end
+        boundary_condition_out <= boundary_condition_in;
+        weight_out <= weight_in;
+        // if(stage == STAGE_PARAMETERS_LOADING) begin
+        //     weight_out <= weight_in;
+        //     boundary_condition_out <= boundary_condition_in;
+        // end else if(stage == STAGE_READ_FROM_MEM) begin
+        //     //boundary_condition_out <= boundary_condition_mem;
+        //     //Todo : Temporary hack to debug
+        //     if(mem_rw_address != 0) begin
+        //         boundary_condition_out <= 2;
+        //     end else begin
+        //         boundary_condition_out <= boundary_condition_mem;
+        //     end
+        // end
     end
 end
 
@@ -197,9 +199,7 @@ always@(posedge clk) begin
     if(reset) begin
         mem_rw_address <= 0;
     end else begin
-        if (stage == STAGE_MEASUREMENT_PREPARING) begin
-            mem_rw_address <= 0;
-        end else if (stage == STAGE_WRITE_TO_MEM) begin
+        if (stage == STAGE_WRITE_TO_MEM) begin
             if(mem_rw_address < NUM_CONTEXTS -1) begin
                 mem_rw_address <= mem_rw_address + 1;
             end else begin
@@ -222,9 +222,9 @@ always@(*) begin
 end
 
 //logic to data write to memory
-assign data_to_memory = {growth,boundary_condition_out,is_error};
+assign data_to_memory = {growth,is_error};
 
-assign {growth_mem,boundary_condition_mem,is_error_mem} = data_from_memory;
+assign {growth_mem,is_error_mem} = data_from_memory;
 
 endmodule
 

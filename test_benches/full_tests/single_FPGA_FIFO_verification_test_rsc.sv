@@ -19,18 +19,20 @@ module verification_bench_single_FPGA_rsc;
 localparam CODE_DISTANCE = 5;                
 localparam CODE_DISTANCE_X = CODE_DISTANCE + 1;
 localparam CODE_DISTANCE_Z = (CODE_DISTANCE_X - 1)/2;
+localparam NUM_CONTEXTS = 2;
 
 parameter GRID_WIDTH_X = CODE_DISTANCE + 1;
 parameter GRID_WIDTH_Z = (CODE_DISTANCE_X - 1)/2;
 parameter GRID_WIDTH_U = CODE_DISTANCE;
+localparam PHYSICAL_GRID_WIDTH_U = GRID_WIDTH_U / NUM_CONTEXTS + 1;
 parameter MAX_WEIGHT = 2;
 
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
-localparam MEASUREMENT_ROUNDS = CODE_DISTANCE;
+localparam MEASUREMENT_ROUNDS = PHYSICAL_GRID_WIDTH_U * NUM_CONTEXTS;
 
 
-localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
+localparam PU_COUNT_ACROSS_CONTEXT = CODE_DISTANCE_X * CODE_DISTANCE_Z * PHYSICAL_GRID_WIDTH_U * NUM_CONTEXTS;
 
 localparam X_BIT_WIDTH = $clog2(GRID_WIDTH_X);
 localparam Z_BIT_WIDTH = $clog2(GRID_WIDTH_Z);
@@ -39,21 +41,22 @@ localparam ADDRESS_WIDTH = X_BIT_WIDTH + Z_BIT_WIDTH + U_BIT_WIDTH;
 
 localparam ITERATION_COUNTER_WIDTH = 8;  // counts up to CODE_DISTANCE iterations
 
-// localparam NS_ERROR_COUNT = (CODE_DISTANCE_X-1) * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
-// localparam EW_ERROR_COUNT = CODE_DISTANCE_X * (CODE_DISTANCE_Z+1) * MEASUREMENT_ROUNDS;
-// localparam UD_ERROR_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
-// localparam CORRECTION_COUNT = NS_ERROR_COUNT + EW_ERROR_COUNT + UD_ERROR_COUNT;
+localparam NS_ERROR_COUNT_PER_ROUND = (GRID_WIDTH_X-1) * GRID_WIDTH_Z;
+localparam EW_ERROR_COUNT_PER_ROUND = (GRID_WIDTH_X-1) * GRID_WIDTH_Z + 1;
+localparam UD_ERROR_COUNT_PER_ROUND = GRID_WIDTH_X * GRID_WIDTH_Z;
+localparam CORRECTION_COUNT_PER_ROUND = NS_ERROR_COUNT_PER_ROUND + EW_ERROR_COUNT_PER_ROUND + UD_ERROR_COUNT_PER_ROUND;
+localparam CORRECTION_BYTES_PER_ROUND = ((CORRECTION_COUNT_PER_ROUND  + 7) >> 3);
 
 reg clk;
 reg reset;
 
 
-wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
+wire [(ADDRESS_WIDTH * PU_COUNT_ACROSS_CONTEXT)-1:0] roots;
 
 `define BYTES_PER_ROUND ((CODE_DISTANCE_X * CODE_DISTANCE_Z  + 7) >> 3)
 `define ALIGNED_PU_PER_ROUND (`BYTES_PER_ROUND << 3)
 
-reg [`ALIGNED_PU_PER_ROUND*GRID_WIDTH_U-1:0] measurements;
+reg [`ALIGNED_PU_PER_ROUND*PHYSICAL_GRID_WIDTH_U * NUM_CONTEXTS-1:0] measurements;
 
 `define INDEX(i, j, k) (i * CODE_DISTANCE_Z + j + k * CODE_DISTANCE_Z*CODE_DISTANCE_X)
 `define PADDED_INDEX(i, j, k) (i * CODE_DISTANCE_Z + j + k * `ALIGNED_PU_PER_ROUND)
@@ -83,7 +86,8 @@ Helios_single_FPGA #(
     .GRID_WIDTH_X(GRID_WIDTH_X),
     .GRID_WIDTH_Z(GRID_WIDTH_Z),
     .GRID_WIDTH_U(GRID_WIDTH_U),
-    .MAX_WEIGHT(MAX_WEIGHT)
+    .MAX_WEIGHT(MAX_WEIGHT),
+    .NUM_CONTEXTS(NUM_CONTEXTS)
  ) decoder (
     .clk(clk),
     .reset(reset),
@@ -132,6 +136,7 @@ reg valid_delayed = 0;
 integer i;
 integer j;
 integer k;
+integer context_k;
 integer file, input_file;
 reg open = 1;
 reg input_open = 1;
@@ -173,7 +178,7 @@ always @(posedge clk) begin
                 input_fifo_counter <= 0;
             end
             3'b11: begin
-                if (input_fifo_counter == (`BYTES_PER_ROUND*GRID_WIDTH_U-1)) begin
+                if (input_fifo_counter == (`BYTES_PER_ROUND*PHYSICAL_GRID_WIDTH_U*NUM_CONTEXTS-1)) begin
                     loading_state <= 3'b100;
                 end
                 input_fifo_counter <= input_fifo_counter + 1; 
@@ -185,22 +190,23 @@ always @(posedge clk) begin
                 end
             end
             3'b101: begin
-                if(output_valid == 0) begin
+                if(message_counter == (CORRECTION_BYTES_PER_ROUND*PHYSICAL_GRID_WIDTH_U*NUM_CONTEXTS-1) + 3) begin
                     loading_state <= 3'b10;
                 end else begin
-                    message_counter <= message_counter + 1;
-                    if (message_counter == 0) begin
+                    if(output_valid == 1) begin
+                        message_counter <= message_counter + 1;
+                        if (message_counter == 0) begin
                         iteration_counter <= {24'b0, output_data[7:0]};
-                    end
-                    if (message_counter == 1) begin
-                        cycle_counter[15:8] <= {24'b0, output_data[7:0]};
-                    end
-                    if (message_counter == 2) begin
-                        cycle_counter[7:0] <= {24'b0, output_data[7:0]};
+                        end
+                        if (message_counter == 1) begin
+                            cycle_counter[15:8] <= {24'b0, output_data[7:0]};
+                        end
+                        if (message_counter == 2) begin
+                            cycle_counter[7:0] <= {24'b0, output_data[7:0]};
+                        end
                     end
                     cycle_counter[31:16] <= 16'b0;
                 end
-                
             end
         endcase
     end
@@ -237,7 +243,7 @@ always @(negedge clk) begin
             if (CODE_DISTANCE == 3) begin
                 input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_3_rsc.txt", "r");
             end else if (CODE_DISTANCE == 5) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_5_rsc.txt", "r");
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_5_ctx.txt", "r");
             end else if (CODE_DISTANCE == 7) begin
                 input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_7_rsc.txt", "r");
             end else if (CODE_DISTANCE == 9) begin
@@ -270,7 +276,7 @@ always @(negedge clk) begin
                     if (input_eof == 0)begin 
                         $fscanf (input_file, "%h\n", input_read_value);
                         `measurements(i, j, k) = input_read_value;
-                        if (input_read_value == 1) begin
+                        if (input_read_value == 1 && k != PHYSICAL_GRID_WIDTH_U) begin //This is to avoid duplication in the border PEs
                             syndrome_count = syndrome_count + 1;
                         end
                     end
@@ -285,13 +291,13 @@ end
 
 // Output verification logic
 always @(posedge clk) begin
-    if (loading_state == 3'b101 && !output_valid) begin // This is not becaus we wait until all messages are received
+    if (decoder.controller.global_stage_d == STAGE_PEELING) begin // When we move to peeling we are doen with clustering
 //       $display("%t\tTest case %d pass %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
        if(open == 1) begin
             if (CODE_DISTANCE == 3) begin
                 file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_3_rsc.txt", "r");
             end else if (CODE_DISTANCE == 5) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_5_rsc.txt", "r");
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_5_ctx.txt", "r");
             end else if (CODE_DISTANCE == 7) begin
                 file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_7_rsc.txt", "r");
             end else if (CODE_DISTANCE == 9) begin
@@ -304,11 +310,13 @@ always @(posedge clk) begin
             open = 0;
         end
         if (eof == 0)begin 
-            $fscanf (file, "%h\n", test_case);
-            test_fail = 0;
+            if(decoder.controller.current_context == 0) begin
+                $fscanf (file, "%h\n", test_case);
+                test_fail = 0;
+            end
             eof = $feof(file);
         end
-        for (k=0 ;k <MEASUREMENT_ROUNDS; k++) begin
+        for (k=0 ;k <PHYSICAL_GRID_WIDTH_U; k++) begin
             for (i=0 ;i <CODE_DISTANCE_X; i++) begin
                 for (j=0 ;j <CODE_DISTANCE_Z; j++) begin
                     if (eof == 0)begin 
@@ -321,14 +329,21 @@ always @(posedge clk) begin
                         expected_x = read_value[X_BIT_WIDTH - 1 + 8 :8];
                         expected_u = read_value[U_BIT_WIDTH - 1 + 16 :16];
                         eof = $feof(file);
+
+                        if(decoder.controller.current_context == NUM_CONTEXTS - 1) begin
+                            context_k = 2*PHYSICAL_GRID_WIDTH_U - k - 2;
+                        end else begin
+                            context_k = k;
+                        end
+
                         if(Z_BIT_WIDTH>0) begin
                             if (expected_u != `root_u(i, j, k) || expected_x != `root_x(i, j, k) || expected_z != `root_z(i, j, k)) begin
-                                $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d)" , $time, k, i ,j, `root_u(i, j, k), `root_x(i, j, k), `root_z(i, j, k), expected_u, expected_x, expected_z);
+                                $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d)" , $time, context_k, i ,j, `root_u(i, j, k), `root_x(i, j, k), `root_z(i, j, k), expected_u, expected_x, expected_z);
                                 test_fail = 1;
                             end
                         end else begin
                             if (expected_u != `root_u(i, j, k) || expected_x != `root_x(i, j, k)) begin
-                                $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d)" , $time, k, i ,j, `root_u(i, j, k), `root_x(i, j, k), 0, expected_u, expected_x, expected_z);
+                                $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d)" , $time, context_k, i ,j, `root_u(i, j, k), `root_x(i, j, k), 0, expected_u, expected_x, expected_z);
                                 test_fail = 1;
                             end
                         end
@@ -336,13 +351,17 @@ always @(posedge clk) begin
                 end
             end
         end
-        if (!test_fail) begin
-            $display("%t\tTest case %d pass %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
-            pass_count = pass_count + 1;
-        end else begin
-            $display("%t\tTest case %d fail %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
-            fail_count = fail_count + 1;
-            $finish;
+    end
+    if (message_counter == 3 && output_valid == 1) begin // Cycle counter and iteration counter is recevied
+        if(decoder.controller.current_context == NUM_CONTEXTS - 1) begin
+            if (!test_fail) begin
+                $display("%t\tTest case %d pass %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
+                pass_count = pass_count + 1;
+            end else begin
+                $display("%t\tTest case %d fail %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
+                fail_count = fail_count + 1;
+                $finish;
+            end
         end
     end
     if (input_eof == 1)begin

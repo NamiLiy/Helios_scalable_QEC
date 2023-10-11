@@ -19,6 +19,7 @@ module processing_unit #(
     neighbor_is_error,
 
     input_address, // M,X,Z, address
+    local_context_switch,
 
     input_data,
     output_data,
@@ -39,7 +40,7 @@ output measurement_out;
 input [STAGE_WIDTH-1:0] global_stage;
 
 input [NEIGHBOR_COUNT-1:0] neighbor_fully_grown;
-output neighbor_increase;
+output reg [NEIGHBOR_COUNT-1:0] neighbor_increase;
 input [NEIGHBOR_COUNT-1:0] neighbor_is_boundary;
 output [NEIGHBOR_COUNT-1:0] neighbor_is_error;
 
@@ -47,6 +48,7 @@ input [NEIGHBOR_COUNT*EXPOSED_DATA_SIZE-1:0] input_data;
 output [NEIGHBOR_COUNT*EXPOSED_DATA_SIZE-1:0] output_data;
 
 input [ADDRESS_WIDTH-1:0] input_address;
+input local_context_switch;
 
 output reg [ADDRESS_WIDTH-1:0] root;
 output reg odd;
@@ -114,7 +116,31 @@ end
 assign measurement_out = m;
 
 // Increase growth during the growth stage
-assign neighbor_increase = odd && (stage == STAGE_GROW) && (last_stage != STAGE_GROW);
+reg already_grown;
+always@(posedge clk) begin
+    if(reset) begin
+        already_grown <= 0;
+    end else begin
+        if((stage == STAGE_GROW) && (last_stage != STAGE_GROW)) begin
+            already_grown <= ~already_grown;
+        end
+    end
+end
+
+always@(*) begin
+    neighbor_increase = 6'b0;
+    if( (stage == STAGE_GROW) && (last_stage != STAGE_GROW)) begin
+        if(odd) begin
+            if(last_context_switch_is_local && already_grown) begin
+                neighbor_increase = 6'b110000;
+            end else begin
+               neighbor_increase = 6'b111111;
+            end
+        end else begin
+            neighbor_increase = 6'b000000;
+        end
+    end
+end
 
 // root is the minimum of valid roots
 // when root changes : change parent vector
@@ -268,9 +294,7 @@ always@(posedge clk) begin
     if(reset) begin
         mem_rw_address <= 0;
     end else begin
-        if (stage == STAGE_MEASUREMENT_PREPARING) begin
-            mem_rw_address <= 0;
-        end else if (stage == STAGE_WRITE_TO_MEM) begin
+        if (stage == STAGE_WRITE_TO_MEM && local_context_switch == 1'b0) begin
             if(mem_rw_address < NUM_CONTEXTS -1) begin
                 mem_rw_address <= mem_rw_address + 1;
             end else begin
@@ -292,11 +316,29 @@ always@(*) begin
     end
 end
 
+// logic to check whether last context switch was a local context switch
+reg last_context_switch_is_local;
+always@(posedge clk) begin
+    if(reset) begin
+        last_context_switch_is_local <= 0;
+    end else begin
+        if (stage == STAGE_WRITE_TO_MEM) begin
+            last_context_switch_is_local <= local_context_switch;
+        end
+    end
+end
+
 //logic to data write to memory
-assign data_to_memory = {cluster_parity, parent_vector, root, odd, m};
+assign data_to_memory = {cluster_parity, 
+    (last_context_switch_is_local) ? parent_vector[4] : parent_vector[5],
+    (last_context_switch_is_local) ? parent_vector[5] : parent_vector[4],
+    parent_vector[3:0],  
+    root, odd, m};
 
 //logic to read data from memory
-assign {cluster_parity_mem, parent_vector_mem, root_mem, odd_mem, m_mem} = data_from_memory;
+assign {cluster_parity_mem, parent_vector_mem, root_mem, odd_mem, m_mem} = (local_context_switch) ? 
+    {cluster_parity, parent_vector[4], parent_vector[5], parent_vector[3:0], root, odd, m} : 
+    data_from_memory;
             
 
 endmodule
