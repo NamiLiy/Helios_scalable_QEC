@@ -16,7 +16,7 @@ module verification_bench_single_FPGA_rsc;
 `include "../../parameters/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
-localparam CODE_DISTANCE = 5;                
+localparam CODE_DISTANCE = 3;                
 localparam CODE_DISTANCE_X = CODE_DISTANCE + 1;
 localparam CODE_DISTANCE_Z = (CODE_DISTANCE_X - 1)/2;
 
@@ -191,13 +191,14 @@ always @(posedge clk) begin
                 erasure_fifo_counter <= 0;
             end
             3'b111 : begin //new
-                if(erasure_fifo_counter == (`ERASURE_BYTES_PER_ROUND*GRID_WIDTH_U-1)) begin //CHECK WHAT IS THE ERASURE BOUND HERE
+                if(erasure_fifo_counter == (`ERASURE_BYTES_PER_ROUND*GRID_WIDTH_U-1)) begin
                     loading_state <= 3'b100;
                 end
                 erasure_fifo_counter <= erasure_fifo_counter + 1;
             end
             3'b100: begin
                 if(output_valid == 1) begin
+//                    $display("output valid");
                     loading_state <= 3'b101;
                     message_counter <= 0;
                 end
@@ -267,8 +268,10 @@ always @(negedge clk) begin
                 erasure_file = $fopen("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_erasure_7_rsc.txt", "r");
             end else if (CODE_DISTANCE == 9) begin
                 input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_9_rsc.txt", "r");
+                erasure_file = $fopen("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_erasure_9_rsc.txt", "r");
             end else if (CODE_DISTANCE == 11) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_11_rsc.txt", "r");
+                input_file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_11_rsc.txt", "r");
+                erasure_file = $fopen("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_erasure_11_rsc.txt", "r");
             end else if (CODE_DISTANCE == 13) begin
                 input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_13_rsc.txt", "r");
             end else if (CODE_DISTANCE == 15) begin
@@ -316,7 +319,6 @@ always @(negedge clk) begin
                         $fscanf (erasure_file, "%h\n", input_read_value);
                         `erasure(i, j, k) = input_read_value;
                         if(input_read_value != 0) begin
-                            $display("input read value is %d with k %d i %d j %d", input_read_value, k, i, j);
                         end
                     end
                 end
@@ -331,7 +333,7 @@ end
 integer file_root_op;
 reg [7:0] test;
 
-assign file_root_op = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_5_roots.txt", "w");        
+assign file_root_op = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_11_roots.txt", "w");        
         
 always@ (posedge clk) begin
     if(decoder.controller.global_stage == STAGE_RESULT_VALID && decoder.previous_global_stage != STAGE_RESULT_VALID) begin      

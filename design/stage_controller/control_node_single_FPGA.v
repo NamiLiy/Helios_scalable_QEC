@@ -248,6 +248,7 @@ always @(posedge clk) begin
                 end else begin
                     delay_counter <= delay_counter + 1;
                 end
+                measurement_rounds <= 0;
             end
 
             STAGE_RESULT_VALID: begin //5
@@ -331,7 +332,7 @@ serializer #(
 reg [31:0] output_message_counter;
 
 always @(posedge clk) begin
-    if (reset) begin
+    if (reset) begin //changed
         output_message_counter <= 0;
     end else begin
         if(output_valid_d2 && output_ready) begin
