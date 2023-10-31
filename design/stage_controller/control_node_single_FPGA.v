@@ -75,6 +75,7 @@ reg [31:0] cycle_counter;
 reg busy;
 reg odd_clusters;
 reg border_busy;
+reg [CONTEXT_COUNTER_WIDTH-1:0] current_context;
 
 always@(posedge clk) begin
     busy <= |busy_PE;
@@ -157,7 +158,7 @@ wire output_fifo_ready_d;
 reg [NUM_CONTEXTS -1 : 0] unsynced_merge;
 reg [NUM_CONTEXTS -1 : 0] odd_clusters_in_context;
 localparam CONTEXT_COUNTER_WIDTH = $clog2(NUM_CONTEXTS + 1);
-reg [CONTEXT_COUNTER_WIDTH-1:0] current_context;
+
 
 reg growing_incomplete; //Todo : In an optimized version use this. For the current version I'm not using it.
 

@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 
 period = 8
 file_list = ['d7_cutoff_accuracy.txt']
-f = open("d7_cutoff_accuracy_expanded.txt", "w")
 
 for file in file_list:
     file1 = open(file, 'r')

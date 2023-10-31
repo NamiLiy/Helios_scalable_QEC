@@ -245,21 +245,27 @@ always @(negedge clk) begin
             end else if (CODE_DISTANCE == 5) begin
                 input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_5_ctx.txt", "r");
             end else if (CODE_DISTANCE == 7) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_7_rsc.txt", "r");
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_7_ctx.txt", "r");
             end else if (CODE_DISTANCE == 9) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_9_rsc.txt", "r");
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_9_ctx.txt", "r");
             end else if (CODE_DISTANCE == 11) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_11_rsc.txt", "r");
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_11_ctx.txt", "r");
             end else if (CODE_DISTANCE == 13) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_13_rsc.txt", "r");
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_13_ctx.txt", "r");
             end else if (CODE_DISTANCE == 15) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_15_rsc.txt", "r");
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_15_ctx.txt", "r");
             end else if (CODE_DISTANCE == 17) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_17_rsc.txt", "r");
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_17_ctx.txt", "r");
             end else if (CODE_DISTANCE == 19) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_19_rsc.txt", "r");
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_19_ctx.txt", "r");
             end else if (CODE_DISTANCE == 21) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_21_rsc.txt", "r");
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_21_ctx.txt", "r");
+            end else if (CODE_DISTANCE == 23) begin
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_23_ctx.txt", "r");
+            end else if (CODE_DISTANCE == 25) begin
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_25_ctx.txt", "r");
+            end else if (CODE_DISTANCE == 27) begin
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_27_ctx.txt", "r");
             end
             input_open = 0;
         end
@@ -299,13 +305,27 @@ always @(posedge clk) begin
             end else if (CODE_DISTANCE == 5) begin
                 file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_5_ctx.txt", "r");
             end else if (CODE_DISTANCE == 7) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_7_rsc.txt", "r");
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_7_ctx.txt", "r");
             end else if (CODE_DISTANCE == 9) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_9_rsc.txt", "r");
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_9_ctx.txt", "r");
             end else if (CODE_DISTANCE == 11) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_11_rsc.txt", "r");
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_11_ctx.txt", "r");
             end else if (CODE_DISTANCE == 13) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_13_rsc.txt", "r");
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_13_ctx.txt", "r");
+            end else if (CODE_DISTANCE == 15) begin
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_15_ctx.txt", "r");
+            end else if (CODE_DISTANCE == 17) begin
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_17_ctx.txt", "r");
+            end else if (CODE_DISTANCE == 19) begin
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_19_ctx.txt", "r");
+            end else if (CODE_DISTANCE == 21) begin
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_21_ctx.txt", "r");
+            end else if (CODE_DISTANCE == 23) begin
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_23_ctx.txt", "r");
+            end else if (CODE_DISTANCE == 25) begin
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_25_ctx.txt", "r");
+            end else if (CODE_DISTANCE == 27) begin
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_27_ctx.txt", "r");
             end 
             open = 0;
         end
@@ -338,7 +358,7 @@ always @(posedge clk) begin
 
                         if(Z_BIT_WIDTH>0) begin
                             if (expected_u != `root_u(i, j, k) || expected_x != `root_x(i, j, k) || expected_z != `root_z(i, j, k)) begin
-                                //$display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d)" , $time, context_k, i ,j, `root_u(i, j, k), `root_x(i, j, k), `root_z(i, j, k), expected_u, expected_x, expected_z);
+                                $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d)" , $time, context_k, i ,j, `root_u(i, j, k), `root_x(i, j, k), `root_z(i, j, k), expected_u, expected_x, expected_z);
                                 test_fail = 1;
                             end
                         end else begin
@@ -353,15 +373,13 @@ always @(posedge clk) begin
         end
     end
     if (message_counter == 3 && output_valid == 1) begin // Cycle counter and iteration counter is recevied
-        if(decoder.controller.current_context == NUM_CONTEXTS - 1) begin
-            if (!test_fail) begin
-                $display("%t\tTest case %d pass %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
-                pass_count = pass_count + 1;
-            end else begin
-                $display("%t\tTest case %d fail %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
-                fail_count = fail_count + 1;
-                //$finish;
-            end
+        if (!test_fail) begin
+            $display("%t\tTest case %d pass %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
+            pass_count = pass_count + 1;
+        end else begin
+            $display("%t\tTest case %d fail %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
+            fail_count = fail_count + 1;
+            $finish;
         end
     end
     if (input_eof == 1)begin

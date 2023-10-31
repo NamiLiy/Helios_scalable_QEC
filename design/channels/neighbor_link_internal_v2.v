@@ -184,14 +184,17 @@ reg [3:0] mem_rw_address;
 wire [4:0] data_from_memory;
 wire [4:0] data_to_memory;
 
-blk_mem_gen_1 edge_mem (
-    .clka(clk),            // Clock input
+rams_sp_nc #(
+    .DEPTH(NUM_CONTEXTS),
+    .WIDTH(5)
+) edge_mem (
+    .clk(clk),            // Clock input
     //.rsta(reset),            // Reset input (active high)
-    .ena(1'b1),              // Enable input
-    .wea(write_to_mem),            // Write Enable input (0 to 0)
-    .addra(mem_rw_address),     // Address input (3 downto 0)
-    .dina(data_to_memory),      // Data input (35 downto 0)
-    .douta(data_from_memory)    // Data output (35 downto 0)
+    .en(1'b1),              // Enable input
+    .we(write_to_mem),            // Write Enable input (0 to 0)
+    .addr(mem_rw_address),     // Address input (3 downto 0)
+    .di(data_to_memory),      // Data input (35 downto 0)
+    .dout(data_from_memory)    // Data output (35 downto 0)
 );
 
 

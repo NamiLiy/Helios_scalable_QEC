@@ -3,7 +3,7 @@
 #include <math.h>
 #include <time.h>
 
-#define D 5
+#define D 7
 #define TOTAL_MEASUREMENTS D
 
 struct Address {
@@ -384,7 +384,7 @@ int loadFileData(FILE* file, int (*array)[D][D+1][(D-1)/2]) {
             }
         }
     }
-    printf("Test id : %x loaded\n",test_id);
+    // printf("Test id : %x loaded\n",test_id);
     return test_id;
 }
 
