@@ -13,4 +13,4 @@ ip_repo/
 plots/*.png
 plots/*.csv
 plots/*.txt
-
+test_benches/test_data/*.txt
