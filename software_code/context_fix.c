@@ -3,12 +3,12 @@
 #include <math.h>
 #include <time.h>
 
-#define D 7
+#define D 5
 #define TOTAL_MEASUREMENTS D
 
 
 
-int loadFileData(FILE* file, int (*array)[D][D+1][(D-1)/2]) {
+int loadFileData(FILE* file, int (*array)[D+1][D+1][(D-1)/2]) {
     int test_id;
     if (fscanf(file, "%x", &test_id) != 1) {
         printf("Error reading file. No more test cases.\n");
@@ -28,6 +28,11 @@ int loadFileData(FILE* file, int (*array)[D][D+1][(D-1)/2]) {
             }
         }
     }
+    for(int i=0; i< D + 1;i++){
+        for(int j=0; j< (D-1)/2;j++){
+            (*array)[D][i][j] = 0;
+        }
+    }
     // printf("Test id : %x loaded\n",test_id);
     return test_id;
 }
@@ -41,7 +46,7 @@ int print_output(FILE* file, int (*array)[D][D+1][(D-1)/2], int test) {
             }
         }
     }
-    for(int k=D-1;k>=(D/2);k--){
+    for(int k=D;k>(D/2);k--){
         for(int i=0; i< D + 1;i++){
             for(int j=0; j< (D-1)/2;j++){
                 fprintf(file, "00%06X\n", (*array)[k][i][j]);
@@ -71,7 +76,7 @@ int input_handle(){
     }
 
     while(1){
-        int syndrome[D][D+1][(D-1)/2];
+        int syndrome[D+1][D+1][(D-1)/2];
         int ret_val = loadFileData(file, &syndrome);
         if(ret_val < 0) {
             break;
@@ -103,7 +108,7 @@ int output_handle(){
     }
 
     while(1){
-        int syndrome[D][D+1][(D-1)/2];
+        int syndrome[D+1][D+1][(D-1)/2];
         int ret_val = loadFileData(file, &syndrome);
         if(ret_val < 0) {
             break;

@@ -37,7 +37,10 @@ localparam BYTES_PER_ROUND = ((GRID_WIDTH_X * GRID_WIDTH_Z  + 7) >> 3);
 localparam ALIGNED_PU_PER_ROUND = (BYTES_PER_ROUND << 3);
 
 localparam PU_COUNT_PER_ROUND = GRID_WIDTH_X * GRID_WIDTH_Z;
-localparam PHYSICAL_GRID_WIDTH_U = GRID_WIDTH_U / NUM_CONTEXTS + 1;
+localparam PHYSICAL_GRID_WIDTH_U = (GRID_WIDTH_U % NUM_CONTEXTS == 0) ? 
+                                   (GRID_WIDTH_U / NUM_CONTEXTS) : 
+                                   (GRID_WIDTH_U / NUM_CONTEXTS + 1);
+
 localparam PU_COUNT = PU_COUNT_PER_ROUND * PHYSICAL_GRID_WIDTH_U;
 
 localparam NS_ERROR_COUNT_PER_ROUND = (GRID_WIDTH_X-1) * GRID_WIDTH_Z;

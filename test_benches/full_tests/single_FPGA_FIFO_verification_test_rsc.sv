@@ -24,7 +24,9 @@ localparam NUM_CONTEXTS = 2;
 parameter GRID_WIDTH_X = CODE_DISTANCE + 1;
 parameter GRID_WIDTH_Z = (CODE_DISTANCE_X - 1)/2;
 parameter GRID_WIDTH_U = CODE_DISTANCE;
-localparam PHYSICAL_GRID_WIDTH_U = GRID_WIDTH_U / NUM_CONTEXTS + 1;
+localparam PHYSICAL_GRID_WIDTH_U = (GRID_WIDTH_U % NUM_CONTEXTS == 0) ? 
+                                   (GRID_WIDTH_U / NUM_CONTEXTS) : 
+                                   (GRID_WIDTH_U / NUM_CONTEXTS + 1);
 parameter MAX_WEIGHT = 2;
 
 
@@ -282,7 +284,7 @@ always @(negedge clk) begin
                     if (input_eof == 0)begin 
                         $fscanf (input_file, "%h\n", input_read_value);
                         `measurements(i, j, k) = input_read_value;
-                        if (input_read_value == 1 && k != 2*PHYSICAL_GRID_WIDTH_U-1) begin //This is to avoid duplication in the border PEs
+                        if (input_read_value == 1) begin //This is to avoid duplication in the border PEs
                             syndrome_count = syndrome_count + 1;
                         end
                     end
@@ -351,20 +353,23 @@ always @(posedge clk) begin
                         eof = $feof(file);
 
                         if(decoder.controller.current_context == NUM_CONTEXTS - 1) begin
-                            context_k = 2*PHYSICAL_GRID_WIDTH_U - k - 2;
+                            context_k = 2*PHYSICAL_GRID_WIDTH_U - k - 1;
                         end else begin
                             context_k = k;
                         end
-
-                        if(Z_BIT_WIDTH>0) begin
-                            if (expected_u != `root_u(i, j, k) || expected_x != `root_x(i, j, k) || expected_z != `root_z(i, j, k)) begin
-                                $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d)" , $time, context_k, i ,j, `root_u(i, j, k), `root_x(i, j, k), `root_z(i, j, k), expected_u, expected_x, expected_z);
-                                test_fail = 1;
-                            end
+                        if(decoder.controller.current_context == 1 && k == 0) begin
+                            continue;
                         end else begin
-                            if (expected_u != `root_u(i, j, k) || expected_x != `root_x(i, j, k)) begin
-                                $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d)" , $time, context_k, i ,j, `root_u(i, j, k), `root_x(i, j, k), 0, expected_u, expected_x, expected_z);
-                                test_fail = 1;
+                            if(Z_BIT_WIDTH>0) begin
+                                if (expected_u != `root_u(i, j, k) || expected_x != `root_x(i, j, k) || expected_z != `root_z(i, j, k)) begin
+                                    $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d)" , $time, context_k, i ,j, `root_u(i, j, k), `root_x(i, j, k), `root_z(i, j, k), expected_u, expected_x, expected_z);
+                                    test_fail = 1;
+                                end
+                            end else begin
+                                if (expected_u != `root_u(i, j, k) || expected_x != `root_x(i, j, k)) begin
+                                    $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d)" , $time, context_k, i ,j, `root_u(i, j, k), `root_x(i, j, k), 0, expected_u, expected_x, expected_z);
+                                    test_fail = 1;
+                                end
                             end
                         end
                     end
