@@ -131,11 +131,11 @@ always@(*) begin
     neighbor_increase = 6'b0;
     if( (stage == STAGE_GROW) && (last_stage != STAGE_GROW)) begin
         if(odd) begin
-            if(last_context_switch_is_local && already_grown) begin
-                neighbor_increase = 6'b110000;
-            end else begin
+            // if(last_context_switch_is_local && already_grown) begin
+            //     neighbor_increase = 6'b110000;
+            // end else begin
                neighbor_increase = 6'b111111;
-            end
+            // end
         end else begin
             neighbor_increase = 6'b000000;
         end

@@ -3,8 +3,9 @@
 #include <math.h>
 #include <time.h>
 
-#define D 5
+#define D 7
 #define TOTAL_MEASUREMENTS D
+#define NUM_CONTEXTS 4
 
 
 
@@ -37,8 +38,11 @@ int loadFileData(FILE* file, int (*array)[D+1][D+1][(D-1)/2]) {
     return test_id;
 }
 
-int print_output(FILE* file, int (*array)[D][D+1][(D-1)/2], int test) {
+int print_output(FILE* file, int (*array)[D+1][D+1][(D-1)/2], int test) {
+
     fprintf(file, "%08X\n", test);
+
+#if NUM_CONTEXTS == 2
     for(int k=0;k<=(D/2);k++){
         for(int i=0; i< D + 1;i++){
             for(int j=0; j< (D-1)/2;j++){
@@ -53,8 +57,58 @@ int print_output(FILE* file, int (*array)[D][D+1][(D-1)/2], int test) {
             }
         }
     }
+#endif
+#if NUM_CONTEXTS == 4
+    for(int k=0;k<=(D/4);k++){
+        for(int i=0; i< D + 1;i++){
+            for(int j=0; j< (D-1)/2;j++){
+                fprintf(file, "00%06X\n", (*array)[k][i][j]);
+            }
+        }
+    }
+    for(int k=D/2; k>(D/4); k--){
+        for(int i=0; i< D + 1;i++){
+            for(int j=0; j< (D-1)/2;j++){
+                fprintf(file, "00%06X\n", (*array)[k][i][j]);
+            }
+        }
+    }
+    for(int k=D/2 + 1; k<=(3*D/4);k++){
+        for(int i=0; i< D + 1;i++){
+            for(int j=0; j< (D-1)/2;j++){
+                fprintf(file, "00%06X\n", (*array)[k][i][j]);
+            }
+        }
+    }
+    for(int k=D; k>(3*D/4); k--){
+        for(int i=0; i< D + 1;i++){
+            for(int j=0; j< (D-1)/2;j++){
+                fprintf(file, "00%06X\n", (*array)[k][i][j]);
+            }
+        }
+    }
+#endif
+
     return 0;
 }
+
+int print_detailed_output(FILE* file, int (*array)[D+1][D+1][(D-1)/2], int test) {
+
+    fprintf(file, "Test id %d\n", test);
+
+    for(int k=0;k<D;k++){
+        for(int i=0; i< D + 1;i++){
+            for(int j=0; j< (D-1)/2;j++){
+                if ((*array)[k][i][j] == 1) {
+                    fprintf(file, "k = %d i = %d j = %d\n", k, i, j);
+                }
+            }
+        }
+    }
+
+    return 0;
+}
+
 
 int input_handle(){
     // load syndrome
@@ -64,6 +118,14 @@ int input_handle(){
     FILE* file = fopen(filename, "r");
     if (file == NULL) {
         printf("Error opening file %s.\n", filename);
+        return -1;
+    }
+
+    char detail_filename[100];
+    sprintf(detail_filename, "../test_benches/test_data/input_data_details_rsc.txt");
+    FILE* file_det = fopen(detail_filename, "wb");
+    if (file == NULL) {
+        printf("Error opening detailed file %s.\n", filename);
         return -1;
     }
 
@@ -81,6 +143,7 @@ int input_handle(){
         if(ret_val < 0) {
             break;
         }
+        print_detailed_output(file_det, &syndrome, ret_val);
         print_output(file_op, &syndrome, ret_val);
     }
 
