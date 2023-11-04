@@ -48,8 +48,10 @@ localparam EW_ERROR_COUNT_PER_ROUND = (GRID_WIDTH_X-1) * GRID_WIDTH_Z + 1;
 localparam UD_ERROR_COUNT_PER_ROUND = GRID_WIDTH_X * GRID_WIDTH_Z;
 localparam CORRECTION_COUNT_PER_ROUND = NS_ERROR_COUNT_PER_ROUND + EW_ERROR_COUNT_PER_ROUND + UD_ERROR_COUNT_PER_ROUND;
 
-localparam BORDER_MASK_MSB = PU_COUNT - 1;
-localparam BORDER_MASK_LSB = PU_COUNT_PER_ROUND * (PHYSICAL_GRID_WIDTH_U- 1);
+localparam BORDER_TOP_MSB = PU_COUNT - 1;
+localparam BORDER_TOP_LSB = PU_COUNT_PER_ROUND * (PHYSICAL_GRID_WIDTH_U- 1);
+localparam BORDER_BOT_MSB = PU_COUNT_PER_ROUND - 1;
+localparam BORDER_BOT_LSB = 0;
 
 
 input clk;
@@ -83,7 +85,7 @@ reg [CONTEXT_COUNTER_WIDTH-1:0] current_context;
 always@(posedge clk) begin
     busy <= |busy_PE;
     odd_clusters <= |odd_clusters_PE;
-    border_busy <= |(busy_PE[BORDER_MASK_MSB : BORDER_MASK_LSB]);
+    border_busy <= |(busy_PE[BORDER_TOP_MSB : BORDER_TOP_LSB]) || |(busy_PE[BORDER_BOT_MSB : BORDER_BOT_LSB]);
 end
 
 // global_stage_d delayed logic

@@ -226,21 +226,21 @@ always@(*) begin
     end
 end
 
-// reg last_context_switch_is_local;
-// always@(posedge clk) begin
-//     if(reset) begin
-//         last_context_switch_is_local <= 0;
-//     end else begin
-//         if (stage == STAGE_WRITE_TO_MEM) begin
-//             last_context_switch_is_local <= local_context_switch;
-//         end
-//     end
-// end
+reg last_context_switch_is_local;
+always@(posedge clk) begin
+    if(reset) begin
+        last_context_switch_is_local <= 0;
+    end else begin
+        if (stage == STAGE_WRITE_TO_MEM) begin
+            last_context_switch_is_local <= local_context_switch;
+        end
+    end
+end
 
 //logic to data write to memory
 assign data_to_memory = {growth,is_error};
 
-assign {growth_mem,is_error_mem} = (local_context_switch) ? {growth, is_error} : data_from_memory;
+assign {growth_mem,is_error_mem} = (last_context_switch_is_local) ? {growth, is_error} : data_from_memory;
 
 endmodule
 

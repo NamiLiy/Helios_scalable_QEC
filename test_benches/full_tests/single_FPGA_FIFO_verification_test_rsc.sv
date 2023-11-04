@@ -16,10 +16,10 @@ module verification_bench_single_FPGA_rsc;
 `include "../../parameters/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
-localparam CODE_DISTANCE = 5;                
+localparam CODE_DISTANCE = 7;                
 localparam CODE_DISTANCE_X = CODE_DISTANCE + 1;
 localparam CODE_DISTANCE_Z = (CODE_DISTANCE_X - 1)/2;
-localparam NUM_CONTEXTS = 2;
+localparam NUM_CONTEXTS = 4;
 
 parameter GRID_WIDTH_X = CODE_DISTANCE + 1;
 parameter GRID_WIDTH_Z = (CODE_DISTANCE_X - 1)/2;
@@ -352,22 +352,22 @@ always @(posedge clk) begin
                         expected_u = read_value[U_BIT_WIDTH - 1 + 16 :16];
                         eof = $feof(file);
 
-                        if(decoder.controller.current_context == NUM_CONTEXTS - 1) begin
-                            context_k = 2*PHYSICAL_GRID_WIDTH_U - k - 1;
+                        if(decoder.controller.current_context % 2 == 1) begin
+                            context_k = decoder.controller.current_context*PHYSICAL_GRID_WIDTH_U + PHYSICAL_GRID_WIDTH_U - k - 1;
                         end else begin
-                            context_k = k;
+                            context_k = decoder.controller.current_context*PHYSICAL_GRID_WIDTH_U  + k;
                         end
-                        if(decoder.controller.current_context == 1 && k == 0) begin
+                        if(decoder.controller.current_context == NUM_CONTEXTS - 1 && k == 0) begin //hack for d=7,11
                             continue;
                         end else begin
                             if(Z_BIT_WIDTH>0) begin
                                 if (expected_u != `root_u(i, j, k) || expected_x != `root_x(i, j, k) || expected_z != `root_z(i, j, k)) begin
-                                    $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d)" , $time, context_k, i ,j, `root_u(i, j, k), `root_x(i, j, k), `root_z(i, j, k), expected_u, expected_x, expected_z);
+                                    $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d) : TC %d" , $time, context_k, i ,j, `root_u(i, j, k), `root_x(i, j, k), `root_z(i, j, k), expected_u, expected_x, expected_z, test_case);
                                     test_fail = 1;
                                 end
                             end else begin
                                 if (expected_u != `root_u(i, j, k) || expected_x != `root_x(i, j, k)) begin
-                                    $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d)" , $time, context_k, i ,j, `root_u(i, j, k), `root_x(i, j, k), 0, expected_u, expected_x, expected_z);
+                                    $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d) : TC %d" , $time, context_k, i ,j, `root_u(i, j, k), `root_x(i, j, k), 0, expected_u, expected_x, expected_z, test_case);
                                     test_fail = 1;
                                 end
                             end
