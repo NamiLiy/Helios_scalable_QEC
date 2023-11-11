@@ -3,7 +3,7 @@
 #include <math.h>
 #include <time.h>
 
-#define D 7
+#define D 27
 #define TOTAL_MEASUREMENTS D
 
 struct Address {

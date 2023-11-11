@@ -11,9 +11,9 @@ int max(int a, int b) {
 double normal_random(double mean, double std_dev);
 
 int main() {
-    int distance = 7;
-    double p = 0.005;
-    int test_runs = 200;
+    int distance = 27;
+    double p = 0.001;
+    int test_runs = 10;
 
     double mean, std_dev;
     mean = p;

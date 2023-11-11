@@ -102,22 +102,8 @@ reg cycle_counter_reset;
 
 always @(posedge clk) begin
     if (reset) begin
-        cycle_counter_on <= 0;
-        cycle_counter_reset <= 0;
         cycle_counter <= 0;
     end else begin
-        if (global_stage == STAGE_GROW && current_context == 0) begin
-            cycle_counter_on <= 1;
-        end else if (global_stage == STAGE_RESULT_VALID && current_context == 0) begin
-            cycle_counter_on <= 0;
-        end
-
-        if (global_stage == STAGE_GROW && current_context == 0) begin
-            cycle_counter_reset <= 1;
-        end else begin
-            cycle_counter_reset <= 0;
-        end
-
         if(cycle_counter_reset) begin
             cycle_counter <= 2; // to account for propagation time from controller to PEs 
         end else if(cycle_counter_on) begin
@@ -173,6 +159,8 @@ always @(posedge clk) begin
         delay_counter <= 0;
         result_valid <= 0;
         growing_incomplete <= 0;
+        cycle_counter_on <= 0;
+        cycle_counter_reset <= 0;
     end else begin
         case (global_stage)
             STAGE_IDLE: begin // 0
@@ -189,6 +177,8 @@ always @(posedge clk) begin
                     end
                 end
                 current_context <= 0; 
+                cycle_counter_on <= 0;
+                cycle_counter_reset <= 0;
             end
 
             STAGE_PARAMETERS_LOADING: begin // 6
@@ -239,6 +229,7 @@ always @(posedge clk) begin
                 delay_counter <= 0;
                 measurement_rounds <= 0;
                 growing_incomplete <= 1;
+                cycle_counter_reset <= 0;
             end
 
             STAGE_MERGE: begin //3
@@ -257,41 +248,11 @@ always @(posedge clk) begin
                     unsynced_merge[current_context] <= 1'b0;
                 end
 
-
-                // if (delay_counter == MAXIMUM_DELAY) begin // for this iteration this context is done
-                //     if(!busy) begin
-                //         delay_counter <= 0;
-                //         global_stage <= STAGE_WRITE_TO_MEM;
-                //         global_stage_saved <= STAGE_MERGE;
-                //         unsynced_merge[current_context] <= 1'b0;
-                //         odd_clusters_in_context[current_context] <= odd_clusters;  
-                //     end else begin
-                //         delay_counter <= delay_counter + 1;
-                //         unsynced_merge[current_context] <= 1'b1;
-                //     end
-                // end else if (delay_counter > MAXIMUM_DELAY) begin
-                //     if(!busy) begin
-                //         delay_counter <= 0;
-                //         global_stage <= STAGE_WRITE_TO_MEM;
-                //         global_stage_saved <= STAGE_MERGE;
-                //         odd_clusters_in_context[current_context] <= odd_clusters;
-                //     end
-                // end else begin
-                //     delay_counter <= delay_counter + 1;
-                // end
             end           
 
             STAGE_PEELING: begin //4
                 global_stage <= STAGE_WRITE_TO_MEM;
                 global_stage_saved <= STAGE_PEELING;
-                // if (delay_counter >= 1) begin
-                //     if(!busy) begin
-                //         global_stage <= STAGE_RESULT_VALID;
-                //         delay_counter <= 0;
-                //     end
-                // end else begin
-                //     delay_counter <= delay_counter + 1;
-                // end
             end
 
             STAGE_RESULT_VALID: begin //5
@@ -306,12 +267,12 @@ always @(posedge clk) begin
             end
 
             STAGE_WRITE_TO_MEM: begin //1
-                global_stage <= STAGE_READ_FROM_MEM;
-            end
+            //     global_stage <= STAGE_READ_FROM_MEM;
+            // end
 
-            STAGE_READ_FROM_MEM: begin //8
-                if (delay_counter == 2) begin
-                    delay_counter <= 0;
+            // STAGE_READ_FROM_MEM: begin //8
+            //     if (delay_counter == 1) begin
+            //         delay_counter <= 0;
                     if(current_context < NUM_CONTEXTS -1 ) begin
                         if(global_stage_saved == STAGE_MERGE) begin
                             // if(growing_incomplete == 1'b1) begin
@@ -345,17 +306,20 @@ always @(posedge clk) begin
                             end
                         end else if(global_stage_saved == STAGE_MEASUREMENT_LOADING) begin
                             global_stage <= STAGE_GROW;
+                            cycle_counter_on <= 1;
+                            cycle_counter_reset <= 1;
                         end else if(global_stage_saved == STAGE_PEELING) begin
                             global_stage <= STAGE_RESULT_VALID;
+                            cycle_counter_on <= 0;
                         end else if(global_stage_saved == STAGE_RESULT_VALID) begin
                             global_stage <= STAGE_IDLE;
                         end else if(global_stage_saved == STAGE_GROW) begin
                             global_stage <= STAGE_MERGE;
                         end
                     end
-                end else begin
-                    delay_counter <= delay_counter + 1;
-                end
+                // end else begin
+                    delay_counter <= 0;
+                // end
             end
             
             default: begin

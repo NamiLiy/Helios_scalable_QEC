@@ -12,7 +12,7 @@ module support_processing_unit #(
 
     output_data,
     input_data,
-    local_context_switch
+    do_not_store, // Mem store wont happen when this flag is raised
 );
 
 `include "../../parameters/parameters.sv"
@@ -27,7 +27,7 @@ input [STAGE_WIDTH-1:0] global_stage;
 input [EXPOSED_DATA_SIZE-1:0] input_data;
 output reg [EXPOSED_DATA_SIZE-1:0] output_data;
 
-input local_context_switch;
+input do_not_store;
 
 
 reg [STAGE_WIDTH - 1 : 0] stage;
@@ -47,7 +47,9 @@ end
 
 reg write_to_mem;
 localparam RAM_LOG_DEPTH = $clog2(NUM_CONTEXTS);
-reg [RAM_LOG_DEPTH-1:0] mem_rw_address;
+reg [RAM_LOG_DEPTH-1:0] mem_read_address;
+reg [RAM_LOG_DEPTH-1:0] mem_write_address;
+wire [RAM_LOG_DEPTH-1:0] mem_rw_address;
 localparam RAM_WIDTH = ADDRESS_WIDTH + 6 + 3;
 wire [RAM_WIDTH - 1 :0] data_from_memory;
 wire [RAM_WIDTH - 1:0] data_to_memory;
@@ -70,34 +72,43 @@ rams_sp_nc #(
 //logic to calulate the address to write to memory
 always@(posedge clk) begin
     if(reset) begin
-        mem_rw_address <= 0;
+        mem_write_address <= 0;
     end else begin
-        if (stage == STAGE_WRITE_TO_MEM && local_context_switch == 1'b0) begin
-            if(mem_rw_address < NUM_CONTEXTS -1) begin
-                mem_rw_address <= mem_rw_address + 1;
-            end else begin
-                mem_rw_address <= 0;
+        if (stage == STAGE_WRITE_TO_MEM) begin
+            if(do_not_store == 1'b0) begin
+                if(mem_write_address < NUM_CONTEXTS -1) begin
+                    mem_write_address <= mem_write_address + 1;
+                end else begin
+                    mem_write_address <= 0;
+                end
             end
         end
     end
 end
 
-reg last_context_switch_is_local;
 always@(posedge clk) begin
     if(reset) begin
-        last_context_switch_is_local <= 0;
+        mem_read_address <= 1;
     end else begin
         if (stage == STAGE_WRITE_TO_MEM) begin
-            last_context_switch_is_local <= local_context_switch;
+            if(do_not_store == 1'b0) begin
+                if(mem_read_address < NUM_CONTEXTS -1) begin
+                    mem_read_address <= mem_read_address + 1;
+                end else begin
+                    mem_read_address <= 0;
+                end
+            end
         end
     end
 end
+
+assign mem_rw_address = (stage == STAGE_WRITE_TO_MEM) ? mem_write_address : mem_read_address;
 
 always@(*) begin
     if(reset) begin
         write_to_mem = 0;
     end else begin
-        if (stage == STAGE_WRITE_TO_MEM && local_context_switch == 1'b0) begin
+        if (stage == STAGE_WRITE_TO_MEM && do_not_store == 1'b0) begin
             write_to_mem = 1;
         end else begin
             write_to_mem = 0;
@@ -112,9 +123,9 @@ always@(posedge clk) begin
     if(reset) begin
         output_data <= 0;
     end else begin
-        if(stage == STAGE_WRITE_TO_MEM && local_context_switch) begin
+        if(stage == STAGE_WRITE_TO_MEM && do_not_store) begin
             output_data <= input_data;
-        end else if(stage == STAGE_READ_FROM_MEM && !last_context_switch_is_local) begin
+        end else if(stage == STAGE_WRITE_TO_MEM) begin
             output_data <= data_from_memory;
         end
     end

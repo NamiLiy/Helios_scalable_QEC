@@ -99,7 +99,7 @@ generate
                 wire local_measurement;
                 wire measurement_out;
                 wire [NEIGHBOR_COUNT-1:0] neighbor_fully_grown;
-                wire [NEIGHBOR_COUNT-1:0] neighbor_increase;
+                wire  neighbor_increase;
                 wire [NEIGHBOR_COUNT-1:0] neighbor_is_boundary;
                 wire [NEIGHBOR_COUNT-1:0] neighbor_is_error;
 
@@ -111,7 +111,6 @@ generate
                 wire busy_PE;
 
                 reg [ADDRESS_WIDTH_WITH_B-1:0] address_global;
-                wire local_context_switch;
                 always@(*) begin
                     address_global[Z_BIT_WIDTH-1:0] = j;
                     address_global[X_BIT_WIDTH+Z_BIT_WIDTH-1:Z_BIT_WIDTH] = i;
@@ -122,14 +121,6 @@ generate
                         address_global[ADDRESS_WIDTH-1:X_BIT_WIDTH+Z_BIT_WIDTH] = PHYSICAL_GRID_WIDTH_U - k - 1 + context_stage_delayed*PHYSICAL_GRID_WIDTH_U;
                     end
                 end
-
-                assign local_context_switch = 1'b0;
-
-                // if(k==PHYSICAL_GRID_WIDTH_U-1) begin
-                //     assign local_context_switch = 1'b1;
-                // end else begin
-                //     assign local_context_switch = 1'b0;
-                // end
 
                 processing_unit #(
                     .ADDRESS_WIDTH(ADDRESS_WIDTH_WITH_B),
@@ -150,7 +141,6 @@ generate
                     .input_data(input_data),
                     .output_data(output_data),
                     .input_address(address_global),
-                    .local_context_switch(local_context_switch),
 
                     .odd(odd),
                     .root(root),
@@ -179,14 +169,15 @@ generate
                 end
 
                 support_processing_unit #(
-                    .ADDRESS_WIDTH(ADDRESS_WIDTH_WITH_B)
+                    .ADDRESS_WIDTH(ADDRESS_WIDTH_WITH_B),
+                    .NUM_CONTEXTS(NUM_CONTEXTS/2)
                 ) spu (
                     .clk(clk),
                     .reset(reset),
                     .global_stage(global_stage),
                     .input_data(input_data),
                     .output_data(output_data),
-                    .local_context_switch(local_context_switch)
+                    .do_not_store(local_context_switch)
                 );
             end
         end
@@ -256,8 +247,8 @@ endgenerate
         .reset(reset), \
         .global_stage(global_stage), \
         .fully_grown(fully_grown_data), \
-        .a_increase(`PU(ai, aj, ak).neighbor_increase[adirection]), \
-        .b_increase(`PU(bi, bj, bk).neighbor_increase[bdirection]), \
+        .a_increase(`PU(ai, aj, ak).neighbor_increase), \
+        .b_increase(`PU(bi, bj, bk).neighbor_increase), \
         .is_boundary(is_boundary), \
         .a_is_error_in(`PU(ai, aj, ak).neighbor_is_error[adirection]), \
         .b_is_error_in(`PU(bi, bj, bk).neighbor_is_error[bdirection]), \
@@ -268,7 +259,7 @@ endgenerate
         .b_output_data(`SLICE_VEC(`PU(bi, bj, bk).input_data, bdirection, EXPOSED_DATA_SIZE)), \
         .weight_in(2), \
         .weight_out(), \
-        .local_context_switch(local_context_switch), \
+        .do_not_store(local_context_switch), \
         .boundary_condition_in(type), \
         .boundary_condition_out(), \
         .is_error_systolic_in(is_error_systolic_in) \
@@ -288,7 +279,7 @@ endgenerate
         .reset(reset), \
         .global_stage(global_stage), \
         .fully_grown(`PU(ai, aj, ak).neighbor_fully_grown[adirection]), \
-        .a_increase(`PU(ai, aj, ak).neighbor_increase[adirection]), \
+        .a_increase(`PU(ai, aj, ak).neighbor_increase), \
         .b_increase(), \
         .is_boundary(`PU(ai, aj, ak).neighbor_is_boundary[adirection]), \
         .a_is_error_in(`PU(ai, aj, ak).neighbor_is_error[adirection]), \
@@ -300,7 +291,7 @@ endgenerate
         .b_output_data(), \
         .weight_in(2), \
         .weight_out(), \
-        .local_context_switch(local_context_switch), \
+        .do_not_store(local_context_switch), \
         .boundary_condition_in(type), \
         .boundary_condition_out(), \
         .is_error_systolic_in(is_error_systolic_in) \
@@ -317,7 +308,7 @@ endgenerate
         .reset(reset), \
         .global_stage(global_stage), \
         .fully_grown(fully_grown_data), \
-        .a_increase(`PU(ai, aj, ak).neighbor_increase[adirection]), \
+        .a_increase(`PU(ai, aj, ak).neighbor_increase), \
         .b_increase(0), \
         .is_boundary(is_boundary), \
         .a_is_error_in(`PU(ai, aj, ak).neighbor_is_error[adirection]), \
@@ -329,7 +320,7 @@ endgenerate
         .b_output_data(), \
         .weight_in(2), \
         .weight_out(), \
-        .local_context_switch(local_context_switch), \
+        .do_not_store(local_context_switch), \
         .boundary_condition_in(type), \
         .boundary_condition_out(), \
         .is_error_systolic_in(0) \
@@ -418,12 +409,12 @@ generate
                 wire fully_grown_data;
                 always@(*) begin 
                     if(k==1) begin //Ugly workaround for d=11
-                        if(context_stage_delayed < NUM_CONTEXTS - 1)
+                        if(context_stage < NUM_CONTEXTS - 1) //This is not delayed as boundary_condition must be given befoe moving to the stage
                             type_for_boundary_links = 3'b00; //  Internal
                         else
                             type_for_boundary_links = 3'b10; // Non-existant
                     end else if(k==0) begin
-                        if(context_stage_delayed > 0)
+                        if(context_stage > 0)
                             type_for_boundary_links = 3'b00; //  Internal
                         else
                             type_for_boundary_links = 3'b01; // Boundary
@@ -554,12 +545,12 @@ generate
             // assign ud_k[PHYSICAL_GRID_WIDTH_U].ud_i[i].ud_j[j].fully_grown_data = ud_k[PHYSICAL_GRID_WIDTH_U-1].ud_i[i].ud_j[j].fully_grown_data;
             assign s_pu_i[i].s_pu_j[j].s_pu_k[1].input_data = `SLICE_VEC(`PU(i,j,PHYSICAL_GRID_WIDTH_U-1).output_data, `NEIGHBOR_IDX_UP, EXPOSED_DATA_SIZE);
             // assign `SLICE_VEC(`PU(i, j, PHYSICAL_GRID_WIDTH_U-1).input_data, `NEIGHBOR_IDX_UP, EXPOSED_DATA_SIZE) = s_pu_i[i].s_pu_j[j].output_data;
-            assign pu_k[PHYSICAL_GRID_WIDTH_U-1].pu_i[i].pu_j[j].input_data[5*EXPOSED_DATA_SIZE +: EXPOSED_DATA_SIZE] = s_pu_i[i].s_pu_j[j].s_pu_k[1].output_data;
+            // assign pu_k[PHYSICAL_GRID_WIDTH_U-1].pu_i[i].pu_j[j].input_data[5*EXPOSED_DATA_SIZE +: EXPOSED_DATA_SIZE] = s_pu_i[i].s_pu_j[j].s_pu_k[1].output_data;
             // assign pu_k[PHYSICAL_GRID_WIDTH_U-1].pu_i[i].pu_j[j].neighbor_is_boundary[5] = 1'b0;
 
             assign s_pu_i[i].s_pu_j[j].s_pu_k[0].input_data = `SLICE_VEC(`PU(i,j,0).output_data, `NEIGHBOR_IDX_DOWN, EXPOSED_DATA_SIZE);
             // assign `SLICE_VEC(`PU(i, j, PHYSICAL_GRID_WIDTH_U-1).input_data, `NEIGHBOR_IDX_UP, EXPOSED_DATA_SIZE) = s_pu_i[i].s_pu_j[j].output_data;
-            assign pu_k[0].pu_i[i].pu_j[j].input_data[4*EXPOSED_DATA_SIZE +: EXPOSED_DATA_SIZE] = s_pu_i[i].s_pu_j[j].s_pu_k[0].output_data;
+            // assign pu_k[0].pu_i[i].pu_j[j].input_data[4*EXPOSED_DATA_SIZE +: EXPOSED_DATA_SIZE] = s_pu_i[i].s_pu_j[j].s_pu_k[0].output_data;
             // if(context_stage_delayed %2 == 0) begin
             //     assign pu_k[0].pu_i[i].pu_j[j].neighbor_is_boundary[4] = 1'b0;
             // end else begin

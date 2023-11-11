@@ -3,13 +3,16 @@
 #include <math.h>
 #include <time.h>
 
-#define D 7
+#define D 27
 #define TOTAL_MEASUREMENTS D
-#define NUM_CONTEXTS 4
+#define NUM_CONTEXTS 14
+
+#define distance_per_context ((D + NUM_CONTEXTS - 1)/NUM_CONTEXTS)
+#define rounded_distance (distance_per_context*NUM_CONTEXTS)
 
 
 
-int loadFileData(FILE* file, int (*array)[D+1][D+1][(D-1)/2]) {
+int loadFileData(FILE* file, int (*array)[rounded_distance][D+1][(D-1)/2]) {
     int test_id;
     if (fscanf(file, "%x", &test_id) != 1) {
         printf("Error reading file. No more test cases.\n");
@@ -38,7 +41,7 @@ int loadFileData(FILE* file, int (*array)[D+1][D+1][(D-1)/2]) {
     return test_id;
 }
 
-int print_output(FILE* file, int (*array)[D+1][D+1][(D-1)/2], int test) {
+int print_output(FILE* file, int (*array)[rounded_distance][D+1][(D-1)/2], int test) {
 
     fprintf(file, "%08X\n", test);
 
@@ -58,32 +61,24 @@ int print_output(FILE* file, int (*array)[D+1][D+1][(D-1)/2], int test) {
         }
     }
 #endif
-#if NUM_CONTEXTS == 4
-    for(int k=0;k<=(D/4);k++){
-        for(int i=0; i< D + 1;i++){
-            for(int j=0; j< (D-1)/2;j++){
-                fprintf(file, "00%06X\n", (*array)[k][i][j]);
+#if NUM_CONTEXTS > 2
+    
+    for(int l=0;l<NUM_CONTEXTS;l++){
+		if(l%2==0) {
+            for(int k=0;k< distance_per_context;k++){
+                for(int i=0; i< D + 1;i++){
+                    for(int j=0; j< (D-1)/2;j++){
+                        fprintf(file, "00%06X\n", (*array)[l*distance_per_context + k][i][j]);
+                    }
+                }
             }
-        }
-    }
-    for(int k=D/2; k>(D/4); k--){
-        for(int i=0; i< D + 1;i++){
-            for(int j=0; j< (D-1)/2;j++){
-                fprintf(file, "00%06X\n", (*array)[k][i][j]);
-            }
-        }
-    }
-    for(int k=D/2 + 1; k<=(3*D/4);k++){
-        for(int i=0; i< D + 1;i++){
-            for(int j=0; j< (D-1)/2;j++){
-                fprintf(file, "00%06X\n", (*array)[k][i][j]);
-            }
-        }
-    }
-    for(int k=D; k>(3*D/4); k--){
-        for(int i=0; i< D + 1;i++){
-            for(int j=0; j< (D-1)/2;j++){
-                fprintf(file, "00%06X\n", (*array)[k][i][j]);
+        } else{
+            for(int k=distance_per_context-1; k>=0; k--){
+                for(int i=0; i< D + 1;i++){
+                    for(int j=0; j< (D-1)/2;j++){
+                        fprintf(file, "00%06X\n", (*array)[l*distance_per_context + k][i][j]);
+                    }
+                }
             }
         }
     }

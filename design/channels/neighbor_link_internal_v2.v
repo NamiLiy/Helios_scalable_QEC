@@ -34,7 +34,7 @@ module neighbor_link_internal #(
 
     weight_out,
     boundary_condition_out,
-    local_context_switch
+    do_not_store
 );
 
 `include "../../parameters/parameters.sv"
@@ -64,7 +64,7 @@ output [EXPOSED_DATA_SIZE-1:0] b_output_data;
 input [LINK_BIT_WIDTH-1:0] weight_in;
 input [1:0] boundary_condition_in;
 input is_error_systolic_in;
-input local_context_switch;
+input do_not_store;
 
 output reg [LINK_BIT_WIDTH-1:0] weight_out;
 output reg [1:0] boundary_condition_out;
@@ -115,7 +115,7 @@ always@(posedge clk) begin
     end else begin
         if(stage == STAGE_MEASUREMENT_LOADING) begin
                 growth <= 0;
-        end else if(stage == STAGE_READ_FROM_MEM) begin
+        end else if(stage == STAGE_WRITE_TO_MEM) begin
             growth <= growth_mem;
         end else begin
             growth <= growth_new;
@@ -126,7 +126,7 @@ end
 always@(posedge clk) begin
     if(reset) begin
         is_error <= 0;
-    end else if(stage == STAGE_READ_FROM_MEM) begin
+    end else if(stage == STAGE_WRITE_TO_MEM) begin
         is_error <= is_error_mem;
     end else begin
         if (boundary_condition_out == 0)  begin // No boundary default case 
@@ -180,7 +180,10 @@ always@(posedge clk) begin
 end
 
 reg write_to_mem;
-reg [3:0] mem_rw_address;
+localparam RAM_LOG_DEPTH = $clog2(NUM_CONTEXTS);
+reg [RAM_LOG_DEPTH-1:0] mem_read_address;
+reg [RAM_LOG_DEPTH-1:0] mem_write_address;
+wire [RAM_LOG_DEPTH-1:0] mem_rw_address;
 wire [4:0] data_from_memory;
 wire [4:0] data_to_memory;
 
@@ -202,23 +205,43 @@ rams_sp_nc #(
 //logic to calulate the address to write to memory
 always@(posedge clk) begin
     if(reset) begin
-        mem_rw_address <= 0;
+        mem_write_address <= 0;
     end else begin
-        if (stage == STAGE_WRITE_TO_MEM  && local_context_switch == 1'b0) begin
-            if(mem_rw_address < NUM_CONTEXTS -1) begin
-                mem_rw_address <= mem_rw_address + 1;
-            end else begin
-                mem_rw_address <= 0;
+        if (stage == STAGE_WRITE_TO_MEM) begin
+            if(do_not_store == 1'b0) begin
+                if(mem_write_address < NUM_CONTEXTS -1) begin
+                    mem_write_address <= mem_write_address + 1;
+                end else begin
+                    mem_write_address <= 0;
+                end
             end
         end
     end
 end
 
+always@(posedge clk) begin
+    if(reset) begin
+        mem_read_address <= 1;
+    end else begin
+        if (stage == STAGE_WRITE_TO_MEM) begin
+            if(do_not_store == 1'b0) begin
+                if(mem_read_address < NUM_CONTEXTS -1) begin
+                    mem_read_address <= mem_read_address + 1;
+                end else begin
+                    mem_read_address <= 0;
+                end
+            end
+        end
+    end
+end
+
+assign mem_rw_address = (stage == STAGE_WRITE_TO_MEM) ? mem_write_address : mem_read_address;
+
 always@(*) begin
     if(reset) begin
         write_to_mem = 0;
     end else begin
-        if (stage == STAGE_WRITE_TO_MEM) begin
+        if (stage == STAGE_WRITE_TO_MEM && do_not_store == 1'b0) begin
             write_to_mem = 1;
         end else begin
             write_to_mem = 0;
@@ -226,21 +249,10 @@ always@(*) begin
     end
 end
 
-reg last_context_switch_is_local;
-always@(posedge clk) begin
-    if(reset) begin
-        last_context_switch_is_local <= 0;
-    end else begin
-        if (stage == STAGE_WRITE_TO_MEM) begin
-            last_context_switch_is_local <= local_context_switch;
-        end
-    end
-end
-
 //logic to data write to memory
 assign data_to_memory = {growth,is_error};
 
-assign {growth_mem,is_error_mem} = (last_context_switch_is_local) ? {growth, is_error} : data_from_memory;
+assign {growth_mem,is_error_mem} = (do_not_store) ? {growth, is_error} : data_from_memory;
 
 endmodule
 
