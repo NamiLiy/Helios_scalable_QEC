@@ -12,7 +12,7 @@ module support_processing_unit #(
 
     output_data,
     input_data,
-    do_not_store, // Mem store wont happen when this flag is raised
+    do_not_store // Mem store wont happen when this flag is raised
 );
 
 `include "../../parameters/parameters.sv"
