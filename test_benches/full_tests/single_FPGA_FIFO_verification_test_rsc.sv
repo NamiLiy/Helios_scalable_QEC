@@ -19,7 +19,7 @@ module verification_bench_single_FPGA_rsc;
 localparam CODE_DISTANCE = 27;                
 localparam CODE_DISTANCE_X = CODE_DISTANCE + 1;
 localparam CODE_DISTANCE_Z = (CODE_DISTANCE_X - 1)/2;
-localparam NUM_CONTEXTS = 14;
+localparam NUM_CONTEXTS = 4;
 
 parameter GRID_WIDTH_X = CODE_DISTANCE + 1;
 parameter GRID_WIDTH_Z = (CODE_DISTANCE_X - 1)/2;

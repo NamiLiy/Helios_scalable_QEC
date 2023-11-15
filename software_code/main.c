@@ -12,8 +12,8 @@ double normal_random(double mean, double std_dev);
 
 int main() {
     int distance = 27;
-    double p = 0.001;
-    int test_runs = 10;
+    double p = 0.005;
+    int test_runs = 200;
 
     double mean, std_dev;
     mean = p;
@@ -53,7 +53,7 @@ int main() {
         if(weight_rounded > max_weight) weight_rounded = max_weight;
         if(weight_rounded < min_weight) weight_rounded = min_weight;
         error_list_scrambled[i] = weight_rounded;
-        printf("%f %f %d\n", p_array[i], weight, weight_rounded);
+        //printf("%f %f %d\n", p_array[i], weight, weight_rounded);
     }
 
     int ns_count = 0;

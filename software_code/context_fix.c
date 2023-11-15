@@ -5,7 +5,7 @@
 
 #define D 27
 #define TOTAL_MEASUREMENTS D
-#define NUM_CONTEXTS 14
+#define NUM_CONTEXTS 4
 
 #define distance_per_context ((D + NUM_CONTEXTS - 1)/NUM_CONTEXTS)
 #define rounded_distance (distance_per_context*NUM_CONTEXTS)
@@ -18,6 +18,13 @@ int loadFileData(FILE* file, int (*array)[rounded_distance][D+1][(D-1)/2]) {
         printf("Error reading file. No more test cases.\n");
         fclose(file);
         return -1;
+    }
+    for(int k=0;k<rounded_distance;k++){
+        for(int i=0; i< D + 1;i++){
+            for(int j=0; j< (D-1)/2;j++){
+                (*array)[k][i][j] = 0;
+            }
+        }
     }
     for(int k=0;k<D;k++){
         for(int i=0; i< D + 1;i++){
@@ -32,20 +39,16 @@ int loadFileData(FILE* file, int (*array)[rounded_distance][D+1][(D-1)/2]) {
             }
         }
     }
-    for(int i=0; i< D + 1;i++){
-        for(int j=0; j< (D-1)/2;j++){
-            (*array)[D][i][j] = 0;
-        }
-    }
+    // for(int i=0; i< D + 1;i++){
+    //     for(int j=0; j< (D-1)/2;j++){
+    //         (*array)[D][i][j] = 0;
+    //     }
+    // }
     // printf("Test id : %x loaded\n",test_id);
     return test_id;
 }
 
-<<<<<<< HEAD
 int print_output(FILE* file, int (*array)[rounded_distance][D+1][(D-1)/2], int test) {
-=======
-int print_output(FILE* file, int (*array)[D+1][D+1][(D-1)/2], int test) {
->>>>>>> 931f2c2651a264d3a8181a6aaf38e47b42e9c75c
 
     fprintf(file, "%08X\n", test);
 
@@ -65,7 +68,6 @@ int print_output(FILE* file, int (*array)[D+1][D+1][(D-1)/2], int test) {
         }
     }
 #endif
-<<<<<<< HEAD
 #if NUM_CONTEXTS > 2
     
     for(int l=0;l<NUM_CONTEXTS;l++){
@@ -84,34 +86,6 @@ int print_output(FILE* file, int (*array)[D+1][D+1][(D-1)/2], int test) {
                         fprintf(file, "00%06X\n", (*array)[l*distance_per_context + k][i][j]);
                     }
                 }
-=======
-#if NUM_CONTEXTS == 4
-    for(int k=0;k<=(D/4);k++){
-        for(int i=0; i< D + 1;i++){
-            for(int j=0; j< (D-1)/2;j++){
-                fprintf(file, "00%06X\n", (*array)[k][i][j]);
-            }
-        }
-    }
-    for(int k=D/2; k>(D/4); k--){
-        for(int i=0; i< D + 1;i++){
-            for(int j=0; j< (D-1)/2;j++){
-                fprintf(file, "00%06X\n", (*array)[k][i][j]);
-            }
-        }
-    }
-    for(int k=D/2 + 1; k<=(3*D/4);k++){
-        for(int i=0; i< D + 1;i++){
-            for(int j=0; j< (D-1)/2;j++){
-                fprintf(file, "00%06X\n", (*array)[k][i][j]);
-            }
-        }
-    }
-    for(int k=D; k>(3*D/4); k--){
-        for(int i=0; i< D + 1;i++){
-            for(int j=0; j< (D-1)/2;j++){
-                fprintf(file, "00%06X\n", (*array)[k][i][j]);
->>>>>>> 931f2c2651a264d3a8181a6aaf38e47b42e9c75c
             }
         }
     }
