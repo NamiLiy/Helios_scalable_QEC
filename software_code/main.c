@@ -12,7 +12,7 @@ double normal_random(double mean, double std_dev);
 
 int main() {
     int distance = 13;
-    double p = 0.0002;
+    double p = 0.002;
     int test_runs = 1000;
 
     double mean, std_dev;

@@ -53,7 +53,7 @@ wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 `define BYTES_PER_ROUND ((CODE_DISTANCE_X * CODE_DISTANCE_Z  + 7) >> 3)
 `define ALIGNED_PU_PER_ROUND (`BYTES_PER_ROUND << 3)
 
-`define ERASURE_BYTES_PER_ROUND ((GRID_WIDTH_U * GRID_WIDTH_U -(GRID_WIDTH_U-1)  + 7) >> 3)
+`define ERASURE_BYTES_PER_ROUND ((GRID_WIDTH_U * GRID_WIDTH_U -(GRID_WIDTH_U-1)  + 7) >> 3) //The extra (GRID_WIDTH_U-1) comes from edges that cannot be correctly caught by syndromes at the border
 `define ALIGNED_ERASURES_PER_ROUND (`ERASURE_BYTES_PER_ROUND << 3)
 
 

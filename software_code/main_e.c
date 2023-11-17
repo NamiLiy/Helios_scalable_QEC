@@ -12,7 +12,7 @@ double normal_random(double mean, double std_dev);
 
 int main() {
     int distance = 13;
-    double p = 0.0001;
+    double p = 0.000;
     int test_runs = 1000;
 
     double mean, std_dev;
@@ -29,7 +29,8 @@ int main() {
     int data_errors[distance][distance][distance];
     int m_errors[distance+1][distance][distance];
 
-    int syndrome [distance][distance][distance];
+    int syndrome_ns [distance][distance+1][(distance-1)/2];
+    int syndrome_ew [distance][distance+1][(distance-1)/2];
 
     int errors = 0;
     int syndrome_count = 0;
@@ -120,19 +121,19 @@ int main() {
     }
 
     printf("\n");
-    for (int i = 0; i < ns_count; i++) {
-        printf("32'd%d, ", ns_weight_list[i]);
-    }
-    printf("\n");
+    // for (int i = 0; i < ns_count; i++) {
+    //     printf("32'd%d, ", ns_weight_list[i]);
+    // }
+    // printf("\n");
 
-    for (int i = 0; i < ew_count; i++) {
-        printf("32'd%d, ", ew_weight_list[i]);
-    }
-    printf("\n");
+    // for (int i = 0; i < ew_count; i++) {
+    //     printf("32'd%d, ", ew_weight_list[i]);
+    // }
+    // printf("\n");
 
-    for (int i=data_qubits; i < total_error_count; i++) {
-        printf("32'd%d, ", error_list_scrambled[i]);
-    }
+    // for (int i=data_qubits; i < total_error_count; i++) {
+    //     printf("32'd%d, ", error_list_scrambled[i]);
+    // }
     printf("\n");
 
 
@@ -164,12 +165,14 @@ int main() {
             }
             for (int i = 0; i < distance; i++) {
                 for (int j = 0; j < distance; j++) {
-                    if (values[count] < p) m_errors[k][i][j] = 1;
-                    else m_errors[k][i][j] = 0;
-                    count++;
-                    if(m_errors[k][i][j] == 1) {
-                        errors++;
-                    }
+                    //@Siona : I set all of these to zero as erasures are only considered in data qubits
+                    m_errors[k][i][j] = 0;
+                    // if (values[count] < p) m_errors[k][i][j] = 1;
+                    // else m_errors[k][i][j] = 0;
+                    // count++;
+                    // if(m_errors[k][i][j] == 1) {
+                    //     errors++;
+                    // }
                 }
             }
             free(values);
@@ -201,21 +204,31 @@ int main() {
         //     printf("\n");
         // }
 
+        // @Siona : This logic is incorrect. I fixed it. Need to verify
         for (int k = 0; k < distance; k++) {
             for (int i = 0; i < distance; i++) {
-                for (int j = 0; j < distance; j++) {
-                    if(i==0){
-                        syndrome[k][i][j] = data_errors[k][i][j*2] ^ data_errors[k][i][j*2+1] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j];
-                    }
-                    else if(i==distance) {
-                        syndrome[k][i][j] = data_errors[k][i-1][j*2+1] ^ data_errors[k][i-1][j*2+2] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j];
-                    }
-                    else if(i%2 == 1) {
-                        syndrome[k][i][j] = data_errors[k][i-1][j*2+1] ^ data_errors[k][i-1][j*2+2] ^ data_errors[k][i][j*2+1] ^ data_errors[k][i][j*2+2] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j];
+                for (int j = 0; j < (distance-1)/2; j++) {
+                    if(i%2 == 1) {
+                        syndrome_ns[k][i][j] = data_errors[k][i][j*2+2];
                     } else {
-                        syndrome[k][i][j] = data_errors[k][i-1][j*2] ^ data_errors[k][i-1][j*2+1] ^ data_errors[k][i][j*2] ^ data_errors[k][i][j*2+1] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j];
+                        syndrome_ns[k][i][j] = data_errors[k][i][j*2+1];
                     }
-                    if(syndrome[k][i][j] == 1) {
+                    if(syndrome_ns[k][i][j] == 1) {
+                        syndrome_count++;
+                    }
+                }
+            }
+        }
+
+        for (int k = 0; k < distance; k++) {
+            for (int i = 0; i < distance; i++) {
+                for (int j = 0; j < (distance-1)/2; j++) {
+                    if(i%2 == 1) {
+                        syndrome_ew[k][i][j] = data_errors[k][i][j*2+1];
+                    } else {
+                        syndrome_ew[k][i][j] = data_errors[k][i][j*2];
+                    }
+                    if(syndrome_ew[k][i][j] == 1) {
                         syndrome_count++;
                     }
                 }
@@ -224,17 +237,19 @@ int main() {
 
         fprintf(out_fp, "%08X\n", t+1);
         for (int k = 0; k < distance; k++) {
-            int count = 0;
-            for (int i = 0; i < distance; i++) {
-                for (int j = 0; j < distance; j++) {
-                    if(count < ((distance*distance)-(distance-1))) {
-                        fprintf(out_fp, "%08X\n", syndrome[k][i][j]); 
-                    }
-                    count++;
-                    
+            for (int i = 0; i < distance+1; i++) {
+                for (int j = 0; j < (distance-1)/2; j++) {
+                    fprintf(out_fp, "%08X\n", syndrome_ns[k][i][j]);
                 }
                 // printf("\n");
             }
+            for (int i = 0; i < distance+1; i++) {
+                for (int j = 0; j < (distance-1)/2; j++) {
+                    fprintf(out_fp, "%08X\n", syndrome_ew[k][i][j]);
+                }
+                // printf("\n");
+            }
+            fprintf(out_fp, "%08X\n", data_errors[k][distance-1][distance-1]); //This is the last edge that is counted as ew but not follow pattern
             // printf("\n");
         }
 
@@ -277,10 +292,10 @@ int main() {
     // fclose(out_fp);
 
 
-    printf("Errors: %d\n", errors);
-    printf("Error rate actual %f\n", (double)errors/(double)(test_runs*(data_qubits + m_error_per_round)*distance));
-    printf("Syndrome count: %d\n", syndrome_count);
-    printf("Syndrome rate actual %f\n", (double)syndrome_count/(double)(test_runs*(distance+1)*((distance-1)/2)*(distance)));
+    printf("Erasures: %d\n", errors);
+    printf("Erasure rate actual %f\n", (double)errors/(double)(test_runs*(data_qubits + m_error_per_round)*distance));
+    printf("Erasure count: %d\n", syndrome_count);
+    printf("Erasure rate actual %f\n", (double)syndrome_count/(double)(test_runs*(distance+1)*((distance-1)/2)*(distance)));
 
     free_random_seeds(rs);
 

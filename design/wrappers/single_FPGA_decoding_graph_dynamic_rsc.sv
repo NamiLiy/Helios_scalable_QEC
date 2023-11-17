@@ -411,7 +411,7 @@ generate
                 end else if (i == GRID_WIDTH_X-1 && j == GRID_WIDTH_Z) begin
                     assign ew_k[k].ew_i[i].ew_j[j].weight_in = `WEIGHT_EW(i,j);
                     if(k == GRID_WIDTH_U-1) begin
-                        assign ew_k[k].ew_i[i].ew_j[j].erased = erasure[(i-1)*GRID_WIDTH_Z + (j-1) + (GRID_WIDTH_Z*GRID_WIDTH_X-GRID_WIDTH_Z)]; //CHECK OFFSET
+                        assign ew_k[k].ew_i[i].ew_j[j].erased = erasure[(i-1)*GRID_WIDTH_Z + j + (GRID_WIDTH_Z*GRID_WIDTH_X-GRID_WIDTH_Z)]; //CHECK OFFSET //@Siona : This should be j and not j-1. changed
                     end else begin
                         assign ew_k[k].ew_i[i].ew_j[j].erased = ew_k[k+1].ew_i[i].ew_j[j].erased_out;
                     end
@@ -458,7 +458,7 @@ generate
                 end else begin // Fake edges
                     assign ud_k[k].ud_i[i].ud_j[j].weight_in = 2;
                 end
-                assign ud_k[k].ud_i[i].ud_j[j].erased = 0;
+                // assign ud_k[k].ud_i[i].ud_j[j].erased = 0; //@Siona: double assignment 
             end
         end
     end
