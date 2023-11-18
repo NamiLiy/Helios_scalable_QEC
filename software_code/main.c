@@ -15,7 +15,7 @@ double normal_random(double mean, double std_dev);
 int main() {
     int distance = 13;
     double p = 0.001;
-    double erasure_threshold = 0.001;
+    double erasure_threshold = 0.000;
     int test_runs = 200;
 
     double mean, std_dev;
