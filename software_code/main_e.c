@@ -13,7 +13,7 @@ double normal_random(double mean, double std_dev);
 int main() {
     int distance = 13;
     double p = 0.000;
-    int test_runs = 1000;
+    int test_runs = 200;
 
     double mean, std_dev;
     mean = p;
@@ -35,7 +35,7 @@ int main() {
     int errors = 0;
     int syndrome_count = 0;
 
-    struct RandomSeeds* rs = init_random_seeds(data_qubits + m_error_per_round);
+    struct RandomSeeds* rs = init_random_seeds_2(data_qubits + m_error_per_round);
 
     int total_error_count = data_qubits + m_error_per_round;
 
@@ -54,7 +54,7 @@ int main() {
         if(weight_rounded > max_weight) weight_rounded = max_weight;
         if(weight_rounded < min_weight) weight_rounded = min_weight;
         error_list_scrambled[i] = weight_rounded;
-        printf("%f %f %d\n", p_array[i], weight, weight_rounded);
+        // printf("%f %f %d\n", p_array[i], weight, weight_rounded);
     }
 
     int ns_count = 0;
@@ -209,7 +209,12 @@ int main() {
             for (int i = 0; i < distance; i++) {
                 for (int j = 0; j < (distance-1)/2; j++) {
                     if(i%2 == 1) {
-                        syndrome_ns[k][i][j] = data_errors[k][i][j*2+2];
+                        if(j == (distance-1)/2 -1){ // last column
+                            syndrome_ns[k][i][j] = data_errors[k][i][j*2+2] | data_errors[k][i-1][j*2+2];
+                        }
+                        else{
+                            syndrome_ns[k][i][j] = data_errors[k][i][j*2+2];
+                        }
                     } else {
                         syndrome_ns[k][i][j] = data_errors[k][i][j*2+1];
                     }
@@ -226,7 +231,12 @@ int main() {
                     if(i%2 == 1) {
                         syndrome_ew[k][i][j] = data_errors[k][i][j*2+1];
                     } else {
-                        syndrome_ew[k][i][j] = data_errors[k][i][j*2];
+                        if(i>0 && j== 0){ //First column
+                            syndrome_ew[k][i][j] = data_errors[k][i][j*2] | data_errors[k][i-1][j*2];
+                        }
+                        else{
+                            syndrome_ew[k][i][j] = data_errors[k][i][j*2];
+                        }
                     }
                     if(syndrome_ew[k][i][j] == 1) {
                         syndrome_count++;
@@ -237,13 +247,13 @@ int main() {
 
         fprintf(out_fp, "%08X\n", t+1);
         for (int k = 0; k < distance; k++) {
-            for (int i = 0; i < distance+1; i++) {
+            for (int i = 0; i < distance; i++) {
                 for (int j = 0; j < (distance-1)/2; j++) {
                     fprintf(out_fp, "%08X\n", syndrome_ns[k][i][j]);
                 }
                 // printf("\n");
             }
-            for (int i = 0; i < distance+1; i++) {
+            for (int i = 0; i < distance; i++) {
                 for (int j = 0; j < (distance-1)/2; j++) {
                     fprintf(out_fp, "%08X\n", syndrome_ew[k][i][j]);
                 }
@@ -293,9 +303,7 @@ int main() {
 
 
     printf("Erasures: %d\n", errors);
-    printf("Erasure rate actual %f\n", (double)errors/(double)(test_runs*(data_qubits + m_error_per_round)*distance));
-    printf("Erasure count: %d\n", syndrome_count);
-    printf("Erasure rate actual %f\n", (double)syndrome_count/(double)(test_runs*(distance+1)*((distance-1)/2)*(distance)));
+    printf("Erasure rate actual %f\n", (double)errors/(double)(test_runs*(data_qubits)*distance));
 
     free_random_seeds(rs);
 

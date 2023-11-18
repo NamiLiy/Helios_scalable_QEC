@@ -11,6 +11,7 @@ struct RandomSeeds {
 };
 
 struct RandomSeeds* init_random_seeds(int num_seeds);
+struct RandomSeeds* init_random_seeds_2(int num_seeds);
 
 double* next_random_values(struct RandomSeeds* rs);
 

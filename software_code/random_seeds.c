@@ -37,6 +37,25 @@ struct RandomSeeds* init_random_seeds(int num_seeds) {
     return rs;
 }
 
+// Initialize the RandomSeeds struct with n random seeds
+struct RandomSeeds* init_random_seeds_2(int num_seeds) {
+    struct RandomSeeds* rs = (struct RandomSeeds*)malloc(sizeof(struct RandomSeeds));
+    rs->num_seeds = num_seeds;
+    rs->seeds = (int*)malloc(num_seeds * sizeof(int));
+    rs->values = (double*)malloc(num_seeds * sizeof(double));
+
+    // Generate random seeds using the current time as a seed
+    srand(time(NULL)*53258905);
+    // srand();
+    for (int i = 0; i < num_seeds; i++) {
+        rs->seeds[i] = rand();
+        printf("%d, ", rs->seeds[i]);
+        rs->values[i] = 0.0;
+    }
+
+    return rs;
+}
+
 // Generate the next random value for each seed and return them as an array of doubles between 0 and 1
 double* next_random_values(struct RandomSeeds* rs) {
     double* values = (double*)malloc(rs->num_seeds * sizeof(double));

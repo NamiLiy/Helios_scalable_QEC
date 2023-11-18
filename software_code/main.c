@@ -12,8 +12,8 @@ double normal_random(double mean, double std_dev);
 
 int main() {
     int distance = 13;
-    double p = 0.002;
-    int test_runs = 1000;
+    double p = 0.001;
+    int test_runs = 200;
 
     double mean, std_dev;
     mean = p;
@@ -53,7 +53,7 @@ int main() {
         if(weight_rounded > max_weight) weight_rounded = max_weight;
         if(weight_rounded < min_weight) weight_rounded = min_weight;
         error_list_scrambled[i] = weight_rounded;
-        printf("%f %f %d\n", p_array[i], weight, weight_rounded);
+        // printf("%f %f %d\n", p_array[i], weight, weight_rounded);
     }
 
     int ns_count = 0;
@@ -119,21 +119,21 @@ int main() {
         }
     }
 
-    printf("\n");
-    for (int i = 0; i < ns_count; i++) {
-        printf("32'd%d, ", ns_weight_list[i]);
-    }
-    printf("\n");
+    // printf("\n");
+    // for (int i = 0; i < ns_count; i++) {
+    //     printf("32'd%d, ", ns_weight_list[i]);
+    // }
+    // printf("\n");
 
-    for (int i = 0; i < ew_count; i++) {
-        printf("32'd%d, ", ew_weight_list[i]);
-    }
-    printf("\n");
+    // for (int i = 0; i < ew_count; i++) {
+    //     printf("32'd%d, ", ew_weight_list[i]);
+    // }
+    // printf("\n");
 
-    for (int i=data_qubits; i < total_error_count; i++) {
-        printf("32'd%d, ", error_list_scrambled[i]);
-    }
-    printf("\n");
+    // for (int i=data_qubits; i < total_error_count; i++) {
+    //     printf("32'd%d, ", error_list_scrambled[i]);
+    // }
+    // printf("\n");
 
 
 

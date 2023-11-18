@@ -154,6 +154,7 @@ reg [U_BIT_WIDTH-1 : 0] expected_u;
 reg test_fail;
 reg processing = 0;
 reg [31:0] syndrome_count;
+reg [31:0] erasure_count;
 reg [31:0] pass_count = 0;
 reg [31:0] fail_count = 0;
 reg [31:0] total_count;
@@ -310,6 +311,9 @@ always @(negedge clk) begin
         if (erasure_eof == 0)begin 
             $fscanf (erasure_file, "%h\n", test_case);
             erasure_eof = $feof(erasure_file);
+            if (erasure_eof == 0)begin 
+                erasure_count = 0;
+            end
         end
         
         
@@ -320,6 +324,7 @@ always @(negedge clk) begin
                         $fscanf (erasure_file, "%h\n", input_read_value);
                         `erasure(i, j, k) = input_read_value;
                         if(input_read_value != 0) begin
+                            erasure_count = erasure_count +1;
                         end
                     end
                 end
@@ -336,37 +341,37 @@ reg [7:0] test;
 
 assign file_root_op = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_11_roots.txt", "w");        
         
-always@ (posedge clk) begin
-    if(decoder.controller.global_stage == STAGE_RESULT_VALID && decoder.previous_global_stage != STAGE_RESULT_VALID) begin      
-        for(k = 0; k < GRID_WIDTH_U; k++) begin
-            for(i = 0; i < GRID_WIDTH_X; i++) begin
-                for(j = 0; j < GRID_WIDTH_Z; j++) begin
-                    $fwrite (file_root_op, (Z_BIT_WIDTH > 0) ? `root_z(i, j, k) : 0);
-                    $fwrite (file_root_op, `root_x(i, j, k));
-                    $fdisplay(file_root_op, `root_u(i, j, k));
-                end
-            end
-        end
-    end
-end
+//always@ (posedge clk) begin
+//    if(decoder.controller.global_stage == STAGE_RESULT_VALID && decoder.previous_global_stage != STAGE_RESULT_VALID) begin      
+//        for(k = 0; k < GRID_WIDTH_U; k++) begin
+//            for(i = 0; i < GRID_WIDTH_X; i++) begin
+//                for(j = 0; j < GRID_WIDTH_Z; j++) begin
+//                    $fwrite (file_root_op, (Z_BIT_WIDTH > 0) ? `root_z(i, j, k) : 0);
+//                    $fwrite (file_root_op, `root_x(i, j, k));
+//                    $fdisplay(file_root_op, `root_u(i, j, k));
+//                end
+//            end
+//        end
+//    end
+//end
 
 // Output verification logic
 always @(posedge clk) begin
     if (loading_state == 3'b101 && !output_valid) begin // This is not becaus we wait until all messages are received
-        $display("%t\tTest case %d pass %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
-       /* if(open == 1) begin
+       //$display("%t\tTest case %d pass %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
+       if(open == 1) begin
             if (CODE_DISTANCE == 3) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_3_rsc.txt", "r");
+                file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_3_rsc.txt", "r");
             end else if (CODE_DISTANCE == 5) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_5_rsc.txt", "r");
+                file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_5_rsc.txt", "r");
             end else if (CODE_DISTANCE == 7) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_7_rsc.txt", "r");
+                file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_7_rsc.txt", "r");
             end else if (CODE_DISTANCE == 9) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_9_rsc.txt", "r");
+                file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_9_rsc.txt", "r");
             end else if (CODE_DISTANCE == 11) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_11_rsc.txt", "r");
+                file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_11_rsc.txt", "r");
             end else if (CODE_DISTANCE == 13) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_13_rsc.txt", "r");
+                file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_13_rsc.txt", "r");
             end 
             open = 0;
         end
@@ -405,13 +410,13 @@ always @(posedge clk) begin
             end
         end
         if (!test_fail) begin
-            $display("%t\tTest case %d pass %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
+            $display("%t\tTest case %d pass %d cycles %d iterations %d syndromes %d erasures", $time, test_case, cycle_counter, iteration_counter, syndrome_count, erasure_count);
             pass_count = pass_count + 1;
         end else begin
-            $display("%t\tTest case %d fail %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
+            $display("%t\tTest case %d fail %d cycles %d iterations %d syndromes %d erasures", $time, test_case, cycle_counter, iteration_counter, syndrome_count, erasure_count);
             fail_count = fail_count + 1;
             $finish;
-        end*/
+        end //*/
     end
     if (input_eof == 1)begin
         total_count = pass_count + fail_count;
