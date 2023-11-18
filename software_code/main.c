@@ -4,6 +4,8 @@
 #include <math.h>
 #include <time.h>
 
+// This file now contain both erasure and pali errors
+
 int max(int a, int b) {
     return (a > b) ? a : b;
 }
@@ -13,6 +15,7 @@ double normal_random(double mean, double std_dev);
 int main() {
     int distance = 13;
     double p = 0.001;
+    double erasure_threshold = 0.001;
     int test_runs = 200;
 
     double mean, std_dev;
@@ -27,16 +30,21 @@ int main() {
     int m_error_per_round = (distance+1)*(distance-1)/2;
 
     int data_errors[distance][distance][distance];
+    int erasure_errors[distance][distance][distance];
     int m_errors[distance+1][distance+1][(distance-1)/2];
 
     int syndrome [distance][distance+1][(distance-1)/2];
 
+    int erasure_ns [distance][distance+1][(distance-1)/2];
+    int erasure_ew [distance][distance+1][(distance-1)/2];
+
     int errors = 0;
     int syndrome_count = 0;
+    int erasures = 0;
 
-    struct RandomSeeds* rs = init_random_seeds(data_qubits + m_error_per_round);
+    struct RandomSeeds* rs = init_random_seeds(data_qubits + m_error_per_round + data_qubits);
 
-    int total_error_count = data_qubits + m_error_per_round;
+    int total_error_count = data_qubits + m_error_per_round + data_qubits;
 
     double p_array[total_error_count];
     int error_list_scrambled[total_error_count];
@@ -137,13 +145,21 @@ int main() {
 
 
 
-    FILE *out_fp, *in_fp;
+    FILE *out_fp, *in_fp, *out_fp_e;
     int c;
     char filename[100];
     sprintf(filename, "../test_benches/test_data/input_data_%d_rsc.txt", distance);
     out_fp = fopen(filename, "wb");
     if (out_fp == NULL) {
         fprintf(stderr, "Can't open output file %s!\n", "output_3.txt");
+        exit(1);
+    }
+
+    char filename_e[100];
+    sprintf(filename_e, "../test_benches/test_data/input_data_erasure_%d_rsc.txt", distance);
+    out_fp_e = fopen(filename_e, "wb");
+    if (out_fp_e == NULL) {
+        fprintf(stderr, "Can't open erasure file %s!\n", "output_3.txt");
         exit(1);
     }
 
@@ -169,6 +185,18 @@ int main() {
                     count++;
                     if(m_errors[k][i][j] == 1) {
                         errors++;
+                    }
+                }
+            }
+            for (int i = 0; i < distance; i++) {
+                for (int j = 0; j < distance; j++) {
+                    // printf("%f ", values[count]);
+                    if (values[count] < (erasure_threshold/2)) erasure_errors[k][i][j] = 2;
+                    else if (values[count] < erasure_threshold) erasure_errors[k][i][j] = 1;
+                    else erasure_errors[k][i][j] = 0;
+                    count++;
+                    if(erasure_errors[k][i][j] > 0) {
+                        erasures++;
                     }
                 }
             }
@@ -205,16 +233,17 @@ int main() {
             for (int i = 0; i < (distance + 1); i++) {
                 for (int j = 0; j < (distance-1)/2; j++) {
                     if(i==0){
-                        syndrome[k][i][j] = data_errors[k][i][j*2] ^ data_errors[k][i][j*2+1] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j];
+                        syndrome[k][i][j] = data_errors[k][i][j*2] ^ data_errors[k][i][j*2+1] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j] ^ erasure_errors[k][i][j*2] ^ erasure_errors[k][i][j*2+1];
                     }
                     else if(i==distance) {
-                        syndrome[k][i][j] = data_errors[k][i-1][j*2+1] ^ data_errors[k][i-1][j*2+2] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j];
+                        syndrome[k][i][j] = data_errors[k][i-1][j*2+1] ^ data_errors[k][i-1][j*2+2] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j] ^ erasure_errors[k][i-1][j*2+1] ^ erasure_errors[k][i-1][j*2+2];
                     }
                     else if(i%2 == 1) {
-                        syndrome[k][i][j] = data_errors[k][i-1][j*2+1] ^ data_errors[k][i-1][j*2+2] ^ data_errors[k][i][j*2+1] ^ data_errors[k][i][j*2+2] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j];
+                        syndrome[k][i][j] = data_errors[k][i-1][j*2+1] ^ data_errors[k][i-1][j*2+2] ^ data_errors[k][i][j*2+1] ^ data_errors[k][i][j*2+2] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j] ^ erasure_errors[k][i-1][j*2+1] ^ erasure_errors[k][i-1][j*2+2] ^ erasure_errors[k][i][j*2+1] ^ erasure_errors[k][i][j*2+2];
                     } else {
-                        syndrome[k][i][j] = data_errors[k][i-1][j*2] ^ data_errors[k][i-1][j*2+1] ^ data_errors[k][i][j*2] ^ data_errors[k][i][j*2+1] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j];
+                        syndrome[k][i][j] = data_errors[k][i-1][j*2] ^ data_errors[k][i-1][j*2+1] ^ data_errors[k][i][j*2] ^ data_errors[k][i][j*2+1] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j] ^ erasure_errors[k][i-1][j*2] ^ erasure_errors[k][i-1][j*2+1] ^ erasure_errors[k][i][j*2] ^ erasure_errors[k][i][j*2+1] ;
                     }
+                    syndrome[k][i][j] = syndrome[k][i][j] & 1;
                     if(syndrome[k][i][j] == 1) {
                         syndrome_count++;
                     }
@@ -230,6 +259,64 @@ int main() {
                 }
                 // printf("\n");
             }
+            // printf("\n");
+        }
+
+        for (int k = 0; k < distance; k++) {
+            for (int i = 0; i < distance; i++) {
+                for (int j = 0; j < (distance-1)/2; j++) {
+                    if(i%2 == 1) {
+                        if(j == (distance-1)/2 -1){ // last column
+                            erasure_ns[k][i][j] = erasure_errors[k][i][j*2+2] | erasure_errors[k][i-1][j*2+2];
+                        }
+                        else{
+                            erasure_ns[k][i][j] = erasure_errors[k][i][j*2+2];
+                        }
+                    } else {
+                        erasure_ns[k][i][j] = erasure_errors[k][i][j*2+1];
+                    }
+                    if(erasure_ns[k][i][j] > 0) {
+                        erasure_ns[k][i][j] = 1;
+                    }
+                }
+            }
+        }
+
+        for (int k = 0; k < distance; k++) {
+            for (int i = 0; i < distance; i++) {
+                for (int j = 0; j < (distance-1)/2; j++) {
+                    if(i%2 == 1) {
+                        erasure_ew[k][i][j] = erasure_errors[k][i][j*2+1];
+                    } else {
+                        if(i>0 && j== 0){ //First column
+                            erasure_ew[k][i][j] = erasure_errors[k][i][j*2] | erasure_errors[k][i-1][j*2];
+                        }
+                        else{
+                            erasure_ew[k][i][j] = erasure_errors[k][i][j*2];
+                        }
+                    }
+                    if(erasure_ew[k][i][j] > 0) {
+                        erasure_ew[k][i][j] = 1;
+                    }
+                }
+            }
+        }
+
+        fprintf(out_fp_e, "%08X\n", t+1);
+        for (int k = 0; k < distance; k++) {
+            for (int i = 0; i < distance; i++) {
+                for (int j = 0; j < (distance-1)/2; j++) {
+                    fprintf(out_fp_e, "%08X\n", erasure_ns[k][i][j]);
+                }
+                // printf("\n");
+            }
+            for (int i = 0; i < distance; i++) {
+                for (int j = 0; j < (distance-1)/2; j++) {
+                    fprintf(out_fp_e, "%08X\n", erasure_ew[k][i][j]);
+                }
+                // printf("\n");
+            }
+            fprintf(out_fp_e, "%08X\n", erasure_errors[k][distance-1][distance-1] > 0 ? 1 : 0); //This is the last edge that is counted as ew but not follow pattern
             // printf("\n");
         }
 
@@ -263,6 +350,7 @@ int main() {
         }*/
     }
     fclose(out_fp);
+    fclose(out_fp_e);
 
     // in_fp = fopen("../test_benches/test_data/test_file_d17_p001.bin", "rb");
     // while ((c = fgetc(in_fp)) != EOF) {
@@ -276,6 +364,8 @@ int main() {
     printf("Error rate actual %f\n", (double)errors/(double)(test_runs*(data_qubits + m_error_per_round)*distance));
     printf("Syndrome count: %d\n", syndrome_count);
     printf("Syndrome rate actual %f\n", (double)syndrome_count/(double)(test_runs*(distance+1)*((distance-1)/2)*(distance)));
+    printf("Erasure count: %d\n", erasures);
+    printf("Erasure rate actual %f\n", (double)erasures/(double)(test_runs*(data_qubits)*(distance)));
 
     free_random_seeds(rs);
 
