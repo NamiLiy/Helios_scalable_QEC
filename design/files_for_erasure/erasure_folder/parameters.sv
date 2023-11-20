@@ -1,0 +1,21 @@
+//`ifndef DEFINE_DUF_PARAMETERS
+
+// global stage of the algorithm
+localparam STAGE_WIDTH = 4;
+localparam [STAGE_WIDTH-1:0]
+    STAGE_IDLE = 0,
+    STAGE_MEASUREMENT_LOADING = 1,
+    STAGE_GROW = 2,
+    STAGE_MERGE = 3,
+    STAGE_PEELING = 4,
+    STAGE_RESULT_VALID = 5,
+    STAGE_PARAMETERS_LOADING = 6,
+    STAGE_MEASUREMENT_PREPARING = 7,
+    STAGE_ERASURE_LOADING = 8;
+
+localparam [7:0]
+    START_DECODING_MSG = 8'h01,
+    MEASUREMENT_DATA_HEADER = 8'h02;
+
+//`define DEFINE_DUF_PARAMETERS 1
+//`endif
