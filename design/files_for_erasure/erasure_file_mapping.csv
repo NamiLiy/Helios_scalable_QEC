@@ -1,0 +1,13 @@
+../../design/channels,neighbor_link_internal_v2.v
+../../design/pe,processing_unit_single_FPGA_v2.v
+../../design/stage_controller,control_node_single_FPGA.v
+../../design/wrappers,Helios_single_FPGA_core.v
+../../design/wrappers,single_FPGA_decoding_graph_dynamic_rsc.sv
+../../parameters,parameters.sv
+../../software_code,main.c
+../../software_code,main_e.c
+../../software_code,random_seeds.c
+../../software_code,random_seeds.h
+../../software_code,script.sh
+../../software_code,union_find.c
+../../test_benches/full_tests,single_FPGA_FIFO_verification_test_rsc.sv
