@@ -11,7 +11,7 @@ module single_FPGA_decoding_graph_dynamic_rsc #(
     reset,
     measurements,
     odd_clusters,
-    //roots,
+    roots,
     busy,
     global_stage,
     correction
@@ -48,7 +48,7 @@ input [PU_COUNT_PER_ROUND-1:0] measurements;
 input [STAGE_WIDTH-1:0] global_stage;
 
 output [PU_COUNT - 1 : 0] odd_clusters;
-// output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
+output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 output [PU_COUNT - 1 : 0] busy;
 output [CORRECTION_COUNT_PER_ROUND - 1 : 0] correction;
 
@@ -57,7 +57,7 @@ genvar j;
 genvar k;
 
 //logic to calulate the context_stage
-reg[$clog2(NUM_CONTEXTS):0] context_stage;
+reg[3:0] context_stage;
 always@(posedge clk) begin
     if(reset) begin
         context_stage <= 0;
@@ -73,7 +73,7 @@ always@(posedge clk) begin
 end
 
 //context_stage delayed
-reg[$clog2(NUM_CONTEXTS):0] context_stage_delayed;
+reg[3:0] context_stage_delayed;
 always@(posedge clk) begin
     if(reset) begin
         context_stage_delayed <= 0;
@@ -146,7 +146,7 @@ generate
                     .root(root),
                     .busy(busy_PE)
                 );
-                // assign `roots(i, j, k) = root[ADDRESS_WIDTH-1:0];
+                assign `roots(i, j, k) = root[ADDRESS_WIDTH-1:0];
                 assign `busy(i, j, k) = busy_PE;
                 assign `odd_clusters(i,j,k) = odd;
             end
@@ -161,41 +161,24 @@ generate
                 wire local_context_switch;
 
                 if (k==1)
-                    // // This line is for d=27 ctx = 27
-                    // assign local_context_switch = (context_stage_delayed %2 == 0 && context_stage_delayed < NUM_CONTEXTS - 1) ? 1'b1 : 1'b0;
-                    //This line is for d=27 ctx = 4
-                    assign local_context_switch = (context_stage_delayed %2 == 0 && context_stage_delayed < NUM_CONTEXTS - 1) ? 1'b1 : 1'b0;
+                    assign local_context_switch = (context_stage_delayed %2 == 0) ? 1'b1 : 1'b0;
                 else if(k==0)
-                    assign local_context_switch = (context_stage_delayed %2 == 1 && context_stage_delayed < NUM_CONTEXTS - 1) ? 1'b1 : 1'b0;
+                    assign local_context_switch = (context_stage_delayed %2 == 1) ?1'b1 : 1'b0;
                 else begin
                     assign local_context_switch = 1'b0;
                 end
-                if(k==1) begin
-                    support_processing_unit #(
-                        .ADDRESS_WIDTH(ADDRESS_WIDTH_WITH_B),
-                        //.NUM_CONTEXTS(NUM_CONTEXTS/2 + 1) // +1 is for ctx = d
-                        .NUM_CONTEXTS((NUM_CONTEXTS + 1)/2) 
-                    ) spu (
-                        .clk(clk),
-                        .reset(reset),
-                        .global_stage(global_stage),
-                        .input_data(input_data),
-                        .output_data(output_data),
-                        .do_not_store(local_context_switch)
-                    );
-                end else begin
-                    support_processing_unit #(
-                        .ADDRESS_WIDTH(ADDRESS_WIDTH_WITH_B),
-                        .NUM_CONTEXTS(NUM_CONTEXTS/2 + 1) // +1 is for ctx = d
-                    ) spu (
-                        .clk(clk),
-                        .reset(reset),
-                        .global_stage(global_stage),
-                        .input_data(input_data),
-                        .output_data(output_data),
-                        .do_not_store(local_context_switch)
-                    );
-                end
+
+                support_processing_unit #(
+                    .ADDRESS_WIDTH(ADDRESS_WIDTH_WITH_B),
+                    .NUM_CONTEXTS(NUM_CONTEXTS/2)
+                ) spu (
+                    .clk(clk),
+                    .reset(reset),
+                    .global_stage(global_stage),
+                    .input_data(input_data),
+                    .output_data(output_data),
+                    .do_not_store(local_context_switch)
+                );
             end
         end
     end
@@ -425,25 +408,16 @@ generate
                 reg [3:0] type_for_boundary_links;
                 wire fully_grown_data;
                 always@(*) begin 
-                     if(k==1) begin //Ugly workaround for d=11
-                         if(context_stage < NUM_CONTEXTS - 1) //This is not delayed as boundary_condition must be given befoe moving to the stage
-                             type_for_boundary_links = 3'b00; //  Internal
-                         else
-                             type_for_boundary_links = 3'b10; // Non-existant
-                     end else if(k==0) begin
+                    if(k==1) begin //Ugly workaround for d=11
+                        if(context_stage < NUM_CONTEXTS - 1) //This is not delayed as boundary_condition must be given befoe moving to the stage
+                            type_for_boundary_links = 3'b00; //  Internal
+                        else
+                            type_for_boundary_links = 3'b10; // Non-existant
+                    end else if(k==0) begin
                         if(context_stage > 0)
                             type_for_boundary_links = 3'b00; //  Internal
-                        else if(context_stage == 0)
-                            type_for_boundary_links = 3'b01; // Boundary
                         else
-                            type_for_boundary_links = 3'b10; //Non existant
-//                    end else if(k==PHYSICAL_GRID_WIDTH_U) begin
-//                        if(context_stage > 0)
-//                            type_for_boundary_links = 3'b00; //  Internal
-//                        else if(context_stage == 0)
-//                            type_for_boundary_links = 3'b01; // Boundary
-//                        else
-//                            type_for_boundary_links = 3'b10; //Non existant
+                            type_for_boundary_links = 3'b01; // Boundary
                     end else
                         type_for_boundary_links = 3'b00; //  Internal
                 end
@@ -451,19 +425,16 @@ generate
 
                 wire local_context_switch;
                 if(k==PHYSICAL_GRID_WIDTH_U) begin
-                    // assign local_context_switch = (context_stage_delayed %2 == 0 && context_stage_delayed < NUM_CONTEXTS - 1) ? 1'b1 : 1'b0; //this is for ctx=d version
-                    assign local_context_switch = (context_stage_delayed %2 == 0 && context_stage_delayed < NUM_CONTEXTS - 1) ? 1'b1 : 1'b0;
+                    assign local_context_switch = (context_stage_delayed %2 == 0) ? 1'b1 : 1'b0;
                 end else if(k==0) begin
-                    assign local_context_switch = (context_stage_delayed %2 == 1 && context_stage_delayed < NUM_CONTEXTS - 1) ? 1'b1 : 1'b0;
+                    assign local_context_switch = (context_stage_delayed %2 == 1) ? 1'b1 : 1'b0;
                 end else begin
                     assign local_context_switch = 1'b0;
                 end
                 if(k==0) begin
-                    // `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k, i,j,0, `NEIGHBOR_IDX_DOWN, type_for_boundary_links, NUM_CONTEXTS / 2 + 1) //+1 is only for d=ctx
-                    `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k, i,j,0, `NEIGHBOR_IDX_DOWN, type_for_boundary_links, NUM_CONTEXTS / 2 + 1)
+                    `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k, i,j,0, `NEIGHBOR_IDX_DOWN, type_for_boundary_links, NUM_CONTEXTS / 2)
                 end else if(k==PHYSICAL_GRID_WIDTH_U) begin
-                    // `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k-1, i,j,1, `NEIGHBOR_IDX_UP, type_for_boundary_links, NUM_CONTEXTS / 2 + 1) //+1 is for d=ctx
-                    `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k-1, i,j,1, `NEIGHBOR_IDX_UP, type_for_boundary_links, (NUM_CONTEXTS + 1)/ 2) //+1 is for d=ctx
+                    `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k-1, i,j,1, `NEIGHBOR_IDX_UP, type_for_boundary_links, NUM_CONTEXTS / 2)
                 end else if (k < PHYSICAL_GRID_WIDTH_U) begin
                     `NEIGHBOR_LINK_INTERNAL_0(i, j, k-1, i, j, k, `NEIGHBOR_IDX_UP, `NEIGHBOR_IDX_DOWN, type_for_boundary_links, NUM_CONTEXTS)
                 end

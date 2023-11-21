@@ -44,7 +44,7 @@ output [7 : 0] output_data;
 output output_valid;
 input output_ready;
 
-wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
+// wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 
 wire [STAGE_WIDTH-1:0] global_stage;
 wire [CORRECTION_COUNT_PER_ROUND - 1 : 0] correction;
@@ -64,7 +64,7 @@ single_FPGA_decoding_graph_dynamic_rsc #(
     .reset(reset),
     .measurements(measurements),
     .odd_clusters(odd_clusters),
-    .roots(roots),
+    // .roots(roots),
     .correction(correction),
     .busy(busy),
     .global_stage(global_stage)

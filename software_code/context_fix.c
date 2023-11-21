@@ -3,9 +3,9 @@
 #include <math.h>
 #include <time.h>
 
-#define D 27
+#define D 51
 #define TOTAL_MEASUREMENTS D
-#define NUM_CONTEXTS 4
+#define NUM_CONTEXTS D
 
 #define distance_per_context ((D + NUM_CONTEXTS - 1)/NUM_CONTEXTS)
 #define rounded_distance (distance_per_context*NUM_CONTEXTS)
@@ -94,7 +94,7 @@ int print_output(FILE* file, int (*array)[rounded_distance][D+1][(D-1)/2], int t
     return 0;
 }
 
-int print_detailed_output(FILE* file, int (*array)[D+1][D+1][(D-1)/2], int test) {
+int print_detailed_output(FILE* file, int (*array)[rounded_distance][D+1][(D-1)/2], int test) {
 
     fprintf(file, "Test id %d\n", test);
 
@@ -140,7 +140,7 @@ int input_handle(){
     }
 
     while(1){
-        int syndrome[D+1][D+1][(D-1)/2];
+        int syndrome[rounded_distance][D+1][(D-1)/2];
         int ret_val = loadFileData(file, &syndrome);
         if(ret_val < 0) {
             break;
@@ -173,7 +173,7 @@ int output_handle(){
     }
 
     while(1){
-        int syndrome[D+1][D+1][(D-1)/2];
+        int syndrome[rounded_distance][D+1][(D-1)/2];
         int ret_val = loadFileData(file, &syndrome);
         if(ret_val < 0) {
             break;

@@ -16,10 +16,10 @@ module verification_bench_single_FPGA_rsc;
 `include "../../parameters/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
-localparam CODE_DISTANCE = 27;                
+localparam CODE_DISTANCE = 51;                
 localparam CODE_DISTANCE_X = CODE_DISTANCE + 1;
 localparam CODE_DISTANCE_Z = (CODE_DISTANCE_X - 1)/2;
-localparam NUM_CONTEXTS = 4;
+localparam NUM_CONTEXTS = CODE_DISTANCE;
 
 parameter GRID_WIDTH_X = CODE_DISTANCE + 1;
 parameter GRID_WIDTH_Z = (CODE_DISTANCE_X - 1)/2;
@@ -268,6 +268,8 @@ always @(negedge clk) begin
                 input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_25_ctx.txt", "r");
             end else if (CODE_DISTANCE == 27) begin
                 input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_27_ctx.txt", "r");
+            end else if (CODE_DISTANCE == 51) begin
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_51_ctx.txt", "r");
             end
             input_open = 0;
         end
@@ -328,6 +330,8 @@ always @(posedge clk) begin
                 file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_25_ctx.txt", "r");
             end else if (CODE_DISTANCE == 27) begin
                 file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_27_ctx.txt", "r");
+            end else if (CODE_DISTANCE == 51) begin
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_51_ctx.txt", "r");
             end 
             open = 0;
         end
@@ -357,7 +361,7 @@ always @(posedge clk) begin
                         end else begin
                             context_k = decoder.controller.current_context*PHYSICAL_GRID_WIDTH_U  + k;
                         end
-                        if(decoder.controller.current_context == NUM_CONTEXTS - 1 && k == 0) begin //hack for d=7,11
+                        if(decoder.controller.current_context == NUM_CONTEXTS - 1 && expected_u == 0 && expected_x==0 && expected_z==0) begin //hack for d=7,11
                             continue;
                         end else begin
                             if(Z_BIT_WIDTH>0) begin
