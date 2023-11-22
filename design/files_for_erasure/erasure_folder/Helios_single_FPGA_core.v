@@ -11,8 +11,7 @@ module Helios_single_FPGA #(
     input_ready,
     output_data,
     output_valid,
-    output_ready,
-    erasure
+    output_ready
 
     // roots // A debug port. Do not use in the real implementation
 );
@@ -43,7 +42,7 @@ output input_ready;
 output [7 : 0] output_data;
 output output_valid;
 input output_ready;
-input [GRID_WIDTH_U*GRID_WIDTH_U-(GRID_WIDTH_U-1) : 0] erasure;
+wire [GRID_WIDTH_U*GRID_WIDTH_U-(GRID_WIDTH_U-1) : 0] erasure;
 
 wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 
