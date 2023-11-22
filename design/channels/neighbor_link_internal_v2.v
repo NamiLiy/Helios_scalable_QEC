@@ -67,8 +67,7 @@ output reg [LINK_BIT_WIDTH-1:0] weight_out;
 output reg [1:0] boundary_condition_out;
 
 reg [LINK_BIT_WIDTH-1 : 0] growth;
-
-
+reg [STAGE_WIDTH - 1 : 0] stage;
 
 `define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
@@ -88,12 +87,20 @@ always@(*) begin
     end
 end
 
+always@(posedge clk) begin
+    if(reset) begin
+        stage <= STAGE_IDLE;
+    end else begin
+        stage <= global_stage;
+    end
+end
+
 
 always@(posedge clk) begin
     if(reset) begin
         growth <= 0;
     end else begin
-        if(global_stage == STAGE_MEASUREMENT_LOADING) begin
+        if(stage == STAGE_MEASUREMENT_LOADING) begin
                 growth <= 0;
         end else begin
             growth <= growth_new;
@@ -106,17 +113,17 @@ always@(posedge clk) begin
         is_error <= 0;
     end else begin
         if (boundary_condition_out == 0)  begin // No boundary default case 
-            if(global_stage == STAGE_MEASUREMENT_LOADING) begin
+            if(stage == STAGE_MEASUREMENT_LOADING) begin
                 is_error <= 0;
-            end else if(global_stage == STAGE_RESULT_VALID) begin
+            end else if(stage == STAGE_RESULT_VALID) begin
                 is_error <= is_error_systolic_in;
             end else begin
                 is_error <= a_is_error_in | b_is_error_in;
             end
         end else if (boundary_condition_out == 1) begin // edge touching a boundary
-            if(global_stage == STAGE_MEASUREMENT_LOADING) begin
+            if(stage == STAGE_MEASUREMENT_LOADING) begin
                 is_error <= 0;
-            end else if(global_stage == STAGE_RESULT_VALID) begin
+            end else if(stage == STAGE_RESULT_VALID) begin
                 is_error <= is_error_systolic_in;
             end else begin
                 is_error <= a_is_error_in;
@@ -138,7 +145,7 @@ always@(posedge clk) begin
         weight_out <= 0;
         boundary_condition_out <= 0;
     end else begin
-        if(global_stage == STAGE_PARAMETERS_LOADING) begin
+        if(stage == STAGE_PARAMETERS_LOADING) begin
             weight_out <= weight_in;
             boundary_condition_out <= boundary_condition_in;
         end
