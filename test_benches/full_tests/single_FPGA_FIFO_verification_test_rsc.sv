@@ -175,7 +175,7 @@ always @(posedge clk) begin
                 input_fifo_counter <= 0;
             end
             3'b11: begin
-                if (input_fifo_counter == (`BYTES_PER_ROUND*MEASUREMENT_ROUNDS)) begin
+                if (input_fifo_counter == (`BYTES_PER_ROUND*MEASUREMENT_ROUNDS - 1)) begin
                     loading_state <= 3'b100;
                 end
                 input_fifo_counter <= input_fifo_counter + 1; 
@@ -237,7 +237,7 @@ always @(negedge clk) begin
         measurements = 0;
         if(input_open == 1) begin
             if (CODE_DISTANCE == 3) begin
-                input_file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_3_streaming.txt", "r");
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_3_streaming.txt", "r");
             end else if (CODE_DISTANCE == 5) begin
                 input_file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_5_streaming.txt", "r");
             end else if (CODE_DISTANCE == 7) begin
@@ -247,7 +247,7 @@ always @(negedge clk) begin
             end else if (CODE_DISTANCE == 11) begin
                 input_file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_11_streaming.txt", "r");
             end else if (CODE_DISTANCE == 13) begin
-                input_file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_13_streaming.txt", "r");
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_13_streaming.txt", "r");
             end else if (CODE_DISTANCE == 15) begin
                 input_file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_15_streaming.txt", "r");
             end else if (CODE_DISTANCE == 17) begin
@@ -288,8 +288,8 @@ integer file_root_op;
 integer file_syndrome_op;
 reg [7:0] test;
 
-assign file_root_op = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_7_roots.txt", "w");
-assign file_syndrome_op = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_7_syndrome.txt", "w");
+assign file_root_op = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_7_roots.txt", "w");
+assign file_syndrome_op = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_7_syndrome.txt", "w");
         
         
 always@ (posedge clk) begin

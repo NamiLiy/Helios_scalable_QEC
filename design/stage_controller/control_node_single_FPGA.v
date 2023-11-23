@@ -82,7 +82,7 @@ always @(posedge clk) begin
     end else begin
         if (global_stage == STAGE_MEASUREMENT_LOADING) begin
             cycle_counter <= 1;
-        end else if (global_stage == STAGE_GROW || global_stage == STAGE_MERGE || global_stage == STAGE_PEELING) begin
+        end else if (global_stage == STAGE_GROW || global_stage == STAGE_MERGE || global_stage == STAGE_PEELING || global_stage == STAGE_STREAMING_CORRECTION) begin
             cycle_counter <= cycle_counter + 1;
         end
     end

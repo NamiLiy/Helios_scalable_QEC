@@ -27,7 +27,7 @@ int main() {
     int m_error_per_round = (distance+1)*(distance-1)/2;
 
     int data_errors[distance-1][distance][distance];
-    int m_errors[distance-1][distance+1][(distance-1)/2]; // changed first to -1
+    int m_errors[distance][distance+1][(distance-1)/2]; // changed first to -1
 
     int syndrome [distance-1][distance+1][(distance-1)/2];
 
@@ -119,21 +119,21 @@ int main() {
         }
     }
 
-    printf("\n");
-    for (int i = 0; i < ns_count; i++) {
-        printf("32'd%d, ", ns_weight_list[i]);
-    }
-    printf("\n");
+    // printf("\n");
+    // for (int i = 0; i < ns_count; i++) {
+    //     printf("32'd%d, ", ns_weight_list[i]);
+    // }
+    // printf("\n");
 
-    for (int i = 0; i < ew_count; i++) {
-        printf("32'd%d, ", ew_weight_list[i]);
-    }
-    printf("\n");
+    // for (int i = 0; i < ew_count; i++) {
+    //     printf("32'd%d, ", ew_weight_list[i]);
+    // }
+    // printf("\n");
 
-    for (int i=data_qubits; i < total_error_count; i++) {
-        printf("32'd%d, ", error_list_scrambled[i]);
-    }
-    printf("\n");
+    // for (int i=data_qubits; i < total_error_count; i++) {
+    //     printf("32'd%d, ", error_list_scrambled[i]);
+    // }
+    // printf("\n");
 
 
 
@@ -147,7 +147,20 @@ int main() {
         exit(1);
     }
 
+    for (int i = 0; i < distance+1; i++) {
+        for (int j = 0; j < (distance-1)/2; j++) {
+            m_errors[distance-1][i][j] = 0;
+        }
+    }
+
     for (int t = 0; t < test_runs; t++) {
+
+        for (int i = 0; i < distance+1; i++) {
+            for (int j = 0; j < (distance-1)/2; j++) {
+                m_errors[0][i][j] = m_errors[distance-1][i][j]; //Move the measurement round at the top of previous round to the bottom
+            }
+        }
+
         for (int k = 0; k < distance-1; k++) {
             double* values = next_random_values(rs);
             int count = 0;
@@ -164,10 +177,10 @@ int main() {
             }
             for (int i = 0; i < distance+1; i++) {
                 for (int j = 0; j < (distance-1)/2; j++) {
-                    if (values[count] < p) m_errors[k][i][j] = 1;
-                    else m_errors[k][i][j] = 0;
+                    if (values[count] < p) m_errors[k+1][i][j] = 1; //Plus one as 0 come from previous decoding round
+                    else m_errors[k+1][i][j] = 0;
                     count++;
-                    if(m_errors[k][i][j] == 1) {
+                    if(m_errors[k+1][i][j] == 1) {
                         errors++;
                     }
                 }
@@ -175,11 +188,11 @@ int main() {
             free(values);
         }
 
-        for (int i = 0; i < distance+1; i++) {
-            for (int j = 0; j < (distance-1)/2; j++) {
-                m_errors[distance][i][j] = 0.0;
-            }
-        }
+        // for (int i = 0; i < distance+1; i++) {
+        //     for (int j = 0; j < (distance-1)/2; j++) {
+        //         m_errors[distance][i][j] = 0.0;
+        //     }
+        // }
 
         // for (int k = 0; k < distance; k++) {
         //     for (int i = 0; i < distance; i++) {
@@ -273,9 +286,9 @@ int main() {
 
 
     printf("Errors: %d\n", errors);
-    printf("Error rate actual %f\n", (double)errors/(double)(test_runs*(data_qubits + m_error_per_round)*distance));
+    printf("Error rate actual %f\n", (double)errors/(double)(test_runs*(data_qubits + m_error_per_round)*(distance-1)));
     printf("Syndrome count: %d\n", syndrome_count);
-    printf("Syndrome rate actual %f\n", (double)syndrome_count/(double)(test_runs*(distance+1)*((distance-1)/2)*(distance)));
+    printf("Syndrome rate actual %f\n", (double)syndrome_count/(double)(test_runs*(distance+1)*((distance-1)/2)*(distance-1)));
 
     free_random_seeds(rs);
 
