@@ -36,7 +36,7 @@ struct Node node_array[D][D+1][(D-1)/2];
 struct Edge hor_edges[D][D][D];
 struct Edge ver_edges[D][D+1][(D-1)/2];
 struct Edge diag_edges[D-1][D][D-2];
-struct Edge hook_edges[D-1][D-1][(D-1)/2 - 1];
+struct Edge hook_edges[D-1][D-1][(D-1)/2]; // hook errors can be traced to the boundary
 
 struct Address get_root(struct Address a){
     if(node_array[a.k][a.i][a.j].id.k == node_array[a.k][a.i][a.j].root.k &&
@@ -232,7 +232,11 @@ int merge(int k, int i, int j, int direction){
     } else {
         if(hook_edges[k][i][j].to_be_updated == 1){
             hook_edges[k][i][j].to_be_updated == 0;
-            merge_internal(hook_edges[k][i][j].a, hook_edges[k][i][j].b);
+            if(hook_edges[k][i][j].is_boundary == 1){
+                update_boundary(hook_edges[k][i][j].a);
+            } else {
+                merge_internal(hook_edges[k][i][j].a, hook_edges[k][i][j].b);
+            }
         }
     }
     return 0;
@@ -350,15 +354,28 @@ void union_find (int syndrome[D][D+1][(D-1)/2]){
     //hook edges
     for(int k=0;k<D-1;k++){
         for(int i=0; i < D-1;i++){
-            for(int j=0; j< (D-1)/2 -1;j++){
+            for(int j=0; j< (D-1)/2;j++){
+                if(i%2==0 && j == 0){
+                    hook_edges[k][i][j].is_boundary = 1;
+                    hook_edges[k][i][j].a.k = k;
+                    hook_edges[k][i][j].a.j = j;
+                    hook_edges[k][i][j].a.i = i+1;
+                } else if(i%2==1 && j == (D-1)/2 - 1){
+                    hook_edges[k][i][j].is_boundary = 1;
+                    hook_edges[k][i][j].a.k = k;
+                    hook_edges[k][i][j].a.j = j;
+                    hook_edges[k][i][j].a.i = i+1;
+                } else {
+                    hook_edges[k][i][j].is_boundary = 0;
+                    hook_edges[k][i][j].a.k = k;
+                    hook_edges[k][i][j].b.k = k+1;
+                    hook_edges[k][i][j].a.j = j;
+                    hook_edges[k][i][j].b.j = j+1;
+                    hook_edges[k][i][j].a.i = i+1;
+                    hook_edges[k][i][j].b.i = i+1;
+                }
                 hook_edges[k][i][j].growth = 0;
 		        hook_edges[k][i][j].to_be_updated = 0;
-                hook_edges[k][i][j].a.k = k;
-                hook_edges[k][i][j].b.k = k+1;
-                hook_edges[k][i][j].a.j = j;
-                hook_edges[k][i][j].b.j = j+1;
-                hook_edges[k][i][j].a.i = i+1;
-                hook_edges[k][i][j].b.i = i+1;
                 // printf("%d %d %d and %d %d %d\n", hook_edges[k][i][j].a.k, hook_edges[k][i][j].a.i, hook_edges[k][i][j].a.j, hook_edges[k][i][j].b.k, hook_edges[k][i][j].b.i, hook_edges[k][i][j].b.j);
 
             }
@@ -371,16 +388,17 @@ void union_find (int syndrome[D][D+1][(D-1)/2]){
             for(int j=0; j< D-2;j++){
                 diag_edges[k][i][j].growth = 0;
 		        diag_edges[k][i][j].to_be_updated = 0;
+                diag_edges[k][i][j].is_boundary = 0;
                 diag_edges[k][i][j].a.k = k;
                 diag_edges[k][i][j].a.i = i;
                 diag_edges[k][i][j].b.k = k+1;
                 diag_edges[k][i][j].b.i = i+1;
                 if(j % 2 == 0) {
-                    diag_edges[k][i][j].a.j = j - j/2;
-                    diag_edges[k][i][j].b.j = j - j/2;
+                    diag_edges[k][i][j].a.j = j - j/2; // This is = j/2 mathematically for even j
+                    diag_edges[k][i][j].b.j = j - j/2; // This is = j/2 mathematically for even j
                 } else if (j % 2 == 1 && i % 2 == 0) {
-                    diag_edges[k][i][j].a.j = j - j/2;
-                    diag_edges[k][i][j].b.j = j - (j/2+1);
+                    diag_edges[k][i][j].a.j = j - j/2; // This is = j/2  + 1 mathematically for odd j
+                    diag_edges[k][i][j].b.j = j - (j/2+1); // This is = j/2 mathematically for odd j
                 } else if (j % 2 == 1 && i % 2 == 1) {
                     diag_edges[k][i][j].a.j = j/2;
                     diag_edges[k][i][j].b.j = j - j/2;
