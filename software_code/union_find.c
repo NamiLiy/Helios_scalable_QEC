@@ -355,10 +355,16 @@ void union_find (int syndrome[D][D+1][(D-1)/2]){
 		        hook_edges[k][i][j].to_be_updated = 0;
                 hook_edges[k][i][j].a.k = k;
                 hook_edges[k][i][j].b.k = k+1;
-                hook_edges[k][i][j].a.j = j;
-                hook_edges[k][i][j].b.j = j+1;
-                hook_edges[k][i][j].a.i = i+1;
-                hook_edges[k][i][j].b.i = i+1;
+                if(i%2 ==0){
+                    hook_edges[k][i][j].a.j = j+1;
+                    hook_edges[k][i][j].b.j = j+1;
+                }else {
+                    hook_edges[k][i][j].a.j = j;
+                    hook_edges[k][i][j].b.j = j;
+                }
+                hook_edges[k][i][j].a.i = i;
+                hook_edges[k][i][j].b.i = i+2;
+                // Nami did a minor change and made hook edges 90 degrees rotated because thats how it is in the playground which we use to verify.
                 // printf("%d %d %d and %d %d %d\n", hook_edges[k][i][j].a.k, hook_edges[k][i][j].a.i, hook_edges[k][i][j].a.j, hook_edges[k][i][j].b.k, hook_edges[k][i][j].b.i, hook_edges[k][i][j].b.j);
 
             }
