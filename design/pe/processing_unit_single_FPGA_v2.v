@@ -195,6 +195,7 @@ always@(posedge clk) begin
                     end else begin // I am not the boundary
                         odd <= 1;
                         casex (neighbor_parent_vector & child_touching_boundary)
+                            // Nami : Correct this. This should be equal to the number of neighbors
                             6'b1xxxxx: odd_to_children <= 6'b100000;
                             6'b01xxxx: odd_to_children <= 6'b010000;
                             6'b001xxx: odd_to_children <= 6'b001000;
@@ -213,6 +214,7 @@ always@(posedge clk) begin
                     end else begin // I am not the boundary
                         odd <= 0;
                         casex (neighbor_parent_vector & child_touching_boundary)
+                            // Nami : Correct this. This should be equal to the number of neighbors
                             6'b1xxxxx: odd_to_children <= 6'b100000;
                             6'b01xxxx: odd_to_children <= 6'b010000;
                             6'b001xxx: odd_to_children <= 6'b001000;
@@ -295,6 +297,7 @@ end
 always@(*) begin
     if(stage == STAGE_PEELING && !some_child_is_not_peeling_complete && odd) begin
         casex (neighbor_is_boundary)
+            // Nami : Correct this. This should be equal to the number of neighbors
             6'b1xxxxx: neighbor_is_error_border = 6'b100000;
             6'b01xxxx: neighbor_is_error_border = 6'b010000;
             6'b001xxx: neighbor_is_error_border = 6'b001000;
