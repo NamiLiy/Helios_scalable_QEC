@@ -413,6 +413,7 @@ generate
                 wire is_error_systolic_in;
                 wire is_error_out;
                 wire [LINK_BIT_WIDTH-1:0] weight_in;
+                assign weight_in = 2;
                 if (i > 0 && i < GRID_WIDTH_X-1 && j < GRID_WIDTH_Z && j > 0 && k < GRID_WIDTH_U-1) begin
                     `NEIGHBOR_LINK_INTERNAL_0(i, j-1, k, i, j, k+1, `NEIGHBOR_IDX_HOOK_RIGHT, `NEIGHBOR_IDX_HOOK_LEFT);
                 end else if ((i == 0 || i == GRID_WIDTH_X-1) && j % 2 == 0) begin
