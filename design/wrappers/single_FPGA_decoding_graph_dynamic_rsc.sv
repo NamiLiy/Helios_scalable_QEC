@@ -242,6 +242,7 @@ generate
                 wire is_error_systolic_in;
                 wire is_error_out;
                 wire [LINK_BIT_WIDTH-1:0] weight_in;
+                assign weight_in = 2;
                 if(i==0 && j < GRID_WIDTH_Z) begin // First row
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_NORTH, 2)
                 end else if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z) begin
@@ -306,57 +307,100 @@ generate
     end
     
     // Generate DIAGONAL NS link
-    for (k=0; k <= GRID_WIDTH_U+1; k=k+1) begin: diag_ns_k
+    for (k=0; k < GRID_WIDTH_U + 1; k=k+1) begin: diag_ns_k // +1 because fake diagonal edges span from first and bottom rows
         for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: diag_ns_i
             for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: diag_ns_j
                 wire is_error_systolic_in;
                 wire is_error_out;
                 wire [LINK_BIT_WIDTH-1:0] weight_in;
-                if(k == GRID_WIDTH_U && j < GRID_WIDTH_Z && i < GRID_WIDTH_X) begin
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, 0, `NEIGHBOR_IDX_DIAG_NORTH, 2)
-                end else if(i==0 && j < GRID_WIDTH_Z && k < GRID_WIDTH_U) begin // First row
+                assign weight_in = 2;
+                if(i==0 && j < GRID_WIDTH_Z && k < GRID_WIDTH_U) begin // First row. In every measurement round Diag North edge is a fake edge. And on the top k round diag measurement round is non-existant
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_DIAG_NORTH, 2)
-                end else if (k == GRID_WIDTH_U+1 && i < GRID_WIDTH_X && j < GRID_WIDTH_Z) begin
-                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, GRID_WIDTH_U-1, `NEIGHBOR_IDX_DIAG_SOUTH, 2)
-                end else if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z && k < GRID_WIDTH_U-1) begin
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_DIAG_SOUTH, 2)                   
-                end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0 && k < GRID_WIDTH_U-1) begin // odd rows which are always internal
-                    `NEIGHBOR_LINK_INTERNAL_0(i-1, j-1, k, i, j-1, k+1, `NEIGHBOR_IDX_DIAG_SOUTH, `NEIGHBOR_IDX_DIAG_NORTH)
-                end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j == 0 && k < GRID_WIDTH_U) begin // First element of even rows
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_DIAG_NORTH, 2)
-                end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j == GRID_WIDTH_Z && k < GRID_WIDTH_U-1) begin // Last element of even rows
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j-1, k, `NEIGHBOR_IDX_DIAG_SOUTH, 2)
-                end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j > 0 && j < GRID_WIDTH_Z && k < GRID_WIDTH_U-1) begin // Middle elements of even rows
-                    `NEIGHBOR_LINK_INTERNAL_0(i-1, j-1, k, i, j, k+1, `NEIGHBOR_IDX_DIAG_SOUTH, `NEIGHBOR_IDX_DIAG_NORTH)
+                end else if (i==GRID_WIDTH_X && j < GRID_WIDTH_Z && k > 0) begin // Last row. In every measurement round Diag North edge is a fake edge. And on the 0th round diag measurement round is non-existant
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k-1, `NEIGHBOR_IDX_DIAG_SOUTH, 2)  
+                //Now handle the remaining last measurement round
+                end else if(k==GRID_WIDTH_U) begin
+                    if (i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0) begin // odd rows which always have fake edges
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j-1, k-1, `NEIGHBOR_IDX_DIAG_SOUTH, 2)
+                    // end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j == 0) begin // First element of even rows does not exist in the last round
+                    //     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_NORTH, 2)
+                    end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j == GRID_WIDTH_Z) begin // Last element of even rows is a fake edge
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j-1, k-1, `NEIGHBOR_IDX_DIAG_SOUTH, 2)
+                    end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j > 0 && j < GRID_WIDTH_Z) begin // Middle elements of even rows
+                        `NEIGHBOR_LINK_INTERNAL_0(i-1, j-1, k-1, `NEIGHBOR_IDX_DIAG_SOUTH, 2)
+                    end
+                // Now handle the first measurement round
+                end else if (k==0) begin
+                    if (i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0) begin // odd rows which always have fake edges
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j-1, k, `NEIGHBOR_IDX_DIAG_NORTH, 2)
+                    end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j == 0) begin // First element of even rows is a fake edge
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_DIAG_NORTH, 2)
+                    // end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j == GRID_WIDTH_Z) begin // Last element of even rows does not exist on first round
+                    //     `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j-1, k, `NEIGHBOR_IDX_DIAG_NORTH, 2)
+                    end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j > 0 && j < GRID_WIDTH_Z) begin // Middle elements of even rows
+                        `NEIGHBOR_LINK_INTERNAL_0(i, j, k, `NEIGHBOR_IDX_DIAG_NORTH, 2)
+                    end
+                // Now handle the easy middle ones
+                end else if(k>0 && k<GRID_WIDTH_U) begin
+                    if (i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0) begin // odd rows which are always internal
+                        `NEIGHBOR_LINK_INTERNAL_0(i-1, j-1, k-1, i, j-1, k, `NEIGHBOR_IDX_DIAG_SOUTH, `NEIGHBOR_IDX_DIAG_NORTH)
+                    end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j == 0) begin // First element of even rows
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_DIAG_NORTH, 2)
+                    end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j == GRID_WIDTH_Z) begin // Last element of even rows
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j-1, k-1, `NEIGHBOR_IDX_DIAG_SOUTH, 2)
+                    end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j > 0 && j < GRID_WIDTH_Z) begin // Middle elements of even rows
+                        `NEIGHBOR_LINK_INTERNAL_0(i-1, j-1, k-1, i, j, k, `NEIGHBOR_IDX_DIAG_SOUTH, `NEIGHBOR_IDX_DIAG_NORTH)
+                    end
                 end
             end
         end
     end
     
-    for (k=0; k <= GRID_WIDTH_U+1; k=k+1) begin: diag_ew_k
+    // Generate DIAGONAL EW link
+    for (k=0; k <= GRID_WIDTH_U; k=k+1) begin: diag_ew_k
         for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: diag_ew_i 
             for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: diag_ew_j
                 wire is_error_systolic_in;
                 wire is_error_out;
                 wire [LINK_BIT_WIDTH-1:0] weight_in;
-                if(k == GRID_WIDTH_U && j < GRID_WIDTH_Z && i < GRID_WIDTH_X) begin
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, 0, `NEIGHBOR_IDX_DIAG_EAST, 2)
-                end else if(i==0 && j < GRID_WIDTH_Z && k < GRID_WIDTH_U) begin // First row
+                assign weight_in = 2;
+                if(i==0 && j < GRID_WIDTH_Z && k < GRID_WIDTH_U) begin // First row
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_DIAG_EAST, 2)
-                end else if (k == GRID_WIDTH_U+1 && i < GRID_WIDTH_X && j < GRID_WIDTH_Z) begin
-                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, GRID_WIDTH_U-1, `NEIGHBOR_IDX_DIAG_WEST, 2)
-                end else if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z && k < GRID_WIDTH_U-1) begin // Last row
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_DIAG_WEST, 2)
-                end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j < GRID_WIDTH_Z && k < GRID_WIDTH_U-1) begin // even rows which are always internal
-                    `NEIGHBOR_LINK_INTERNAL_0(i, j, k+1, i-1, j, k, `NEIGHBOR_IDX_DIAG_EAST, `NEIGHBOR_IDX_DIAG_WEST)
-                end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j == 0 && k < GRID_WIDTH_U) begin // First element of odd rows
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_DIAG_WEST, 2)
-                end else if(i < GRID_WIDTH_X -1 && i > 0 && i%2 == 1 && j == GRID_WIDTH_Z && k < GRID_WIDTH_U) begin // Last element of odd rows excluding last row
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j-1, k, `NEIGHBOR_IDX_DIAG_EAST, 2)
-                end else if(i == GRID_WIDTH_X -1 && j == GRID_WIDTH_Z && k < GRID_WIDTH_U) begin // Last element of last odd row
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j-1, k, `NEIGHBOR_IDX_DIAG_EAST, 2)
-                end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0 && j < GRID_WIDTH_Z && k < GRID_WIDTH_U-1) begin // Middle elements of odd rows
-                    `NEIGHBOR_LINK_INTERNAL_0(i, j-1, k+1, i-1, j, k, `NEIGHBOR_IDX_DIAG_EAST, `NEIGHBOR_IDX_DIAG_WEST)
+                end else if (i==GRID_WIDTH_X && j < GRID_WIDTH_Z && k > 0) begin // Last row. In every measurement round Diag West edge is a fake edge. And on the 0th round diag measurement round is non-existant
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k-1, `NEIGHBOR_IDX_DIAG_WEST, 2)  
+                //Now handle the remaining last measurement round
+                end else if(k==GRID_WIDTH_U) begin
+                    if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j < GRID_WIDTH_Z) begin // even rows which are always internal
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k-1, `NEIGHBOR_IDX_DIAG_WEST,2)
+                    end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j == 0) begin // First element of odd rows
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k-1, `NEIGHBOR_IDX_DIAG_WEST, 2)
+                    // end else if(i < GRID_WIDTH_X -1 && i > 0 && i%2 == 1 && j == GRID_WIDTH_Z) begin // Last element of odd rows excluding last row last element of odd row does not exist
+                    //     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j-1, k, `NEIGHBOR_IDX_EAST, 2)
+                    // end else if(i == GRID_WIDTH_X -1 && j == GRID_WIDTH_Z) begin // Last element of last odd row
+                    //     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j-1, k, `NEIGHBOR_IDX_EAST, 1)
+                    end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0 && j < GRID_WIDTH_Z) begin // Middle elements of odd rows
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_DIAG_WEST, 2)
+                    end
+                end else if(k==0) begin
+                    if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j < GRID_WIDTH_Z) begin // even rows which are always internal
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_DIAG_EAST, 2)
+                    // end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j == 0) begin // First element of odd rows does not exist in the first round
+                    //     `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_WEST, 1)
+                    end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j == GRID_WIDTH_Z) begin // Last element of odd rows 
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j-1, k, `NEIGHBOR_IDX_DIAG_EAST, 2)
+                    end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0 && j < GRID_WIDTH_Z) begin // Middle elements of odd rows
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j-1, k, `NEIGHBOR_IDX_DIAG_EAST, 2)
+                    end
+                end else begin
+                    if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j < GRID_WIDTH_Z) begin // even rows which are always internal
+                        `NEIGHBOR_LINK_INTERNAL_0(i, j, k-1, i-1, j, k, `NEIGHBOR_IDX_DIAG_EAST, `NEIGHBOR_IDX_DIAG_WEST)
+                    end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j == 0) begin // First element of odd rows
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k-1, `NEIGHBOR_IDX_DIAG_WEST, 1)
+                    end else if(i < GRID_WIDTH_X  && i > 0 && i%2 == 1 && j == GRID_WIDTH_Z) begin // Last element of odd rows excluding last row
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j-1, k, `NEIGHBOR_IDX_DIAG_EAST, 2)
+                    end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0 && j < GRID_WIDTH_Z) begin // Middle elements of odd rows
+                        `NEIGHBOR_LINK_INTERNAL_0(i, j-1, k-1, i-1, j, k, `NEIGHBOR_IDX_DIAG_EAST, `NEIGHBOR_IDX_DIAG_WEST)
+                    end
                 end
             end
         end
