@@ -148,9 +148,9 @@ endgenerate
 `define CORR_INDEX_EW(i, j) ((i-1)*(GRID_WIDTH_Z) + j + NS_ERROR_COUNT_PER_ROUND)
 `define CORR_INDEX_UD(i, j) (i*GRID_WIDTH_Z + j + NS_ERROR_COUNT_PER_ROUND + EW_ERROR_COUNT_PER_ROUND)
 // Nami : NS and EW indexing is wrong. Have to account for missing links in boundary. Need to be fixed
-`define CORR_INDEX_DIAG_NS(i, j) ((i-1)*(GRID_WIDTH_Z) + (j-1) + NS_ERROR_COUNT_PER_ROUND + EW_ERROR_COUNT_PER_ROUND + UD_ERROR_COUNT_PER_ROUND)
-`define CORR_INDEX_DIAG_EW(i, j) ((i-1)*(GRID_WIDTH_Z) + (j-1) + NS_ERROR_COUNT_PER_ROUND + EW_ERROR_COUNT_PER_ROUND + UD_ERROR_COUNT_PER_ROUND + DIAG_NS_ERROR_COUNT_PER_ROUND)
-`define CORR_INDEX_DIAG_HOOK(i, j) ((i-1)*(GRID_WIDTH_Z-1) + (j-1) + NS_ERROR_COUNT_PER_ROUND + EW_ERROR_COUNT_PER_ROUND + UD_ERROR_COUNT_PER_ROUND + DIAG_NS_ERROR_COUNT_PER_ROUND + DIAG_EW_ERROR_COUNT_PER_ROUND)
+`define CORR_INDEX_DIAG_NS(i, j) ((i-1)*(GRID_WIDTH_Z) + (j-1)  - ((i-1)/2) + NS_ERROR_COUNT_PER_ROUND + EW_ERROR_COUNT_PER_ROUND + UD_ERROR_COUNT_PER_ROUND) // The extra negative is to reduce the missing edges
+`define CORR_INDEX_DIAG_EW(i, j) ((i-1)*(GRID_WIDTH_Z) + j - ((i+1)/2) + NS_ERROR_COUNT_PER_ROUND + EW_ERROR_COUNT_PER_ROUND + UD_ERROR_COUNT_PER_ROUND + DIAG_NS_ERROR_COUNT_PER_ROUND)
+`define CORR_INDEX_DIAG_HOOK(i, j) ((i-1)*(GRID_WIDTH_Z-1) + j - i%2 + NS_ERROR_COUNT_PER_ROUND + EW_ERROR_COUNT_PER_ROUND + UD_ERROR_COUNT_PER_ROUND + DIAG_NS_ERROR_COUNT_PER_ROUND + DIAG_EW_ERROR_COUNT_PER_ROUND)
 
 
 `define CORRECTION_NS(i, j) correction[`CORR_INDEX_NS(i, j)]
@@ -545,9 +545,9 @@ generate
     for (i=1; i < GRID_WIDTH_X; i=i+1) begin: diag_ns_i_output
         for (j=1; j <= GRID_WIDTH_Z; j=j+1) begin: diag_ns_j_output
             if (i % 2 == 1) begin
-                assign `CORRECTION_DIAG_NS(i,j-(i/2)) = diag_ns_k[0].diag_ns_i[i].diag_ns_j[j].is_error_out;
+                assign `CORRECTION_DIAG_NS(i,j) = diag_ns_k[1].diag_ns_i[i].diag_ns_j[j].is_error_out;
             end else if (i % 2 == 0 && j < GRID_WIDTH_Z) begin
-                assign `CORRECTION_DIAG_NS(i,j - ((i-1)/2)) = diag_ns_k[0].diag_ns_i[i].diag_ns_j[j].is_error_out;
+                assign `CORRECTION_DIAG_NS(i,j) = diag_ns_k[1].diag_ns_i[i].diag_ns_j[j].is_error_out;
             end
         end
     end
@@ -555,66 +555,60 @@ generate
     for (i=1; i < GRID_WIDTH_X; i=i+1) begin: diag_ew_i_output
         for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: diag_ew_j_output
             if (i % 2 == 0) begin
-                assign `CORRECTION_DIAG_EW(i,j - ((i-1)/2)) = diag_ew_k[0].diag_ew_i[i].diag_ew_j[j].is_error_out;
+                assign `CORRECTION_DIAG_EW(i,j) = diag_ew_k[1].diag_ew_i[i].diag_ew_j[j].is_error_out;
             end else if (i % 2 == 1 && j > 0) begin
-                assign `CORRECTION_DIAG_EW(i,(j-(i/2))) = diag_ew_k[0].diag_ew_i[i].diag_ew_j[j].is_error_out;  
+                assign `CORRECTION_DIAG_EW(i,j) = diag_ew_k[1].diag_ew_i[i].diag_ew_j[j].is_error_out;  
             end
         end
     end
     
     for (i=1; i < GRID_WIDTH_X-1; i=i+1) begin: diag_hook_i_output
         for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: diag_hook_j_output
-            if(j=0 && i%2 == 1) begin
-                `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k-1, `NEIGHBOR_IDX_HOOK_SOUTH, 2)
-                `NEIGHBOR_LINK_INTERNAL_SINGLE(i+1, j, k, `NEIGHBOR_IDX_HOOK_NORTH, 2)
-            end else if(j=GRID_WIDTH_Z-1 && i%2 ==0) begin
-                `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k-1, `NEIGHBOR_IDX_HOOK_SOUTH, 2)
-                `NEIGHBOR_LINK_INTERNAL_SINGLE(i+1, j, k, `NEIGHBOR_IDX_HOOK_NORTH, 2)
-            end else begin
-                `NEIGHBOR_LINK_INTERNAL_0(i-1, j, k-1, i+1, j, k, `NEIGHBOR_IDX_HOOK_SOUTH, `NEIGHBOR_IDX_HOOK_NORTH)
-            end
-        end
-            assign `CORRECTION_DIAG_HOOK(i,j) = diag_hook_k[0].diag_hook_i[i].diag_hook_j[j].is_error_out;  
-        end
-    end
-
-    for (k=0; k < GRID_WIDTH_U; k=k+1) begin: ns_k_weight
-        for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: ns_i_weight
-            for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: ns_j_weight
-                if (i < GRID_WIDTH_X && i > 0 && j > 0) begin
-                    assign ns_k[k].ns_i[i].ns_j[j].weight_in = `WEIGHT_NS(i,j);
-                end else begin // Fake edges
-                    assign ns_k[k].ns_i[i].ns_j[j].weight_in = 2;
-                end
+            if(j>0 && i%2 == 1) begin
+                assign `CORRECTION_DIAG_HOOK(i,j) = diag_hook_k[1].diag_hook_i[i].diag_hook_j[j].is_error_out; 
+            end else if(j< GRID_WIDTH_Z-1 && i%2 ==0) begin
+                assign `CORRECTION_DIAG_HOOK(i,j) = diag_hook_k[1].diag_hook_i[i].diag_hook_j[j].is_error_out;
             end
         end
     end
 
-    for (k=0; k < GRID_WIDTH_U; k=k+1) begin: ew_k_weight
-        for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: ew_i_weight
-            for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: ew_j_weight
-                if (i < GRID_WIDTH_X && i > 0 && j < GRID_WIDTH_Z) begin
-                    assign ew_k[k].ew_i[i].ew_j[j].weight_in = `WEIGHT_EW(i,j);
-                end else if (i == GRID_WIDTH_X-1 && j == GRID_WIDTH_Z) begin
-                    assign ew_k[k].ew_i[i].ew_j[j].weight_in = `WEIGHT_EW(i,j);
-                end else begin // Fake edges
-                    assign ew_k[k].ew_i[i].ew_j[j].weight_in = 2;
-                end
-            end
-        end
-    end
+    // for (k=0; k < GRID_WIDTH_U; k=k+1) begin: ns_k_weight
+    //     for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: ns_i_weight
+    //         for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: ns_j_weight
+    //             if (i < GRID_WIDTH_X && i > 0 && j > 0) begin
+    //                 assign ns_k[k].ns_i[i].ns_j[j].weight_in = `WEIGHT_NS(i,j);
+    //             end else begin // Fake edges
+    //                 assign ns_k[k].ns_i[i].ns_j[j].weight_in = 2;
+    //             end
+    //         end
+    //     end
+    // end
 
-    for (k=0; k <= GRID_WIDTH_U; k=k+1) begin: ud_k_weight
-        for (i=0; i < GRID_WIDTH_X; i=i+1) begin: ud_i_weight
-            for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: ud_j_weight
-                if(k < GRID_WIDTH_U) begin
-                    assign ud_k[k].ud_i[i].ud_j[j].weight_in = `WEIGHT_UD(i,j);
-                end else begin // Fake edges
-                    assign ud_k[k].ud_i[i].ud_j[j].weight_in = 2;
-                end
-            end
-        end
-    end
+    // for (k=0; k < GRID_WIDTH_U; k=k+1) begin: ew_k_weight
+    //     for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: ew_i_weight
+    //         for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: ew_j_weight
+    //             if (i < GRID_WIDTH_X && i > 0 && j < GRID_WIDTH_Z) begin
+    //                 assign ew_k[k].ew_i[i].ew_j[j].weight_in = `WEIGHT_EW(i,j);
+    //             end else if (i == GRID_WIDTH_X-1 && j == GRID_WIDTH_Z) begin
+    //                 assign ew_k[k].ew_i[i].ew_j[j].weight_in = `WEIGHT_EW(i,j);
+    //             end else begin // Fake edges
+    //                 assign ew_k[k].ew_i[i].ew_j[j].weight_in = 2;
+    //             end
+    //         end
+    //     end
+    // end
+
+    // for (k=0; k <= GRID_WIDTH_U; k=k+1) begin: ud_k_weight
+    //     for (i=0; i < GRID_WIDTH_X; i=i+1) begin: ud_i_weight
+    //         for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: ud_j_weight
+    //             if(k < GRID_WIDTH_U) begin
+    //                 assign ud_k[k].ud_i[i].ud_j[j].weight_in = `WEIGHT_UD(i,j);
+    //             end else begin // Fake edges
+    //                 assign ud_k[k].ud_i[i].ud_j[j].weight_in = 2;
+    //             end
+    //         end
+    //     end
+    // end
     
     // All weight assignemnts are handled at the top
     // for (k=0; k <= GRID_WIDTH_U+1; k=k+1) begin: diag_ns_k_weight
