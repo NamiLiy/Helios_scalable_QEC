@@ -447,9 +447,9 @@ generate
     end
 
     // Extra hook errors due to vivado limitations
-    for (k=0; k <= GRID_WIDTH_U; k=k+1) begin: diag_hook_k_extra
-        for (i=0; i < GRID_WIDTH_X; i=i+1) begin: diag_hook_i_extra
-            for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: diag_hook_j_extra
+    for (k=0; k <= GRID_WIDTH_U; k=k+1) begin: diag_hook_k_missing
+        for (i=0; i < GRID_WIDTH_X; i=i+1) begin: diag_hook_i_missing
+            for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: diag_hook_j_missing
                 wire is_error_systolic_in;
                 wire is_error_out;
                 wire [LINK_BIT_WIDTH-1:0] weight_in;
