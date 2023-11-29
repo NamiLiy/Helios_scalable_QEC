@@ -326,7 +326,7 @@ generate
                     end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j == GRID_WIDTH_Z) begin // Last element of even rows is a fake edge
                         `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j-1, k-1, `NEIGHBOR_IDX_DIAG_SOUTH, 2)
                     end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j > 0 && j < GRID_WIDTH_Z) begin // Middle elements of even rows
-                        `NEIGHBOR_LINK_INTERNAL_0(i-1, j-1, k-1, `NEIGHBOR_IDX_DIAG_SOUTH, 2)
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j-1, k-1, `NEIGHBOR_IDX_DIAG_SOUTH, 2)
                     end
                 // Now handle the first measurement round
                 end else if (k==0) begin
@@ -337,7 +337,7 @@ generate
                     // end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j == GRID_WIDTH_Z) begin // Last element of even rows does not exist on first round
                     //     `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j-1, k, `NEIGHBOR_IDX_DIAG_NORTH, 2)
                     end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j > 0 && j < GRID_WIDTH_Z) begin // Middle elements of even rows
-                        `NEIGHBOR_LINK_INTERNAL_0(i, j, k, `NEIGHBOR_IDX_DIAG_NORTH, 2)
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_DIAG_NORTH, 2)
                     end
                 // Now handle the easy middle ones
                 end else if(k>0 && k<GRID_WIDTH_U) begin
@@ -431,10 +431,10 @@ generate
                 // Now handle everyhthing else in the middle
                 end else begin
                     if(i >0 && i < GRID_WIDTH_X - 1) begin
-                        if(j=0 && i%2 == 1) begin
+                        if(j==0 && i%2 == 1) begin
                             `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k-1, `NEIGHBOR_IDX_HOOK_SOUTH, 2)
                             `NEIGHBOR_LINK_INTERNAL_SINGLE(i+1, j, k, `NEIGHBOR_IDX_HOOK_NORTH, 2)
-                        end else if(j=GRID_WIDTH_Z-1 && i%2 ==0) begin
+                        end else if(j==GRID_WIDTH_Z-1 && i%2 ==0) begin
                             `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k-1, `NEIGHBOR_IDX_HOOK_SOUTH, 2)
                             `NEIGHBOR_LINK_INTERNAL_SINGLE(i+1, j, k, `NEIGHBOR_IDX_HOOK_NORTH, 2)
                         end else begin
@@ -487,7 +487,7 @@ generate
     end
 
     
-    for (k>1; k < GRID_WIDTH_U-1; k=k+1) begin: diag_ns_k_extra
+    for (k=1; k < GRID_WIDTH_U-1; k=k+1) begin: diag_ns_k_extra
         for (i=1; i < GRID_WIDTH_X; i=i+1) begin: diag_ns_i_extra
             for (j=0; j <= GRID_WIDTH_Z; j=j+1) begin: diag_ns_j_extra
                 if (i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0) begin // odd rows 
@@ -514,7 +514,7 @@ generate
     for (k=1; k < GRID_WIDTH_U; k=k+1) begin: diag_hook_k_extra
         for (i=1; i < GRID_WIDTH_X-1; i=i+1) begin: diag_hook_i_extra
             for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: diag_hook_j_extra
-                if ( !(j=0 && i%2 == 1) && !(j=GRID_WIDTH_Z-1 && i%2 ==0)) begin
+                if ( !(j==0 && i%2 == 1) && !(j==GRID_WIDTH_Z-1 && i%2 ==0)) begin
                     assign diag_hook_k[k].diag_hook_i[i].diag_hook_j[j].is_error_systolic_in = diag_hook_k[k+1].diag_hook_i[i].diag_hook_j[j].is_error_out;
                 end
             end
