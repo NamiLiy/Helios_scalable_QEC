@@ -237,7 +237,7 @@ always @(negedge clk) begin
             if (CODE_DISTANCE == 3) begin
                 input_file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_3_rsc.txt", "r");
             end else if (CODE_DISTANCE == 5) begin
-                input_file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_5_rsc.txt", "r");
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_cct_noise_5.txt", "r");
             end else if (CODE_DISTANCE == 7) begin
                 input_file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_7_rsc.txt", "r");
             end else if (CODE_DISTANCE == 9) begin
@@ -283,37 +283,37 @@ always @(negedge clk) begin
 end
 
 
-integer file_root_op;
-assign file_root_op = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_3_roots.txt", "w");        
-reg test;        
-always@ (posedge clk) begin
-    if(decoder.controller.global_stage == STAGE_RESULT_VALID && decoder.previous_global_stage != STAGE_RESULT_VALID) begin      
-        $display("valid");
-        for(k = 0; k < GRID_WIDTH_U; k++) begin
-            for(i = 0; i < GRID_WIDTH_X; i++) begin
-                for(j = 0; j < GRID_WIDTH_Z; j++) begin
-                    if(k ==  1 && i == 1 && j == 0) begin
-                        $display("k %d i %d j %d \n", `root_u(i, j, k), `root_x(i, j, k), `root_z(i, j, k));
-                        test <= k;
-                    end
-                    $fwrite (file_root_op, (Z_BIT_WIDTH > 0) ? `root_z(i, j, k) : 0);
-                    $fwrite (file_root_op, `root_x(i, j, k));
-                    $fdisplay(file_root_op, `root_u(i, j, k));
-                end
-            end
-        end
-    end
-end
+// integer file_root_op;
+// assign file_root_op = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_3_roots.txt", "w");        
+// reg test;        
+// always@ (posedge clk) begin
+//     if(decoder.controller.global_stage == STAGE_RESULT_VALID && decoder.previous_global_stage != STAGE_RESULT_VALID) begin      
+//         $display("valid");
+//         for(k = 0; k < GRID_WIDTH_U; k++) begin
+//             for(i = 0; i < GRID_WIDTH_X; i++) begin
+//                 for(j = 0; j < GRID_WIDTH_Z; j++) begin
+//                     if(k ==  1 && i == 1 && j == 0) begin
+//                         $display("k %d i %d j %d \n", `root_u(i, j, k), `root_x(i, j, k), `root_z(i, j, k));
+//                         test <= k;
+//                     end
+//                     $fwrite (file_root_op, (Z_BIT_WIDTH > 0) ? `root_z(i, j, k) : 0);
+//                     $fwrite (file_root_op, `root_x(i, j, k));
+//                     $fdisplay(file_root_op, `root_u(i, j, k));
+//                 end
+//             end
+//         end
+//     end
+// end
 
 // Output verification logic
 always @(posedge clk) begin
     if (loading_state == 3'b101 && !output_valid) begin // This is not becaus we wait until all messages are received
         $display("%t\tTest case %d pass %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
-       /* if(open == 1) begin
+      if(open == 1) begin
             if (CODE_DISTANCE == 3) begin
                 file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_3_rsc.txt", "r");
             end else if (CODE_DISTANCE == 5) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_5_rsc.txt", "r");
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_cct_noise_5.txt", "r");
             end else if (CODE_DISTANCE == 7) begin
                 file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_7_rsc.txt", "r");
             end else if (CODE_DISTANCE == 9) begin
@@ -366,7 +366,8 @@ always @(posedge clk) begin
             $display("%t\tTest case %d fail %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
             fail_count = fail_count + 1;
             $finish;
-        end*/
+        end 
+        //*/
     end
     if (input_eof == 1)begin
         total_count = pass_count + fail_count;
