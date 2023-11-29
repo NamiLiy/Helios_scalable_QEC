@@ -378,7 +378,7 @@ generate
                     // end else if(i == GRID_WIDTH_X -1 && j == GRID_WIDTH_Z) begin // Last element of last odd row
                     //     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j-1, k, `NEIGHBOR_IDX_EAST, 1)
                     end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0 && j < GRID_WIDTH_Z) begin // Middle elements of odd rows
-                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_DIAG_WEST, 2)
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k-1, `NEIGHBOR_IDX_DIAG_WEST, 2)
                     end
                 end else if(k==0) begin
                     if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j < GRID_WIDTH_Z) begin // even rows which are always internal
