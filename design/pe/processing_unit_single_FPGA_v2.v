@@ -195,14 +195,20 @@ always@(posedge clk) begin
                     end else begin // I am not the boundary
                         odd <= 1;
                         casex (neighbor_parent_vector & child_touching_boundary)
-                            // Nami : Correct this. This should be equal to the number of neighbors
-                            6'b1xxxxx: odd_to_children <= 6'b100000;
-                            6'b01xxxx: odd_to_children <= 6'b010000;
-                            6'b001xxx: odd_to_children <= 6'b001000;
-                            6'b0001xx: odd_to_children <= 6'b000100;
-                            6'b00001x: odd_to_children <= 6'b000010;
-                            6'b000001: odd_to_children <= 6'b000001;
-                            default: odd_to_children <= 0;
+                            12'b1xxxxxxxxxxx: odd_to_children <= 12'b100000000000;
+                            12'b01xxxxxxxxxx: odd_to_children <= 12'b010000000000;
+                            12'b001xxxxxxxxx: odd_to_children <= 12'b001000000000;
+                            12'b0001xxxxxxxx: odd_to_children <= 12'b000100000000;
+                            12'b00001xxxxxxx: odd_to_children <= 12'b000010000000;
+                            12'b000001xxxxxx: odd_to_children <= 12'b000001000000;
+                            12'b0000001xxxxx: odd_to_children <= 12'b000000100000;
+                            12'b00000001xxxx: odd_to_children <= 12'b000000010000;
+                            12'b000000001xxx: odd_to_children <= 12'b000000001000;
+                            12'b0000000001xx: odd_to_children <= 12'b000000000100;
+                            12'b00000000001x: odd_to_children <= 12'b000000000010;
+                            12'b000000000001: odd_to_children <= 12'b000000000001;
+                            // Default case
+                            default: odd_to_children <= 12'b000000000000;
                         endcase
                     end
                 end
@@ -214,14 +220,20 @@ always@(posedge clk) begin
                     end else begin // I am not the boundary
                         odd <= 0;
                         casex (neighbor_parent_vector & child_touching_boundary)
-                            // Nami : Correct this. This should be equal to the number of neighbors
-                            6'b1xxxxx: odd_to_children <= 6'b100000;
-                            6'b01xxxx: odd_to_children <= 6'b010000;
-                            6'b001xxx: odd_to_children <= 6'b001000;
-                            6'b0001xx: odd_to_children <= 6'b000100;
-                            6'b00001x: odd_to_children <= 6'b000010;
-                            6'b000001: odd_to_children <= 6'b000001;
-                            default: odd_to_children <= 0;
+                            12'b1xxxxxxxxxxx: odd_to_children <= 12'b100000000000;
+                            12'b01xxxxxxxxxx: odd_to_children <= 12'b010000000000;
+                            12'b001xxxxxxxxx: odd_to_children <= 12'b001000000000;
+                            12'b0001xxxxxxxx: odd_to_children <= 12'b000100000000;
+                            12'b00001xxxxxxx: odd_to_children <= 12'b000010000000;
+                            12'b000001xxxxxx: odd_to_children <= 12'b000001000000;
+                            12'b0000001xxxxx: odd_to_children <= 12'b000000100000;
+                            12'b00000001xxxx: odd_to_children <= 12'b000000010000;
+                            12'b000000001xxx: odd_to_children <= 12'b000000001000;
+                            12'b0000000001xx: odd_to_children <= 12'b000000000100;
+                            12'b00000000001x: odd_to_children <= 12'b000000000010;
+                            12'b000000000001: odd_to_children <= 12'b000000000001;
+                            // Default case
+                            default: odd_to_children <= 12'b000000000000;
                         endcase
                     end
                 end else begin  //My parent is not odd
@@ -297,14 +309,19 @@ end
 always@(*) begin
     if(stage == STAGE_PEELING && !some_child_is_not_peeling_complete && odd) begin
         casex (neighbor_is_boundary)
-            // Nami : Correct this. This should be equal to the number of neighbors
-            6'b1xxxxx: neighbor_is_error_border = 6'b100000;
-            6'b01xxxx: neighbor_is_error_border = 6'b010000;
-            6'b001xxx: neighbor_is_error_border = 6'b001000;
-            6'b0001xx: neighbor_is_error_border = 6'b000100;
-            6'b00001x: neighbor_is_error_border = 6'b000010;
-            6'b000001: neighbor_is_error_border = 6'b000001;
-            default: neighbor_is_error_border = 0;
+            12'b1xxxxxxxxxxx: neighbor_is_error_border = 12'b100000000000;
+            12'b01xxxxxxxxxx: neighbor_is_error_border = 12'b010000000000;
+            12'b001xxxxxxxxx: neighbor_is_error_border = 12'b001000000000;
+            12'b0001xxxxxxxx: neighbor_is_error_border = 12'b000100000000;
+            12'b00001xxxxxxx: neighbor_is_error_border = 12'b000010000000;
+            12'b000001xxxxxx: neighbor_is_error_border = 12'b000001000000;
+            12'b0000001xxxxx: neighbor_is_error_border = 12'b000000100000;
+            12'b00000001xxxx: neighbor_is_error_border = 12'b000000010000;
+            12'b000000001xxx: neighbor_is_error_border = 12'b000000001000;
+            12'b0000000001xx: neighbor_is_error_border = 12'b000000000100;
+            12'b00000000001x: neighbor_is_error_border = 12'b000000000010;
+            12'b000000000001: neighbor_is_error_border = 12'b000000000001;
+            default: neighbor_is_error_border = 12'b000000000000; // Default case
         endcase
     end else begin
         neighbor_is_error_border = 6'b0;

@@ -147,7 +147,6 @@ endgenerate
 `define CORR_INDEX_NS(i, j) ((i-1)*(GRID_WIDTH_Z) + j-1)
 `define CORR_INDEX_EW(i, j) ((i-1)*(GRID_WIDTH_Z) + j + NS_ERROR_COUNT_PER_ROUND)
 `define CORR_INDEX_UD(i, j) (i*GRID_WIDTH_Z + j + NS_ERROR_COUNT_PER_ROUND + EW_ERROR_COUNT_PER_ROUND)
-// Nami : NS and EW indexing is wrong. Have to account for missing links in boundary. Need to be fixed
 `define CORR_INDEX_DIAG_NS(i, j) ((i-1)*(GRID_WIDTH_Z) + (j-1)  - ((i-1)/2) + NS_ERROR_COUNT_PER_ROUND + EW_ERROR_COUNT_PER_ROUND + UD_ERROR_COUNT_PER_ROUND) // The extra negative is to reduce the missing edges
 `define CORR_INDEX_DIAG_EW(i, j) ((i-1)*(GRID_WIDTH_Z) + j - ((i+1)/2) + NS_ERROR_COUNT_PER_ROUND + EW_ERROR_COUNT_PER_ROUND + UD_ERROR_COUNT_PER_ROUND + DIAG_NS_ERROR_COUNT_PER_ROUND)
 `define CORR_INDEX_DIAG_HOOK(i, j) ((i-1)*(GRID_WIDTH_Z-1) + j - i%2 + NS_ERROR_COUNT_PER_ROUND + EW_ERROR_COUNT_PER_ROUND + UD_ERROR_COUNT_PER_ROUND + DIAG_NS_ERROR_COUNT_PER_ROUND + DIAG_EW_ERROR_COUNT_PER_ROUND)
