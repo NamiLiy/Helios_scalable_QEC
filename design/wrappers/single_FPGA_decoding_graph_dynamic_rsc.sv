@@ -392,13 +392,13 @@ generate
                     end
                 end else begin
                     if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j < GRID_WIDTH_Z) begin // even rows which are always internal
-                        `NEIGHBOR_LINK_INTERNAL_0(i, j, k-1, i-1, j, k, `NEIGHBOR_IDX_DIAG_EAST, `NEIGHBOR_IDX_DIAG_WEST)
+                        `NEIGHBOR_LINK_INTERNAL_0(i, j, k, i-1, j, k-1, `NEIGHBOR_IDX_DIAG_EAST, `NEIGHBOR_IDX_DIAG_WEST)
                     end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j == 0) begin // First element of odd rows
-                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k-1, `NEIGHBOR_IDX_DIAG_WEST, 1)
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k-1, `NEIGHBOR_IDX_DIAG_WEST, 2)
                     end else if(i < GRID_WIDTH_X  && i > 0 && i%2 == 1 && j == GRID_WIDTH_Z) begin // Last element of odd rows excluding last row
                         `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j-1, k, `NEIGHBOR_IDX_DIAG_EAST, 2)
                     end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0 && j < GRID_WIDTH_Z) begin // Middle elements of odd rows
-                        `NEIGHBOR_LINK_INTERNAL_0(i, j-1, k-1, i-1, j, k, `NEIGHBOR_IDX_DIAG_EAST, `NEIGHBOR_IDX_DIAG_WEST)
+                        `NEIGHBOR_LINK_INTERNAL_0(i, j-1, k, i-1, j, k-1, `NEIGHBOR_IDX_DIAG_EAST, `NEIGHBOR_IDX_DIAG_WEST)
                     end
                 end
             end
