@@ -3,7 +3,7 @@
 #include <math.h>
 #include <time.h>
 
-#define D 3
+#define D 5
 
 struct Address {
     int k;
@@ -54,6 +54,19 @@ int get_parity(struct Address a){
     return node_array[root.k][root.i][root.j].parity;
 }
 
+//print roots
+int print_roots(){
+    printf("count %d\n", count);
+    for(int k=0;k<D;k++){
+        for(int i=0; i< D + 1;i++){
+            for(int j=0; j< (D-1)/2;j++){
+                struct Address root = get_root(node_array[k][i][j].id);
+                printf("%d %d %d : %d %d %d\n", k, i, j, root.k, root.i, root.j);
+            }
+        }
+    }
+    return 0;
+}
 
 int grow(int k, int i, int j, int direction){
     // If odd increase growth
@@ -493,6 +506,8 @@ void union_find (int syndrome[D][D+1][(D-1)/2]){
                 }
             }
         }
+        //Print roots
+        print_roots();
 
     }
 }
@@ -514,7 +529,7 @@ int loadFileData(FILE* file, int (*array)[D][D+1][(D-1)/2]) {
                     return -1;
                 }
                 (*array)[k][i][j] = value;
-                if(count == 311 && value == 1) {
+                if(test_id == 12 && value == 1) {
                     printf("syndrome %d %d %d \n", k, i, j);
                 }
             }
@@ -535,7 +550,8 @@ int print_output(FILE* file, int test) {
     for(int k=0;k<D;k++){
         for(int i=0; i< D + 1;i++){
             for(int j=0; j< (D-1)/2;j++){
-                fprintf(file, "00%02X%02X%02X\n", node_array[k][i][j].root.k, node_array[k][i][j].root.i, node_array[k][i][j].root.j);
+                struct Address root = get_root(node_array[k][i][j].root);
+                fprintf(file, "00%02X%02X%02X\n", root.k, root.i, root.j);
             }
         }
     }
@@ -546,7 +562,7 @@ int main(){
     // load syndrome
     int distance = D;
     char filename[100];
-    sprintf(filename, "../test_benches/test_data/input_data_%d_rsc.txt", distance);
+    sprintf(filename, "../test_benches/test_data/input_cct_noise_%d.txt", distance);
     FILE* file = fopen(filename, "r");
     if (file == NULL) {
         printf("Error opening file %s.\n", filename);
@@ -555,20 +571,20 @@ int main(){
 
 
     char output_filename[100];
-    sprintf(output_filename, "../test_benches/test_data/output_data_%d_rsc.txt", distance);
+    sprintf(output_filename, "../test_benches/test_data/output_cct_noise_%d.txt", distance);
     FILE* file_op = fopen(output_filename, "wb");
     if (file_op == NULL) {
         printf("Error opening file %s.\n", output_filename);
         return -1;
     }
 
-    char verilog_roots_filename[100];
-    sprintf(verilog_roots_filename, "../test_benches/test_data/output_data_%d_roots.txt", distance);
-    FILE* file_verilog_roots = fopen(verilog_roots_filename, "r");
-    if (file_verilog_roots == NULL) {
-        printf("Error opening file %s.\n", verilog_roots_filename);
-        return -1;
-    }
+    // char verilog_roots_filename[100];
+    // sprintf(verilog_roots_filename, "../test_benches/test_data/output_data_%d_roots.txt", distance);
+    // FILE* file_verilog_roots = fopen(verilog_roots_filename, "r");
+    // if (file_verilog_roots == NULL) {
+    //     printf("Error opening file %s.\n", verilog_roots_filename);
+    //     return -1;
+    // }
 
     while(1){
         count++;
@@ -579,7 +595,7 @@ int main(){
         }
         union_find(syndrome);
         print_output(file_op, ret_val);
-        verifyVerilogRoots(file_verilog_roots, node_array);
+        // verifyVerilogRoots(file_verilog_roots, node_array);
     }
 
     fclose(file_op);

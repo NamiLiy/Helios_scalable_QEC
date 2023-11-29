@@ -173,15 +173,15 @@ end
 always@(posedge clk) begin
     if(stage == STAGE_MEASUREMENT_LOADING) begin
         odd <= measurement;
-        odd_to_children <= (measurement ? 6'h3f : 0);
+        odd_to_children <= (measurement ? 12'hfff : 0);
     end else begin
         if (stage == STAGE_MERGE) begin
             if(|parent_vector) begin
                 odd <= |(parent_vector & parent_odd);
-                odd_to_children <= (|(parent_vector & parent_odd) ? 6'h3f : 0);
+                odd_to_children <= (|(parent_vector & parent_odd) ? 12'hfff  : 0);
             end else begin
                 odd <= next_cluster_parity & !next_cluster_touching_boundary;
-                odd_to_children <= ((next_cluster_parity & !next_cluster_touching_boundary) ? 6'h3f : 0);
+                odd_to_children <= ((next_cluster_parity & !next_cluster_touching_boundary) ? 12'hfff  : 0);
             end
         end else if(stage == STAGE_PEELING) begin
             if(~(|parent_vector)) begin
@@ -302,7 +302,7 @@ always@(*) begin
     if(stage == STAGE_PEELING && !some_child_is_not_peeling_complete) begin
         neighbor_is_error_internal = neighbor_parent_vector & child_peeling_m;
     end else begin
-        neighbor_is_error_internal = 6'b0;
+        neighbor_is_error_internal = 12'b0;
     end
 end
 
@@ -324,7 +324,7 @@ always@(*) begin
             default: neighbor_is_error_border = 12'b000000000000; // Default case
         endcase
     end else begin
-        neighbor_is_error_border = 6'b0;
+        neighbor_is_error_border = 12'b0;
     end
 end
 
