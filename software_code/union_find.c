@@ -3,7 +3,7 @@
 #include <math.h>
 #include <time.h>
 
-#define D 5
+#define D 21
 
 struct Address {
     int k;
@@ -507,7 +507,7 @@ void union_find (int syndrome[D][D+1][(D-1)/2]){
             }
         }
         //Print roots
-        print_roots();
+        // print_roots();
 
     }
 }

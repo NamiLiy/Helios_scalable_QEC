@@ -16,7 +16,7 @@ module verification_bench_single_FPGA_rsc;
 `include "../../parameters/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
-localparam CODE_DISTANCE = 5;                
+localparam CODE_DISTANCE = 13;                
 localparam CODE_DISTANCE_X = CODE_DISTANCE + 1;
 localparam CODE_DISTANCE_Z = (CODE_DISTANCE_X - 1)/2;
 
@@ -239,21 +239,21 @@ always @(negedge clk) begin
             end else if (CODE_DISTANCE == 5) begin
                 input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_cct_noise_5.txt", "r");
             end else if (CODE_DISTANCE == 7) begin
-                input_file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_7_rsc.txt", "r");
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_cct_noise_7.txt", "r");
             end else if (CODE_DISTANCE == 9) begin
-                input_file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_9_rsc.txt", "r");
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_cct_noise_9.txt", "r");
             end else if (CODE_DISTANCE == 11) begin
-                input_file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_11_rsc.txt", "r");
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_cct_noise_11.txt", "r");
             end else if (CODE_DISTANCE == 13) begin
-                input_file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_13_rsc.txt", "r");
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_cct_noise_13.txt", "r");
             end else if (CODE_DISTANCE == 15) begin
-                input_file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_15_rsc.txt", "r");
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_cct_noise_15.txt", "r");;
             end else if (CODE_DISTANCE == 17) begin
-                input_file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_17_rsc.txt", "r");
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_cct_noise_17.txt", "r");
             end else if (CODE_DISTANCE == 19) begin
-                input_file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_19_rsc.txt", "r");
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_cct_noise_19.txt", "r");
             end else if (CODE_DISTANCE == 21) begin
-                input_file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_21_rsc.txt", "r");
+                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_cct_noise_21.txt", "r");
             end
             input_open = 0;
         end
@@ -311,18 +311,26 @@ always @(posedge clk) begin
         // $display("%t\tTest case %d pass %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
       if(open == 1) begin
             if (CODE_DISTANCE == 3) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_3_rsc.txt", "r");
+                file = $fopen ("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_3_rsc.txt", "r");
             end else if (CODE_DISTANCE == 5) begin
                 file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_cct_noise_5.txt", "r");
             end else if (CODE_DISTANCE == 7) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_7_rsc.txt", "r");
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_cct_noise_7.txt", "r");
             end else if (CODE_DISTANCE == 9) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_9_rsc.txt", "r");
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_cct_noise_9.txt", "r");
             end else if (CODE_DISTANCE == 11) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_11_rsc.txt", "r");
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_cct_noise_11.txt", "r");
             end else if (CODE_DISTANCE == 13) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_13_rsc.txt", "r");
-            end 
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_cct_noise_13.txt", "r");
+            end else if (CODE_DISTANCE == 15) begin
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_cct_noise_15.txt", "r");;
+            end else if (CODE_DISTANCE == 17) begin
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_cct_noise_17.txt", "r");
+            end else if (CODE_DISTANCE == 19) begin
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_cct_noise_19.txt", "r");
+            end else if (CODE_DISTANCE == 21) begin
+                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_cct_noise_21.txt", "r");
+            end
             open = 0;
         end
         if (eof == 0)begin 
