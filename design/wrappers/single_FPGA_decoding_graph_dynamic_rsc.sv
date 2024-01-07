@@ -11,7 +11,7 @@ module single_FPGA_decoding_graph_dynamic_rsc #(
     reset,
     measurements,
     odd_clusters,
-    //roots,
+    roots,
     busy,
     global_stage,
     correction
@@ -48,7 +48,7 @@ input [PU_COUNT_PER_ROUND-1:0] measurements;
 input [STAGE_WIDTH-1:0] global_stage;
 
 output [PU_COUNT - 1 : 0] odd_clusters;
-// output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
+output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 output [PU_COUNT - 1 : 0] busy;
 output [CORRECTION_COUNT_PER_ROUND - 1 : 0] correction;
 

@@ -216,15 +216,19 @@ always @(posedge clk) begin
                     result_valid <= 0;
                 end else begin
                     global_stage_saved <= STAGE_MEASUREMENT_LOADING;
-                    global_stage <= STAGE_WRITE_TO_MEM;
+                    global_stage <= (NUM_CONTEXTS == 1 ? STAGE_GROW : STAGE_WRITE_TO_MEM);
                     measurement_rounds <= 0;
                     delay_counter <= 0;
                     result_valid <= 0;
+                    if(NUM_CONTEXTS == 1) begin
+                        cycle_counter_on <= 1;
+                        cycle_counter_reset <= 1;
+                    end
                 end
             end
 
             STAGE_GROW: begin //2
-                global_stage <= STAGE_WRITE_TO_MEM;
+                global_stage <= (NUM_CONTEXTS == 1 ? STAGE_MERGE : STAGE_WRITE_TO_MEM);
                 global_stage_saved <= STAGE_GROW;
                 delay_counter <= 0;
                 measurement_rounds <= 0;
@@ -237,6 +241,15 @@ always @(posedge clk) begin
                     if(!busy) begin
                         delay_counter <= 0;
                         global_stage <= STAGE_WRITE_TO_MEM;
+                        if(NUM_CONTEXTS == 1) begin
+                            if(|odd_clusters == 1'b0) begin // everybody is even
+                                global_stage <= STAGE_PEELING;
+                            end else begin // somebody is odd
+                                global_stage <= STAGE_GROW;
+                            end
+                        end else begin
+                            global_stage <= STAGE_WRITE_TO_MEM;
+                        end
                         global_stage_saved <= STAGE_MERGE;
                         odd_clusters_in_context[current_context] <= odd_clusters;  
                     end
@@ -251,7 +264,7 @@ always @(posedge clk) begin
             end           
 
             STAGE_PEELING: begin //4
-                global_stage <= STAGE_WRITE_TO_MEM;
+                global_stage <= (NUM_CONTEXTS == 1 ? STAGE_RESULT_VALID : STAGE_WRITE_TO_MEM);
                 global_stage_saved <= STAGE_PEELING;
             end
 
@@ -259,8 +272,15 @@ always @(posedge clk) begin
                 measurement_rounds <= measurement_rounds + 1;
                 if(measurement_rounds >= PHYSICAL_GRID_WIDTH_U - 1) begin
                     global_stage_saved <= STAGE_RESULT_VALID;
-                    global_stage <= STAGE_WRITE_TO_MEM;
+                    if(NUM_CONTEXTS == 1) begin
+                        global_stage <= STAGE_IDLE;
+                    end else begin
+                        global_stage <= STAGE_WRITE_TO_MEM;
+                    end
                     measurement_rounds <= 0;
+                end
+                if(NUM_CONTEXTS == 1) begin
+                    cycle_counter_on <= 0;
                 end
                 delay_counter <= 0;
                 result_valid <= 1;

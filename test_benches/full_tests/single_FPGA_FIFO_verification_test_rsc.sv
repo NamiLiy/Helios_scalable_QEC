@@ -16,10 +16,10 @@ module verification_bench_single_FPGA_rsc;
 `include "../../parameters/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
-localparam CODE_DISTANCE = 51;                
+localparam CODE_DISTANCE = 5;                
 localparam CODE_DISTANCE_X = CODE_DISTANCE + 1;
 localparam CODE_DISTANCE_Z = (CODE_DISTANCE_X - 1)/2;
-localparam NUM_CONTEXTS = CODE_DISTANCE;
+localparam NUM_CONTEXTS = 1;
 
 parameter GRID_WIDTH_X = CODE_DISTANCE + 1;
 parameter GRID_WIDTH_Z = (CODE_DISTANCE_X - 1)/2;
