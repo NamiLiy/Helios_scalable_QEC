@@ -3,16 +3,28 @@ module Helios_single_FPGA #(
     parameter GRID_WIDTH_Z = 1,
     parameter GRID_WIDTH_U = 3,
     parameter MAX_WEIGHT = 2,
-    parameter NUM_CONTEXTS = 2 
-) (
+    parameter NUM_CONTEXTS = 2,
+    parameter FPGA_ID = 1 
+) (,
     clk,
     reset,
+
     input_data,
     input_valid,
     input_ready,
+
     output_data,
     output_valid,
-    output_ready
+    output_ready,
+
+    parent_rx_data,
+    parent_rx_valid,
+    parent_rx_ready,
+
+    parent_tx_data,
+    parent_tx_valid,
+    parent_tx_ready,
+
 
     // roots // A debug port. Do not use in the real implementation
 );
@@ -44,6 +56,14 @@ output [7 : 0] output_data;
 output output_valid;
 input output_ready;
 
+input [63 : 0] parent_rx_data;
+input parent_rx_valid;
+output parent_rx_ready;
+
+output [63 : 0] parent_tx_data;
+output parent_tx_valid;
+input parent_tx_ready;
+
 wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 
 wire [STAGE_WIDTH-1:0] global_stage;
@@ -52,6 +72,14 @@ wire [CORRECTION_COUNT_PER_ROUND - 1 : 0] correction;
 wire [PU_COUNT_PER_ROUND-1:0] measurements;
 wire [PU_COUNT - 1 : 0] odd_clusters;
 wire [PU_COUNT - 1 : 0] busy;
+
+wire [63:0] input_ctrl_rx_data;
+wire input_ctrl_rx_valid;
+wire input_ctrl_rx_ready;
+
+wire [63:0] output_ctrl_tx_data;
+wire output_ctrl_tx_valid;
+wire output_ctrl_tx_ready;
 
 single_FPGA_decoding_graph_dynamic_rsc #( 
     .GRID_WIDTH_X(GRID_WIDTH_X),
@@ -86,11 +114,45 @@ unified_controller #(
     .output_data(output_data),
     .output_valid(output_valid),
     .output_ready(output_ready),
+    .input_ctrl_rx_data(input_ctrl_rx_data),
+    .input_ctrl_rx_valid(input_ctrl_rx_valid),
+    .input_ctrl_rx_ready(input_ctrl_rx_ready),
+    .output_ctrl_tx_data(output_ctrl_tx_data),
+    .output_ctrl_tx_valid(output_ctrl_tx_valid),
+    .output_ctrl_tx_ready(output_ctrl_tx_ready),
     .busy_PE(busy),
     .odd_clusters_PE(odd_clusters),
     .global_stage(global_stage),
     .measurements(measurements),
     .correction(correction)
+);
+
+fifo_wrapper #(
+    .WIDTH(64),
+    .DEPTH(64)
+) parent_fifo (
+    .clk(clk),
+    .reset(reset),
+    .input_data(parent_rx_data),
+    .input_valid(parent_rx_valid),
+    .input_ready(parent_rx_ready),
+    .output_data(input_ctrl_rx_data),
+    .output_valid(input_ctrl_rx_valid),
+    .output_ready(input_ctrl_rx_ready)
+);
+
+fifo_wrapper #(
+    .WIDTH(64),
+    .DEPTH(64)
+) controller_fifo (
+    .clk(clk),
+    .reset(reset),
+    .input_data(output_ctrl_tx_data),
+    .input_valid(output_ctrl_tx_valid),
+    .input_ready(output_ctrl_tx_ready),
+    .output_data(parent_tx_data),
+    .output_valid(parent_tx_valid),
+    .output_ready(parent_tx_ready)
 );
 
 endmodule

@@ -4,7 +4,8 @@ module unified_controller #(
     parameter GRID_WIDTH_U = 3,
     parameter ITERATION_COUNTER_WIDTH = 8,  // counts to 255 iterations
     parameter MAXIMUM_DELAY = 2,
-    parameter NUM_CONTEXTS = 2
+    parameter NUM_CONTEXTS = 2,
+    parameter CTRL_FIFO_WIDTH = 64
 ) (
     clk,
     reset,
@@ -16,6 +17,14 @@ module unified_controller #(
     output_data,
     output_valid,
     output_ready,
+
+    input_ctrl_rx_data,
+    input_ctrl_rx_valid,
+    input_ctrl_rx_ready,
+
+    output_ctrl_tx_data,
+    output_ctrl_tx_valid,
+    output_ctrl_tx_ready,
 
     busy_PE, 
     odd_clusters_PE,
@@ -53,6 +62,8 @@ localparam BORDER_TOP_LSB = PU_COUNT_PER_ROUND * (PHYSICAL_GRID_WIDTH_U- 1);
 localparam BORDER_BOT_MSB = PU_COUNT_PER_ROUND - 1;
 localparam BORDER_BOT_LSB = 0;
 
+localparam CTRL_MSG_MSB = 47;
+
 
 input clk;
 input reset;
@@ -72,6 +83,14 @@ output reg input_ready;
 output reg [7 : 0] output_data;
 output reg output_valid;
 input output_ready;
+
+input [CTRL_FIFO_WIDTH-1:0] input_ctrl_rx_data;
+input input_ctrl_rx_valid;
+output reg input_ctrl_rx_ready;
+
+output reg [CTRL_FIFO_WIDTH-1:0] output_ctrl_tx_data;
+output reg output_ctrl_tx_valid;
+input output_ctrl_tx_ready;
 
 reg result_valid;
 reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
@@ -164,12 +183,12 @@ always @(posedge clk) begin
     end else begin
         case (global_stage)
             STAGE_IDLE: begin // 0
-                if (input_valid && input_ready) begin
-                    if(input_data == START_DECODING_MSG) begin
+                if (input_ctrl_rx_valid && input_ctrl_rx_ready) begin
+                    if(input_ctrl_rx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == START_DECODING_MSG) begin
                         global_stage <= STAGE_PARAMETERS_LOADING;
                         delay_counter <= 0;
                         result_valid <= 0;
-                    end else if(input_data == MEASUREMENT_DATA_HEADER) begin
+                    end else if(input_ctrl_rx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == MEASUREMENT_DATA_HEADER) begin
                         global_stage <= STAGE_MEASUREMENT_PREPARING;
                         delay_counter <= 0;
                         result_valid <= 0;
@@ -287,12 +306,6 @@ always @(posedge clk) begin
             end
 
             STAGE_WRITE_TO_MEM: begin //1
-            //     global_stage <= STAGE_READ_FROM_MEM;
-            // end
-
-            // STAGE_READ_FROM_MEM: begin //8
-            //     if (delay_counter == 1) begin
-            //         delay_counter <= 0;
                     if(current_context < NUM_CONTEXTS -1 ) begin
                         if(global_stage_saved == STAGE_MERGE) begin
                             // if(growing_incomplete == 1'b1) begin
@@ -353,7 +366,7 @@ always@(*) begin
     if (reset) begin
         input_ready = 0;
     end else begin 
-        if(global_stage == STAGE_IDLE || global_stage == STAGE_MEASUREMENT_PREPARING) begin
+        if(global_stage == STAGE_MEASUREMENT_PREPARING) begin
             input_ready = 1;
         end else begin
             input_ready = 0;
@@ -374,6 +387,46 @@ always@(*) begin
 end
 
 assign output_fifo_data = correction;
+
+always@(*) begin
+    if (reset) begin
+        input_ctrl_rx_ready = 0;
+    end else begin 
+        if(global_stage == STAGE_IDLE) begin
+            input_ctrl_rx_ready = 1;
+        end else begin
+            input_ctrl_rx_ready = 0;
+        end
+    end
+end
+
+reg send_results;
+
+always@(posedge clk) begin
+    if (reset) begin
+        send_results <= 0;
+    end else begin
+        if(global_stage == STAGE_RESULT_VALID) begin
+            send_results <= 1;
+        end else begin
+            send_results <= 0;
+        end
+    end
+end
+
+always@(*) begin
+    if(reset) begin
+        output_ctrl_tx_valid = 0;
+    end else begin
+        if(global_stage == STAGE_RESULT_VALID && send_results == 0) begin
+            output_ctrl_tx_valid = 1;
+            output_ctrl_tx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] = iteration_counter;
+            output_ctrl_tx_data [CTRL_MSG_MSB - 8 : CTRL_MSG_MSB - 23] = cycle_counter;
+        end else begin
+            output_ctrl_tx_valid = 0;
+        end
+    end
+end
 
 // FIFO
 fifo_wrapper #(
@@ -448,5 +501,7 @@ always@(*) begin
         end
     endcase
 end
+
+
 
 endmodule

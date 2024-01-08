@@ -28,5 +28,5 @@ set style line 2 lt rgb "black" lw 1 pt 2
 set style line 3 lt rgb "black" lw 1 pt 3
 
 set arrow from 15,278.09 to 17,302.54 nohead dashtype 2
-plot "new_pe_latency.txt.csv" using 1:($2) with linespoints title " p = 0.001 phen" ls 2, "new_pe_latency.txt.csv" using 1:($4) with linespoints title " p = 0.005 phen" ls 3, "new_pe_latency.txt.csv" using 1:($8) with linespoints title " p = 0.01 cct" ls 1                       
+plot "new_pe_latency.txt.csv" using 1:($2) with linespoints title " p = 0.001 phen" ls 2, "new_pe_latency.txt.csv" using 1:($4) with linespoints title " p = 0.005 phen" ls 3, "new_pe_latency.txt.csv" using 1:($8) with linespoints title " p = 0.001 cct" ls 1                       
 

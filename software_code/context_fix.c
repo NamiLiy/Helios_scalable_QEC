@@ -132,7 +132,7 @@ int input_handle(){
     }
 
     char output_filename[100];
-    sprintf(output_filename, "../test_benches/test_data/input_data_%d_ctx.txt", distance);
+    sprintf(output_filename, "../test_benches/test_data/input_data_%d_1.txt", distance);
     FILE* file_op = fopen(output_filename, "wb");
     if (file_op == NULL) {
         printf("Error opening file %s.\n", output_filename);
@@ -165,7 +165,7 @@ int output_handle(){
     }
 
     char output_filename[100];
-    sprintf(output_filename, "../test_benches/test_data/output_data_%d_ctx.txt", distance);
+    sprintf(output_filename, "../test_benches/test_data/output_data_%d_1.txt", distance);
     FILE* file_op = fopen(output_filename, "wb");
     if (file_op == NULL) {
         printf("Error opening file %s.\n", output_filename);
