@@ -6,6 +6,7 @@
 #define D 5
 #define TOTAL_MEASUREMENTS D
 #define NUM_CONTEXTS 5
+#define fpga_id 2
 
 #define distance_per_context ((D + NUM_CONTEXTS - 1)/NUM_CONTEXTS)
 #define rounded_distance (distance_per_context*NUM_CONTEXTS)
@@ -48,7 +49,7 @@ int loadFileData(FILE* file, int (*array)[rounded_distance][D+1][(D-1)/2]) {
     return test_id;
 }
 
-int print_output(FILE* file, int (*array)[rounded_distance][D+1][(D-1)/2], int test) {
+int print_output(FILE* file, int (*array)[rounded_distance][D+1][(D-1)/2], int test, int flag) {
 
     fprintf(file, "%08X\n", test);
 
@@ -75,7 +76,10 @@ int print_output(FILE* file, int (*array)[rounded_distance][D+1][(D-1)/2], int t
             for(int k=0;k< distance_per_context;k++){
                 for(int i=0; i< D + 1;i++){
                     for(int j=0; j< (D-1)/2;j++){
-                        fprintf(file, "01%06X\n", (*array)[l*distance_per_context + k][i][j]);
+                        if(flag)
+                            fprintf(file, "01%06X\n", (*array)[l*distance_per_context + k][i][j]);
+                        else
+                            fprintf(file, "00%06X\n", (*array)[l*distance_per_context + k][i][j]);
                     }
                 }
             }
@@ -83,7 +87,10 @@ int print_output(FILE* file, int (*array)[rounded_distance][D+1][(D-1)/2], int t
             for(int k=distance_per_context-1; k>=0; k--){
                 for(int i=0; i< D + 1;i++){
                     for(int j=0; j< (D-1)/2;j++){
-                        fprintf(file, "01%06X\n", (*array)[l*distance_per_context + k][i][j]);
+                        if(flag)
+                            fprintf(file, "01%06X\n", (*array)[l*distance_per_context + k][i][j]);
+                        else
+                            fprintf(file, "00%06X\n", (*array)[l*distance_per_context + k][i][j]);
                     }
                 }
             }
@@ -132,7 +139,7 @@ int input_handle(){
     }
 
     char output_filename[100];
-    sprintf(output_filename, "../test_benches/test_data/input_data_%d_1.txt", distance);
+    sprintf(output_filename, "../test_benches/test_data/input_data_%d_%d.txt", distance, fpga_id);
     FILE* file_op = fopen(output_filename, "wb");
     if (file_op == NULL) {
         printf("Error opening file %s.\n", output_filename);
@@ -146,7 +153,7 @@ int input_handle(){
             break;
         }
         print_detailed_output(file_det, &syndrome, ret_val);
-        print_output(file_op, &syndrome, ret_val);
+        print_output(file_op, &syndrome, ret_val, 0);
     }
 
     fclose(file_op);
@@ -165,7 +172,7 @@ int output_handle(){
     }
 
     char output_filename[100];
-    sprintf(output_filename, "../test_benches/test_data/output_data_%d_1.txt", distance);
+    sprintf(output_filename, "../test_benches/test_data/output_data_%d_%d.txt", distance, fpga_id);
     FILE* file_op = fopen(output_filename, "wb");
     if (file_op == NULL) {
         printf("Error opening file %s.\n", output_filename);
@@ -178,7 +185,7 @@ int output_handle(){
         if(ret_val < 0) {
             break;
         }
-        print_output(file_op, &syndrome, ret_val);
+        print_output(file_op, &syndrome, ret_val, 1);
     }
 
     fclose(file_op);

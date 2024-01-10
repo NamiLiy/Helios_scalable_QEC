@@ -6,7 +6,7 @@ module unified_controller #(
     parameter MAXIMUM_DELAY = 2,
     parameter NUM_CONTEXTS = 2,
     parameter CTRL_FIFO_WIDTH = 64,
-    parameter NUM_FPGAS = 5,
+    parameter NUM_FPGAS = 5
 ) (
     clk,
     reset,
@@ -417,6 +417,9 @@ always@(posedge clk) begin
 end
 
 always@(*) begin
+    output_ctrl_tx_valid = 0;
+    output_ctrl_tx_valid = 0;
+    output_ctrl_tx_data = 64'h0;
     if(reset) begin
         output_ctrl_tx_valid = 0;
     end else begin

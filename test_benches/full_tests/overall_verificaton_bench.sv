@@ -17,24 +17,26 @@ module overall_verification_bench;
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
 localparam CODE_DISTANCE = 5;
-localparam NUM_LEAVES = 1;
+localparam NUM_LEAVES = 2;
+
+`define SLICE_VEC(vec, idx, width) (vec[idx*width +: width])
 
 reg clk;
 reg reset;
 
-wire [63:0] parent_rx_data;
-wire parent_rx_valid;
-wire parent_rx_ready;
+wire [64*NUM_LEAVES - 1:0] parent_rx_data;
+wire [NUM_LEAVES - 1 : 0] parent_rx_valid;
+wire [NUM_LEAVES - 1 : 0] parent_rx_ready;
 
-wire [63:0] parent_tx_data;
-wire parent_tx_valid;
-wire parent_tx_ready;
+wire [64*NUM_LEAVES - 1:0] parent_tx_data;
+wire [NUM_LEAVES - 1 : 0] parent_tx_valid;
+wire [NUM_LEAVES - 1 : 0] parent_tx_ready;
 wire on;
 
 root_hub_test #(
     .CODE_DISTANCE(CODE_DISTANCE),
     .NUM_LEAVES(NUM_LEAVES)
-) root_hub (
+) root_hub_tb(
     .clk(clk),
     .reset(reset),
 
@@ -47,21 +49,27 @@ root_hub_test #(
 );
 
 
-// instantiate
-verification_bench_leaf #(
-    .CODE_DISTANCE(CODE_DISTANCE),
-    .FPGA_ID(1)
- ) decoder (
-    .clk(clk),
-    .reset(reset),
-    .parent_rx_data(parent_rx_data),
-    .parent_rx_valid(parent_rx_valid),
-    .parent_rx_ready(parent_rx_ready),
-    .parent_tx_data(parent_tx_data),
-    .parent_tx_valid(parent_tx_valid),
-    .parent_tx_ready(parent_tx_ready)
-    //.roots(roots)
-);
+generate
+    genvar i;
+    for(i = 0; i < NUM_LEAVES; i = i + 1) begin : leaf
+        verification_bench_leaf #(
+            .CODE_DISTANCE(CODE_DISTANCE),
+            .NUM_FPGAS(NUM_LEAVES + 1),
+            .FPGA_ID(i + 1)
+        ) decoder_tb(
+            .clk(clk),
+            .reset(reset),
+            .parent_rx_data(`SLICE_VEC(parent_rx_data, i, 64)),
+            .parent_rx_valid(`SLICE_VEC(parent_rx_valid, i, 1)),
+            .parent_rx_ready(`SLICE_VEC(parent_rx_ready, i, 1)),
+            .parent_tx_data(`SLICE_VEC(parent_tx_data, i, 64)),
+            .parent_tx_valid(`SLICE_VEC(parent_tx_valid, i, 1)),
+            .parent_tx_ready(`SLICE_VEC(parent_tx_ready, i, 1))
+            //.roots(roots)
+        );
+    end
+endgenerate
+
 
 always #5 clk = ~clk;  // flip every 5ns, that is 100MHz clock
 
