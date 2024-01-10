@@ -4,8 +4,8 @@ module Helios_single_FPGA #(
     parameter GRID_WIDTH_U = 3,
     parameter MAX_WEIGHT = 2,
     parameter NUM_CONTEXTS = 2,
-    parameter FPGA_ID = 1 
-) (,
+    parameter NUM_FPGAS = 5
+) (
     clk,
     reset,
 
@@ -25,6 +25,8 @@ module Helios_single_FPGA #(
     parent_tx_valid,
     parent_tx_ready,
 
+    FPGA_ID
+
 
     // roots // A debug port. Do not use in the real implementation
 );
@@ -36,7 +38,8 @@ module Helios_single_FPGA #(
 localparam X_BIT_WIDTH = $clog2(GRID_WIDTH_X);
 localparam Z_BIT_WIDTH = $clog2(GRID_WIDTH_Z);
 localparam U_BIT_WIDTH = $clog2(GRID_WIDTH_U);
-localparam ADDRESS_WIDTH = X_BIT_WIDTH + Z_BIT_WIDTH + U_BIT_WIDTH;
+localparam FPGA_BIT_WIDTH = $clog2(NUM_FPGAS);
+localparam ADDRESS_WIDTH = X_BIT_WIDTH + Z_BIT_WIDTH + U_BIT_WIDTH + FPGA_BIT_WIDTH;
 
 localparam PU_COUNT_PER_ROUND = GRID_WIDTH_X * GRID_WIDTH_Z;
 localparam PU_COUNT = PU_COUNT_PER_ROUND * GRID_WIDTH_U;
@@ -64,6 +67,8 @@ output [63 : 0] parent_tx_data;
 output parent_tx_valid;
 input parent_tx_ready;
 
+input [$clog2(NUM_FPGAS) -1 : 0] FPGA_ID;
+
 wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 
 wire [STAGE_WIDTH-1:0] global_stage;
@@ -86,7 +91,8 @@ single_FPGA_decoding_graph_dynamic_rsc #(
     .GRID_WIDTH_Z(GRID_WIDTH_Z),
     .GRID_WIDTH_U(GRID_WIDTH_U),
     .MAX_WEIGHT(MAX_WEIGHT),
-    .NUM_CONTEXTS(NUM_CONTEXTS)
+    .NUM_CONTEXTS(NUM_CONTEXTS),
+    .NUM_FPGAS(NUM_FPGAS)
 ) decoding_graph_rsc (
     .clk(clk),
     .reset(reset),
@@ -95,7 +101,8 @@ single_FPGA_decoding_graph_dynamic_rsc #(
     .roots(roots),
     .correction(correction),
     .busy(busy),
-    .global_stage(global_stage)
+    .global_stage(global_stage),
+    .FPGA_ID(FPGA_ID)
 );
 
 unified_controller #( 
@@ -104,7 +111,8 @@ unified_controller #(
     .GRID_WIDTH_U(GRID_WIDTH_U),
     .ITERATION_COUNTER_WIDTH(8),
     .MAXIMUM_DELAY(3),
-    .NUM_CONTEXTS(NUM_CONTEXTS)
+    .NUM_CONTEXTS(NUM_CONTEXTS),
+    .NUM_FPGAS(NUM_FPGAS)
 ) controller (
     .clk(clk),
     .reset(reset),

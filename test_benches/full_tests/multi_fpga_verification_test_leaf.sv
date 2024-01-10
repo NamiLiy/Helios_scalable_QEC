@@ -13,6 +13,7 @@
 
 module verification_bench_leaf#(
     parameter CODE_DISTANCE = 5,
+    parameter NUM_FPGAS = 5,
     parameter FPGA_ID = 1
 )(
     input clk,
@@ -52,7 +53,8 @@ localparam PU_COUNT_ACROSS_CONTEXT = CODE_DISTANCE_X * CODE_DISTANCE_Z * PHYSICA
 localparam X_BIT_WIDTH = $clog2(GRID_WIDTH_X);
 localparam Z_BIT_WIDTH = $clog2(GRID_WIDTH_Z);
 localparam U_BIT_WIDTH = $clog2(GRID_WIDTH_U);
-localparam ADDRESS_WIDTH = X_BIT_WIDTH + Z_BIT_WIDTH + U_BIT_WIDTH;
+localparam FPGA_BIT_WIDTH = $clog2(NUM_FPGAS);
+localparam ADDRESS_WIDTH = X_BIT_WIDTH + Z_BIT_WIDTH + U_BIT_WIDTH + FPGA_BIT_WIDTH;
 
 localparam ITERATION_COUNTER_WIDTH = 8;  // counts up to CODE_DISTANCE iterations
 
@@ -78,6 +80,7 @@ reg [`ALIGNED_PU_PER_ROUND*PHYSICAL_GRID_WIDTH_U * NUM_CONTEXTS-1:0] measurement
 `define root_x(i, j, k) decoder.roots[ADDRESS_WIDTH*`INDEX(i, j, k)+Z_BIT_WIDTH +: X_BIT_WIDTH]
 `define root_z(i, j, k) decoder.roots[ADDRESS_WIDTH*`INDEX(i, j, k) +: Z_BIT_WIDTH]
 `define root_u(i, j, k) decoder.roots[ADDRESS_WIDTH*`INDEX(i, j, k)+X_BIT_WIDTH+Z_BIT_WIDTH +: U_BIT_WIDTH]
+`define root_fpga(i, j, k) decoder.roots[ADDRESS_WIDTH*`INDEX(i, j, k)+X_BIT_WIDTH+Z_BIT_WIDTH+U_BIT_WIDTH +: FPGA_BIT_WIDTH]
 
 
 
@@ -103,7 +106,7 @@ Helios_single_FPGA #(
     .GRID_WIDTH_U(GRID_WIDTH_U),
     .MAX_WEIGHT(MAX_WEIGHT),
     .NUM_CONTEXTS(NUM_CONTEXTS),
-    .FPGA_ID(FPGA_ID)
+    .NUM_FPGAS(NUM_FPGAS)
  ) decoder (
     .clk(clk),
     .reset(reset),
@@ -119,7 +122,8 @@ Helios_single_FPGA #(
     .parent_rx_ready(parent_rx_ready),
     .parent_tx_data(parent_tx_data),
     .parent_tx_valid(parent_tx_valid),
-    .parent_tx_ready(parent_tx_ready)
+    .parent_tx_ready(parent_tx_ready),
+    .FPGA_ID(FPGA_ID)
     
     //.roots(roots)
 );
@@ -167,6 +171,7 @@ reg [31:0] read_value, test_case, input_read_value;
 reg [X_BIT_WIDTH-1 : 0] expected_x;
 reg [Z_BIT_WIDTH-1 : 0] expected_z;
 reg [U_BIT_WIDTH-1 : 0] expected_u;
+reg [FPGA_BIT_WIDTH-1 : 0] expected_fpga;
 reg test_fail;
 reg processing = 0;
 reg [31:0] syndrome_count;
@@ -320,6 +325,7 @@ always @(posedge clk) begin
                         end
                         expected_x = read_value[X_BIT_WIDTH - 1 + 8 :8];
                         expected_u = read_value[U_BIT_WIDTH - 1 + 16 :16];
+                        expected_fpga = read_value[FPGA_BIT_WIDTH - 1 + 24 :24];
                         eof = $feof(file);
 
                         if(decoder.controller.current_context % 2 == 1) begin
@@ -332,10 +338,11 @@ always @(posedge clk) begin
                         end else begin
                             if(Z_BIT_WIDTH>0) begin
                                 if (expected_u != `root_u(i, j, k) || expected_x != `root_x(i, j, k) || expected_z != `root_z(i, j, k)) begin
-                                    $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d) : TC %d : ID %d" , $time, context_k, i ,j, `root_u(i, j, k), `root_x(i, j, k), `root_z(i, j, k), expected_u, expected_x, expected_z, test_case, FPGA_ID);
+                                    $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d,%0d) : Expected (%0d,%0d,%0d,%0d) : TC %d : ID %d" , $time, context_k, i ,j, `root_fpga(i,j,k), `root_u(i, j, k), `root_x(i, j, k), `root_z(i, j, k), expected_fpga, expected_u, expected_x, expected_z, test_case, FPGA_ID);
                                     test_fail = 1;
                                 end
                             end else begin
+                                // This logic has to be modified to multi FPGA
                                 if (expected_u != `root_u(i, j, k) || expected_x != `root_x(i, j, k)) begin
                                     $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d) : TC %d : ID %d" , $time, context_k, i ,j, `root_u(i, j, k), `root_x(i, j, k), 0, expected_u, expected_x, expected_z, test_case, FPGA_ID);
                                     test_fail = 1;
@@ -352,7 +359,7 @@ always @(posedge clk) begin
             $display("%t\tID  = %d Test case  = %d, %d pass %d cycles %d iterations %d syndromes", $time, FPGA_ID, test_case, pass_count, cycle_counter, iteration_counter, syndrome_count);
             pass_count = pass_count + 1;
         end else begin
-            $display("%t\tID  = %d Test case  = %d, %d fail %d cycles %d iterations %d syndromes", $time, FPGA_ID, test_case, fail_count,cycle_counter, iteration_counter, syndrome_count);
+            $display("%t\tID  = %d Test case  = %d, %d fail %d cycles %d iterations %d syndromes", $time, FPGA_ID, test_case, fail_count, cycle_counter, iteration_counter, syndrome_count);
             fail_count = fail_count + 1;
             $finish;
         end

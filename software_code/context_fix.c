@@ -5,7 +5,7 @@
 
 #define D 5
 #define TOTAL_MEASUREMENTS D
-#define NUM_CONTEXTS D
+#define NUM_CONTEXTS 5
 
 #define distance_per_context ((D + NUM_CONTEXTS - 1)/NUM_CONTEXTS)
 #define rounded_distance (distance_per_context*NUM_CONTEXTS)
@@ -75,7 +75,7 @@ int print_output(FILE* file, int (*array)[rounded_distance][D+1][(D-1)/2], int t
             for(int k=0;k< distance_per_context;k++){
                 for(int i=0; i< D + 1;i++){
                     for(int j=0; j< (D-1)/2;j++){
-                        fprintf(file, "00%06X\n", (*array)[l*distance_per_context + k][i][j]);
+                        fprintf(file, "01%06X\n", (*array)[l*distance_per_context + k][i][j]);
                     }
                 }
             }
@@ -83,7 +83,7 @@ int print_output(FILE* file, int (*array)[rounded_distance][D+1][(D-1)/2], int t
             for(int k=distance_per_context-1; k>=0; k--){
                 for(int i=0; i< D + 1;i++){
                     for(int j=0; j< (D-1)/2;j++){
-                        fprintf(file, "00%06X\n", (*array)[l*distance_per_context + k][i][j]);
+                        fprintf(file, "01%06X\n", (*array)[l*distance_per_context + k][i][j]);
                     }
                 }
             }

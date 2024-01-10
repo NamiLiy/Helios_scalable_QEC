@@ -5,7 +5,8 @@ module single_FPGA_decoding_graph_dynamic_rsc #(
     parameter GRID_WIDTH_Z = 1,
     parameter GRID_WIDTH_U = 3,
     parameter MAX_WEIGHT = 2,
-    parameter NUM_CONTEXTS = 4 
+    parameter NUM_CONTEXTS = 4,
+    parameter NUM_FPGAS = 5 
 ) (
     clk,
     reset,
@@ -14,7 +15,9 @@ module single_FPGA_decoding_graph_dynamic_rsc #(
     roots,
     busy,
     global_stage,
-    correction
+    correction,
+    FPGA_ID
+
 );
 
 `include "../../parameters/parameters.sv"
@@ -24,7 +27,8 @@ module single_FPGA_decoding_graph_dynamic_rsc #(
 localparam X_BIT_WIDTH = $clog2(GRID_WIDTH_X);
 localparam Z_BIT_WIDTH = $clog2(GRID_WIDTH_Z);
 localparam U_BIT_WIDTH = $clog2(GRID_WIDTH_U);
-localparam ADDRESS_WIDTH = X_BIT_WIDTH + Z_BIT_WIDTH + U_BIT_WIDTH;
+localparam FPGA_BIT_WIDTH = $clog2(NUM_FPGAS);
+localparam ADDRESS_WIDTH = X_BIT_WIDTH + Z_BIT_WIDTH + U_BIT_WIDTH + FPGA_BIT_WIDTH;
 localparam ADDRESS_WIDTH_WITH_B = ADDRESS_WIDTH + 1;
 
 localparam PHYSICAL_GRID_WIDTH_U = (GRID_WIDTH_U % NUM_CONTEXTS == 0) ? 
@@ -51,6 +55,8 @@ output [PU_COUNT - 1 : 0] odd_clusters;
 output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 output [PU_COUNT - 1 : 0] busy;
 output [CORRECTION_COUNT_PER_ROUND - 1 : 0] correction;
+
+input [FPGA_BIT_WIDTH-1:0] FPGA_ID;
 
 genvar i;
 genvar j;
@@ -90,7 +96,6 @@ end
 `define busy(i, j, k) busy[`INDEX(i, j, k)]
 `define PU(i, j, k) pu_k[k].pu_i[i].pu_j[j]
 `define SPU(i, j, k) s_pu_i[i].s_pu_j[j].s_pu_k[k]
-`define ADDRESS_BOUNDARY(i,j,k) ((`ADDRESS(i,j,k)+ (1'b1<<ADDRESS_WIDTH)))
 
 generate
     for (k=PHYSICAL_GRID_WIDTH_U-1; k >= 0; k=k-1) begin: pu_k
@@ -114,6 +119,7 @@ generate
                 always@(*) begin
                     address_global[Z_BIT_WIDTH-1:0] = j;
                     address_global[X_BIT_WIDTH+Z_BIT_WIDTH-1:Z_BIT_WIDTH] = i;
+                    address_global[ADDRESS_WIDTH - 1 : X_BIT_WIDTH+Z_BIT_WIDTH+U_BIT_WIDTH] = FPGA_ID;
                     address_global[ADDRESS_WIDTH_WITH_B-1:ADDRESS_WIDTH] = 1'b1;
                     if(context_stage_delayed%2 == 0) begin
                         address_global[ADDRESS_WIDTH-1:X_BIT_WIDTH+Z_BIT_WIDTH] = k + context_stage_delayed*PHYSICAL_GRID_WIDTH_U;

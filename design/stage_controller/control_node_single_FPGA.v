@@ -5,7 +5,8 @@ module unified_controller #(
     parameter ITERATION_COUNTER_WIDTH = 8,  // counts to 255 iterations
     parameter MAXIMUM_DELAY = 2,
     parameter NUM_CONTEXTS = 2,
-    parameter CTRL_FIFO_WIDTH = 64
+    parameter CTRL_FIFO_WIDTH = 64,
+    parameter NUM_FPGAS = 5,
 ) (
     clk,
     reset,
@@ -40,7 +41,8 @@ module unified_controller #(
 localparam X_BIT_WIDTH = $clog2(GRID_WIDTH_X);
 localparam Z_BIT_WIDTH = $clog2(GRID_WIDTH_Z);
 localparam U_BIT_WIDTH = $clog2(GRID_WIDTH_U);
-localparam ADDRESS_WIDTH = X_BIT_WIDTH + Z_BIT_WIDTH + U_BIT_WIDTH;
+localparam FPGA_BIT_WIDTH = $clog2(NUM_FPGAS);
+localparam ADDRESS_WIDTH = X_BIT_WIDTH + Z_BIT_WIDTH + U_BIT_WIDTH + FPGA_BIT_WIDTH;
 
 localparam BYTES_PER_ROUND = ((GRID_WIDTH_X * GRID_WIDTH_Z  + 7) >> 3);
 localparam ALIGNED_PU_PER_ROUND = (BYTES_PER_ROUND << 3);
