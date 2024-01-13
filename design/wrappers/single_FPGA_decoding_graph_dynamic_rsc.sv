@@ -16,7 +16,17 @@ module single_FPGA_decoding_graph_dynamic_rsc #(
     busy,
     global_stage,
     correction,
-    FPGA_ID
+    FPGA_ID,
+
+    border_output_data,
+    border_output_valid,
+    border_output_ready,
+
+    border_input_data,
+    border_input_valid,
+    border_input_ready,
+
+    border_continous
 
 );
 
@@ -43,6 +53,8 @@ localparam EW_ERROR_COUNT_PER_ROUND = (GRID_WIDTH_X-1) * GRID_WIDTH_Z + 1;
 localparam UD_ERROR_COUNT_PER_ROUND = GRID_WIDTH_X * GRID_WIDTH_Z;
 localparam CORRECTION_COUNT_PER_ROUND = NS_ERROR_COUNT_PER_ROUND + EW_ERROR_COUNT_PER_ROUND + UD_ERROR_COUNT_PER_ROUND;
 localparam EXPOSED_DATA_SIZE = ADDRESS_WIDTH_WITH_B + 1 + 1 + 1;
+localparam FPGA_FIFO_SIZE = EXPOSED_DATA_SIZE + 1;
+localparam FPGA_FIFO_COUNT = 2*GRID_WIDTH_Z - 1;
 
 localparam LINK_BIT_WIDTH = $clog2(MAX_WEIGHT + 1);
 
@@ -57,6 +69,16 @@ output [PU_COUNT - 1 : 0] busy;
 output [CORRECTION_COUNT_PER_ROUND - 1 : 0] correction;
 
 input [FPGA_BIT_WIDTH-1:0] FPGA_ID;
+
+output [2*FPGA_FIFO_SIZE*FPGA_FIFO_COUNT-1:0] border_output_data;
+output [2*FPGA_FIFO_COUNT-1:0] border_output_valid;
+input [2*FPGA_FIFO_COUNT-1:0] border_output_ready;
+
+input [2*FPGA_FIFO_SIZE*FPGA_FIFO_COUNT-1:0] border_input_data;
+input [2*FPGA_FIFO_COUNT-1:0] border_input_valid;
+output [2*FPGA_FIFO_COUNT-1:0] border_input_ready;
+
+input[1:0] border_continous;
 
 genvar i;
 genvar j;
@@ -257,8 +279,6 @@ endgenerate
 `define WEIGHT_EW(i,j) 2
 `define WEIGHT_UD(i,j) 2
 
-
-
 `define NEIGHBOR_LINK_INTERNAL_0(ai, aj, ak, bi, bj, bk, adirection, bdirection, type, num_contexts) \
     wire is_boundary; \
     neighbor_link_internal #( \
@@ -351,6 +371,37 @@ endgenerate
         assign `PU(ai, aj, ak).neighbor_fully_grown[adirection] = fully_grown_data;\
         assign `PU(ai, aj, ak).neighbor_is_boundary[adirection] = is_boundary;
 
+`define NEIGHBOR_LINK_EXTERNAL(ai, aj, ak, adirection, type, num_contexts, border, border_id, init_address) \
+    neighbor_link_external #( \
+        .ADDRESS_WIDTH(ADDRESS_WIDTH_WITH_B), \
+        .MAX_WEIGHT(2), \
+        .NUM_CONTEXTS(num_contexts) \
+    ) neighbor_link ( \
+        .clk(clk), \
+        .reset(reset), \
+        .global_stage(global_stage), \
+        .fully_grown(`PU(ai, aj, ak).neighbor_fully_grown[adirection]), \
+        .a_increase(`PU(ai, aj, ak).neighbor_increase), \
+        .is_boundary(`PU(ai, aj, ak).neighbor_is_boundary[adirection]), \
+        .a_is_error_in(`PU(ai, aj, ak).neighbor_is_error[adirection]), \
+        .is_error(is_error_out), \
+        .a_input_data(`SLICE_VEC(`PU(ai, aj, ak).output_data, adirection, EXPOSED_DATA_SIZE)), \
+        .a_output_data(`SLICE_VEC(`PU(ai, aj, ak).input_data, adirection, EXPOSED_DATA_SIZE)), \
+        .weight_in(2), \
+        .weight_out(), \
+        .do_not_store(local_context_switch), \
+        .boundary_condition_in(type), \
+        .boundary_condition_out(), \
+        .is_error_systolic_in(is_error_systolic_in), \
+        .fifo_output_data(`SLICE_VEC(border_output_data, border*FPGA_FIFO_COUNT +  border_id, FPGA_FIFO_SIZE)), \
+        .fifo_output_valid(`SLICE_VEC(border_output_valid, border*FPGA_FIFO_COUNT +  border_id, 1)), \
+        .fifo_output_ready(`SLICE_VEC(border_output_ready, border*FPGA_FIFO_COUNT +  border_id, 1)), \
+        .fifo_input_data(`SLICE_VEC(border_input_data, border*FPGA_FIFO_COUNT +  border_id, FPGA_FIFO_SIZE)), \
+        .fifo_input_valid(`SLICE_VEC(border_input_valid, border*FPGA_FIFO_COUNT +  border_id, 1)), \
+        .fifo_input_ready(`SLICE_VEC(border_input_ready, border*FPGA_FIFO_COUNT +  border_id, 1)), \
+        .b_init_address(init_address) \
+    );
+
 
 generate
     // Generate North South neighbors
@@ -363,16 +414,41 @@ generate
                 wire fully_grown_data;
                 wire local_context_switch;
                 assign local_context_switch = 1'b0;
+
+                wire [1:0] north_cut_type;
+                wire [1:0] south_cut_type;
+
+                assign north_cut_type = (border_continous[0]==1) ? 2'b11 : 2'b10;
+                assign south_cut_type = (border_continous[1]==1) ? 2'b11 : 2'b10;
+
+                reg [ADDRESS_WIDTH_WITH_B-1:0] init_address;
+                always@(*) begin
+                    init_address [ADDRESS_WIDTH-1:X_BIT_WIDTH+Z_BIT_WIDTH] = k;
+                    init_address [ADDRESS_WIDTH_WITH_B-1:ADDRESS_WIDTH] = 1'b1;
+                    if(i==0) begin
+                        init_address [X_BIT_WIDTH+Z_BIT_WIDTH-1:Z_BIT_WIDTH] = GRID_WIDTH_X - 1;
+                        init_address [Z_BIT_WIDTH-1:0] = j-1;
+                        init_address [ADDRESS_WIDTH - 1 : X_BIT_WIDTH+Z_BIT_WIDTH+U_BIT_WIDTH] = FPGA_ID - 1;
+                    end else begin
+                        init_address[X_BIT_WIDTH+Z_BIT_WIDTH-1:Z_BIT_WIDTH] = 0;
+                        init_address [Z_BIT_WIDTH-1:0] = j+1;
+                        init_address [ADDRESS_WIDTH - 1 : X_BIT_WIDTH+Z_BIT_WIDTH+U_BIT_WIDTH] = FPGA_ID + 1;
+                    end
+                end
+
                 // if(k==PHYSICAL_GRID_WIDTH_U-1) begin
                 //     assign local_context_switch = 1'b1;
                 // end else begin
                 //     assign local_context_switch = 1'b0;
                 // end
-
-                if(i==0 && j < GRID_WIDTH_Z) begin // First row
+                if(i==0 && j == 0) begin // First row top left. always never exists
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_NORTH, 2, NUM_CONTEXTS)
-                end else if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z) begin
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_SOUTH, 2, NUM_CONTEXTS)                   
+                end else if(i==0 && j < GRID_WIDTH_Z && j > 0) begin // First row
+                    `NEIGHBOR_LINK_EXTERNAL(i, j, k, `NEIGHBOR_IDX_NORTH, north_cut_type, NUM_CONTEXTS, 0, j-1, init_address)
+                end else if(i==GRID_WIDTH_X && j == GRID_WIDTH_Z-1) begin // Last row far right. Never exists
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_SOUTH, 2, NUM_CONTEXTS)
+                end else if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z-1) begin
+                    `NEIGHBOR_LINK_EXTERNAL(i-1, j, k, `NEIGHBOR_IDX_SOUTH, south_cut_type, NUM_CONTEXTS, 1, j, init_address)                 
                 end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0) begin // odd rows which are always internal
                     `NEIGHBOR_LINK_INTERNAL_0(i-1, j-1, k, i, j-1, k, `NEIGHBOR_IDX_SOUTH, `NEIGHBOR_IDX_NORTH, 0, NUM_CONTEXTS)
                 end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j == 0) begin // First element of even rows
@@ -396,16 +472,33 @@ generate
                 wire fully_grown_data;
                 wire local_context_switch;
                 assign local_context_switch = 1'b0;
-                // if(k==PHYSICAL_GRID_WIDTH_U-1) begin
-                //     assign local_context_switch = 1'b1;
-                // end else begin
-                //     assign local_context_switch = 1'b0;
-                // end
+
+                wire [1:0] north_cut_type;
+                wire [1:0] south_cut_type;
+
+                assign north_cut_type = (border_continous[0]==1) ? 2'b11 : 2'b10;
+                assign south_cut_type = (border_continous[1]==1) ? 2'b11 : 2'b10;
+
+                reg [ADDRESS_WIDTH_WITH_B-1:0] init_address;
+                always@(*) begin
+                    init_address [ADDRESS_WIDTH-1:X_BIT_WIDTH+Z_BIT_WIDTH] = k;
+                    init_address [ADDRESS_WIDTH_WITH_B-1:ADDRESS_WIDTH] = 1'b1;
+                    if(i==0) begin
+                        init_address [X_BIT_WIDTH+Z_BIT_WIDTH-1:Z_BIT_WIDTH] = GRID_WIDTH_X - 1;
+                        init_address [Z_BIT_WIDTH-1:0] = j;
+                        init_address [ADDRESS_WIDTH - 1 : X_BIT_WIDTH+Z_BIT_WIDTH+U_BIT_WIDTH] = FPGA_ID - 1;
+                    end else begin
+                        init_address[X_BIT_WIDTH+Z_BIT_WIDTH-1:Z_BIT_WIDTH] = 0;
+                        init_address [Z_BIT_WIDTH-1:0] = j;
+                        init_address [ADDRESS_WIDTH - 1 : X_BIT_WIDTH+Z_BIT_WIDTH+U_BIT_WIDTH] = FPGA_ID + 1;
+                    end
+                end
+
                 assign weight_in = `WEIGHT_EW(i,j);
                 if(i==0 && j < GRID_WIDTH_Z) begin // First row
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_EAST, 2, NUM_CONTEXTS)
+                    `NEIGHBOR_LINK_EXTERNAL(i, j, k, `NEIGHBOR_IDX_EAST, north_cut_type, NUM_CONTEXTS, 0, j + GRID_WIDTH_Z, init_address)
                 end else if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z) begin // Last row
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_WEST, 2, NUM_CONTEXTS)
+                    `NEIGHBOR_LINK_EXTERNAL(i-1, j, k, `NEIGHBOR_IDX_WEST, south_cut_type, NUM_CONTEXTS, 1, j + GRID_WIDTH_Z, init_address)
                 end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j < GRID_WIDTH_Z) begin // even rows which are always internal
                     `NEIGHBOR_LINK_INTERNAL_0(i, j, k, i-1, j, k, `NEIGHBOR_IDX_EAST, `NEIGHBOR_IDX_WEST, 0, NUM_CONTEXTS)
                 end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j == 0) begin // First element of odd rows

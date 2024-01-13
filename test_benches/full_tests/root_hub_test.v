@@ -101,17 +101,17 @@ end
 always@(*) begin
     case(root_hub_state)
         IDLE: begin
-            local_tx_data_d = {8'hff, 8'b0, 8'b0, 8'b0, 8'b0, 8'b0, 8'b0, 8'b0};
+            local_tx_data_d = {8'hff, 8'hff, 8'b0, 8'b0, 8'b0, 8'b0, 8'b0, 8'b0};
             local_tx_valid_d = 0;
             local_rx_ready_d = 0;
         end
         START_DECODING: begin
-            local_tx_data_d = {8'hff, 8'b0, START_DECODING_MSG, 8'b0, 8'b0, 8'b0, 8'b0, 8'b0};
+            local_tx_data_d = {8'hff, 8'hff, START_DECODING_MSG, 8'b0, 8'b0, 8'b0, 8'b0, 8'b0};
             local_tx_valid_d = 1;
             local_rx_ready_d = 0;
         end
         MEASUREMENT_DATA: begin
-            local_tx_data_d = {8'hff, 8'b0, MEASUREMENT_DATA_HEADER, 8'b0, 8'b0, 8'b0, 8'b0, 8'b0};
+            local_tx_data_d = {8'hff, 8'hff, MEASUREMENT_DATA_HEADER, 8'b0, 8'b0, 8'b0, 8'b0, 8'b0};
             local_tx_valid_d = 1;
             local_rx_ready_d = 0;
         end

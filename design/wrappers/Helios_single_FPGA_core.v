@@ -49,6 +49,11 @@ localparam EW_ERROR_COUNT_PER_ROUND = (GRID_WIDTH_X-1) * GRID_WIDTH_Z + 1;
 localparam UD_ERROR_COUNT_PER_ROUND = GRID_WIDTH_X * GRID_WIDTH_Z;
 localparam CORRECTION_COUNT_PER_ROUND = NS_ERROR_COUNT_PER_ROUND + EW_ERROR_COUNT_PER_ROUND + UD_ERROR_COUNT_PER_ROUND;
 
+localparam ADDRESS_WIDTH_WITH_B = ADDRESS_WIDTH + 1;
+localparam EXPOSED_DATA_SIZE = ADDRESS_WIDTH_WITH_B + 1 + 1 + 1;
+localparam FPGA_FIFO_SIZE = EXPOSED_DATA_SIZE + 1;
+localparam FPGA_FIFO_COUNT = 2*GRID_WIDTH_Z - 1;
+
 input clk;
 input reset;
 
@@ -67,7 +72,7 @@ output [63 : 0] parent_tx_data;
 output parent_tx_valid;
 input parent_tx_ready;
 
-input [$clog2(NUM_FPGAS) -1 : 0] FPGA_ID;
+input [7 : 0] FPGA_ID;
 
 wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 
@@ -86,6 +91,22 @@ wire [63:0] output_ctrl_tx_data;
 wire output_ctrl_tx_valid;
 wire output_ctrl_tx_ready;
 
+wire [2*FPGA_FIFO_SIZE*FPGA_FIFO_COUNT-1:0] border_output_data;
+wire [2*FPGA_FIFO_COUNT-1:0] border_output_valid;
+wire [2*FPGA_FIFO_COUNT-1:0] border_output_ready;
+
+wire [2*FPGA_FIFO_SIZE*FPGA_FIFO_COUNT-1:0] border_input_data;
+wire [2*FPGA_FIFO_COUNT-1:0] border_input_valid;
+wire [2*FPGA_FIFO_COUNT-1:0] border_input_ready;
+
+wire [63:0] handler_to_controller_data;
+wire handler_to_controller_valid;
+wire handler_to_controller_ready;
+
+wire [63:0] controller_to_handler_data;
+wire controller_to_handler_valid;
+wire controller_to_handler_ready;
+
 single_FPGA_decoding_graph_dynamic_rsc #( 
     .GRID_WIDTH_X(GRID_WIDTH_X),
     .GRID_WIDTH_Z(GRID_WIDTH_Z),
@@ -102,7 +123,14 @@ single_FPGA_decoding_graph_dynamic_rsc #(
     .correction(correction),
     .busy(busy),
     .global_stage(global_stage),
-    .FPGA_ID(FPGA_ID)
+    .FPGA_ID(FPGA_ID),
+    .border_output_data(border_output_data),
+    .border_output_valid(border_output_valid),
+    .border_output_ready(border_output_ready),
+    .border_input_data(border_input_data),
+    .border_input_valid(border_input_valid),
+    .border_input_ready(border_input_ready),
+    .border_continous(2'b0)
 );
 
 unified_controller #( 
@@ -135,15 +163,42 @@ unified_controller #(
     .correction(correction)
 );
 
+message_handler #(
+    .FPGA_FIFO_SIZE(FPGA_FIFO_SIZE),
+    .FPGA_FIFO_COUNT(FPGA_FIFO_COUNT)
+) handler (
+    .clk(clk),
+    .reset(reset),
+    .border_input_data(border_output_data),
+    .border_input_valid(border_output_valid),
+    .border_input_ready(border_output_ready),
+    .border_output_data(border_input_data),
+    .border_output_valid(border_input_valid),
+    .border_output_ready(border_input_ready),
+    .handler_to_control_data(handler_to_controller_data),
+    .handler_to_control_valid(handler_to_controller_valid),
+    .handler_to_control_ready(handler_to_controller_ready),
+    .control_to_handler_data(controller_to_handler_data),
+    .control_to_handler_valid(controller_to_handler_valid),
+    .control_to_handler_ready(controller_to_handler_ready),
+    .in_data(parent_rx_data),
+    .in_valid(parent_rx_valid),
+    .in_ready(parent_rx_ready),
+    .out_data(parent_tx_data),
+    .out_valid(parent_tx_valid),
+    .out_ready(parent_tx_ready),
+    .fpga_id(FPGA_ID)
+);
+
 fifo_wrapper #(
     .WIDTH(64),
     .DEPTH(64)
 ) parent_fifo (
     .clk(clk),
     .reset(reset),
-    .input_data(parent_rx_data),
-    .input_valid(parent_rx_valid),
-    .input_ready(parent_rx_ready),
+    .input_data(handler_to_controller_data),
+    .input_valid(handler_to_controller_valid),
+    .input_ready(handler_to_controller_ready),
     .output_data(input_ctrl_rx_data),
     .output_valid(input_ctrl_rx_valid),
     .output_ready(input_ctrl_rx_ready)
@@ -158,9 +213,9 @@ fifo_wrapper #(
     .input_data(output_ctrl_tx_data),
     .input_valid(output_ctrl_tx_valid),
     .input_ready(output_ctrl_tx_ready),
-    .output_data(parent_tx_data),
-    .output_valid(parent_tx_valid),
-    .output_ready(parent_tx_ready)
+    .output_data(controller_to_handler_data),
+    .output_valid(controller_to_handler_valid),
+    .output_ready(controller_to_handler_ready)
 );
 
 endmodule
