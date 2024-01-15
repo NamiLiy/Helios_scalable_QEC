@@ -14,6 +14,7 @@
 module verification_bench_leaf#(
     parameter CODE_DISTANCE = 5,
     parameter NUM_FPGAS = 5,
+    parameter ROUTER_DELAY = 18,
     parameter FPGA_ID = 1
 )(
     input clk,
@@ -106,7 +107,8 @@ Helios_single_FPGA #(
     .GRID_WIDTH_U(GRID_WIDTH_U),
     .MAX_WEIGHT(MAX_WEIGHT),
     .NUM_CONTEXTS(NUM_CONTEXTS),
-    .NUM_FPGAS(NUM_FPGAS)
+    .NUM_FPGAS(NUM_FPGAS),
+    .ROUTER_DELAY_COUNTER(ROUTER_DELAY)
  ) decoder (
     .clk(clk),
     .reset(reset),

@@ -18,6 +18,7 @@ module overall_verification_bench;
 
 localparam CODE_DISTANCE = 5;
 localparam NUM_LEAVES = 2;
+localparam ROUTER_DELAY = 18;
 
 `define SLICE_VEC(vec, idx, width) (vec[idx*width +: width])
 
@@ -55,6 +56,7 @@ generate
         verification_bench_leaf #(
             .CODE_DISTANCE(CODE_DISTANCE),
             .NUM_FPGAS(NUM_LEAVES + 1),
+            .ROUTER_DELAY(ROUTER_DELAY),
             .FPGA_ID(i + 1)
         ) decoder_tb(
             .clk(clk),

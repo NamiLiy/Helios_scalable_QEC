@@ -4,7 +4,8 @@ module Helios_single_FPGA #(
     parameter GRID_WIDTH_U = 3,
     parameter MAX_WEIGHT = 2,
     parameter NUM_CONTEXTS = 2,
-    parameter NUM_FPGAS = 5
+    parameter NUM_FPGAS = 5,
+    parameter ROUTER_DELAY_COUNTER = 18
 ) (
     clk,
     reset,
@@ -107,6 +108,8 @@ wire [63:0] controller_to_handler_data;
 wire controller_to_handler_valid;
 wire controller_to_handler_ready;
 
+wire router_busy;
+
 single_FPGA_decoding_graph_dynamic_rsc #( 
     .GRID_WIDTH_X(GRID_WIDTH_X),
     .GRID_WIDTH_Z(GRID_WIDTH_Z),
@@ -140,7 +143,8 @@ unified_controller #(
     .ITERATION_COUNTER_WIDTH(8),
     .MAXIMUM_DELAY(3),
     .NUM_CONTEXTS(NUM_CONTEXTS),
-    .NUM_FPGAS(NUM_FPGAS)
+    .NUM_FPGAS(NUM_FPGAS),
+    .ROUTER_DELAY_COUNTER(ROUTER_DELAY_COUNTER)
 ) controller (
     .clk(clk),
     .reset(reset),
@@ -160,7 +164,8 @@ unified_controller #(
     .odd_clusters_PE(odd_clusters),
     .global_stage(global_stage),
     .measurements(measurements),
-    .correction(correction)
+    .correction(correction),
+    .router_busy(router_busy)
 );
 
 message_handler #(
@@ -187,7 +192,8 @@ message_handler #(
     .out_data(parent_tx_data),
     .out_valid(parent_tx_valid),
     .out_ready(parent_tx_ready),
-    .fpga_id(FPGA_ID)
+    .fpga_id(FPGA_ID),
+    .router_busy(router_busy)
 );
 
 fifo_wrapper #(

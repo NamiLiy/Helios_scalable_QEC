@@ -1,6 +1,8 @@
 module root_hub #(
     parameter NUM_FPGAS = 5,
-    parameter MAXIMUM_DELAY = 3
+    parameter MAXIMUM_DELAY = 3,
+    parameter CHANNEL_WIDTH = 64,
+    parameter DEST_WIDTH = 8
 ) (
     clk,
     reset,
@@ -145,8 +147,8 @@ fifo_wrapper #(
 
 router #(
     .NUM_CHANNELS(NUM_FPGAS),
-    .CHANNEL_WIDTH(64),
-    .DEST_WIDTH(8)
+    .CHANNEL_WIDTH(CHANNEL_WIDTH),
+    .DEST_WIDTH(DEST_WIDTH)
 ) router (
     .clk(clk),
     .reset(reset),

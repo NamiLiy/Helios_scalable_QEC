@@ -32,7 +32,8 @@ module message_handler #(
     handler_to_control_valid,
     handler_to_control_ready,
 
-    fpga_id
+    fpga_id,
+    router_busy
 );
 
     input clk;
@@ -63,11 +64,14 @@ module message_handler #(
     input handler_to_control_ready;
     
     input [7:0] fpga_id;
+    output router_busy;
 
     // we buffer the in_data using a FIFO
     wire [GT_FIFO_SIZE-1 : 0] in_data_buffered;
     wire in_valid_buffered;
     reg in_ready_buffered;
+
+    assign router_busy = |border_input_valid;
 
     fifo_wrapper #(
         .WIDTH(GT_FIFO_SIZE),

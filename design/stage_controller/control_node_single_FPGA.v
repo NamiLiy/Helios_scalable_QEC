@@ -3,10 +3,11 @@ module unified_controller #(
     parameter GRID_WIDTH_Z = 1,
     parameter GRID_WIDTH_U = 3,
     parameter ITERATION_COUNTER_WIDTH = 8,  // counts to 255 iterations
-    parameter MAXIMUM_DELAY = 2,
+    parameter MAXIMUM_DELAY = 3,
     parameter NUM_CONTEXTS = 2,
     parameter CTRL_FIFO_WIDTH = 64,
-    parameter NUM_FPGAS = 5
+    parameter NUM_FPGAS = 5,
+    parameter ROUTER_DELAY_COUNTER = 18
 ) (
     clk,
     reset,
@@ -31,7 +32,9 @@ module unified_controller #(
     odd_clusters_PE,
     measurements,
     correction,
-    global_stage
+    global_stage,
+
+    router_busy
 );
 
 `include "../../parameters/parameters.sv"
@@ -94,6 +97,8 @@ output reg [CTRL_FIFO_WIDTH-1:0] output_ctrl_tx_data;
 output reg output_ctrl_tx_valid;
 input output_ctrl_tx_ready;
 
+input router_busy;
+
 reg result_valid;
 reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
 reg [31:0] cycle_counter;
@@ -107,6 +112,24 @@ always@(posedge clk) begin
     busy <= |busy_PE;
     odd_clusters <= |odd_clusters_PE;
     border_busy <= |(busy_PE[BORDER_TOP_MSB : BORDER_TOP_LSB]) || |(busy_PE[BORDER_BOT_MSB : BORDER_BOT_LSB]);
+end
+
+reg[$clog2(ROUTER_DELAY_COUNTER+1)-1 : 0] router_busy_reg;
+
+always@(posedge clk) begin
+    if (reset) begin
+        router_busy_reg <= 0;
+    end else begin
+        if(global_stage == STAGE_MERGE) begin
+            if(router_busy) begin
+                router_busy_reg <= ROUTER_DELAY_COUNTER;
+            end else begin
+                router_busy_reg <= router_busy_reg - 1;
+            end
+        end else begin
+            router_busy_reg <= 0;
+        end
+    end
 end
 
 // global_stage_d delayed logic
@@ -174,6 +197,8 @@ localparam CONTEXT_COUNTER_WIDTH = $clog2(NUM_CONTEXTS + 1);
 
 reg growing_incomplete; //Todo : In an optimized version use this. For the current version I'm not using it.
 
+reg multi_fpga_mode;
+
 always @(posedge clk) begin
     if (reset) begin
         global_stage <= STAGE_IDLE;
@@ -182,6 +207,7 @@ always @(posedge clk) begin
         growing_incomplete <= 0;
         cycle_counter_on <= 0;
         cycle_counter_reset <= 0;
+        multi_fpga_mode <= 0;
     end else begin
         case (global_stage)
             STAGE_IDLE: begin // 0
@@ -190,11 +216,16 @@ always @(posedge clk) begin
                         global_stage <= STAGE_PARAMETERS_LOADING;
                         delay_counter <= 0;
                         result_valid <= 0;
+                        multi_fpga_mode <= input_ctrl_rx_data [0];
                     end else if(input_ctrl_rx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == MEASUREMENT_DATA_HEADER) begin
                         global_stage <= STAGE_MEASUREMENT_PREPARING;
                         delay_counter <= 0;
                         result_valid <= 0;
                         measurement_rounds <= 0;
+                    end else if(input_ctrl_rx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == MOVE_TO_STAGE) begin
+                        global_stage <= STAGE_GROW;
+                        delay_counter <= 0;
+                        result_valid <= 0;
                     end
                 end
                 current_context <= 0; 
@@ -237,7 +268,9 @@ always @(posedge clk) begin
                     result_valid <= 0;
                 end else begin
                     global_stage_saved <= STAGE_MEASUREMENT_LOADING;
-                    global_stage <= (NUM_CONTEXTS == 1 ? STAGE_GROW : STAGE_WRITE_TO_MEM);
+                    if(multi_fpga_mode == 1'b0) begin
+                        global_stage <= (NUM_CONTEXTS == 1 ? STAGE_GROW : STAGE_WRITE_TO_MEM);
+                    end
                     measurement_rounds <= 0;
                     delay_counter <= 0;
                     result_valid <= 0;
@@ -259,23 +292,32 @@ always @(posedge clk) begin
 
             STAGE_MERGE: begin //3
                 if (delay_counter >= MAXIMUM_DELAY) begin
-                    if(!busy) begin
-                        delay_counter <= 0;
-                        global_stage <= STAGE_WRITE_TO_MEM;
-                        if(NUM_CONTEXTS == 1) begin
-                            if(|odd_clusters == 1'b0) begin // everybody is even
+                    if(multi_fpga_mode == 1'b0) begin
+                        if(!busy) begin
+                            delay_counter <= 0;
+                            if(NUM_CONTEXTS == 1) begin
+                                if(|odd_clusters == 1'b0) begin // everybody is even
+                                    global_stage <= STAGE_PEELING;
+                                end else begin // somebody is odd
+                                    global_stage <= STAGE_GROW;
+                                end
+                            end else begin
+                                global_stage <= STAGE_WRITE_TO_MEM;
+                            end
+                            global_stage_saved <= STAGE_MERGE;
+                            odd_clusters_in_context[current_context] <= odd_clusters;  
+                        end
+                        if(border_busy) begin
+                            unsynced_merge[current_context] <= 1'b1;
+                        end
+                    end else begin
+                        if (input_ctrl_rx_valid && input_ctrl_rx_ready && input_ctrl_rx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == MOVE_TO_STAGE) begin
+                            if(input_ctrl_rx_data[0] == 1'b0) begin
                                 global_stage <= STAGE_PEELING;
-                            end else begin // somebody is odd
+                            end else begin
                                 global_stage <= STAGE_GROW;
                             end
-                        end else begin
-                            global_stage <= STAGE_WRITE_TO_MEM;
                         end
-                        global_stage_saved <= STAGE_MERGE;
-                        odd_clusters_in_context[current_context] <= odd_clusters;  
-                    end
-                    if(border_busy) begin
-                        unsynced_merge[current_context] <= 1'b1;
                     end
                 end else begin
                     delay_counter <= delay_counter + 1;
@@ -396,6 +438,12 @@ always@(*) begin
     end else begin 
         if(global_stage == STAGE_IDLE) begin
             input_ctrl_rx_ready = 1;
+        end else if(global_stage == STAGE_MERGE) begin
+            if(multi_fpga_mode && delay_counter > MAXIMUM_DELAY) begin
+                input_ctrl_rx_ready = 1;
+            end else begin
+                input_ctrl_rx_ready = 0;
+            end
         end else begin
             input_ctrl_rx_ready = 0;
         end
@@ -423,12 +471,25 @@ always@(*) begin
     if(reset) begin
         output_ctrl_tx_valid = 0;
     end else begin
-        if(global_stage == STAGE_RESULT_VALID && send_results == 0) begin
-            output_ctrl_tx_valid = 1;
-            output_ctrl_tx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] = iteration_counter;
-            output_ctrl_tx_data [CTRL_MSG_MSB - 8 : CTRL_MSG_MSB - 23] = cycle_counter;
+        if(multi_fpga_mode == 1'b0) begin
+            if(global_stage == STAGE_RESULT_VALID && send_results == 0) begin
+                output_ctrl_tx_valid = 1;
+                output_ctrl_tx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] = iteration_counter;
+                output_ctrl_tx_data [CTRL_MSG_MSB - 8 : CTRL_MSG_MSB - 23] = cycle_counter;
+            end
         end else begin
-            output_ctrl_tx_valid = 0;
+            if(global_stage == STAGE_MERGE && delay_counter > MAXIMUM_DELAY) begin
+                if(input_ctrl_rx_valid && input_ctrl_rx_ready && input_ctrl_rx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == SEND_ODD_AND_BUSY) begin
+                    output_ctrl_tx_valid = 1;
+                    output_ctrl_tx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] = SEND_ODD_AND_BUSY;
+                    output_ctrl_tx_data [1] = odd_clusters;
+                    if(busy || router_busy_reg > 0) begin
+                        output_ctrl_tx_data [0] = 1;
+                    end else begin
+                        output_ctrl_tx_data [0] = 0;
+                    end
+                end
+            end
         end
     end
 end
