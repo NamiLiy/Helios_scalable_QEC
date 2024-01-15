@@ -1,6 +1,7 @@
 module root_hub #(
-    parameter NUM_FPGAS = 5
-) (,
+    parameter NUM_FPGAS = 5,
+    parameter MAXIMUM_DELAY = 3
+) (
     clk,
     reset,
 
@@ -16,9 +17,13 @@ module root_hub #(
     // roots // A debug port. Do not use in the real implementation
 );
 
+// Idx 0 is upstream rest are downstream in sequential order
+
 `include "../../parameters/parameters.sv"
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
+
+localparam NUM_CHILDREN = NUM_FPGAS - 1;
 
 input clk;
 input reset;
@@ -39,6 +44,7 @@ wire [64*NUM_FPGAS-1 : 0] tx_data_d;
 wire [NUM_FPGAS-1 : 0] tx_valid_d;
 wire [NUM_FPGAS-1 : 0] tx_ready_d;
 
+// We buffer downstream data in a FIFO
 generate
     genvar i;
     for(i = 1; i < NUM_FPGAS; i = i + 1) begin: fpga
@@ -72,33 +78,52 @@ generate
     end
 endgenerate
 
-wire [63 : 0] local_rx_data;
-wire local_rx_valid;
-reg local_rx_ready;
+wire [63:0] data_from_controller;
+wire valid_from_controller;
+wire ready_from_controller;
 
-reg [63 : 0] local_tx_data;
-reg local_tx_valid;
-wire local_tx_ready;
+wire [63:0] data_to_controller;
+wire valid_to_controller;
+wire ready_to_controller;
 
-always@(*) begin
-    local_tx_data = rx_data[0+:64];
-    local_tx_valid = rx_valid[0];
-    local_rx_ready = tx_ready[0];
-end
+wire router_busy;
 
-assign rx_ready[0] = local_tx_ready;
-assign tx_data[0+:64] = local_rx_data;
-assign tx_valid[0] = local_rx_valid;
+root_controller #(
+    .ITERATION_COUNTER_WIDTH(8),
+    .MAXIMUM_DELAY(MAXIMUM_DELAY),
+    .CTRL_FIFO_WIDTH(64),
+    .NUM_CHILDREN(NUM_CHILDREN)    
+) controller (
+    .clk(clk),
+    .reset(reset),
+
+    // we can send whatever data coming directly from cpu to controller as it is always externally buffered
+    .data_from_cpu(rx_data[0+:64]),
+    .valid_from_cpu(rx_valid[0]),
+    .ready_from_cpu(rx_ready[0]),
+    .data_to_cpu(tx_data[0+:64]),
+    .valid_to_cpu(tx_valid[0]),
+    .ready_to_cpu(tx_ready[0]),
+
+    .data_to_fpgas(data_from_controller),
+    .valid_to_fpgas(valid_from_controller),
+    .ready_to_fpgas(ready_from_controller),
+    .data_from_fpgas(data_to_controller),
+    .valid_from_fpgas(valid_to_controller),
+    .ready_from_fpgas(ready_to_controller),
+
+    .router_busy(router_busy)
+);
 
 fifo_wrapper #(
     .WIDTH(64),
     .DEPTH(128)
-) local_input_fifo (
+) controller_to_router_fifo(
     .clk(clk),
     .reset(reset),
-    .input_data(local_tx_data),
-    .input_valid(local_tx_valid),
-    .input_ready(local_tx_ready),
+    .input_data(data_from_controller),
+    .input_valid(valid_from_controller),
+    .input_ready(ready_from_controller),
     .output_data(rx_data_d[0+:64]),
     .output_valid(rx_valid_d[0]),
     .output_ready(rx_ready_d[0])
@@ -107,15 +132,15 @@ fifo_wrapper #(
 fifo_wrapper #(
     .WIDTH(64),
     .DEPTH(128)
-) local_output_fifo (
+) router_to_controller_fifo (
     .clk(clk),
     .reset(reset),
     .input_data(tx_data_d[0+:64]),
     .input_valid(tx_valid_d[0]),
     .input_ready(tx_ready_d[0]),
-    .output_data(local_rx_data),
-    .output_valid(local_rx_valid),
-    .output_ready(local_rx_ready)
+    .output_data(data_to_controller),
+    .output_valid(valid_to_controller),
+    .output_ready(ready_to_controller)
 );
 
 router #(
@@ -132,7 +157,9 @@ router #(
 
     .tx_data(tx_data_d),
     .tx_valid(tx_valid_d),
-    .tx_ready(tx_ready_d)
+    .tx_ready(tx_ready_d),
+
+    .router_busy(router_busy)
 );
 
 endmodule

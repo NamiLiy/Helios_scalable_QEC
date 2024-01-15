@@ -60,12 +60,15 @@ localparam START_DECODING = 4'd1;
 localparam MEASUREMENT_DATA = 4'd2;
 localparam WAIT_FOR_RESULT = 4'd3;
 
+reg multi_fpga_run;
+
 
 always@(posedge clk) begin
     if(reset) begin
         root_hub_state <= 0;
         count <= 0;
         fpga_count <= 0;
+        multi_fpga_run <= 0;
     end else begin
         case(root_hub_state)
             IDLE: begin //Send the start decoding msg
@@ -73,6 +76,12 @@ always@(posedge clk) begin
                     root_hub_state <= START_DECODING;
                     fpga_count <= 0;
                     count <= count + 1;
+                    // this is just a fun workaround
+                    // if(count >= MAX_COUNT/3 && count < 2*MAX_COUNT/3) begin
+                    //     multi_fpga_run <= 1;
+                    // end else begin
+                    //     multi_fpga_run <= 0;
+                    // end
                 end
             end
             START_DECODING: begin // Measurement data header
@@ -89,7 +98,11 @@ always@(posedge clk) begin
                 if(local_rx_valid_d) begin
                     fpga_count <= fpga_count + 1;
                     $display("%t\tID = %d Test case  = %d, %d cycles %d iterations", $time, 0, count, local_rx_data_d[39:24], local_rx_data_d[47:40]);
-                    if(fpga_count == NUM_LEAVES - 1) begin
+                    if(multi_fpga_run == 1'b0) begin
+                        if(fpga_count == NUM_LEAVES - 1) begin
+                            root_hub_state <= IDLE;
+                        end
+                    end else begin
                         root_hub_state <= IDLE;
                     end
                 end
@@ -106,7 +119,7 @@ always@(*) begin
             local_rx_ready_d = 0;
         end
         START_DECODING: begin
-            local_tx_data_d = {8'hff, 8'hff, START_DECODING_MSG, 8'b0, 8'b0, 8'b0, 8'b0, 8'b0};
+            local_tx_data_d = {8'hff, 8'hff, START_DECODING_MSG, 8'b0, 8'b0, 8'b0, 8'b0, 7'b0, multi_fpga_run};
             local_tx_valid_d = 1;
             local_rx_ready_d = 0;
         end

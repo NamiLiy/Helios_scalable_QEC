@@ -1,175 +1,272 @@
-module parent_controller #(
-    parameter CODE_DISTANCE_X = 3,
-    parameter CODE_DISTANCE_Z = 2,
+module root_controller #(
     parameter ITERATION_COUNTER_WIDTH = 8,  // counts to 255 iterations
-    parameter MAXIMUM_INITIAL_DELAY = 10,
-    parameter MAXIMUM_BUSY_DELAY = 7,
-    parameter CHILD_COUNT = 2
+    parameter MAXIMUM_DELAY = 2, // This has use only in multi-fpga mode
+    parameter CTRL_FIFO_WIDTH = 64,
+    parameter NUM_CHILDREN = 4
 ) (
     clk,
     reset,
-    new_round_start,
 
-    busy_child, 
-    odd_clusters_child,
-    global_stage,
+    data_from_cpu,
+    valid_from_cpu,
+    ready_from_cpu,
 
-    result_valid,
-    iteration_counter, 
-    cycle_counter,
+    data_to_cpu,
+    valid_to_cpu,
+    ready_to_cpu,
 
-    decoding_start,
-    next_iteration
+    data_to_fpgas,
+    valid_to_fpgas,
+    ready_to_fpgas,
+
+    data_from_fpgas,
+    valid_from_fpgas,
+    ready_from_fpgas,
+
+    router_busy
 );
 
 `include "../../parameters/parameters.sv"
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
-localparam MEASUREMENT_ROUNDS = `MAX(CODE_DISTANCE_X, CODE_DISTANCE_Z);
-localparam PER_DIM_BIT_WIDTH = $clog2(MEASUREMENT_ROUNDS);
-localparam ADDRESS_WIDTH = PER_DIM_BIT_WIDTH * 3;
 
-localparam PU_COUNT = CODE_DISTANCE_X * CODE_DISTANCE_Z * MEASUREMENT_ROUNDS;
+localparam CTRL_MSG_MSB = 47;
+
 
 input clk;
 input reset;
-output reg [STAGE_WIDTH-1:0] global_stage;
-reg [STAGE_WIDTH-1:0] global_stage_previous;
 
-input [CHILD_COUNT - 1 : 0]  busy_child;
-input [CHILD_COUNT - 1 : 0]  odd_clusters_child;
-input new_round_start;
+input [CTRL_FIFO_WIDTH-1:0] data_from_cpu;
+input valid_from_cpu;
+output reg ready_from_cpu;
 
-output reg result_valid;
-output reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
-output reg [31:0] cycle_counter;
+output reg [CTRL_FIFO_WIDTH-1:0] data_to_cpu;
+output reg valid_to_cpu;
+input ready_to_cpu;
 
-output reg decoding_start;
-output reg next_iteration;
+output reg [CTRL_FIFO_WIDTH-1:0] data_to_fpgas;
+output reg valid_to_fpgas;
+input ready_to_fpgas;
 
+input [CTRL_FIFO_WIDTH-1:0] data_from_fpgas;
+input valid_from_fpgas;
+output reg ready_from_fpgas;
 
-reg [MAXIMUM_BUSY_DELAY-1:0] busy;
+input router_busy;
+
+reg [STAGE_WIDTH-1:0] global_stage;
+
+reg result_valid;
+reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
+reg [31:0] cycle_counter;
+
+reg busy;
 reg odd_clusters;
 
-always@(posedge clk) begin
-    busy[0] <= |busy_child;
-    busy[MAXIMUM_BUSY_DELAY-1:1] <= busy[MAXIMUM_BUSY_DELAY-2:0];
-    odd_clusters <= |odd_clusters_child;
-end
+reg multi_fpga_mode;
+
+reg cycle_counter_on;
+reg cycle_counter_reset;
+reg [$clog2(NUM_CHILDREN + 1)-1:0] return_msg_count;
 
 always @(posedge clk) begin
     if (reset) begin
         cycle_counter <= 0;
     end else begin
-        if (global_stage == STAGE_MEASUREMENT_LOADING) begin
-            cycle_counter <= 1;
-        end else if (!result_valid && global_stage != STAGE_IDLE) begin
+        if(cycle_counter_reset) begin
+            cycle_counter <= 2; // to account for propagation time from controller to PEs 
+        end else if(cycle_counter_on) begin
             cycle_counter <= cycle_counter + 1;
         end
     end
 end
 
-always @(posedge clk) begin
-    if (reset) begin
-        global_stage_previous <= STAGE_IDLE;
-    end else begin
-        global_stage_previous <= global_stage;
-    end
-end
-
-always @(posedge clk) begin
-    if (reset) begin
-        iteration_counter <= 0;
-    end else begin
-        if (global_stage == STAGE_MEASUREMENT_LOADING) begin
-            iteration_counter <= 0;
-        end else if (global_stage == STAGE_GROW && global_stage_previous != STAGE_GROW) begin
-            iteration_counter <= iteration_counter + 1;
-        end
-    end
-end
-
-localparam DELAY_COUNTER_WIDTH = $clog2(MAXIMUM_DELAY + 1);
+localparam DELAY_COUNTER_WIDTH = 8;
 reg [DELAY_COUNTER_WIDTH-1:0] delay_counter;
+reg merge_incomplete;
+reg prelim_busy;
+
+always@(posedge clk) begin
+    if (reset) begin
+        prelim_busy <= 0;
+    end else begin
+        prelim_busy <= router_busy;
+    end
+end
 
 always @(posedge clk) begin
     if (reset) begin
         global_stage <= STAGE_IDLE;
         delay_counter <= 0;
-        result_valid <= 0;
-        decoding_start <= 0;
-        next_iteration <= 0;
+        cycle_counter_on <= 0;
+        cycle_counter_reset <= 0;
+        multi_fpga_mode <= 0;
     end else begin
         case (global_stage)
             STAGE_IDLE: begin // 0
-                if (new_round_start) begin
-                    global_stage <= STAGE_MEASUREMENT_LOADING;
-                    delay_counter <= 0;
-                    result_valid <= 0;
-                    decoding_start <= 1;
+                if (valid_from_cpu && ready_to_fpgas) begin
+                    if(data_from_cpu [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == START_DECODING_MSG) begin
+                        multi_fpga_mode <= data_from_cpu [0];
+                    end else if(data_from_cpu [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == MEASUREMENT_DATA_HEADER) begin
+                        if(multi_fpga_mode) begin
+                            global_stage <= STAGE_MEASUREMENT_LOADING; // This is to wait reasonable time to load the data
+                        end else begin
+                            global_stage <= STAGE_RESULT_VALID; // The root controller does nothing in single FPGA mode
+                        end
+                        result_valid <= 0;
+                    end
                 end
-                next_iteration <= 0; 
-                // else begin
-                //     result_valid <= 1;
-                // end
+                iteration_counter <= 0;
+                cycle_counter_on <= 0;
+                cycle_counter_reset <= 1;
+                delay_counter <= 0;
+                return_msg_count <= 0;
             end
 
             STAGE_MEASUREMENT_LOADING: begin
-                // Currently this is single cycle as only from external buffer happens.
-                // In future might need multiple
-                global_stage <= STAGE_GROW;
-                delay_counter <= 0;
-                result_valid <= 0; // for safety
+                // We come to this state only in multi-FPGA mode
+                if(delay_counter < 100) begin
+                    delay_counter <= delay_counter + 1;
+                end else begin
+                    delay_counter <= 0;
+                    global_stage <= STAGE_GROW;
+                end
             end
 
             STAGE_GROW: begin //2
+                // We come to this state only in multi-FPGA mode
                 global_stage <= STAGE_MERGE;
-                delay_counter <= 0;
+                cycle_counter_reset <= 0;
+                cycle_counter_on <= 1;
+                iteration_counter <= iteration_counter + 1;
             end
 
             STAGE_MERGE: begin //3
-                if (delay_counter >= MAXIMUM_INITIAL_DELAY) begin
-                    if(!busy) begin
-                        if(!odd_clusters) begin
-                            global_stage <= STAGE_PEELING;
-                            delay_counter <= 0;
-                            decoding_start <= 0;
-                        end else begin
-                            global_stage <= STAGE_GROW;
-                            delay_counter <= 0;
-                            next_iteration <= !next_iteration;
-                        end
+                // We come to this state only in multi-FPGA mode
+                if (delay_counter >= MAXIMUM_DELAY) begin
+                    if(!prelim_busy) begin // Ask nodes for busy states
+                        global_stage <= STAGE_WAIT_TILL_NODE_RESULTS; 
                     end
+                    delay_counter <= 0;
                 end else begin
                     delay_counter <= delay_counter + 1;
                 end
+            end
+
+            STAGE_WAIT_TILL_NODE_RESULTS: begin //4
+                // We come to this state only in multi-FPGA mode
+                if (valid_from_fpgas && ready_to_fpgas) begin
+                    if(data_from_fpgas [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == NODE_RESULT_MSG) begin
+                        return_msg_count <= return_msg_count + 1;
+                        if(data_from_fpgas [0] == 1'b1) begin
+                            merge_incomplete <= 1'b1;
+                        end else begin
+                            if(data_from_fpgas [1] == 1'b1) begin
+                                odd_clusters <= 1'b1;
+                            end
+                        end
+                    end
+                end
+                if(return_msg_count == NUM_CHILDREN) begin
+                    if(merge_incomplete) begin
+                        global_stage <= STAGE_MERGE;
+                    end else begin
+                        if (odd_clusters) begin
+                            global_stage <= STAGE_GROW;
+                        end else begin
+                            global_stage <= STAGE_PEELING;
+                        end
+                    end
+                    return_msg_count <= 0;
+                end
+                
             end           
 
             STAGE_PEELING: begin //4
-                if (delay_counter >= MAXIMUM_INITIAL_DELAY) begin
-                    if(!busy) begin
-                        global_stage <= STAGE_RESULT_VALID;
-                        delay_counter <= 0;
-                        next_iteration <= 1;
-                    end
-                end else begin
-                    delay_counter <= delay_counter + 1;
-                    next_iteration <= 0;
-                end
+                // We come to this state only in multi-FPGA mode
+                global_stage <= STAGE_RESULT_VALID;
+                cycle_counter_on <= 0;
             end
 
             STAGE_RESULT_VALID: begin //5
-                global_stage <= STAGE_IDLE;
-                result_valid <= 1;
+                if(multi_fpga_mode == 1'b0) begin
+                    if(valid_from_fpgas) begin
+                        return_msg_count <= return_msg_count + 1;
+                    end
+                    if(return_msg_count == NUM_CHILDREN) begin
+                        global_stage <= STAGE_IDLE;
+                        return_msg_count <= 0;
+                    end
+                end else begin
+                    if(delay_counter >= MAXIMUM_DELAY) begin
+                        global_stage <= STAGE_IDLE;
+                        delay_counter <= 0;
+                    end else begin
+                        delay_counter <= delay_counter + 1;
+                    end
+                end
             end
-
-
             
             default: begin
                 global_stage <= STAGE_IDLE;
             end
         endcase
     end
+end
+
+always@(*) begin
+    ready_from_cpu = 1'b0;
+    data_to_cpu = 64'b0;
+    valid_to_cpu = 1'b0;
+
+    ready_from_fpgas = 1'b0;
+    data_to_fpgas = 64'b0;
+    valid_to_fpgas = 1'b0;
+
+    case(global_stage)
+        STAGE_IDLE: begin
+            ready_from_cpu = ready_to_fpgas;
+            data_to_fpgas = data_from_cpu;
+            valid_to_fpgas = valid_from_cpu;
+        end
+
+        STAGE_GROW: begin
+            data_to_fpgas = {8'hff, 8'hff, MOVE_TO_STAGE, 8'b0, 8'b0, 8'b0, 8'b0, 8'b0};
+            valid_to_fpgas = 1'b1;
+        end
+
+        STAGE_MERGE: begin
+            if (delay_counter >= MAXIMUM_DELAY) begin
+                if(!prelim_busy) begin // Ask nodes for busy states
+                    data_to_fpgas = {8'hff, 8'hff, SEND_ODD_AND_BUSY, 8'b0, 8'b0, 8'b0, 8'b0, 8'b0};
+                    valid_to_fpgas = 1'b1;
+                end
+            end
+        end
+
+        STAGE_WAIT_TILL_NODE_RESULTS: begin
+            ready_from_fpgas = 1'b1;
+        end
+
+        STAGE_PEELING: begin
+            data_to_fpgas = {8'hff, 8'hff, MOVE_TO_STAGE, 8'b0, 8'b0, 8'b0, 8'b0, 8'b1};
+            valid_to_fpgas = 1'b1;
+        end
+
+        STAGE_RESULT_VALID: begin
+            if(multi_fpga_mode == 1'b0) begin
+                valid_to_cpu = valid_from_fpgas;
+                data_to_cpu = data_from_fpgas;
+                ready_from_fpgas = ready_to_cpu;
+            end else begin
+                if(delay_counter >= MAXIMUM_DELAY) begin
+                    valid_to_cpu = 1'b1;
+                    data_to_cpu [39:24] = cycle_counter;
+                    data_to_cpu [47:40] = iteration_counter;
+                end 
+            end
+        end
+    endcase
 end
 
 endmodule

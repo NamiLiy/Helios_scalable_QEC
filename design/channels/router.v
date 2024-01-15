@@ -12,7 +12,9 @@ module router #(
 
     tx_data,
     tx_valid,
-    tx_ready
+    tx_ready,
+
+    router_busy
 );
 
     input clk;
@@ -25,7 +27,11 @@ module router #(
     input [CHANNEL_WIDTH*NUM_CHANNELS-1 : 0] rx_data;
     input [NUM_CHANNELS-1 : 0] rx_valid;
     output reg [NUM_CHANNELS-1 : 0] rx_ready;
+
+    output router_busy;
     
+    assign router_busy = |rx_valid;
+
 
     reg [$clog2(NUM_CHANNELS)-1 : 0] selected_idx;
     
