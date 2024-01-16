@@ -24,7 +24,7 @@ localparam [7:0]
 //`define DEFINE_DUF_PARAMETERS 1
 //`endif
 
-// MEASUREMENT_DATA_HEADER -> 
+// START_DECODING_MSG -> 
 // [0] = 0 => single fpga, 1 => multiple fpga
 
 // NODE_RESULT_MSG ->

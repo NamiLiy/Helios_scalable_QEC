@@ -10,10 +10,17 @@ int max(int a, int b) {
 
 double normal_random(double mean, double std_dev);
 
-int main() {
-    int distance = 5;
-    double p = 0.005;
-    int test_runs = 20;
+int main(int argc, char *argv[]) {
+    if (argc != 5) {
+        fprintf(stderr, "Usage: %s <distance> <p> <test_runs> <syndrome_filename>\n", argv[0]);
+        return 1;
+    }
+
+    int distance = atoi(argv[1]);
+    double p = atof(argv[2]);
+    int test_runs = atoi(argv[3]);
+
+    char *filename = argv[4];
 
     double mean, std_dev;
     mean = p;
@@ -139,8 +146,8 @@ int main() {
 
     FILE *out_fp, *in_fp;
     int c;
-    char filename[100];
-    sprintf(filename, "../test_benches/test_data/input_data_%d_rsc.txt", distance);
+    // char filename[100];
+    // sprintf(filename, "../test_benches/test_data/input_data_%d_rsc.txt", distance);
     out_fp = fopen(filename, "wb");
     if (out_fp == NULL) {
         fprintf(stderr, "Can't open output file %s!\n", "output_3.txt");
