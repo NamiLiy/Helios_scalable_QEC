@@ -220,7 +220,7 @@ int main(int argc, char *argv[]) {
                     if(i==0){
                         syndrome[k][i][j] = data_errors[k][i][j*2] ^ data_errors[k][i][j*2+1] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j];
                     }
-                    else if(i==distance) {
+                    else if(i==distance_i-1) {
                         syndrome[k][i][j] = data_errors[k][i-1][j*2+1] ^ data_errors[k][i-1][j*2+2] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j];
                     }
                     else if(i%2 == 1) {
