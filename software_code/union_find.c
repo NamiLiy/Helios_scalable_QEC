@@ -409,22 +409,26 @@ int print_output(FILE* file, int test, struct Distance distance) {
 
 int main(int argc, char *argv[]) {
 
-    if (argc != 4) {
+    if (argc != 5) {
         fprintf(stderr, "Usage: %s <distance> <input_filename> <output_filename>\n", argv[0]);
         return 1;
     }
 
     // Convert first argument to integer for distance
     int d = atoi(argv[1]);
-    struct Distance distance = {d, (d+1), (d-1)/2};
+    
+    // The second and third arguments are file names
+    char *input_filename = argv[2];
+    char *output_filename = argv[3];
+
+    int multiplication_factor = atoi(argv[4]);
+
+    struct Distance distance = {d, (d+1)*multiplication_factor, (d-1)/2};
     if(distance.k > D || distance.i > D || distance.j > D) {
         fprintf(stderr, "If distance greater than %d please change the parameter in source\n", D);
         return 1;
     }
 
-    // The second and third arguments are file names
-    char *input_filename = argv[2];
-    char *output_filename = argv[3];
 
     // sprintf(filename, "../test_benches/test_data/input_data_%d_rsc.txt", distance);
     FILE* file = fopen(input_filename, "r");
