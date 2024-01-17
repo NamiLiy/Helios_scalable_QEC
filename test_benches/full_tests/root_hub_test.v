@@ -1,7 +1,7 @@
 module root_hub_test #(
     parameter CODE_DISTANCE = 5,
     parameter NUM_LEAVES = 1,
-    parameter MAX_COUNT = 20
+    parameter MAX_COUNT = 1000
 ) (
     clk,
     reset,
@@ -68,7 +68,7 @@ always@(posedge clk) begin
         root_hub_state <= 0;
         count <= 0;
         fpga_count <= 0;
-        multi_fpga_run <= 0;
+        multi_fpga_run <= 1;
     end else begin
         case(root_hub_state)
             IDLE: begin //Send the start decoding msg

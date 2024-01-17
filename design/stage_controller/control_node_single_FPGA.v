@@ -123,7 +123,7 @@ always@(posedge clk) begin
         if(global_stage == STAGE_MERGE) begin
             if(router_busy) begin
                 router_busy_reg <= ROUTER_DELAY_COUNTER;
-            end else begin
+            end else if( router_busy_reg > 0) begin
                 router_busy_reg <= router_busy_reg - 1;
             end
         end else begin
@@ -270,6 +270,8 @@ always @(posedge clk) begin
                     global_stage_saved <= STAGE_MEASUREMENT_LOADING;
                     if(multi_fpga_mode == 1'b0) begin
                         global_stage <= (NUM_CONTEXTS == 1 ? STAGE_GROW : STAGE_WRITE_TO_MEM);
+                    end else begin
+                        global_stage <= STAGE_IDLE;
                     end
                     measurement_rounds <= 0;
                     delay_counter <= 0;
@@ -439,7 +441,7 @@ always@(*) begin
         if(global_stage == STAGE_IDLE) begin
             input_ctrl_rx_ready = 1;
         end else if(global_stage == STAGE_MERGE) begin
-            if(multi_fpga_mode && delay_counter > MAXIMUM_DELAY) begin
+            if(multi_fpga_mode && delay_counter >= MAXIMUM_DELAY) begin
                 input_ctrl_rx_ready = 1;
             end else begin
                 input_ctrl_rx_ready = 0;
@@ -478,10 +480,10 @@ always@(*) begin
                 output_ctrl_tx_data [CTRL_MSG_MSB - 8 : CTRL_MSG_MSB - 23] = cycle_counter;
             end
         end else begin
-            if(global_stage == STAGE_MERGE && delay_counter > MAXIMUM_DELAY) begin
+            if(global_stage == STAGE_MERGE && delay_counter >= MAXIMUM_DELAY) begin
                 if(input_ctrl_rx_valid && input_ctrl_rx_ready && input_ctrl_rx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == SEND_ODD_AND_BUSY) begin
                     output_ctrl_tx_valid = 1;
-                    output_ctrl_tx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] = SEND_ODD_AND_BUSY;
+                    output_ctrl_tx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] = NODE_RESULT_MSG;
                     output_ctrl_tx_data [1] = odd_clusters;
                     if(busy || router_busy_reg > 0) begin
                         output_ctrl_tx_data [0] = 1;

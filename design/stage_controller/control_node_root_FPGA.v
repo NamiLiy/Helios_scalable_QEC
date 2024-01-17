@@ -121,11 +121,13 @@ always @(posedge clk) begin
                 cycle_counter_reset <= 1;
                 delay_counter <= 0;
                 return_msg_count <= 0;
+                merge_incomplete <= 0;
+                odd_clusters <= 0;
             end
 
             STAGE_MEASUREMENT_LOADING: begin
                 // We come to this state only in multi-FPGA mode
-                if(delay_counter < 100) begin
+                if(delay_counter < 50) begin
                     delay_counter <= delay_counter + 1;
                 end else begin
                     delay_counter <= 0;
@@ -155,7 +157,7 @@ always @(posedge clk) begin
 
             STAGE_WAIT_TILL_NODE_RESULTS: begin //4
                 // We come to this state only in multi-FPGA mode
-                if (valid_from_fpgas && ready_to_fpgas) begin
+                if (valid_from_fpgas && ready_from_fpgas) begin
                     if(data_from_fpgas [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == NODE_RESULT_MSG) begin
                         return_msg_count <= return_msg_count + 1;
                         if(data_from_fpgas [0] == 1'b1) begin
@@ -178,6 +180,8 @@ always @(posedge clk) begin
                         end
                     end
                     return_msg_count <= 0;
+                    merge_incomplete <= 0;
+                    odd_clusters <= 0;
                 end
                 
             end           
@@ -231,7 +235,7 @@ always@(*) begin
         end
 
         STAGE_GROW: begin
-            data_to_fpgas = {8'hff, 8'hff, MOVE_TO_STAGE, 8'b0, 8'b0, 8'b0, 8'b0, 8'b0};
+            data_to_fpgas = {8'hff, 8'hff, MOVE_TO_STAGE, 8'b0, 8'b0, 8'b0, 8'b0, 8'b1};
             valid_to_fpgas = 1'b1;
         end
 
@@ -249,7 +253,7 @@ always@(*) begin
         end
 
         STAGE_PEELING: begin
-            data_to_fpgas = {8'hff, 8'hff, MOVE_TO_STAGE, 8'b0, 8'b0, 8'b0, 8'b0, 8'b1};
+            data_to_fpgas = {8'hff, 8'hff, MOVE_TO_STAGE, 8'b0, 8'b0, 8'b0, 8'b0, 8'b0};
             valid_to_fpgas = 1'b1;
         end
 

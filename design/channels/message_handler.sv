@@ -48,12 +48,12 @@ module message_handler #(
     input out_ready;
 
     input [2*FPGA_FIFO_SIZE*FPGA_FIFO_COUNT-1:0] border_input_data;
-    input [FPGA_FIFO_COUNT-1:0] border_input_valid;
-    output [FPGA_FIFO_COUNT-1:0] border_input_ready;
+    input [2*FPGA_FIFO_COUNT-1:0] border_input_valid;
+    output [2*FPGA_FIFO_COUNT-1:0] border_input_ready;
 
     output [2*FPGA_FIFO_SIZE*FPGA_FIFO_COUNT-1:0] border_output_data;
-    output [FPGA_FIFO_COUNT-1:0] border_output_valid;
-    input [FPGA_FIFO_COUNT-1:0] border_output_ready;
+    output [2*FPGA_FIFO_COUNT-1:0] border_output_valid;
+    input [2*FPGA_FIFO_COUNT-1:0] border_output_ready;
 
     input [GT_FIFO_SIZE-1:0] control_to_handler_data;
     input control_to_handler_valid;

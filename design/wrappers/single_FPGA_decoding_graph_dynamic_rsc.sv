@@ -496,9 +496,9 @@ generate
 
                 assign weight_in = `WEIGHT_EW(i,j);
                 if(i==0 && j < GRID_WIDTH_Z) begin // First row
-                    `NEIGHBOR_LINK_EXTERNAL(i, j, k, `NEIGHBOR_IDX_EAST, north_cut_type, NUM_CONTEXTS, 0, j + GRID_WIDTH_Z, init_address)
+                    `NEIGHBOR_LINK_EXTERNAL(i, j, k, `NEIGHBOR_IDX_EAST, north_cut_type, NUM_CONTEXTS, 0, j + GRID_WIDTH_Z - 1, init_address)
                 end else if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z) begin // Last row
-                    `NEIGHBOR_LINK_EXTERNAL(i-1, j, k, `NEIGHBOR_IDX_WEST, south_cut_type, NUM_CONTEXTS, 1, j + GRID_WIDTH_Z, init_address)
+                    `NEIGHBOR_LINK_EXTERNAL(i-1, j, k, `NEIGHBOR_IDX_WEST, south_cut_type, NUM_CONTEXTS, 1, j + GRID_WIDTH_Z - 1, init_address)
                 end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j < GRID_WIDTH_Z) begin // even rows which are always internal
                     `NEIGHBOR_LINK_INTERNAL_0(i, j, k, i-1, j, k, `NEIGHBOR_IDX_EAST, `NEIGHBOR_IDX_WEST, 0, NUM_CONTEXTS)
                 end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j == 0) begin // First element of odd rows
