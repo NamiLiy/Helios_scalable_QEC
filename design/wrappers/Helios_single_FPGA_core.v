@@ -53,7 +53,7 @@ localparam CORRECTION_COUNT_PER_ROUND = NS_ERROR_COUNT_PER_ROUND + EW_ERROR_COUN
 localparam ADDRESS_WIDTH_WITH_B = ADDRESS_WIDTH + 1;
 localparam EXPOSED_DATA_SIZE = ADDRESS_WIDTH_WITH_B + 1 + 1 + 1;
 localparam FPGA_FIFO_SIZE = EXPOSED_DATA_SIZE + 1;
-localparam FPGA_FIFO_COUNT = 2*GRID_WIDTH_Z - 1;
+localparam FPGA_FIFO_COUNT = (2*GRID_WIDTH_Z - 1)*GRID_WIDTH_U;
 
 input clk;
 input reset;
@@ -108,6 +108,8 @@ wire [63:0] controller_to_handler_data;
 wire controller_to_handler_valid;
 wire controller_to_handler_ready;
 
+wire [1:0] border_continous;
+
 wire router_busy;
 
 single_FPGA_decoding_graph_dynamic_rsc #( 
@@ -133,7 +135,7 @@ single_FPGA_decoding_graph_dynamic_rsc #(
     .border_input_data(border_input_data),
     .border_input_valid(border_input_valid),
     .border_input_ready(border_input_ready),
-    .border_continous(2'b0)
+    .border_continous(border_continous)
 );
 
 unified_controller #( 
@@ -165,7 +167,9 @@ unified_controller #(
     .global_stage(global_stage),
     .measurements(measurements),
     .correction(correction),
-    .router_busy(router_busy)
+    .router_busy(router_busy),
+    .border_continous(border_continous),
+    .FPGA_ID(FPGA_ID)
 );
 
 message_handler #(

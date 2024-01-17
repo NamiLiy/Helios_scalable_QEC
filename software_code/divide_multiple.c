@@ -173,8 +173,8 @@ int handle_output_data(int distance, char *syndrome_filename, int num_fpgas) {
                         int k_id = (value >> 16) & 0xFF; // Extracts the second 8 bits
                         int i_id = (value >> 8) & 0xFF;  // Extracts the third 8 bits
                         int j_id = value & 0xFF;         // Extracts the fourth 8 bits
-                        f_id = f_id/(distance + 1) + 1;
-                        i_id = f_id%(distance + 1);
+                        f_id = i_id/(distance + 1) + 1;
+                        i_id = i_id%(distance + 1);
                         fprintf(syndrome_out_file[l], "%02X%02X%02X%02X\n", f_id, k_id, i_id, j_id);
                     }
                 }

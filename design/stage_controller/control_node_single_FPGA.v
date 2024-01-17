@@ -34,7 +34,9 @@ module unified_controller #(
     correction,
     global_stage,
 
-    router_busy
+    router_busy,
+    border_continous,
+    FPGA_ID
 );
 
 `include "../../parameters/parameters.sv"
@@ -98,6 +100,8 @@ output reg output_ctrl_tx_valid;
 input output_ctrl_tx_ready;
 
 input router_busy;
+output reg [1:0] border_continous;
+input [7:0] FPGA_ID;
 
 reg result_valid;
 reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
@@ -208,6 +212,7 @@ always @(posedge clk) begin
         cycle_counter_on <= 0;
         cycle_counter_reset <= 0;
         multi_fpga_mode <= 0;
+        border_continous <= 2'b0;
     end else begin
         case (global_stage)
             STAGE_IDLE: begin // 0
@@ -217,6 +222,14 @@ always @(posedge clk) begin
                         delay_counter <= 0;
                         result_valid <= 0;
                         multi_fpga_mode <= input_ctrl_rx_data [0];
+                        if(input_ctrl_rx_data[0] == 1'b1) begin
+                            if(FPGA_ID != 1) begin
+                                border_continous[0] <= 1'b1;
+                            end
+                            if(FPGA_ID != NUM_FPGAS - 1) begin
+                                border_continous[1] <= 1'b1;
+                            end
+                        end
                     end else if(input_ctrl_rx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == MEASUREMENT_DATA_HEADER) begin
                         global_stage <= STAGE_MEASUREMENT_PREPARING;
                         delay_counter <= 0;

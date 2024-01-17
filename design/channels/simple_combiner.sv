@@ -28,8 +28,8 @@ module simple_combiner #(
     output reg [NUM_CHANNELS-1 : 0] in_ready;
 
     output reg  [CHANNEL_WIDTH_OUT-1 : 0] out_data;
-    output reg [NUM_CHANNELS-1 : 0] out_valid;
-    input [NUM_CHANNELS-1 : 0] out_ready;
+    output reg out_valid;
+    input out_ready;
     
 
     reg [$clog2(NUM_CHANNELS)-1 : 0] selected_idx;

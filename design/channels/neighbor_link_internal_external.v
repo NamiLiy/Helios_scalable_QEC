@@ -42,7 +42,7 @@ module neighbor_link_external #(
 `include "../../parameters/parameters.sv"
 
 localparam LINK_BIT_WIDTH = $clog2(MAX_WEIGHT + 1);
-localparam EXPOSED_DATA_SIZE = ADDRESS_WIDTH + 1 + 1 + 1 + 1 + 3;
+localparam EXPOSED_DATA_SIZE = ADDRESS_WIDTH + 1 + 1 + 1;
 localparam FIFO_DATA_SIZE = EXPOSED_DATA_SIZE + 1; // +1 for the growth
 
 input clk;
@@ -112,14 +112,15 @@ always@(posedge clk) begin
             if(fifo_output_ready && fifo_output_valid) begin
                 a_increase_mem <= 0;
             end else begin
-                if(type)
-                a_increase_mem <= a_increase;
+                if(boundary_condition_in == 3 && stage == STAGE_GROW) begin
+                    a_increase_mem <= a_increase;
+                end
             end
         end
     end
 end
 
-reg a_input_data_mem;
+reg [EXPOSED_DATA_SIZE-1:0] a_input_data_mem;
 reg a_input_data_mem_modified;
 
 always@(posedge clk) begin
@@ -133,7 +134,7 @@ always@(posedge clk) begin
             if(fifo_output_ready && fifo_output_valid) begin
                 a_input_data_mem_modified <= 0;
             end else begin
-                if(boundary_condition_out == 3 && fully_grown && a_input_data != a_input_data_mem) begin
+                if(boundary_condition_in == 3 && fully_grown && a_input_data != a_input_data_mem) begin
                     a_input_data_mem_modified <= 1;
                 end
             end
@@ -141,8 +142,10 @@ always@(posedge clk) begin
     end
 end
 
-assign fifo_output_data = {a_increase_mem, a_input_data_mem};
-assign fifo_output_valid = (boundary_condition_out == 3 && (a_input_data_mem_modified || a_increase_mem));
+assign fifo_output_data[EXPOSED_DATA_SIZE-1 : 0] = a_input_data_mem;
+assign fifo_output_data[EXPOSED_DATA_SIZE + 1 -1] = a_increase_mem;
+
+assign fifo_output_valid = (boundary_condition_in == 3 && (a_input_data_mem_modified || a_increase_mem));
 
 assign fifo_input_ready = 1'b1;
 assign {b_increase, b_input_data_temp} = fifo_input_valid ? fifo_input_data : 32'b0;
@@ -166,6 +169,9 @@ assign b_initial_data [ADDRESS_WIDTH + 1 -1]  = 1'b0;
 assign b_initial_data [ADDRESS_WIDTH + 2 -1]  = 1'b0;
 assign b_initial_data [ADDRESS_WIDTH + 3 -1]  = 1'b0;
 
+wire [1:0] boundary_condition_to_internal;
+assign boundary_condition_to_internal = (boundary_condition_in == 3) ? 2'b0 : boundary_condition_in;
+
 neighbor_link_internal #(
         .ADDRESS_WIDTH(ADDRESS_WIDTH),
         .MAX_WEIGHT(MAX_WEIGHT),
@@ -188,7 +194,7 @@ neighbor_link_internal #(
         .weight_in(weight_in), 
         .weight_out(weight_out), 
         .do_not_store(local_context_switch), 
-        .boundary_condition_in(type), 
+        .boundary_condition_in(boundary_condition_to_internal), 
         .boundary_condition_out(boundary_condition_out),
         .is_error_systolic_in(is_error_systolic_in)
 );

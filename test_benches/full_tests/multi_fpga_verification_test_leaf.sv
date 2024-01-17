@@ -189,9 +189,12 @@ reg [31:0] cycle_counter;
 reg [31:0] iteration_counter;
 reg [31:0] message_counter;
 
+reg completed;
+
 always @(posedge clk) begin
     if(reset) begin
         loading_state <= 3'b0;
+        completed = 0;
     end else begin
         case(loading_state)
             3'b0: begin
@@ -264,9 +267,10 @@ always @(*) begin
 end
 
 string input_filename, output_filename;
+
 // Input loading logic
 always @(negedge clk) begin
-    if (loading_state == 3'b10) begin
+    if (loading_state == 3'b10 && completed == 0) begin
         measurements = 0;
         if(input_open == 1) begin
             input_filename = $sformatf("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_%0d_%0d.txt", CODE_DISTANCE, FPGA_ID);
@@ -301,7 +305,7 @@ end
 
 // Output verification logic
 always @(posedge clk) begin
-    if (decoder.controller.global_stage_d == STAGE_PEELING) begin // When we move to peeling we are doen with clustering
+    if (decoder.controller.global_stage_d == STAGE_PEELING && completed == 0) begin // When we move to peeling we are doen with clustering
 //       $display("%t\tTest case %d pass %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
        if(open == 1) begin
             output_filename = $sformatf("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_%0d_%0d.txt", CODE_DISTANCE, FPGA_ID);
@@ -329,15 +333,17 @@ always @(posedge clk) begin
                         expected_u = read_value[U_BIT_WIDTH - 1 + 16 :16];
                         expected_fpga = read_value[FPGA_BIT_WIDTH - 1 + 24 :24];
                         eof = $feof(file);
-
-                        if(decoder.controller.current_context % 2 == 1) begin
-                            context_k = decoder.controller.current_context*PHYSICAL_GRID_WIDTH_U + PHYSICAL_GRID_WIDTH_U - k - 1;
-                        end else begin
-                            context_k = decoder.controller.current_context*PHYSICAL_GRID_WIDTH_U  + k;
-                        end
-                        if(decoder.controller.current_context == NUM_CONTEXTS - 1 && expected_u == 0 && expected_x==0 && expected_z==0) begin //hack for d=7,11
-                            continue;
-                        end else begin
+                        
+                        context_k = k;
+                        // These logic are for multi context verification
+//                        if(decoder.controller.current_context % 2 == 1) begin
+//                            context_k = decoder.controller.current_context*PHYSICAL_GRID_WIDTH_U + PHYSICAL_GRID_WIDTH_U - k - 1;
+//                        end else begin
+//                            context_k = decoder.controller.current_context*PHYSICAL_GRID_WIDTH_U  + k;
+//                        end
+//                        if(decoder.controller.current_context == NUM_CONTEXTS - 1 && expected_u == 0 && expected_x==0 && expected_z==0) begin //hack for d=7,11
+//                            continue;
+                        //end else begin
                             if(Z_BIT_WIDTH>0) begin
                                 if (expected_u != `root_u(i, j, k) || expected_x != `root_x(i, j, k) || expected_z != `root_z(i, j, k)) begin
                                     $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d,%0d) : Expected (%0d,%0d,%0d,%0d) : TC %d : ID %d" , $time, context_k, i ,j, `root_fpga(i,j,k), `root_u(i, j, k), `root_x(i, j, k), `root_z(i, j, k), expected_fpga, expected_u, expected_x, expected_z, test_case, FPGA_ID);
@@ -350,13 +356,13 @@ always @(posedge clk) begin
                                     test_fail = 1;
                                 end
                             end
-                        end
+                        //end
                     end
                 end
             end
         end
     end
-    if (message_counter == 3 && output_valid == 1) begin // Cycle counter and iteration counter is recevied
+    if (message_counter == 3 && output_valid == 1 && completed == 0) begin // Cycle counter and iteration counter is recevied
         if (!test_fail) begin
             $display("%t\tID  = %d Test case  = %d, %d pass %d cycles %d iterations %d syndromes", $time, FPGA_ID, test_case, pass_count, cycle_counter, iteration_counter, syndrome_count);
             pass_count = pass_count + 1;
@@ -366,12 +372,13 @@ always @(posedge clk) begin
             $finish;
         end
     end
-    if (input_eof == 1)begin
+    if (input_eof == 1 && completed == 0)begin
         total_count = pass_count + fail_count;
         $display("%t\t Done:", $time);
         $display("Total : %d",total_count);
         $display("Passed : %d",pass_count);
         $display("Failed : %d",fail_count);
+        completed = 1;
         $finish;
     end
 end

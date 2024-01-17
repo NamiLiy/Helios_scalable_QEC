@@ -154,8 +154,8 @@ module message_handler #(
         .out_ready(southern_border_input_ready)
     );
 
-    reg north_fpga_id;
-    reg south_fpga_id;
+    reg [7:0] north_fpga_id;
+    reg [7:0] south_fpga_id;
     reg [GT_FIFO_SIZE - 1 : 0] modified_northern_border_input_data;
     reg [GT_FIFO_SIZE -1 : 0] modified_southern_border_input_data;
 
@@ -174,8 +174,8 @@ module message_handler #(
         modified_southern_border_input_data = southern_border_input_data;
         modified_northern_border_input_data[63:56] = north_fpga_id;
         modified_southern_border_input_data[63:56] = south_fpga_id;
-        modified_northern_border_input_data[FIFO_TAG_MSB+1] = 1'b0;
-        modified_southern_border_input_data[FIFO_TAG_MSB+1] = 1'b1;
+        modified_northern_border_input_data[FIFO_TAG_MSB] = 1'b1;
+        modified_southern_border_input_data[FIFO_TAG_MSB] = 1'b0;
     end
 
     always@(*) begin
@@ -222,10 +222,10 @@ module message_handler #(
             if(in_data_buffered[55:48] == 8'hff) begin
                 handler_to_control_valid = 1'b1;
                 in_ready_buffered = handler_to_control_ready;
-            end else if(in_data_buffered[FIFO_TAG_MSB+1] == 1'b0) begin
+            end else if(in_data_buffered[FIFO_TAG_MSB] == 1'b0) begin
                 northern_border_output_valid = 1'b1;
                 in_ready_buffered = 1'b1;
-            end else if(in_data_buffered[FIFO_TAG_MSB+1] == 1'b1) begin
+            end else if(in_data_buffered[FIFO_TAG_MSB] == 1'b1) begin
                 southern_border_output_valid = 1'b1;
                 in_ready_buffered = 1'b1;
             end
@@ -236,7 +236,7 @@ module message_handler #(
         .NUM_CHANNELS(FPGA_FIFO_COUNT),
         .CHANNEL_WIDTH_IN(GT_FIFO_SIZE),
         .CHANNEL_WIDTH_OUT(FPGA_FIFO_SIZE),
-        .TAG_MSB(FIFO_TAG_MSB),
+        .TAG_MSB(FIFO_TAG_MSB-1),
         .TAG_LSB(FIFO_TAG_LSB)
     ) north_splitter (
         .clk(clk),
@@ -255,7 +255,7 @@ module message_handler #(
         .NUM_CHANNELS(FPGA_FIFO_COUNT),
         .CHANNEL_WIDTH_IN(GT_FIFO_SIZE),
         .CHANNEL_WIDTH_OUT(FPGA_FIFO_SIZE),
-        .TAG_MSB(FIFO_TAG_MSB),
+        .TAG_MSB(FIFO_TAG_MSB-1),
         .TAG_LSB(FIFO_TAG_LSB)
     ) south_splitter (
         .clk(clk),
