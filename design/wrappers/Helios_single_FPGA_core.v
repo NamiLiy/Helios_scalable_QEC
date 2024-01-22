@@ -1,9 +1,9 @@
 module Helios_single_FPGA #(
-    parameter GRID_WIDTH_X = 4,
-    parameter GRID_WIDTH_Z = 1,
-    parameter GRID_WIDTH_U = 3,
+    parameter GRID_WIDTH_X = 22,
+    parameter GRID_WIDTH_Z = 10,
+    parameter GRID_WIDTH_U = 21,
     parameter MAX_WEIGHT = 2,
-    parameter NUM_CONTEXTS = 2 
+    parameter NUM_CONTEXTS = 1 
 ) (
     clk,
     reset,
