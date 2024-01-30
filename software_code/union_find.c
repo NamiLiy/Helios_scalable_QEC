@@ -16,6 +16,7 @@ struct Address {
     int k;
     int i;
     int j;
+    int fpga_id;
     int is_boundary_address;
 };
 
@@ -49,6 +50,7 @@ struct Address get_root(struct Address a){
             struct Address ret = {node_array[a.k][a.i][a.j].id.k,
                                     node_array[a.k][a.i][a.j].id.i,
                                     node_array[a.k][a.i][a.j].id.j,
+                                    node_array[a.k][a.i][a.j].id.fpga_id,
                                     node_array[a.k][a.i][a.j].id.is_boundary_address};
             return ret;
     }  else {
@@ -70,6 +72,7 @@ int grow(int k, int i, int j, int direction){
         if(hor_edges[k][i][j].is_boundary == 1){
             int is_odd = get_parity(hor_edges[k][i][j].a);
             if (is_odd && hor_edges[k][i][j].growth < 2) {
+                //printf("Growth called %d %d %d %d\n", hor_edges[k][i][j].a.k, hor_edges[k][i][j].a.i, hor_edges[k][i][j].a.j, hor_edges[k][i][j].a.fpga_id);
                 hor_edges[k][i][j].growth = hor_edges[k][i][j].growth + 1;
                 grow_ret = 1;
                 if(hor_edges[k][i][j].growth == 2){
@@ -79,6 +82,7 @@ int grow(int k, int i, int j, int direction){
         } else{
             int is_odd = get_parity(hor_edges[k][i][j].a);
             if (is_odd && hor_edges[k][i][j].growth < 2) {
+                //printf("Growth called %d %d %d %d\n", hor_edges[k][i][j].a.k, hor_edges[k][i][j].a.i, hor_edges[k][i][j].a.j, hor_edges[k][i][j].a.fpga_id);
                 hor_edges[k][i][j].growth = hor_edges[k][i][j].growth + 1;
                 grow_ret = 1;
                 if(hor_edges[k][i][j].growth == 2){
@@ -87,6 +91,7 @@ int grow(int k, int i, int j, int direction){
             }
             is_odd = get_parity(hor_edges[k][i][j].b);
             if (is_odd && hor_edges[k][i][j].growth < 2) {
+                //printf("Growth called %d %d %d %d\n", hor_edges[k][i][j].b.k, hor_edges[k][i][j].b.i, hor_edges[k][i][j].b.j, hor_edges[k][i][j].b.fpga_id);
                 hor_edges[k][i][j].growth = hor_edges[k][i][j].growth + 1;
                 grow_ret = 1;
                 if(hor_edges[k][i][j].growth == 2){
@@ -98,6 +103,7 @@ int grow(int k, int i, int j, int direction){
         if(ver_edges[k][i][j].is_boundary == 1){
             int is_odd = get_parity(ver_edges[k][i][j].a);
             if (is_odd && ver_edges[k][i][j].growth < 2) {
+                //printf("Growth called %d %d %d %d\n", ver_edges[k][i][j].a.k, ver_edges[k][i][j].a.i, ver_edges[k][i][j].a.j, ver_edges[k][i][j].a.fpga_id);
                 ver_edges[k][i][j].growth = ver_edges[k][i][j].growth + 1;
                 grow_ret = 1;
                 if(ver_edges[k][i][j].growth == 2){
@@ -107,6 +113,7 @@ int grow(int k, int i, int j, int direction){
         } else{
             int is_odd = get_parity(ver_edges[k][i][j].a);
             if (is_odd && ver_edges[k][i][j].growth < 2) {
+                //printf("Growth called %d %d %d %d\n", ver_edges[k][i][j].a.k, ver_edges[k][i][j].a.i, ver_edges[k][i][j].a.j, ver_edges[k][i][j].a.fpga_id);
                 ver_edges[k][i][j].growth = ver_edges[k][i][j].growth + 1;
                 grow_ret = 1;
                 if(ver_edges[k][i][j].growth == 2){
@@ -115,6 +122,7 @@ int grow(int k, int i, int j, int direction){
             }
             is_odd = get_parity(ver_edges[k][i][j].b);
             if (is_odd && ver_edges[k][i][j].growth < 2) {
+                //printf("Growth called %d %d %d %d\n", ver_edges[k][i][j].b.k, ver_edges[k][i][j].b.i, ver_edges[k][i][j].b.j, ver_edges[k][i][j].b.fpga_id);
                 ver_edges[k][i][j].growth = ver_edges[k][i][j].growth + 1;
                 grow_ret = 1;
                 if(ver_edges[k][i][j].growth == 2){
@@ -129,19 +137,23 @@ int grow(int k, int i, int j, int direction){
 int update_boundary(struct Address a){
     struct Address root = get_root(a);
     if( root.is_boundary_address == 1 ||
-        (root.is_boundary_address == 0  && a.k < root.k) || 
-        (root.is_boundary_address == 0  && a.k == root.k && a.i < root.i) || 
-        (root.is_boundary_address == 0 && a.k == root.k && a.i == root.i && a.j < root.j)){
+        (root.is_boundary_address == 0  && a.fpga_id < root.fpga_id) ||
+        (root.is_boundary_address == 0  && a.fpga_id == root.fpga_id && a.k < root.k) || 
+        (root.is_boundary_address == 0  && a.fpga_id == root.fpga_id && a.k == root.k && a.i < root.i) || 
+        (root.is_boundary_address == 0  && a.fpga_id == root.fpga_id && a.k == root.k && a.i == root.i && a.j < root.j)){
+            //printf("Root goes to %d %d %d %d\n", a.k, a.i, a.j, a.fpga_id);
             // This node should now be the root
             node_array[root.k][root.i][root.j].root.k = a.k;
             node_array[root.k][root.i][root.j].root.i = a.i;
             node_array[root.k][root.i][root.j].root.j = a.j;
+            node_array[root.k][root.i][root.j].root.fpga_id = a.fpga_id;
 
             node_array[a.k][a.i][a.j].parity = 0;
             node_array[a.k][a.i][a.j].boundary = 1;
             node_array[a.k][a.i][a.j].root.k = a.k;
             node_array[a.k][a.i][a.j].root.i = a.i;
             node_array[a.k][a.i][a.j].root.j = a.j;
+            node_array[a.k][a.i][a.j].root.fpga_id = a.fpga_id;
             node_array[a.k][a.i][a.j].root.is_boundary_address = 0;
             node_array[a.k][a.i][a.j].id.is_boundary_address = 0;
     }
@@ -157,9 +169,10 @@ int merge_internal(struct Address a, struct Address b){
     }
 
     if(root_a.is_boundary_address < root_b.is_boundary_address ||
-        (root_a.is_boundary_address == root_b.is_boundary_address  && root_a.k < root_b.k) || 
-        (root_a.is_boundary_address == root_b.is_boundary_address  && root_a.k == root_b.k && root_a.i < root_b.i) || 
-        (root_a.is_boundary_address == root_b.is_boundary_address && root_a.k == root_b.k && root_a.i == root_b.i && root_a.j < root_b.j)){
+        (root_a.is_boundary_address == root_b.is_boundary_address  && root_a.fpga_id < root_b.fpga_id) ||
+        (root_a.is_boundary_address == root_b.is_boundary_address  && root_a.fpga_id == root_b.fpga_id && root_a.k < root_b.k) ||
+        (root_a.is_boundary_address == root_b.is_boundary_address  && root_a.fpga_id == root_b.fpga_id && root_a.k == root_b.k && root_a.i < root_b.i) ||
+        (root_a.is_boundary_address == root_b.is_boundary_address  && root_a.fpga_id == root_b.fpga_id && root_a.k == root_b.k && root_a.i == root_b.i && root_a.j < root_b.j)){
         // A has a lower root
         if(node_array[root_b.k][root_b.i][root_b.j].boundary == 1){
             node_array[root_a.k][root_a.i][root_a.j].parity = 0;
@@ -170,9 +183,12 @@ int merge_internal(struct Address a, struct Address b){
             node_array[root_a.k][root_a.i][root_a.j].parity = node_array[root_a.k][root_a.i][root_a.j].parity ^ node_array[root_b.k][root_b.i][root_b.j].parity;
         }
 
+        //printf("Root goes to %d %d %d %d\n", root_a.k, root_a.i, root_a.j, root_a.fpga_id);
+
         node_array[root_b.k][root_b.i][root_b.j].root.k = root_a.k;
         node_array[root_b.k][root_b.i][root_b.j].root.i = root_a.i;
         node_array[root_b.k][root_b.i][root_b.j].root.j = root_a.j;
+        node_array[root_b.k][root_b.i][root_b.j].root.fpga_id = root_a.fpga_id;
         node_array[root_b.k][root_b.i][root_b.j].root.is_boundary_address = root_a.is_boundary_address;
     } else {
         // B has the lower root
@@ -185,9 +201,11 @@ int merge_internal(struct Address a, struct Address b){
             node_array[root_b.k][root_b.i][root_b.j].parity = node_array[root_b.k][root_b.i][root_b.j].parity ^ node_array[root_a.k][root_a.i][root_a.j].parity;
         }
 
+        //printf("Root goes to %d %d %d %d\n", root_b.k, root_b.i, root_b.j, root_b.fpga_id);
         node_array[root_a.k][root_a.i][root_a.j].root.k = root_b.k;
         node_array[root_a.k][root_a.i][root_a.j].root.i = root_b.i;
         node_array[root_a.k][root_a.i][root_a.j].root.j = root_b.j;
+        node_array[root_a.k][root_a.i][root_a.j].root.fpga_id = root_b.fpga_id;
         node_array[root_a.k][root_a.i][root_a.j].root.is_boundary_address = root_b.is_boundary_address;
     }
 
@@ -200,8 +218,10 @@ int merge(int k, int i, int j, int direction){
         if(hor_edges[k][i][j].to_be_updated == 1){
            hor_edges[k][i][j].to_be_updated == 0;
             if(hor_edges[k][i][j].is_boundary == 1){
+                //printf("Update_boundary hor called %d %d %d %d\n", hor_edges[k][i][j].a.k, hor_edges[k][i][j].a.i, hor_edges[k][i][j].a.j, hor_edges[k][i][j].a.fpga_id);
                 update_boundary(hor_edges[k][i][j].a);
             } else {
+                //printf("Merge_internal hor called %d %d %d %d and %d %d %d %d\n", hor_edges[k][i][j].a.k, hor_edges[k][i][j].a.i, hor_edges[k][i][j].a.j, hor_edges[k][i][j].a.fpga_id, hor_edges[k][i][j].b.k, hor_edges[k][i][j].b.i, hor_edges[k][i][j].b.j, hor_edges[k][i][j].b.fpga_id);
                 merge_internal(hor_edges[k][i][j].a, hor_edges[k][i][j].b);
             }
         }
@@ -209,8 +229,10 @@ int merge(int k, int i, int j, int direction){
         if(ver_edges[k][i][j].to_be_updated == 1){
            ver_edges[k][i][j].to_be_updated == 0;
             if(ver_edges[k][i][j].is_boundary == 1){
+                //printf("Update_boundary ver called %d %d %d %d\n", ver_edges[k][i][j].a.k, ver_edges[k][i][j].a.i, ver_edges[k][i][j].a.j, ver_edges[k][i][j].a.fpga_id);
                 update_boundary(ver_edges[k][i][j].a);
             } else {
+                //printf("Merge_internal ver called %d %d %d %d and %d %d %d %d\n", ver_edges[k][i][j].a.k, ver_edges[k][i][j].a.i, ver_edges[k][i][j].a.j, ver_edges[k][i][j].a.fpga_id, ver_edges[k][i][j].b.k, ver_edges[k][i][j].b.i, ver_edges[k][i][j].b.j, ver_edges[k][i][j].b.fpga_id);
                 merge_internal(ver_edges[k][i][j].a, ver_edges[k][i][j].b);
             }
         }
@@ -218,8 +240,8 @@ int merge(int k, int i, int j, int direction){
     return 0;
 }
 
-void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance distance){
-    // printf("%d", syndrome[0][0][0]);
+void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance distance, int num_fpgas){
+    // //printf("%d", syndrome[0][0][0]);
 
     //Initialize Nodearray
 
@@ -230,10 +252,13 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance
                 node_array[k][i][j].id.k = k;
                 node_array[k][i][j].id.i = i;
                 node_array[k][i][j].id.j = j;
+                node_array[k][i][j].id.fpga_id = i/(distance.i/num_fpgas);
+                //printf("Node array %d %d %d %d\n", node_array[k][i][j].id.k, node_array[k][i][j].id.i, node_array[k][i][j].id.j, node_array[k][i][j].id.fpga_id);
                 node_array[k][i][j].id.is_boundary_address = 1;
                 node_array[k][i][j].root.k = k;
                 node_array[k][i][j].root.i = i;
                 node_array[k][i][j].root.j = j;
+                node_array[k][i][j].root.fpga_id = i/(distance.i/num_fpgas);
                 node_array[k][i][j].root.is_boundary_address = 1;
                 node_array[k][i][j].boundary = 0;
             }
@@ -292,6 +317,8 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance
                     }
                 }
                 hor_edges[k][i][j].to_be_updated = 0;
+                hor_edges[k][i][j].a.fpga_id = hor_edges[k][i][j].a.i/(distance.i/num_fpgas);
+                hor_edges[k][i][j].b.fpga_id = hor_edges[k][i][j].b.i/(distance.i/num_fpgas);
             }
         }
 	}
@@ -315,6 +342,8 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance
                     ver_edges[k][i][j].b.i = i;
                     ver_edges[k][i][j].b.j = j;
                 }
+                ver_edges[k][i][j].a.fpga_id = ver_edges[k][i][j].a.i/(distance.i/num_fpgas);
+                ver_edges[k][i][j].b.fpga_id = ver_edges[k][i][j].b.i/(distance.i/num_fpgas);
 
             }
         }
@@ -373,7 +402,7 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance
 int loadFileData(FILE* file, int (*array)[D][D+1][(D-1)/2], struct Distance distance) {
     int test_id;
     if (fscanf(file, "%x", &test_id) != 1) {
-        printf("Error reading file. No more test cases.\n");
+        //printf("Error reading file. No more test cases.\n");
         fclose(file);
         return -1;
     }
@@ -382,7 +411,7 @@ int loadFileData(FILE* file, int (*array)[D][D+1][(D-1)/2], struct Distance dist
             for(int j=0; j< distance.j ;j++){
                 int value;
                 if (fscanf(file, "%x", &value) != 1) {
-                    printf("Error reading file.\n");
+                    //printf("Error reading file.\n");
                     fclose(file);
                     return -1;
                 }
@@ -390,7 +419,7 @@ int loadFileData(FILE* file, int (*array)[D][D+1][(D-1)/2], struct Distance dist
             }
         }
     }
-    // printf("Test id : %x loaded\n",test_id);
+    // //printf("Test id : %x loaded\n",test_id);
     return test_id;
 }
 
@@ -421,27 +450,27 @@ int main(int argc, char *argv[]) {
     char *input_filename = argv[2];
     char *output_filename = argv[3];
 
-    int multiplication_factor = atoi(argv[4]);
+    int num_fpgas = atoi(argv[4]);
 
-    struct Distance distance = {d, (d+1)*multiplication_factor, (d-1)/2};
+    struct Distance distance = {d, (d+1)*num_fpgas, (d-1)/2};
     if(distance.k > D || distance.i > D || distance.j > D) {
         fprintf(stderr, "If distance greater than %d please change the parameter in source\n", D);
         return 1;
     }
 
 
-    // sprintf(filename, "../test_benches/test_data/input_data_%d_rsc.txt", distance);
+    // s//printf(filename, "../test_benches/test_data/input_data_%d_rsc.txt", distance);
     FILE* file = fopen(input_filename, "r");
     if (file == NULL) {
-        printf("Error opening file %s.\n", input_filename);
+        //printf("Error opening file %s.\n", input_filename);
         return -1;
     }
 
     // char output_filename[100];
-    // sprintf(output_filename, "../test_benches/test_data/output_data_%d_rsc.txt", distance);
+    // s//printf(output_filename, "../test_benches/test_data/output_data_%d_rsc.txt", distance);
     FILE* file_op = fopen(output_filename, "wb");
     if (file_op == NULL) {
-        printf("Error opening file %s.\n", output_filename);
+        //printf("Error opening file %s.\n", output_filename);
         return -1;
     }
 
@@ -451,7 +480,7 @@ int main(int argc, char *argv[]) {
         if(ret_val < 0) {
             break;
         }
-        union_find(syndrome, distance);
+        union_find(syndrome, distance, num_fpgas);
         print_output(file_op, ret_val, distance);
     }
 

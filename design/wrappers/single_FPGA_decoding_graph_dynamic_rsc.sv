@@ -524,29 +524,17 @@ generate
                 wire [LINK_BIT_WIDTH-1:0] weight_in;
                 reg [3:0] type_for_boundary_links;
                 wire fully_grown_data;
-                always@(*) begin 
-                     if(k==1) begin //Ugly workaround for d=11
-                         if(context_stage < NUM_CONTEXTS - 1) //This is not delayed as boundary_condition must be given befoe moving to the stage
-                             type_for_boundary_links = 3'b00; //  Internal
-                         else
-                             type_for_boundary_links = 3'b10; // Non-existant
-                     end else if(k==0) begin
-                        if(context_stage > 0)
-                            type_for_boundary_links = 3'b00; //  Internal
-                        else if(context_stage == 0)
-                            type_for_boundary_links = 3'b01; // Boundary
-                        else
-                            type_for_boundary_links = 3'b10; //Non existant
-//                    end else if(k==PHYSICAL_GRID_WIDTH_U) begin
-//                        if(context_stage > 0)
-//                            type_for_boundary_links = 3'b00; //  Internal
-//                        else if(context_stage == 0)
+//                always@(*) begin 
+//                     if(k==1) begin //Ugly workaround for d=11
+//                            type_for_boundary_links = 3'b00; // Internal
+//                     end else if(k==0) begin
 //                            type_for_boundary_links = 3'b01; // Boundary
-//                        else
+//                    end else if(k==PHYSICAL_GRID_WIDTH_U) begin
 //                            type_for_boundary_links = 3'b10; //Non existant
-                    end else
-                        type_for_boundary_links = 3'b00; //  Internal
-                end
+//                    end else begin
+//                        type_for_boundary_links = 3'b00; //  Internal
+//                    end
+//                end
                 assign weight_in = `WEIGHT_UD(i,j);
 
                 wire local_context_switch;
@@ -560,12 +548,12 @@ generate
                 end
                 if(k==0) begin
                     // `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k, i,j,0, `NEIGHBOR_IDX_DOWN, type_for_boundary_links, NUM_CONTEXTS / 2 + 1) //+1 is only for d=ctx
-                    `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k, i,j,0, `NEIGHBOR_IDX_DOWN, type_for_boundary_links, NUM_CONTEXTS / 2 + 1)
+                    `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k, i,j,0, `NEIGHBOR_IDX_DOWN, 3'b01, NUM_CONTEXTS / 2 + 1)
                 end else if(k==PHYSICAL_GRID_WIDTH_U) begin
                     // `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k-1, i,j,1, `NEIGHBOR_IDX_UP, type_for_boundary_links, NUM_CONTEXTS / 2 + 1) //+1 is for d=ctx
-                    `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k-1, i,j,1, `NEIGHBOR_IDX_UP, type_for_boundary_links, (NUM_CONTEXTS + 1)/ 2) //+1 is for d=ctx
+                    `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k-1, i,j,1, `NEIGHBOR_IDX_UP, 3'b10, (NUM_CONTEXTS + 1)/ 2) //+1 is for d=ctx
                 end else if (k < PHYSICAL_GRID_WIDTH_U) begin
-                    `NEIGHBOR_LINK_INTERNAL_0(i, j, k-1, i, j, k, `NEIGHBOR_IDX_UP, `NEIGHBOR_IDX_DOWN, type_for_boundary_links, NUM_CONTEXTS)
+                    `NEIGHBOR_LINK_INTERNAL_0(i, j, k-1, i, j, k, `NEIGHBOR_IDX_UP, `NEIGHBOR_IDX_DOWN, 3'b00, NUM_CONTEXTS)
                 end
             end
         end

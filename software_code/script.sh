@@ -1,8 +1,8 @@
 #!/bin/bash
 
 distance=5
-p=0.001
-test_runs=20
+p=0.005
+test_runs=1000
 num_fpgas=2 #only the leaves
 multi_fpga_mode=1
 

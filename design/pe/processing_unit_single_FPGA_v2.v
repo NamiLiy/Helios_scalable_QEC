@@ -274,21 +274,27 @@ reg [RAM_LOG_DEPTH-1:0] mem_read_address;
 reg [RAM_LOG_DEPTH-1:0] mem_write_address;
 wire [RAM_LOG_DEPTH-1:0] mem_rw_address;
 localparam RAM_WIDTH = ADDRESS_WIDTH + 6 + 3;
-wire [RAM_WIDTH - 1 :0] data_from_memory;
+reg [RAM_WIDTH - 1 :0] data_from_memory;
 wire [RAM_WIDTH - 1:0] data_to_memory;
 
-rams_sp_nc #(
-    .DEPTH(NUM_CONTEXTS),
-    .WIDTH(RAM_WIDTH)
-) PE_mem (
-    .clk(clk),            // Clock input
-    //.rsta(reset),            // Reset input (active high)
-    .en(1'b1),              // Enable input
-    .we(write_to_mem),            // Write Enable input (0 to 0)
-    .addr(mem_rw_address),     // Address input (3 downto 0)
-    .di(data_to_memory),      // Data input (35 downto 0)
-    .dout(data_from_memory)   // Data output (35 downto 0)
-);
+//rams_sp_nc #(
+//    .DEPTH(NUM_CONTEXTS),
+//    .WIDTH(RAM_WIDTH)
+//) PE_mem (
+//    .clk(clk),            // Clock input
+//    //.rsta(reset),            // Reset input (active high)
+//    .en(1'b1),              // Enable input
+//    .we(write_to_mem),            // Write Enable input (0 to 0)
+//    .addr(mem_rw_address),     // Address input (3 downto 0)
+//    .di(data_to_memory),      // Data input (35 downto 0)
+//    .dout(data_from_memory)   // Data output (35 downto 0)
+//);
+
+always@(posedge clk) begin
+    if(write_to_mem) begin
+        data_from_memory <= data_to_memory;
+    end
+end
 
 //logic to calulate the address to write to memory
 always@(posedge clk) begin

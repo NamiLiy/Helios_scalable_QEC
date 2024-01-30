@@ -124,19 +124,19 @@ reg [EXPOSED_DATA_SIZE-1:0] a_input_data_mem;
 reg a_input_data_mem_modified;
 
 always@(posedge clk) begin
-    a_input_data_mem <= a_input_data;
     if(reset) begin
         a_input_data_mem_modified <= 0;
+        a_input_data_mem <= a_input_data;
     end else begin
         if(stage == STAGE_MEASUREMENT_LOADING) begin
             a_input_data_mem_modified <= 0;
+            a_input_data_mem <= a_input_data;
         end else begin
-            if(fifo_output_ready && fifo_output_valid) begin
+            if(boundary_condition_in == 3 && fully_grown && a_input_data != a_input_data_mem) begin
+                a_input_data_mem <= a_input_data;
+                a_input_data_mem_modified <= 1;
+            end else if(fifo_output_ready && fifo_output_valid) begin
                 a_input_data_mem_modified <= 0;
-            end else begin
-                if(boundary_condition_in == 3 && fully_grown && a_input_data != a_input_data_mem) begin
-                    a_input_data_mem_modified <= 1;
-                end
             end
         end
     end
