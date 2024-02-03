@@ -1,7 +1,8 @@
 module root_hub_test #(
     parameter CODE_DISTANCE = 5,
     parameter NUM_LEAVES = 1,
-    parameter MAX_COUNT = 1000
+    parameter MAX_COUNT = 1000,
+    parameter MULTI_FPGA_RUN = 0
 ) (
     clk,
     reset,
@@ -68,7 +69,7 @@ always@(posedge clk) begin
         root_hub_state <= 0;
         count <= 0;
         fpga_count <= 0;
-        multi_fpga_run <= 1;
+        multi_fpga_run <= MULTI_FPGA_RUN;
     end else begin
         case(root_hub_state)
             IDLE: begin //Send the start decoding msg
@@ -174,8 +175,7 @@ wire [64*(NUM_LEAVES+1) - 1 : 0] router_rx_data;
 wire [NUM_LEAVES+1 - 1 : 0] router_rx_valid;
 wire [NUM_LEAVES+1 - 1 : 0] router_rx_ready;
 
-
-root_hub #(
+root_hub_core_split #(
     .NUM_FPGAS(NUM_LEAVES+1),
     .CHANNEL_WIDTH(64),
     .DEST_WIDTH(8)
@@ -183,29 +183,22 @@ root_hub #(
     .clk(clk),
     .reset(reset),
 
-    .rx_data(router_rx_data),
-    .rx_valid(router_rx_valid),
-    .rx_ready(router_rx_ready),
+    .tx_data(down_tx_data),
+    .tx_valid(down_tx_valid),
+    .tx_ready(down_tx_ready),
 
-    .tx_data(router_tx_data),
-    .tx_valid(router_tx_valid),
-    .tx_ready(router_tx_ready)
+    .rx_data(up_rx_data),
+    .rx_valid(up_rx_valid),
+    .rx_ready(up_rx_ready),
+
+    // The ports are swapped because it is the way the root_hub is instantiated in the root_hub_core_split
+    .local_tx_data(local_rx_data),
+    .local_tx_valid(local_rx_valid),
+    .local_tx_ready(local_rx_ready),
+
+    .local_rx_data(local_tx_data),
+    .local_rx_valid(local_tx_valid),
+    .local_rx_ready(local_tx_ready)
 );
-
-assign down_tx_data = router_tx_data[64+:64*NUM_LEAVES];
-assign down_tx_valid = router_tx_valid[1+:NUM_LEAVES];
-assign router_tx_ready[1+:NUM_LEAVES] = down_tx_ready;
-
-assign router_rx_data[64+:64*NUM_LEAVES] = up_rx_data;
-assign router_rx_valid[1+:NUM_LEAVES] = up_rx_valid;
-assign up_rx_ready = router_rx_ready[1+:NUM_LEAVES];
-
-assign local_rx_data = router_tx_data[0+:64];
-assign local_rx_valid = router_tx_valid[0];
-assign router_tx_ready[0] = local_rx_ready;
-
-assign router_rx_data[0+:64] = local_tx_data;
-assign router_rx_valid[0] = local_tx_valid;
-assign local_tx_ready = router_rx_ready[0];
 
 endmodule
