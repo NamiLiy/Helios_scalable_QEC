@@ -10,10 +10,24 @@ int max(int a, int b) {
 
 double normal_random(double mean, double std_dev);
 
-int main() {
-    int distance = 5;
-    double p = 0.001;
-    int test_runs = 1000;
+int main(int argc, char *argv[]) {
+    if (argc != 6) {
+        fprintf(stderr, "Usage: %s <distance> <p> <test_runs> <syndrome_filename>\n", argv[0]);
+        return 1;
+    }
+
+    int distance = atoi(argv[1]);
+    double p = atof(argv[2]);
+    int test_runs = atoi(argv[3]);
+
+    char *filename = argv[4];
+
+    int multiplication_factor = atoi(argv[5]);
+
+    int distance_i = (distance+1)*multiplication_factor; //This is ancillas in i direction
+    int distance_j = (distance-1)/2; //This is ancillas in j direction
+    int data_qubits_i = distance_i - 1;//This is data qubits in i direction
+    int data_qubits_j = distance;
 
     double mean, std_dev;
     mean = p;
@@ -23,13 +37,12 @@ int main() {
     int min_weight = 2;
     int median_weight = (max_weight + min_weight)/2;    
 
-    int data_qubits = distance*distance;
-    int m_error_per_round = (distance+1)*(distance-1)/2;
+    int data_qubits = data_qubits_i*data_qubits_j;
+    int m_error_per_round = distance_i*distance_j;
+    int data_errors[distance][data_qubits_i][data_qubits_j];
+    int m_errors[distance+1][distance_i][distance_j];
 
-    int data_errors[distance][distance][distance];
-    int m_errors[distance+1][distance+1][(distance-1)/2];
-
-    int syndrome [distance][distance+1][(distance-1)/2];
+    int syndrome [distance][distance_i][distance_j];
 
     int errors = 0;
     int syndrome_count = 0;
@@ -53,94 +66,94 @@ int main() {
         if(weight_rounded > max_weight) weight_rounded = max_weight;
         if(weight_rounded < min_weight) weight_rounded = min_weight;
         error_list_scrambled[i] = weight_rounded;
-        printf("%f %f %d\n", p_array[i], weight, weight_rounded);
+        //printf("%f %f %d\n", p_array[i], weight, weight_rounded);
     }
 
-    int ns_count = 0;
-    int ew_count = 0;
-    int ns_weight_list[(distance)*(distance-1)/2];
-    int ew_weight_list[(distance)*(distance-1)/2 + 1];
+    // int ns_count = 0;
+    // int ew_count = 0;
+    // int ns_weight_list[(distance_i-1)*(distance_j)];
+    // int ew_weight_list[(distance_i-1)*distance_j + 1];
 
-    for (int i = 0; i < distance; i++) {
-        for (int j = 0; j < distance; j++) {
-            if(i==0){ //First row
-                if(j%2==0 && j < distance - 1){ // Odd columns 
-                    ew_weight_list[ew_count] = error_list_scrambled[i*distance+j];
-                    ew_count++;
-                }
-                else if(j%2==1){ //Even columns
-                    ns_weight_list[ns_count] = error_list_scrambled[i*distance+j];
-                    ns_count++;
-                }
-            } else if(i==distance -1){ // LAst row
-                if(j==0){
-                    ew_weight_list[ew_count] = max(error_list_scrambled[i*distance+j],error_list_scrambled[(i-1)*distance+j]);
-                    ew_count++;
-                }
-                else if(j==distance-1){
-                    ew_weight_list[ew_count] = error_list_scrambled[i*distance+j];
-                    ew_count++;
-                }
-                else if(j%2==0) {
-                    ew_weight_list[ew_count] = error_list_scrambled[i*distance+j];
-                    ew_count++;
-                }
-                else if(j%2==1) {
-                    ns_weight_list[ns_count] = error_list_scrambled[i*distance+j];
-                    ns_count++;
-                }
-            } else if(i%2 ==0) {
-                if(j==0){
-                    ew_weight_list[ew_count] = max(error_list_scrambled[i*distance+j],error_list_scrambled[(i-1)*distance+j]);
-                    ew_count++;
-                }
-                else if(j%2 == 0 && j < distance - 1) {
-                    ew_weight_list[ew_count] = error_list_scrambled[i*distance+j];
-                    ew_count++;
-                }
-                else if(j%2 == 1) {
-                    ns_weight_list[ns_count] = error_list_scrambled[i*distance+j];
-                    ns_count++;
-                }
-            } else if(i%2 == 1) {
-                if(j==distance-1){
-                    ns_weight_list[ns_count] = max(error_list_scrambled[i*distance+j],error_list_scrambled[(i-1)*distance+j]);
-                    ns_count++;
-                }
-                else if(j%2 == 0 && j > 0 && j < distance - 1) {
-                    ns_weight_list[ns_count] = error_list_scrambled[i*distance+j];
-                    ns_count++;
-                }
-                else if(j%2 == 1) {
-                    ew_weight_list[ew_count] = error_list_scrambled[i*distance+j];
-                    ew_count++;
-                }
-            }
-        }
-    }
+    // for (int i = 0; i < data_qubits_i; i++) {
+    //     for (int j = 0; j < data_qubits_j; j++) {
+    //         if(i==0){ //First row
+    //             if(j%2==0 && j < distance - 1){ // Odd columns 
+    //                 ew_weight_list[ew_count] = error_list_scrambled[i*data_qubits_j+j];
+    //                 ew_count++;
+    //             }
+    //             else if(j%2==1){ //Even columns
+    //                 ns_weight_list[ns_count] = error_list_scrambled[i*data_qubits_j+j];
+    //                 ns_count++;
+    //             }
+    //         } else if(i==distance -1){ // LAst row
+    //             if(j==0){
+    //                 ew_weight_list[ew_count] = max(error_list_scrambled[i*data_qubits_j+j],error_list_scrambled[(i-1)*data_qubits_j+j]);
+    //                 ew_count++;
+    //             }
+    //             else if(j==distance-1){
+    //                 ew_weight_list[ew_count] = error_list_scrambled[i*distance+j];
+    //                 ew_count++;
+    //             }
+    //             else if(j%2==0) {
+    //                 ew_weight_list[ew_count] = error_list_scrambled[i*distance+j];
+    //                 ew_count++;
+    //             }
+    //             else if(j%2==1) {
+    //                 ns_weight_list[ns_count] = error_list_scrambled[i*distance+j];
+    //                 ns_count++;
+    //             }
+    //         } else if(i%2 ==0) {
+    //             if(j==0){
+    //                 ew_weight_list[ew_count] = max(error_list_scrambled[i*distance+j],error_list_scrambled[(i-1)*distance+j]);
+    //                 ew_count++;
+    //             }
+    //             else if(j%2 == 0 && j < distance - 1) {
+    //                 ew_weight_list[ew_count] = error_list_scrambled[i*distance+j];
+    //                 ew_count++;
+    //             }
+    //             else if(j%2 == 1) {
+    //                 ns_weight_list[ns_count] = error_list_scrambled[i*distance+j];
+    //                 ns_count++;
+    //             }
+    //         } else if(i%2 == 1) {
+    //             if(j==distance-1){
+    //                 ns_weight_list[ns_count] = max(error_list_scrambled[i*distance+j],error_list_scrambled[(i-1)*distance+j]);
+    //                 ns_count++;
+    //             }
+    //             else if(j%2 == 0 && j > 0 && j < distance - 1) {
+    //                 ns_weight_list[ns_count] = error_list_scrambled[i*distance+j];
+    //                 ns_count++;
+    //             }
+    //             else if(j%2 == 1) {
+    //                 ew_weight_list[ew_count] = error_list_scrambled[i*distance+j];
+    //                 ew_count++;
+    //             }
+    //         }
+    //     }
+    // }
 
-    printf("\n");
-    for (int i = 0; i < ns_count; i++) {
-        printf("32'd%d, ", ns_weight_list[i]);
-    }
-    printf("\n");
+    // printf("\n");
+    // for (int i = 0; i < ns_count; i++) {
+    //     printf("32'd%d, ", ns_weight_list[i]);
+    // }
+    // printf("\n");
 
-    for (int i = 0; i < ew_count; i++) {
-        printf("32'd%d, ", ew_weight_list[i]);
-    }
-    printf("\n");
+    // for (int i = 0; i < ew_count; i++) {
+    //     printf("32'd%d, ", ew_weight_list[i]);
+    // }
+    // printf("\n");
 
-    for (int i=data_qubits; i < total_error_count; i++) {
-        printf("32'd%d, ", error_list_scrambled[i]);
-    }
-    printf("\n");
+    // for (int i=data_qubits; i < total_error_count; i++) {
+    //     printf("32'd%d, ", error_list_scrambled[i]);
+    // }
+    // printf("\n");
 
 
 
     FILE *out_fp, *in_fp;
     int c;
-    char filename[100];
-    sprintf(filename, "../test_benches/test_data/input_data_%d_rsc.txt", distance);
+    // char filename[100];
+    // sprintf(filename, "../test_benches/test_data/input_data_%d_rsc.txt", distance);
     out_fp = fopen(filename, "wb");
     if (out_fp == NULL) {
         fprintf(stderr, "Can't open output file %s!\n", "output_3.txt");
@@ -151,8 +164,8 @@ int main() {
         for (int k = 0; k < distance; k++) {
             double* values = next_random_values(rs);
             int count = 0;
-            for (int i = 0; i < distance; i++) {
-                for (int j = 0; j < distance; j++) {
+            for (int i = 0; i < data_qubits_i; i++) {
+                for (int j = 0; j < data_qubits_j; j++) {
                     // printf("%f ", values[count]);
                     if (values[count] < p_array[count]) data_errors[k][i][j] = 1;
                     else data_errors[k][i][j] = 0;
@@ -162,8 +175,8 @@ int main() {
                     }
                 }
             }
-            for (int i = 0; i < distance+1; i++) {
-                for (int j = 0; j < (distance-1)/2; j++) {
+            for (int i = 0; i < distance_i; i++) {
+                for (int j = 0; j < distance_j; j++) {
                     if (values[count] < p) m_errors[k][i][j] = 1;
                     else m_errors[k][i][j] = 0;
                     count++;
@@ -175,8 +188,8 @@ int main() {
             free(values);
         }
 
-        for (int i = 0; i < distance+1; i++) {
-            for (int j = 0; j < (distance-1)/2; j++) {
+        for (int i = 0; i < distance_i; i++) {
+            for (int j = 0; j < distance_j; j++) {
                 m_errors[distance][i][j] = 0.0;
             }
         }
@@ -202,12 +215,12 @@ int main() {
         // }
 
         for (int k = 0; k < distance; k++) {
-            for (int i = 0; i < (distance + 1); i++) {
-                for (int j = 0; j < (distance-1)/2; j++) {
+            for (int i = 0; i < distance_i; i++) {
+                for (int j = 0; j < distance_j; j++) {
                     if(i==0){
                         syndrome[k][i][j] = data_errors[k][i][j*2] ^ data_errors[k][i][j*2+1] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j];
                     }
-                    else if(i==distance) {
+                    else if(i==distance_i-1) {
                         syndrome[k][i][j] = data_errors[k][i-1][j*2+1] ^ data_errors[k][i-1][j*2+2] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j];
                     }
                     else if(i%2 == 1) {
@@ -224,8 +237,8 @@ int main() {
 
         fprintf(out_fp, "%08X\n", t+1);
         for (int k = 0; k < distance; k++) {
-            for (int i = 0; i < distance+1; i++) {
-                for (int j = 0; j < (distance-1)/2; j++) {
+            for (int i = 0; i < distance_i; i++) {
+                for (int j = 0; j < distance_j; j++) {
                     fprintf(out_fp, "%08X\n", syndrome[k][i][j]);
                 }
                 // printf("\n");

@@ -1,6 +1,7 @@
 module neighbor_link_internal #(
     parameter ADDRESS_WIDTH = 6,
-    parameter MAX_WEIGHT = 2
+    parameter MAX_WEIGHT = 2,
+    parameter NUM_CONTEXTS = 2
     // parameter WEIGHT = 2,
     // parameter BOUNDARY_CONDITION = 0, //0 : No boundary 1: A boundary 2: Non existant edge 3: Connected to a FIFO
     // parameter ADDRESS_A = 0,
@@ -32,13 +33,14 @@ module neighbor_link_internal #(
     is_error_systolic_in,
 
     weight_out,
-    boundary_condition_out
+    boundary_condition_out,
+    do_not_store
 );
 
 `include "../../parameters/parameters.sv"
 
 localparam LINK_BIT_WIDTH = $clog2(MAX_WEIGHT + 1);
-localparam EXPOSED_DATA_SIZE = ADDRESS_WIDTH + 1 + 1 + 1 + 1 + 3;
+localparam EXPOSED_DATA_SIZE = ADDRESS_WIDTH + 1 + 1 + 1;
 
 input clk;
 input reset;
@@ -62,11 +64,18 @@ output [EXPOSED_DATA_SIZE-1:0] b_output_data;
 input [LINK_BIT_WIDTH-1:0] weight_in;
 input [1:0] boundary_condition_in;
 input is_error_systolic_in;
+input do_not_store;
 
 output reg [LINK_BIT_WIDTH-1:0] weight_out;
 output reg [1:0] boundary_condition_out;
 
 reg [LINK_BIT_WIDTH-1 : 0] growth;
+reg [STAGE_WIDTH-1:0] stage;
+reg [STAGE_WIDTH-1:0] last_stage;
+
+wire [1:0] growth_mem;
+wire [1:0] boundary_condition_mem;
+wire is_error_mem;
 
 
 
@@ -74,6 +83,17 @@ reg [LINK_BIT_WIDTH-1 : 0] growth;
 
 localparam GROWTH_CALC_WIDTH = $clog2(MAX_WEIGHT + 3);
 reg [GROWTH_CALC_WIDTH-1:0] growth_new;
+
+// stage is always equal to global_stage
+always@(posedge clk) begin
+    if(reset) begin
+        stage <= STAGE_IDLE;
+        last_stage <= STAGE_IDLE;
+    end else begin
+        stage <= global_stage;
+        last_stage <= stage;
+    end
+end
 
 always@(*) begin
     if (boundary_condition_out == 0)  begin // No boundary default case 
@@ -93,8 +113,10 @@ always@(posedge clk) begin
     if(reset) begin
         growth <= 0;
     end else begin
-        if(global_stage == STAGE_MEASUREMENT_LOADING) begin
+        if(stage == STAGE_MEASUREMENT_LOADING) begin
                 growth <= 0;
+        end else if(stage == STAGE_WRITE_TO_MEM) begin
+            growth <= growth_mem;
         end else begin
             growth <= growth_new;
         end 
@@ -104,19 +126,21 @@ end
 always@(posedge clk) begin
     if(reset) begin
         is_error <= 0;
+    end else if(stage == STAGE_WRITE_TO_MEM) begin
+        is_error <= is_error_mem;
     end else begin
         if (boundary_condition_out == 0)  begin // No boundary default case 
-            if(global_stage == STAGE_MEASUREMENT_LOADING) begin
+            if(stage == STAGE_MEASUREMENT_LOADING) begin
                 is_error <= 0;
-            end else if(global_stage == STAGE_RESULT_VALID) begin
+            end else if(stage == STAGE_RESULT_VALID) begin
                 is_error <= is_error_systolic_in;
             end else begin
                 is_error <= a_is_error_in | b_is_error_in;
             end
         end else if (boundary_condition_out == 1) begin // edge touching a boundary
-            if(global_stage == STAGE_MEASUREMENT_LOADING) begin
+            if(stage == STAGE_MEASUREMENT_LOADING) begin
                 is_error <= 0;
-            end else if(global_stage == STAGE_RESULT_VALID) begin
+            end else if(stage == STAGE_RESULT_VALID) begin
                 is_error <= is_error_systolic_in;
             end else begin
                 is_error <= a_is_error_in;
@@ -138,12 +162,97 @@ always@(posedge clk) begin
         weight_out <= 0;
         boundary_condition_out <= 0;
     end else begin
-        if(global_stage == STAGE_PARAMETERS_LOADING) begin
-            weight_out <= weight_in;
-            boundary_condition_out <= boundary_condition_in;
+        boundary_condition_out <= boundary_condition_in;
+        weight_out <= weight_in;
+        // if(stage == STAGE_PARAMETERS_LOADING) begin
+        //     weight_out <= weight_in;
+        //     boundary_condition_out <= boundary_condition_in;
+        // end else if(stage == STAGE_READ_FROM_MEM) begin
+        //     //boundary_condition_out <= boundary_condition_mem;
+        //     //Todo : Temporary hack to debug
+        //     if(mem_rw_address != 0) begin
+        //         boundary_condition_out <= 2;
+        //     end else begin
+        //         boundary_condition_out <= boundary_condition_mem;
+        //     end
+        // end
+    end
+end
+
+reg write_to_mem;
+localparam RAM_LOG_DEPTH = $clog2(NUM_CONTEXTS);
+reg [RAM_LOG_DEPTH-1:0] mem_read_address;
+reg [RAM_LOG_DEPTH-1:0] mem_write_address;
+wire [RAM_LOG_DEPTH-1:0] mem_rw_address;
+wire [4:0] data_from_memory;
+wire [4:0] data_to_memory;
+
+rams_sp_nc #(
+    .DEPTH(NUM_CONTEXTS),
+    .WIDTH(5)
+) edge_mem (
+    .clk(clk),            // Clock input
+    //.rsta(reset),            // Reset input (active high)
+    .en(1'b1),              // Enable input
+    .we(write_to_mem),            // Write Enable input (0 to 0)
+    .addr(mem_rw_address),     // Address input (3 downto 0)
+    .di(data_to_memory),      // Data input (35 downto 0)
+    .dout(data_from_memory)    // Data output (35 downto 0)
+);
+
+
+
+//logic to calulate the address to write to memory
+always@(posedge clk) begin
+    if(reset) begin
+        mem_write_address <= 0;
+    end else begin
+        if (stage == STAGE_WRITE_TO_MEM) begin
+            if(do_not_store == 1'b0) begin
+                if(mem_write_address < NUM_CONTEXTS -1) begin
+                    mem_write_address <= mem_write_address + 1;
+                end else begin
+                    mem_write_address <= 0;
+                end
+            end
         end
     end
 end
+
+always@(posedge clk) begin
+    if(reset) begin
+        mem_read_address <= 1;
+    end else begin
+        if (stage == STAGE_WRITE_TO_MEM) begin
+            if(do_not_store == 1'b0) begin
+                if(mem_read_address < NUM_CONTEXTS -1) begin
+                    mem_read_address <= mem_read_address + 1;
+                end else begin
+                    mem_read_address <= 0;
+                end
+            end
+        end
+    end
+end
+
+assign mem_rw_address = (stage == STAGE_WRITE_TO_MEM) ? mem_write_address : mem_read_address;
+
+always@(*) begin
+    if(reset) begin
+        write_to_mem = 0;
+    end else begin
+        if (stage == STAGE_WRITE_TO_MEM && do_not_store == 1'b0) begin
+            write_to_mem = 1;
+        end else begin
+            write_to_mem = 0;
+        end
+    end
+end
+
+//logic to data write to memory
+assign data_to_memory = {growth,is_error};
+
+assign {growth_mem,is_error_mem} = (do_not_store) ? {growth, is_error} : data_from_memory;
 
 endmodule
 

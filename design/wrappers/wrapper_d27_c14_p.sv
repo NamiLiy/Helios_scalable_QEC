@@ -5,8 +5,7 @@ module single_FPGA_decoding_graph_dynamic_rsc #(
     parameter GRID_WIDTH_Z = 1,
     parameter GRID_WIDTH_U = 3,
     parameter MAX_WEIGHT = 2,
-    parameter NUM_CONTEXTS = 4,
-    parameter NUM_FPGAS = 5 
+    parameter NUM_CONTEXTS = 4 
 ) (
     clk,
     reset,
@@ -15,19 +14,7 @@ module single_FPGA_decoding_graph_dynamic_rsc #(
     roots,
     busy,
     global_stage,
-    correction,
-    FPGA_ID,
-
-    border_output_data,
-    border_output_valid,
-    border_output_ready,
-
-    border_input_data,
-    border_input_valid,
-    border_input_ready,
-
-    border_continous
-
+    correction
 );
 
 `include "../../parameters/parameters.sv"
@@ -37,8 +24,7 @@ module single_FPGA_decoding_graph_dynamic_rsc #(
 localparam X_BIT_WIDTH = $clog2(GRID_WIDTH_X);
 localparam Z_BIT_WIDTH = $clog2(GRID_WIDTH_Z);
 localparam U_BIT_WIDTH = $clog2(GRID_WIDTH_U);
-localparam FPGA_BIT_WIDTH = $clog2(NUM_FPGAS);
-localparam ADDRESS_WIDTH = X_BIT_WIDTH + Z_BIT_WIDTH + U_BIT_WIDTH + FPGA_BIT_WIDTH;
+localparam ADDRESS_WIDTH = X_BIT_WIDTH + Z_BIT_WIDTH + U_BIT_WIDTH;
 localparam ADDRESS_WIDTH_WITH_B = ADDRESS_WIDTH + 1;
 
 localparam PHYSICAL_GRID_WIDTH_U = (GRID_WIDTH_U % NUM_CONTEXTS == 0) ? 
@@ -53,9 +39,6 @@ localparam EW_ERROR_COUNT_PER_ROUND = (GRID_WIDTH_X-1) * GRID_WIDTH_Z + 1;
 localparam UD_ERROR_COUNT_PER_ROUND = GRID_WIDTH_X * GRID_WIDTH_Z;
 localparam CORRECTION_COUNT_PER_ROUND = NS_ERROR_COUNT_PER_ROUND + EW_ERROR_COUNT_PER_ROUND + UD_ERROR_COUNT_PER_ROUND;
 localparam EXPOSED_DATA_SIZE = ADDRESS_WIDTH_WITH_B + 1 + 1 + 1;
-localparam FPGA_FIFO_SIZE = (EXPOSED_DATA_SIZE + 1);
-localparam FPGA_FIFO_COUNT_PER_LAYER = 2*GRID_WIDTH_Z - 1;
-localparam FPGA_FIFO_COUNT = FPGA_FIFO_COUNT_PER_LAYER*PHYSICAL_GRID_WIDTH_U;
 
 localparam LINK_BIT_WIDTH = $clog2(MAX_WEIGHT + 1);
 
@@ -69,24 +52,12 @@ output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 output [PU_COUNT - 1 : 0] busy;
 output [CORRECTION_COUNT_PER_ROUND - 1 : 0] correction;
 
-input [FPGA_BIT_WIDTH-1:0] FPGA_ID;
-
-output [2*FPGA_FIFO_SIZE*FPGA_FIFO_COUNT-1:0] border_output_data;
-output [2*FPGA_FIFO_COUNT-1:0] border_output_valid;
-input [2*FPGA_FIFO_COUNT-1:0] border_output_ready;
-
-input [2*FPGA_FIFO_SIZE*FPGA_FIFO_COUNT-1:0] border_input_data;
-input [2*FPGA_FIFO_COUNT-1:0] border_input_valid;
-output [2*FPGA_FIFO_COUNT-1:0] border_input_ready;
-
-input[1:0] border_continous;
-
 genvar i;
 genvar j;
 genvar k;
 
 //logic to calulate the context_stage
-reg[$clog2(NUM_CONTEXTS):0] context_stage;
+reg[3:0] context_stage;
 always@(posedge clk) begin
     if(reset) begin
         context_stage <= 0;
@@ -102,7 +73,7 @@ always@(posedge clk) begin
 end
 
 //context_stage delayed
-reg[$clog2(NUM_CONTEXTS):0] context_stage_delayed;
+reg[3:0] context_stage_delayed;
 always@(posedge clk) begin
     if(reset) begin
         context_stage_delayed <= 0;
@@ -119,6 +90,7 @@ end
 `define busy(i, j, k) busy[`INDEX(i, j, k)]
 `define PU(i, j, k) pu_k[k].pu_i[i].pu_j[j]
 `define SPU(i, j, k) s_pu_i[i].s_pu_j[j].s_pu_k[k]
+`define ADDRESS_BOUNDARY(i,j,k) ((`ADDRESS(i,j,k)+ (1'b1<<ADDRESS_WIDTH)))
 
 generate
     for (k=PHYSICAL_GRID_WIDTH_U-1; k >= 0; k=k-1) begin: pu_k
@@ -142,12 +114,11 @@ generate
                 always@(*) begin
                     address_global[Z_BIT_WIDTH-1:0] = j;
                     address_global[X_BIT_WIDTH+Z_BIT_WIDTH-1:Z_BIT_WIDTH] = i;
-                    address_global[ADDRESS_WIDTH - 1 : X_BIT_WIDTH+Z_BIT_WIDTH+U_BIT_WIDTH] = FPGA_ID;
                     address_global[ADDRESS_WIDTH_WITH_B-1:ADDRESS_WIDTH] = 1'b1;
                     if(context_stage_delayed%2 == 0) begin
-                        address_global[X_BIT_WIDTH+Z_BIT_WIDTH+U_BIT_WIDTH-1:X_BIT_WIDTH+Z_BIT_WIDTH] = k + context_stage_delayed*PHYSICAL_GRID_WIDTH_U;
+                        address_global[ADDRESS_WIDTH-1:X_BIT_WIDTH+Z_BIT_WIDTH] = k + context_stage_delayed*PHYSICAL_GRID_WIDTH_U;
                     end else begin
-                        address_global[X_BIT_WIDTH+Z_BIT_WIDTH+U_BIT_WIDTH-1:X_BIT_WIDTH+Z_BIT_WIDTH] = PHYSICAL_GRID_WIDTH_U - k - 1 + context_stage_delayed*PHYSICAL_GRID_WIDTH_U;
+                        address_global[ADDRESS_WIDTH-1:X_BIT_WIDTH+Z_BIT_WIDTH] = PHYSICAL_GRID_WIDTH_U - k - 1 + context_stage_delayed*PHYSICAL_GRID_WIDTH_U;
                     end
                 end
 
@@ -190,41 +161,24 @@ generate
                 wire local_context_switch;
 
                 if (k==1)
-                    // // This line is for d=27 ctx = 27
-                    // assign local_context_switch = (context_stage_delayed %2 == 0 && context_stage_delayed < NUM_CONTEXTS - 1) ? 1'b1 : 1'b0;
-                    //This line is for d=27 ctx = 4
-                    assign local_context_switch = (context_stage_delayed %2 == 0 && context_stage_delayed < NUM_CONTEXTS - 1) ? 1'b1 : 1'b0;
+                    assign local_context_switch = (context_stage_delayed %2 == 0) ? 1'b1 : 1'b0;
                 else if(k==0)
-                    assign local_context_switch = (context_stage_delayed %2 == 1 && context_stage_delayed < NUM_CONTEXTS - 1) ? 1'b1 : 1'b0;
+                    assign local_context_switch = (context_stage_delayed %2 == 1) ?1'b1 : 1'b0;
                 else begin
                     assign local_context_switch = 1'b0;
                 end
-                if(k==1) begin
-                    support_processing_unit #(
-                        .ADDRESS_WIDTH(ADDRESS_WIDTH_WITH_B),
-                        //.NUM_CONTEXTS(NUM_CONTEXTS/2 + 1) // +1 is for ctx = d
-                        .NUM_CONTEXTS((NUM_CONTEXTS + 1)/2) 
-                    ) spu (
-                        .clk(clk),
-                        .reset(reset),
-                        .global_stage(global_stage),
-                        .input_data(input_data),
-                        .output_data(output_data),
-                        .do_not_store(local_context_switch)
-                    );
-                end else begin
-                    support_processing_unit #(
-                        .ADDRESS_WIDTH(ADDRESS_WIDTH_WITH_B),
-                        .NUM_CONTEXTS(NUM_CONTEXTS/2 + 1) // +1 is for ctx = d
-                    ) spu (
-                        .clk(clk),
-                        .reset(reset),
-                        .global_stage(global_stage),
-                        .input_data(input_data),
-                        .output_data(output_data),
-                        .do_not_store(local_context_switch)
-                    );
-                end
+
+                support_processing_unit #(
+                    .ADDRESS_WIDTH(ADDRESS_WIDTH_WITH_B),
+                    .NUM_CONTEXTS(NUM_CONTEXTS/2)
+                ) spu (
+                    .clk(clk),
+                    .reset(reset),
+                    .global_stage(global_stage),
+                    .input_data(input_data),
+                    .output_data(output_data),
+                    .do_not_store(local_context_switch)
+                );
             end
         end
     end
@@ -279,6 +233,8 @@ endgenerate
 `define WEIGHT_NS(i,j) 2
 `define WEIGHT_EW(i,j) 2
 `define WEIGHT_UD(i,j) 2
+
+
 
 `define NEIGHBOR_LINK_INTERNAL_0(ai, aj, ak, bi, bj, bk, adirection, bdirection, type, num_contexts) \
     wire is_boundary; \
@@ -372,37 +328,6 @@ endgenerate
         assign `PU(ai, aj, ak).neighbor_fully_grown[adirection] = fully_grown_data;\
         assign `PU(ai, aj, ak).neighbor_is_boundary[adirection] = is_boundary;
 
-`define NEIGHBOR_LINK_EXTERNAL(ai, aj, ak, adirection, type, num_contexts, border, border_id, init_address) \
-    neighbor_link_external #( \
-        .ADDRESS_WIDTH(ADDRESS_WIDTH_WITH_B), \
-        .MAX_WEIGHT(2), \
-        .NUM_CONTEXTS(num_contexts) \
-    ) neighbor_link ( \
-        .clk(clk), \
-        .reset(reset), \
-        .global_stage(global_stage), \
-        .fully_grown(`PU(ai, aj, ak).neighbor_fully_grown[adirection]), \
-        .a_increase(`PU(ai, aj, ak).neighbor_increase), \
-        .is_boundary(`PU(ai, aj, ak).neighbor_is_boundary[adirection]), \
-        .a_is_error_in(`PU(ai, aj, ak).neighbor_is_error[adirection]), \
-        .is_error(is_error_out), \
-        .a_input_data(`SLICE_VEC(`PU(ai, aj, ak).output_data, adirection, EXPOSED_DATA_SIZE)), \
-        .a_output_data(`SLICE_VEC(`PU(ai, aj, ak).input_data, adirection, EXPOSED_DATA_SIZE)), \
-        .weight_in(2), \
-        .weight_out(), \
-        .do_not_store(local_context_switch), \
-        .boundary_condition_in(type), \
-        .boundary_condition_out(), \
-        .is_error_systolic_in(is_error_systolic_in), \
-        .fifo_output_data(`SLICE_VEC(border_output_data, (border*FPGA_FIFO_COUNT +  border_id), FPGA_FIFO_SIZE)), \
-        .fifo_output_valid(`SLICE_VEC(border_output_valid, (border*FPGA_FIFO_COUNT +  border_id), 1)), \
-        .fifo_output_ready(`SLICE_VEC(border_output_ready, (border*FPGA_FIFO_COUNT +  border_id), 1)), \
-        .fifo_input_data(`SLICE_VEC(border_input_data, (border*FPGA_FIFO_COUNT +  border_id), FPGA_FIFO_SIZE)), \
-        .fifo_input_valid(`SLICE_VEC(border_input_valid, (border*FPGA_FIFO_COUNT +  border_id), 1)), \
-        .fifo_input_ready(`SLICE_VEC(border_input_ready, (border*FPGA_FIFO_COUNT +  border_id), 1)), \
-        .b_init_address(init_address) \
-    );
-
 
 generate
     // Generate North South neighbors
@@ -415,41 +340,16 @@ generate
                 wire fully_grown_data;
                 wire local_context_switch;
                 assign local_context_switch = 1'b0;
-
-                wire [1:0] north_cut_type;
-                wire [1:0] south_cut_type;
-
-                assign north_cut_type = (border_continous[0]==1) ? 2'b11 : 2'b10;
-                assign south_cut_type = (border_continous[1]==1) ? 2'b11 : 2'b10;
-
-                reg [ADDRESS_WIDTH_WITH_B-1:0] init_address;
-                always@(*) begin
-                    init_address [ADDRESS_WIDTH-1:X_BIT_WIDTH+Z_BIT_WIDTH] = k;
-                    init_address [ADDRESS_WIDTH_WITH_B-1:ADDRESS_WIDTH] = 1'b1;
-                    if(i==0) begin
-                        init_address [X_BIT_WIDTH+Z_BIT_WIDTH-1:Z_BIT_WIDTH] = GRID_WIDTH_X - 1;
-                        init_address [Z_BIT_WIDTH-1:0] = j-1;
-                        init_address [ADDRESS_WIDTH - 1 : X_BIT_WIDTH+Z_BIT_WIDTH+U_BIT_WIDTH] = FPGA_ID - 1;
-                    end else begin
-                        init_address[X_BIT_WIDTH+Z_BIT_WIDTH-1:Z_BIT_WIDTH] = 0;
-                        init_address [Z_BIT_WIDTH-1:0] = j+1;
-                        init_address [ADDRESS_WIDTH - 1 : X_BIT_WIDTH+Z_BIT_WIDTH+U_BIT_WIDTH] = FPGA_ID + 1;
-                    end
-                end
-
                 // if(k==PHYSICAL_GRID_WIDTH_U-1) begin
                 //     assign local_context_switch = 1'b1;
                 // end else begin
                 //     assign local_context_switch = 1'b0;
                 // end
-                if(i==0 && j == 0) begin // First row top left. always never exists. it could be a boundary in mul-fpga but we can ignore it because it is already represented by an equivalent boundary in same fpga
+
+                if(i==0 && j < GRID_WIDTH_Z) begin // First row
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_NORTH, 2, NUM_CONTEXTS)
-                end else if(i==0 && j < GRID_WIDTH_Z && j > 0) begin // First row
-                    `NEIGHBOR_LINK_EXTERNAL(i, j, k, `NEIGHBOR_IDX_NORTH, north_cut_type, NUM_CONTEXTS, 0, j-1 + k*FPGA_FIFO_COUNT_PER_LAYER, init_address)
-                end else if(i==GRID_WIDTH_X && j == GRID_WIDTH_Z-1) begin // Last row far right. Never exists, (Could exist as boundary, ignored)
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_SOUTH, 2, NUM_CONTEXTS)
-                end else if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z-1) begin
-                    `NEIGHBOR_LINK_EXTERNAL(i-1, j, k, `NEIGHBOR_IDX_SOUTH, south_cut_type, NUM_CONTEXTS, 1, j + k*FPGA_FIFO_COUNT_PER_LAYER, init_address)                 
+                end else if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z) begin
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_SOUTH, 2, NUM_CONTEXTS)                   
                 end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0) begin // odd rows which are always internal
                     `NEIGHBOR_LINK_INTERNAL_0(i-1, j-1, k, i, j-1, k, `NEIGHBOR_IDX_SOUTH, `NEIGHBOR_IDX_NORTH, 0, NUM_CONTEXTS)
                 end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j == 0) begin // First element of even rows
@@ -473,33 +373,16 @@ generate
                 wire fully_grown_data;
                 wire local_context_switch;
                 assign local_context_switch = 1'b0;
-
-                wire [1:0] north_cut_type;
-                wire [1:0] south_cut_type;
-
-                assign north_cut_type = (border_continous[0]==1) ? 2'b11 : 2'b10;
-                assign south_cut_type = (border_continous[1]==1) ? 2'b11 : 2'b10;
-
-                reg [ADDRESS_WIDTH_WITH_B-1:0] init_address;
-                always@(*) begin
-                    init_address [ADDRESS_WIDTH-1:X_BIT_WIDTH+Z_BIT_WIDTH] = k;
-                    init_address [ADDRESS_WIDTH_WITH_B-1:ADDRESS_WIDTH] = 1'b1;
-                    if(i==0) begin
-                        init_address [X_BIT_WIDTH+Z_BIT_WIDTH-1:Z_BIT_WIDTH] = GRID_WIDTH_X - 1;
-                        init_address [Z_BIT_WIDTH-1:0] = j;
-                        init_address [ADDRESS_WIDTH - 1 : X_BIT_WIDTH+Z_BIT_WIDTH+U_BIT_WIDTH] = FPGA_ID - 1;
-                    end else begin
-                        init_address[X_BIT_WIDTH+Z_BIT_WIDTH-1:Z_BIT_WIDTH] = 0;
-                        init_address [Z_BIT_WIDTH-1:0] = j;
-                        init_address [ADDRESS_WIDTH - 1 : X_BIT_WIDTH+Z_BIT_WIDTH+U_BIT_WIDTH] = FPGA_ID + 1;
-                    end
-                end
-
+                // if(k==PHYSICAL_GRID_WIDTH_U-1) begin
+                //     assign local_context_switch = 1'b1;
+                // end else begin
+                //     assign local_context_switch = 1'b0;
+                // end
                 assign weight_in = `WEIGHT_EW(i,j);
                 if(i==0 && j < GRID_WIDTH_Z) begin // First row
-                    `NEIGHBOR_LINK_EXTERNAL(i, j, k, `NEIGHBOR_IDX_EAST, north_cut_type, NUM_CONTEXTS, 0, j + GRID_WIDTH_Z - 1 + k*FPGA_FIFO_COUNT_PER_LAYER, init_address)
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_EAST, 2, NUM_CONTEXTS)
                 end else if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z) begin // Last row
-                    `NEIGHBOR_LINK_EXTERNAL(i-1, j, k, `NEIGHBOR_IDX_WEST, south_cut_type, NUM_CONTEXTS, 1, j + GRID_WIDTH_Z - 1 + k*FPGA_FIFO_COUNT_PER_LAYER, init_address)
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_WEST, 2, NUM_CONTEXTS)
                 end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j < GRID_WIDTH_Z) begin // even rows which are always internal
                     `NEIGHBOR_LINK_INTERNAL_0(i, j, k, i-1, j, k, `NEIGHBOR_IDX_EAST, `NEIGHBOR_IDX_WEST, 0, NUM_CONTEXTS)
                 end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j == 0) begin // First element of odd rows
@@ -524,36 +407,36 @@ generate
                 wire [LINK_BIT_WIDTH-1:0] weight_in;
                 reg [3:0] type_for_boundary_links;
                 wire fully_grown_data;
-//                always@(*) begin 
-//                     if(k==1) begin //Ugly workaround for d=11
-//                            type_for_boundary_links = 3'b00; // Internal
-//                     end else if(k==0) begin
-//                            type_for_boundary_links = 3'b01; // Boundary
-//                    end else if(k==PHYSICAL_GRID_WIDTH_U) begin
-//                            type_for_boundary_links = 3'b10; //Non existant
-//                    end else begin
-//                        type_for_boundary_links = 3'b00; //  Internal
-//                    end
-//                end
+                always@(*) begin 
+                    if(k==1) begin //Ugly workaround for d=11
+                        if(context_stage < NUM_CONTEXTS - 1) //This is not delayed as boundary_condition must be given befoe moving to the stage
+                            type_for_boundary_links = 3'b00; //  Internal
+                        else
+                            type_for_boundary_links = 3'b10; // Non-existant
+                    end else if(k==0) begin
+                        if(context_stage > 0)
+                            type_for_boundary_links = 3'b00; //  Internal
+                        else
+                            type_for_boundary_links = 3'b01; // Boundary
+                    end else
+                        type_for_boundary_links = 3'b00; //  Internal
+                end
                 assign weight_in = `WEIGHT_UD(i,j);
 
                 wire local_context_switch;
                 if(k==PHYSICAL_GRID_WIDTH_U) begin
-                    // assign local_context_switch = (context_stage_delayed %2 == 0 && context_stage_delayed < NUM_CONTEXTS - 1) ? 1'b1 : 1'b0; //this is for ctx=d version
-                    assign local_context_switch = (context_stage_delayed %2 == 0 && context_stage_delayed < NUM_CONTEXTS - 1) ? 1'b1 : 1'b0;
+                    assign local_context_switch = (context_stage_delayed %2 == 0) ? 1'b1 : 1'b0;
                 end else if(k==0) begin
-                    assign local_context_switch = (context_stage_delayed %2 == 1 && context_stage_delayed < NUM_CONTEXTS - 1) ? 1'b1 : 1'b0;
+                    assign local_context_switch = (context_stage_delayed %2 == 1) ? 1'b1 : 1'b0;
                 end else begin
                     assign local_context_switch = 1'b0;
                 end
                 if(k==0) begin
-                    // `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k, i,j,0, `NEIGHBOR_IDX_DOWN, type_for_boundary_links, NUM_CONTEXTS / 2 + 1) //+1 is only for d=ctx
-                    `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k, i,j,0, `NEIGHBOR_IDX_DOWN, 3'b01, NUM_CONTEXTS / 2 + 1)
+                    `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k, i,j,0, `NEIGHBOR_IDX_DOWN, type_for_boundary_links, NUM_CONTEXTS / 2)
                 end else if(k==PHYSICAL_GRID_WIDTH_U) begin
-                    // `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k-1, i,j,1, `NEIGHBOR_IDX_UP, type_for_boundary_links, NUM_CONTEXTS / 2 + 1) //+1 is for d=ctx
-                    `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k-1, i,j,1, `NEIGHBOR_IDX_UP, 3'b10, (NUM_CONTEXTS + 1)/ 2) //+1 is for d=ctx
+                    `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k-1, i,j,1, `NEIGHBOR_IDX_UP, type_for_boundary_links, NUM_CONTEXTS / 2)
                 end else if (k < PHYSICAL_GRID_WIDTH_U) begin
-                    `NEIGHBOR_LINK_INTERNAL_0(i, j, k-1, i, j, k, `NEIGHBOR_IDX_UP, `NEIGHBOR_IDX_DOWN, 3'b00, NUM_CONTEXTS)
+                    `NEIGHBOR_LINK_INTERNAL_0(i, j, k-1, i, j, k, `NEIGHBOR_IDX_UP, `NEIGHBOR_IDX_DOWN, type_for_boundary_links, NUM_CONTEXTS)
                 end
             end
         end

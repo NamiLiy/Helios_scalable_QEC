@@ -22,7 +22,10 @@
 
 module rams_sp_nc (clk, we, en, addr, di, dout);
 
- 
+parameter DEPTH = 1023*4;
+parameter WIDTH = 32;
+
+localparam LOG_DEPTH = $clog2(DEPTH);
 
 input clk;
 
@@ -30,17 +33,17 @@ input we;
 
 input en;
 
-input [11:0] addr;
+input [LOG_DEPTH-1:0] addr;
 
-input [31:0] di;
+input [WIDTH-1:0] di;
 
-output [31:0] dout;
+output [WIDTH-1:0] dout;
 
  
 
-reg [31:0] RAM [1023*4:0];
+reg [WIDTH-1:0] RAM [DEPTH-1:0];
 
-reg [31:0] dout;
+reg [WIDTH-1:0] dout;
 
 integer j;
 initial 

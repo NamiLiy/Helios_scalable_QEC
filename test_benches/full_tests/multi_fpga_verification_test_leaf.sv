@@ -11,12 +11,27 @@
 // root_of_0,1
 // .......
 
-module verification_bench_single_FPGA_rsc;
+module verification_bench_leaf#(
+    parameter CODE_DISTANCE = 5,
+    parameter NUM_FPGAS = 5,
+    parameter ROUTER_DELAY = 18,
+    parameter FPGA_ID = 1
+)(
+    input clk,
+    input reset,
+
+    input [63:0] parent_rx_data,
+    input parent_rx_valid,
+    output parent_rx_ready,
+
+    output [63:0] parent_tx_data,
+    output parent_tx_valid,
+    input parent_tx_ready
+ );
 
 `include "../../parameters/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
-
-localparam CODE_DISTANCE = 5;                
+               
 localparam CODE_DISTANCE_X = CODE_DISTANCE + 1;
 localparam CODE_DISTANCE_Z = (CODE_DISTANCE_X - 1)/2;
 localparam NUM_CONTEXTS = 1;
@@ -39,7 +54,8 @@ localparam PU_COUNT_ACROSS_CONTEXT = CODE_DISTANCE_X * CODE_DISTANCE_Z * PHYSICA
 localparam X_BIT_WIDTH = $clog2(GRID_WIDTH_X);
 localparam Z_BIT_WIDTH = $clog2(GRID_WIDTH_Z);
 localparam U_BIT_WIDTH = $clog2(GRID_WIDTH_U);
-localparam ADDRESS_WIDTH = X_BIT_WIDTH + Z_BIT_WIDTH + U_BIT_WIDTH;
+localparam FPGA_BIT_WIDTH = $clog2(NUM_FPGAS);
+localparam ADDRESS_WIDTH = X_BIT_WIDTH + Z_BIT_WIDTH + U_BIT_WIDTH + FPGA_BIT_WIDTH;
 
 localparam ITERATION_COUNTER_WIDTH = 8;  // counts up to CODE_DISTANCE iterations
 
@@ -48,9 +64,6 @@ localparam EW_ERROR_COUNT_PER_ROUND = (GRID_WIDTH_X-1) * GRID_WIDTH_Z + 1;
 localparam UD_ERROR_COUNT_PER_ROUND = GRID_WIDTH_X * GRID_WIDTH_Z;
 localparam CORRECTION_COUNT_PER_ROUND = NS_ERROR_COUNT_PER_ROUND + EW_ERROR_COUNT_PER_ROUND + UD_ERROR_COUNT_PER_ROUND;
 localparam CORRECTION_BYTES_PER_ROUND = ((CORRECTION_COUNT_PER_ROUND  + 7) >> 3);
-
-reg clk;
-reg reset;
 
 
 wire [(ADDRESS_WIDTH * PU_COUNT_ACROSS_CONTEXT)-1:0] roots;
@@ -68,6 +81,9 @@ reg [`ALIGNED_PU_PER_ROUND*PHYSICAL_GRID_WIDTH_U * NUM_CONTEXTS-1:0] measurement
 `define root_x(i, j, k) decoder.roots[ADDRESS_WIDTH*`INDEX(i, j, k)+Z_BIT_WIDTH +: X_BIT_WIDTH]
 `define root_z(i, j, k) decoder.roots[ADDRESS_WIDTH*`INDEX(i, j, k) +: Z_BIT_WIDTH]
 `define root_u(i, j, k) decoder.roots[ADDRESS_WIDTH*`INDEX(i, j, k)+X_BIT_WIDTH+Z_BIT_WIDTH +: U_BIT_WIDTH]
+`define root_fpga(i, j, k) decoder.roots[ADDRESS_WIDTH*`INDEX(i, j, k)+X_BIT_WIDTH+Z_BIT_WIDTH+U_BIT_WIDTH +: FPGA_BIT_WIDTH]
+
+
 
 reg [7:0] input_data;
 reg input_valid;
@@ -90,7 +106,9 @@ Helios_single_FPGA #(
     .GRID_WIDTH_Z(GRID_WIDTH_Z),
     .GRID_WIDTH_U(GRID_WIDTH_U),
     .MAX_WEIGHT(MAX_WEIGHT),
-    .NUM_CONTEXTS(NUM_CONTEXTS)
+    .NUM_CONTEXTS(NUM_CONTEXTS),
+    .NUM_FPGAS(NUM_FPGAS),
+    .ROUTER_DELAY_COUNTER(ROUTER_DELAY)
  ) decoder (
     .clk(clk),
     .reset(reset),
@@ -99,7 +117,15 @@ Helios_single_FPGA #(
     .input_ready(input_ready_fifo),
     .output_data(output_data_fifo),
     .output_valid(output_valid_fifo),
-    .output_ready(output_ready_fifo)
+    .output_ready(output_ready_fifo),
+
+    .parent_rx_data(parent_rx_data),
+    .parent_rx_valid(parent_rx_valid),
+    .parent_rx_ready(parent_rx_ready),
+    .parent_tx_data(parent_tx_data),
+    .parent_tx_valid(parent_tx_valid),
+    .parent_tx_ready(parent_tx_ready),
+    .FPGA_ID(FPGA_ID)
     
     //.roots(roots)
 );
@@ -133,8 +159,6 @@ fifo_wrapper #(
     .output_ready(output_ready)
 );
 
-always #5 clk = ~clk;  // flip every 5ns, that is 100MHz clock
-
 reg valid_delayed = 0;
 integer i;
 integer j;
@@ -149,6 +173,7 @@ reg [31:0] read_value, test_case, input_read_value;
 reg [X_BIT_WIDTH-1 : 0] expected_x;
 reg [Z_BIT_WIDTH-1 : 0] expected_z;
 reg [U_BIT_WIDTH-1 : 0] expected_u;
+reg [FPGA_BIT_WIDTH-1 : 0] expected_fpga;
 reg test_fail;
 reg processing = 0;
 reg [31:0] syndrome_count;
@@ -164,9 +189,12 @@ reg [31:0] cycle_counter;
 reg [31:0] iteration_counter;
 reg [31:0] message_counter;
 
+reg completed;
+
 always @(posedge clk) begin
     if(reset) begin
         loading_state <= 3'b0;
+        completed = 0;
     end else begin
         case(loading_state)
             3'b0: begin
@@ -217,10 +245,10 @@ end
 
 always@(*) begin
     if(loading_state == 3'b1) begin
-        input_valid = 1;
+        input_valid = 0;
         input_data = START_DECODING_MSG;
     end else if (loading_state == 3'b10) begin
-        input_valid = 1;
+        input_valid = 0;
         input_data = MEASUREMENT_DATA_HEADER;
     end else if (loading_state == 3'b11) begin
         input_valid = 1;
@@ -238,40 +266,15 @@ always @(*) begin
     end
 end
 
+string input_filename, output_filename;
+
 // Input loading logic
 always @(negedge clk) begin
-    if (loading_state == 3'b10) begin
+    if (loading_state == 3'b10 && completed == 0) begin
         measurements = 0;
         if(input_open == 1) begin
-            if (CODE_DISTANCE == 3) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_3_rsc.txt", "r");
-            end else if (CODE_DISTANCE == 5) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_5_ctx.txt", "r");
-            end else if (CODE_DISTANCE == 7) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_7_ctx.txt", "r");
-            end else if (CODE_DISTANCE == 9) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_9_ctx.txt", "r");
-            end else if (CODE_DISTANCE == 11) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_11_ctx.txt", "r");
-            end else if (CODE_DISTANCE == 13) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_13_ctx.txt", "r");
-            end else if (CODE_DISTANCE == 15) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_15_ctx.txt", "r");
-            end else if (CODE_DISTANCE == 17) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_17_ctx.txt", "r");
-            end else if (CODE_DISTANCE == 19) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_19_ctx.txt", "r");
-            end else if (CODE_DISTANCE == 21) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_21_ctx.txt", "r");
-            end else if (CODE_DISTANCE == 23) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_23_ctx.txt", "r");
-            end else if (CODE_DISTANCE == 25) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_25_ctx.txt", "r");
-            end else if (CODE_DISTANCE == 27) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_27_ctx.txt", "r");
-            end else if (CODE_DISTANCE == 51) begin
-                input_file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_51_ctx.txt", "r");
-            end
+            input_filename = $sformatf("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_%0d_%0d.txt", CODE_DISTANCE, FPGA_ID);
+            input_file = $fopen(input_filename, "r");
             input_open = 0;
         end
         if (input_eof == 0)begin 
@@ -302,38 +305,11 @@ end
 
 // Output verification logic
 always @(posedge clk) begin
-    if (decoder.controller.global_stage_d == STAGE_PEELING) begin // When we move to peeling we are doen with clustering
+    if (decoder.controller.global_stage_d == STAGE_PEELING && completed == 0) begin // When we move to peeling we are doen with clustering
 //       $display("%t\tTest case %d pass %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
        if(open == 1) begin
-            if (CODE_DISTANCE == 3) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_3_rsc.txt", "r");
-            end else if (CODE_DISTANCE == 5) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_5_ctx.txt", "r");
-            end else if (CODE_DISTANCE == 7) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_7_ctx.txt", "r");
-            end else if (CODE_DISTANCE == 9) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_9_ctx.txt", "r");
-            end else if (CODE_DISTANCE == 11) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_11_ctx.txt", "r");
-            end else if (CODE_DISTANCE == 13) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_13_ctx.txt", "r");
-            end else if (CODE_DISTANCE == 15) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_15_ctx.txt", "r");
-            end else if (CODE_DISTANCE == 17) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_17_ctx.txt", "r");
-            end else if (CODE_DISTANCE == 19) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_19_ctx.txt", "r");
-            end else if (CODE_DISTANCE == 21) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_21_ctx.txt", "r");
-            end else if (CODE_DISTANCE == 23) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_23_ctx.txt", "r");
-            end else if (CODE_DISTANCE == 25) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_25_ctx.txt", "r");
-            end else if (CODE_DISTANCE == 27) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_27_ctx.txt", "r");
-            end else if (CODE_DISTANCE == 51) begin
-                file = $fopen ("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_51_ctx.txt", "r");
-            end 
+            output_filename = $sformatf("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_%0d_%0d.txt", CODE_DISTANCE, FPGA_ID);
+            file = $fopen(output_filename, "r");
             open = 0;
         end
         if (eof == 0)begin 
@@ -355,63 +331,59 @@ always @(posedge clk) begin
                         end
                         expected_x = read_value[X_BIT_WIDTH - 1 + 8 :8];
                         expected_u = read_value[U_BIT_WIDTH - 1 + 16 :16];
+                        expected_fpga = read_value[FPGA_BIT_WIDTH - 1 + 24 :24];
                         eof = $feof(file);
-
-                        if(decoder.controller.current_context % 2 == 1) begin
-                            context_k = decoder.controller.current_context*PHYSICAL_GRID_WIDTH_U + PHYSICAL_GRID_WIDTH_U - k - 1;
-                        end else begin
-                            context_k = decoder.controller.current_context*PHYSICAL_GRID_WIDTH_U  + k;
-                        end
-                        if(decoder.controller.current_context == NUM_CONTEXTS - 1 && expected_u == 0 && expected_x==0 && expected_z==0) begin //hack for d=7,11
-                            continue;
-                        end else begin
+                        
+                        context_k = k;
+                        // These logic are for multi context verification
+//                        if(decoder.controller.current_context % 2 == 1) begin
+//                            context_k = decoder.controller.current_context*PHYSICAL_GRID_WIDTH_U + PHYSICAL_GRID_WIDTH_U - k - 1;
+//                        end else begin
+//                            context_k = decoder.controller.current_context*PHYSICAL_GRID_WIDTH_U  + k;
+//                        end
+//                        if(decoder.controller.current_context == NUM_CONTEXTS - 1 && expected_u == 0 && expected_x==0 && expected_z==0) begin //hack for d=7,11
+//                            continue;
+                        //end else begin
                             if(Z_BIT_WIDTH>0) begin
                                 if (expected_u != `root_u(i, j, k) || expected_x != `root_x(i, j, k) || expected_z != `root_z(i, j, k)) begin
-                                    $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d) : TC %d" , $time, context_k, i ,j, `root_u(i, j, k), `root_x(i, j, k), `root_z(i, j, k), expected_u, expected_x, expected_z, test_case);
+                                    $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d,%0d) : Expected (%0d,%0d,%0d,%0d) : TC %d : ID %d" , $time, context_k, i ,j, `root_fpga(i,j,k), `root_u(i, j, k), `root_x(i, j, k), `root_z(i, j, k), expected_fpga, expected_u, expected_x, expected_z, test_case, FPGA_ID);
                                     test_fail = 1;
                                 end
                             end else begin
+                                // This logic has to be modified to multi FPGA
                                 if (expected_u != `root_u(i, j, k) || expected_x != `root_x(i, j, k)) begin
-                                    $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d) : TC %d" , $time, context_k, i ,j, `root_u(i, j, k), `root_x(i, j, k), 0, expected_u, expected_x, expected_z, test_case);
+                                    $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d) : TC %d : ID %d" , $time, context_k, i ,j, `root_u(i, j, k), `root_x(i, j, k), 0, expected_u, expected_x, expected_z, test_case, FPGA_ID);
                                     test_fail = 1;
                                 end
                             end
-                        end
+                        //end
                     end
                 end
             end
         end
     end
-    if (message_counter == 3 && output_valid == 1) begin // Cycle counter and iteration counter is recevied
+    if (message_counter == 3 && output_valid == 1 && completed == 0) begin // Cycle counter and iteration counter is recevied
         if (!test_fail) begin
-            $display("%t\tTest case %d pass %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
+            $display("%t\tID  = %d Test case  = %d, %d pass %d cycles %d iterations %d syndromes", $time, FPGA_ID, test_case, pass_count, cycle_counter, iteration_counter, syndrome_count);
             pass_count = pass_count + 1;
         end else begin
-            $display("%t\tTest case %d fail %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
+            $display("%t\tID  = %d Test case  = %d, %d fail %d cycles %d iterations %d syndromes", $time, FPGA_ID, test_case, fail_count, cycle_counter, iteration_counter, syndrome_count);
             fail_count = fail_count + 1;
             $finish;
         end
     end
-    if (input_eof == 1)begin
+    if (input_eof == 1 && completed == 0)begin
         total_count = pass_count + fail_count;
         $display("%t\t Done:", $time);
         $display("Total : %d",total_count);
         $display("Passed : %d",pass_count);
         $display("Failed : %d",fail_count);
+        completed = 1;
         $finish;
     end
 end
 
-initial begin
-    clk = 1'b1;
-    reset = 1'b1;
 
-    #107;
-    reset = 1'b0;
-    #100;
-
-
-end
 
 
 endmodule
