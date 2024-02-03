@@ -13,7 +13,7 @@
 
 module verification_bench_leaf#(
     parameter CODE_DISTANCE = 5,
-    parameter NUM_FPGAS = 5,
+    parameter NUM_FPGAS = 2,
     parameter ROUTER_DELAY = 18,
     parameter FPGA_ID = 1
 )(

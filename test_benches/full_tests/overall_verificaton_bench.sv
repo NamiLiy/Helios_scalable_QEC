@@ -17,7 +17,7 @@ module overall_verification_bench;
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
 localparam CODE_DISTANCE = 5;
-localparam NUM_LEAVES = 2;
+localparam NUM_LEAVES = 1;
 localparam ROUTER_DELAY = 18;
 
 `define SLICE_VEC(vec, idx, width) (vec[idx*width +: width])

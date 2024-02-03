@@ -3,8 +3,8 @@
 distance=5
 p=0.005
 test_runs=1000
-num_fpgas=2 #only the leaves
-multi_fpga_mode=1
+num_fpgas=1 #only the leaves
+multi_fpga_mode=0
 
 if [ $multi_fpga_mode -eq 0 ]; then
 
