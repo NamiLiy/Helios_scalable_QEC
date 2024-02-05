@@ -51,6 +51,14 @@ wire [63:0] local_rx_data;
 wire local_rx_valid;
 wire local_rx_ready;
 
+wire [64*NUM_LEAVES-1 : 0] rx_data_d;
+wire [NUM_LEAVES-1 : 0] rx_valid_d;
+wire [NUM_LEAVES-1 : 0] rx_ready_d;
+
+wire [64*NUM_LEAVES-1 : 0] tx_data_d;
+wire [NUM_LEAVES-1 : 0] tx_valid_d;
+wire [NUM_LEAVES-1 : 0] tx_ready_d;
+
 reg [3:0] root_hub_state;
 
 reg [31:0] count;
@@ -167,38 +175,148 @@ fifo_wrapper #(
     .output_ready(local_tx_ready)
 );
 
-wire [64*(NUM_LEAVES+1) - 1 : 0] router_tx_data;
-wire [NUM_LEAVES+1 - 1 : 0] router_tx_valid;
-wire [NUM_LEAVES+1 - 1 : 0] router_tx_ready;
+// FIFO buffers for the fpgas
+generate
+    genvar i;
+    for(i = 0; i < NUM_LEAVES; i = i + 1) begin: fpga
+        fifo_wrapper #(
+            .WIDTH(64),
+            .DEPTH(128)
+        ) input_fifo (
+            .clk(clk),
+            .reset(reset),
+            .input_data(up_rx_data[64*i+:64]),
+            .input_valid(up_rx_valid[i]),
+            .input_ready(up_rx_ready[i]),
+            .output_data(rx_data_d[64*i+:64]),
+            .output_valid(rx_valid_d[i]),
+            .output_ready(rx_ready_d[i])
+        );
 
-wire [64*(NUM_LEAVES+1) - 1 : 0] router_rx_data;
-wire [NUM_LEAVES+1 - 1 : 0] router_rx_valid;
-wire [NUM_LEAVES+1 - 1 : 0] router_rx_ready;
+        fifo_wrapper #(
+            .WIDTH(64),
+            .DEPTH(128)
+        ) output_fifo (
+            .clk(clk),
+            .reset(reset),
+            .input_data(tx_data_d[64*i+:64]),
+            .input_valid(tx_valid_d[i]),
+            .input_ready(tx_ready_d[i]),
+            .output_data(down_tx_data[64*i+:64]),
+            .output_valid(down_tx_valid[i]),
+            .output_ready(down_tx_ready[i])
+        );
+    end
+endgenerate
 
-root_hub_core_split #(
+wire [63 : 0] tx_data_1;
+wire tx_valid_1;
+wire tx_ready_1;
+
+wire [63 : 0] rx_data_1;
+wire rx_valid_1;
+wire rx_ready_1;
+
+wire [63 : 0] tx_data_2;
+wire tx_valid_2;
+wire tx_ready_2;
+
+wire [63 : 0] rx_data_2;
+wire rx_valid_2;
+wire rx_ready_2;
+
+wire [63 : 0] tx_data_3;
+wire tx_valid_3;
+wire tx_ready_3;
+
+wire [63 : 0] rx_data_3;
+wire rx_valid_3;
+wire rx_ready_3;
+
+wire [63 : 0] tx_data_4;
+wire tx_valid_4;
+wire tx_ready_4;
+
+wire [63 : 0] rx_data_4;
+wire rx_valid_4;
+wire rx_ready_4;
+
+`define CONNECT_NODE_TB(id, tx_data_i, tx_valid_i, tx_ready_i, rx_data_i, rx_valid_i, rx_ready_i) \
+    assign rx_data_i = rx_data_d[64*id+:64]; \
+    assign rx_valid_i = rx_valid_d[id]; \
+    assign rx_ready_d[id] = rx_ready_i; \
+    assign tx_data_d[64*id+:64] = tx_data_i; \
+    assign tx_valid_d[id] = tx_valid_i; \
+    assign tx_ready_i = tx_ready_d[id];
+
+    generate
+        if(NUM_LEAVES > 0) begin
+            `CONNECT_NODE_TB(0, tx_data_1, tx_valid_1, tx_ready_1, rx_data_1, rx_valid_1, rx_ready_1)
+        end else begin
+            assign rx_valid_1 = 0;
+            assign tx_ready_1 = 1;
+        end
+        if(NUM_LEAVES > 1) begin
+            `CONNECT_NODE_TB(1, tx_data_2, tx_valid_2, tx_ready_2, rx_data_2, rx_valid_2, rx_ready_2)
+        end else begin
+            assign rx_valid_2 = 0;
+            assign tx_ready_2 = 1;
+        end
+        if(NUM_LEAVES > 2) begin
+            `CONNECT_NODE_TB(2, tx_data_3, tx_valid_3, tx_ready_3, rx_data_3, rx_valid_3, rx_ready_3)
+        end else begin
+            assign rx_valid_3 = 0;
+            assign tx_ready_3 = 1;
+        end
+        if(NUM_LEAVES > 3) begin
+            `CONNECT_NODE_TB(3, tx_data_4, tx_valid_4, tx_ready_4, rx_data_4, rx_valid_4, rx_ready_4)
+        end else begin
+            assign rx_valid_4 = 0;
+            assign tx_ready_4 = 1;
+        end
+    endgenerate
+
+root_hub_core #(
     .NUM_FPGAS(NUM_LEAVES+1),
+
     .CHANNEL_WIDTH(64),
     .DEST_WIDTH(8)
 ) root_hub (
     .clk(clk),
     .reset(reset),
 
-    .tx_data(down_tx_data),
-    .tx_valid(down_tx_valid),
-    .tx_ready(down_tx_ready),
-
-    .rx_data(up_rx_data),
-    .rx_valid(up_rx_valid),
-    .rx_ready(up_rx_ready),
-
     // The ports are swapped because it is the way the root_hub is instantiated in the root_hub_core_split
-    .local_tx_data(local_rx_data),
-    .local_tx_valid(local_rx_valid),
-    .local_tx_ready(local_rx_ready),
+    .tx_data_0(local_rx_data),
+    .tx_valid_0(local_rx_valid),
+    .tx_ready_0(local_rx_ready),
 
-    .local_rx_data(local_tx_data),
-    .local_rx_valid(local_tx_valid),
-    .local_rx_ready(local_tx_ready)
+    .rx_data_0(local_tx_data),
+    .rx_valid_0(local_tx_valid),
+    .rx_ready_0(local_tx_ready),
+
+    .tx_data_1(tx_data_1),
+    .tx_valid_1(tx_valid_1),
+    .tx_ready_1(tx_ready_1),
+
+    .rx_data_1(rx_data_1),
+    .rx_valid_1(rx_valid_1),
+    .rx_ready_1(rx_ready_1),
+
+    .tx_data_2(tx_data_2),
+    .tx_valid_2(tx_valid_2),
+    .tx_ready_2(tx_ready_2),
+
+    .rx_data_2(rx_data_2),
+    .rx_valid_2(rx_valid_2),
+    .rx_ready_2(rx_ready_2),
+
+    .tx_data_3(tx_data_3),
+    .tx_valid_3(tx_valid_3),
+    .tx_ready_3(tx_ready_3),
+
+    .rx_data_3(rx_data_3),
+    .rx_valid_3(rx_valid_3),
+    .rx_ready_3(rx_ready_3)
 );
 
 endmodule
