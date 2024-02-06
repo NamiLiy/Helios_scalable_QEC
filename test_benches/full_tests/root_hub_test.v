@@ -278,7 +278,7 @@ wire rx_ready_4;
 
 root_hub_core #(
     .NUM_FPGAS(NUM_LEAVES+1),
-
+    .MAXIMUM_DELAY(3),
     .CHANNEL_WIDTH(64),
     .DEST_WIDTH(8)
 ) root_hub (
@@ -286,37 +286,45 @@ root_hub_core #(
     .reset(reset),
 
     // The ports are swapped because it is the way the root_hub is instantiated in the root_hub_core_split
-    .tx_data_0(local_rx_data),
-    .tx_valid_0(local_rx_valid),
-    .tx_ready_0(local_rx_ready),
+    .tx_0_dout(local_rx_data),
+    .tx_0_wr_en(local_rx_valid),
+    .tx_0_full(!local_rx_ready),
 
-    .rx_data_0(local_tx_data),
-    .rx_valid_0(local_tx_valid),
-    .rx_ready_0(local_tx_ready),
+    .rx_0_din(local_tx_data),
+    .rx_0_empty(!local_tx_valid),
+    .rx_0_rd_en(local_tx_ready),
 
-    .tx_data_1(tx_data_1),
-    .tx_valid_1(tx_valid_1),
-    .tx_ready_1(tx_ready_1),
+    .tx_1_dout(tx_data_1),
+    .tx_1_wr_en(tx_valid_1),
+    .tx_1_full(!tx_ready_1),
 
-    .rx_data_1(rx_data_1),
-    .rx_valid_1(rx_valid_1),
-    .rx_ready_1(rx_ready_1),
+    .rx_1_din(rx_data_1),
+    .rx_1_empty(!rx_valid_1),
+    .rx_1_rd_en(rx_ready_1),
 
-    .tx_data_2(tx_data_2),
-    .tx_valid_2(tx_valid_2),
-    .tx_ready_2(tx_ready_2),
+    .tx_2_dout(tx_data_2),
+    .tx_2_wr_en(tx_valid_2),
+    .tx_2_full(!tx_ready_2),
 
-    .rx_data_2(rx_data_2),
-    .rx_valid_2(rx_valid_2),
-    .rx_ready_2(rx_ready_2),
+    .rx_2_din(rx_data_2),
+    .rx_2_empty(!rx_valid_2),
+    .rx_2_rd_en(rx_ready_2),
 
-    .tx_data_3(tx_data_3),
-    .tx_valid_3(tx_valid_3),
-    .tx_ready_3(tx_ready_3),
+    .tx_3_dout(tx_data_3),
+    .tx_3_wr_en(tx_valid_3),
+    .tx_3_full(!tx_ready_3),
 
-    .rx_data_3(rx_data_3),
-    .rx_valid_3(rx_valid_3),
-    .rx_ready_3(rx_ready_3)
+    .rx_3_din(rx_data_3),
+    .rx_3_empty(!rx_valid_3),
+    .rx_3_rd_en(rx_ready_3),
+
+    .tx_4_dout(tx_data_4),
+    .tx_4_wr_en(tx_valid_4),
+    .tx_4_full(!tx_ready_4),
+
+    .rx_4_din(rx_data_4),
+    .rx_4_empty(!rx_valid_4),
+    .rx_4_rd_en(rx_ready_4)
 );
 
 endmodule

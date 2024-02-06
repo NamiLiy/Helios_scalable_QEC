@@ -7,45 +7,45 @@ module root_hub_core #(
     clk,
     reset,
 
-    tx_data_0,
-    tx_valid_0,
-    tx_ready_0,
+    tx_0_dout,
+    tx_0_wr_en,
+    tx_0_full,
 
-    rx_data_0,
-    rx_valid_0,
-    rx_ready_0,
+    rx_0_din,
+    rx_0_empty,
+    rx_0_rd_en,
 
-    tx_data_1,
-    tx_valid_1,
-    tx_ready_1,
+    tx_1_dout,
+    tx_1_wr_en,
+    tx_1_full,
 
-    rx_data_1,
-    rx_valid_1,
-    rx_ready_1,
+    rx_1_din,
+    rx_1_empty,
+    rx_1_rd_en,
 
-    tx_data_2,
-    tx_valid_2,
-    tx_ready_2,
+    tx_2_dout,
+    tx_2_wr_en,
+    tx_2_full,
 
-    rx_data_2,
-    rx_valid_2,
-    rx_ready_2,
+    rx_2_din,
+    rx_2_empty,
+    rx_2_rd_en,
 
-    tx_data_3,
-    tx_valid_3,
-    tx_ready_3,
+    tx_3_dout,
+    tx_3_wr_en,
+    tx_3_full,
 
-    rx_data_3,
-    rx_valid_3,
-    rx_ready_3,
+    rx_3_din,
+    rx_3_empty,
+    rx_3_rd_en,
 
-    tx_data_4,
-    tx_valid_4,
-    tx_ready_4,
+    tx_4_dout,
+    tx_4_wr_en,
+    tx_4_full,
 
-    rx_data_4,
-    rx_valid_4,
-    rx_ready_4
+    rx_4_din,
+    rx_4_empty,
+    rx_4_rd_en,
 
     // roots // A debug port. Do not use in the real implementation
 );
@@ -61,45 +61,45 @@ localparam NUM_CHILDREN = NUM_FPGAS - 1;
 input clk;
 input reset;
 
-output [63 : 0] tx_data_0;
-output tx_valid_0;
-input tx_ready_0;
+output [63 : 0] tx_0_dout;
+output tx_0_wr_en;
+input tx_0_full;
 
-input [63 : 0] rx_data_0;
-input rx_valid_0;
-output rx_ready_0;
+input [63 : 0] rx_0_din;
+input rx_0_empty;
+output rx_0_rd_en;
 
-output [63 : 0] tx_data_1;
-output tx_valid_1;
-input tx_ready_1;
+output [63 : 0] tx_1_dout;
+output tx_1_wr_en;
+input tx_1_full;
 
-input [63 : 0] rx_data_1;
-input rx_valid_1;
-output rx_ready_1;
+input [63 : 0] rx_1_din;
+input rx_1_empty;
+output rx_1_rd_en;
 
-output [63 : 0] tx_data_2;
-output tx_valid_2;
-input tx_ready_2;
+output [63 : 0] tx_2_dout;
+output tx_2_wr_en;
+input tx_2_full;
 
-input [63 : 0] rx_data_2;
-input rx_valid_2;
-output rx_ready_2;
+input [63 : 0] rx_2_din;
+input rx_2_empty;
+output rx_2_rd_en;
 
-output [63 : 0] tx_data_3;
-output tx_valid_3;
-input tx_ready_3;
+output [63 : 0] tx_3_dout;
+output tx_3_wr_en;
+input tx_3_full;
 
-input [63 : 0] rx_data_3;
-input rx_valid_3;
-output rx_ready_3;
+input [63 : 0] rx_3_din;
+input rx_3_empty;
+output rx_3_rd_en;
 
-output [63 : 0] tx_data_4;
-output tx_valid_4;
-input tx_ready_4;
+output [63 : 0] tx_4_dout;
+output tx_4_wr_en;
+input tx_4_full;
 
-input [63 : 0] rx_data_4;
-input rx_valid_4;
-output rx_ready_4;
+input [63 : 0] rx_4_din;
+input rx_4_empty;
+output rx_4_rd_en;
 
 
 wire [64*NUM_FPGAS-1 : 0] rx_data_d;
@@ -130,12 +130,12 @@ root_controller #(
     .reset(reset),
 
     // we can send whatever data coming directly from cpu to controller as it is always externally buffered
-    .data_from_cpu(rx_data_0),
-    .valid_from_cpu(rx_valid_0),
-    .ready_from_cpu(rx_ready_0),
-    .data_to_cpu(tx_data_0),
-    .valid_to_cpu(tx_valid_0),
-    .ready_to_cpu(tx_ready_0),
+    .data_from_cpu(rx_0_din),
+    .valid_from_cpu(!rx_0_empty),
+    .ready_from_cpu(rx_0_rd_en),
+    .data_to_cpu(tx_0_dout),
+    .valid_to_cpu(tx_0_wr_en),
+    .ready_to_cpu(!tx_0_full),
 
     .data_to_fpgas(data_from_controller),
     .valid_to_fpgas(valid_from_controller),
@@ -175,26 +175,27 @@ fifo_wrapper #(
     .output_ready(ready_to_controller)
 );
 
-`define CONNECT_NODE(id, tx_data_i, tx_valid_i, tx_ready_i, rx_data_i, rx_valid_i, rx_ready_i) \
+`define CONNECT_NODE(id, tx_data_i, tx_wr_en_i, tx_full_i, rx_data_i, rx_empty_i, rx_rd_en_i) \
     assign rx_data_d[64*id+:64] = rx_data_i; \
-    assign rx_valid_d[id] = rx_valid_i; \
-    assign rx_ready_i = rx_ready_d[id]; \
+    assign rx_valid_d[id] = !rx_empty_i; \
+    assign rx_rd_en_i = rx_ready_d[id]; \
     assign tx_data_i = tx_data_d[64*id+:64]; \
-    assign tx_valid_i = tx_valid_d[id]; \
-    assign tx_ready_d[id] = tx_ready_i;
+    assign tx_wr_en_i = tx_valid_d[id]; \
+    assign tx_ready_d[id] = !tx_full_i;
+
 
     generate
         if(NUM_FPGAS > 1) begin
-            `CONNECT_NODE(1, tx_data_1, tx_valid_1, tx_ready_1, rx_data_1, rx_valid_1, rx_ready_1)
+            `CONNECT_NODE(1, tx_1_dout, tx_1_wr_en, tx_1_full, rx_1_din, rx_1_empty, rx_1_rd_en)
         end
         if(NUM_FPGAS > 2) begin
-            `CONNECT_NODE(2, tx_data_2, tx_valid_2, tx_ready_2, rx_data_2, rx_valid_2, rx_ready_2)
+            `CONNECT_NODE(2, tx_2_dout, tx_2_wr_en, tx_2_full, rx_2_din, rx_2_empty, rx_2_rd_en)
         end
         if(NUM_FPGAS > 3) begin
-            `CONNECT_NODE(3, tx_data_3, tx_valid_3, tx_ready_3, rx_data_3, rx_valid_3, rx_ready_3)
+            `CONNECT_NODE(3, tx_3_dout, tx_3_wr_en, tx_3_full, rx_3_din, rx_3_empty, rx_3_rd_en)
         end
         if(NUM_FPGAS > 4) begin
-            `CONNECT_NODE(4, tx_data_4, tx_valid_4, tx_ready_4, rx_data_4, rx_valid_4, rx_ready_4)
+            `CONNECT_NODE(4, tx_4_dout, tx_4_wr_en, tx_4_full, rx_4_din, rx_4_empty, rx_4_rd_en)
         end
     endgenerate
 
