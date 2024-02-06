@@ -39,7 +39,7 @@ module router #(
     
     always @(*) begin
         selected_idx = 0; // default value if 'in' is all 0's
-        for (i=NUM_CHANNELS; i>=0; i=i-1) begin
+        for (i=NUM_CHANNELS-1; i>=0; i=i-1) begin
             if (rx_valid[i]) begin
                 selected_idx = i;
             end
@@ -55,7 +55,7 @@ module router #(
     assign dest = selected_data[CHANNEL_WIDTH - 1 :CHANNEL_WIDTH - DEST_WIDTH];
 
     always @(*) begin
-        for (i=NUM_CHANNELS; i>=0; i=i-1) begin
+        for (i=NUM_CHANNELS-1; i>=0; i=i-1) begin
             tx_data[CHANNEL_WIDTH*i +: CHANNEL_WIDTH] = selected_data;
             if(selected_valid) begin
                 if(dest == 8'hff) begin
