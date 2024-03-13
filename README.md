@@ -23,6 +23,10 @@ Please refer to our paper on arXiv: https://arxiv.org/abs/2301.08419 or in the p
 ## Key Results
 
 We list some of the key results of this implementation below
+
+1) Average decoding time scales sub-linearly with $d$. We measure the average decoding time for phenomenological noise ($phen$) of 0.005 and 0.001 and circuit level noise ($cct$) of 0.001. (Left) The average decoding time. The average time per measurement round reducing continuously justifies that our decoder is scalable for large surface codes under both phenomenological noise and circuit level noise. The unusual increase at $d=17$ for circuit level noise is caused by reducing the operating frequency to 75 MHz. The dashed line shows the calculated value at 100MHz.
+
+![alt text](https://github.com/NamiLiy/Helios_scalable_QEC/blob/main/plots/liyan10.pdf?raw=true)
     
 ## Build
 
