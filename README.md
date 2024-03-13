@@ -17,17 +17,17 @@ Please refer to our paper on arxiv : https://arxiv.org/abs/2301.08419
     ├── parameters              # Parameters shared by both design file and test benches
     ├── plots                   # Scripts to generate plots
     ├── old_files               # Previous versions of the design (No longer in use)
-    └── scripts                 # Scripts to build a simple Vivado Project and run verification tests
+    ├── scripts                 # Scripts to build a simple Vivado Project and run verification tests
+    └── scripts                 # Software code to generate test vectors and verify results
     
 ## Build
 
 ### Requirements
 
-This project requires Vivado 2020.2 for simulation and ZCU106 development board for FPGA implementation
-This project is tested on Xilinx Vivado 2019.1 and 2020.2 verisons only.
-It may or may not work in other versions of Vivado.
-This project is tested on ZCU106 development board only.
-Running on other FPGA boards require modifications on pin assignments and block deisgn generation.
+The system is extensively tested on a VCU129 FPGA. In addition, some versions of this system have been run on  ZCU106 and VMK180 FPGAs.
+Running on other FPGA boards requires modifications on pin assignments and block design generation.
+We used Vivado versions between 2019.1 to 2023.2 for synthesis and simulation.
+However, as the main design (except test benches and inter-FPGA communication) does not rely on FPGA-specific components, the Vivado version will create a minimal impact.
 
 ### Helios single FPGA version
 
