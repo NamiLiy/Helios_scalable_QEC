@@ -16,9 +16,11 @@ module overall_verification_bench;
 `include "../../parameters/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
-localparam CODE_DISTANCE = 5;
-localparam NUM_LEAVES = 1;
-localparam ROUTER_DELAY = 18;
+localparam CODE_DISTANCE = 7;
+localparam NUM_LEAVES = 8;
+localparam ROUTER_DELAY = 53;
+localparam MAX_COUNT = 1000;
+localparam MULTI_FPGA_RUN = 1;
 
 `define SLICE_VEC(vec, idx, width) (vec[idx*width +: width])
 
@@ -36,7 +38,10 @@ wire on;
 
 root_hub_test #(
     .CODE_DISTANCE(CODE_DISTANCE),
-    .NUM_LEAVES(NUM_LEAVES)
+    .NUM_LEAVES(NUM_LEAVES),
+    .MAX_COUNT(MAX_COUNT),
+    .MULTI_FPGA_RUN(MULTI_FPGA_RUN),
+    .ROUTER_DELAY(ROUTER_DELAY)
 ) root_hub_tb(
     .clk(clk),
     .reset(reset),

@@ -164,3 +164,64 @@ module fifo_wrapper #(
     assign rd_en = output_ready;
 
 endmodule
+
+module fifo_wrapper_with_delay #(
+    parameter DEPTH     = 16,       // FIFO depth, must be power of 2
+    parameter WIDTH     = 4,         // FIFO width in bits
+    parameter DELAY     = 1
+    ) (
+    input  wire             clk,
+    input wire reset,
+
+    // Input interface
+    input wire              input_valid,
+    output wire             input_ready,
+    input  wire [WIDTH-1:0] input_data,
+
+    // Output interface
+    output reg             output_valid,
+    input  wire             output_ready,
+    output wire [WIDTH-1:0] output_data
+);
+
+    localparam TIME_WIDTH = 32;
+    reg [TIME_WIDTH-1:0] current_time;
+    
+    always @(posedge clk) begin
+        if (reset) begin
+            current_time <= 0;
+        end else begin
+            //if(~input_valid && ~output_valid_received) begin //we can reset the timer when fifos are empty
+            //    current_time <= 0;
+            // end else begin
+                current_time <= current_time + 1;
+            // end
+        end
+    end
+
+    wire [TIME_WIDTH-1:0] received_time;
+    wire output_valid_received;
+    reg output_ready_received;
+
+    fifo_wrapper #(.DEPTH(DEPTH), .WIDTH(WIDTH+TIME_WIDTH)) fifo_inst (
+        .clk(clk),
+        .reset(reset),
+        .input_valid(input_valid),
+        .input_ready(input_ready),
+        .input_data({input_data, current_time}),
+        .output_valid(output_valid_received),
+        .output_ready(output_ready_received),
+        .output_data({output_data, received_time})
+    );
+
+    always@(*) begin
+        if(received_time + DELAY <= current_time) begin
+            output_valid = output_valid_received;
+            output_ready_received = output_ready;
+        end else begin
+            output_valid = 0;
+            output_ready_received = 0;
+        end
+    end
+
+endmodule

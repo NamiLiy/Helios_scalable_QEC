@@ -13,8 +13,9 @@ with open(filename, 'r') as file:
 # Loop through the lines and extract cycle counts
 for line in lines:
     parts = line.split()
+    #print(parts)
     try:
-        cycle_count = int(parts[5])  # 6th entry (0-based index)
+        cycle_count = int(parts[8])  # 6th entry (0-based index)
         cycle_count_distribution[cycle_count] += 1
     except (IndexError, ValueError):
         pass

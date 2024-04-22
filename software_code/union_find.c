@@ -3,7 +3,7 @@
 #include <math.h>
 #include <time.h>
 
-#define D 27
+#define D 100
 #define TOTAL_MEASUREMENTS D
 
 struct Distance {
@@ -454,7 +454,7 @@ int main(int argc, char *argv[]) {
 
     struct Distance distance = {d, (d+1)*num_fpgas, (d-1)/2};
     if(distance.k > D || distance.i > D || distance.j > D) {
-        fprintf(stderr, "If distance greater than %d please change the parameter in source\n", D);
+        fprintf(stderr, "Some distance is greater than %d please change the parameter in source\n", D);
         return 1;
     }
 

@@ -1,10 +1,10 @@
 #!/bin/bash
 
-distance=5
-p=0.005
+distance=7
+p=0.001
 test_runs=1000
-num_fpgas=1 #only the leaves
-multi_fpga_mode=0
+num_fpgas=8 #only the leaves
+multi_fpga_mode=1
 
 if [ $multi_fpga_mode -eq 0 ]; then
 

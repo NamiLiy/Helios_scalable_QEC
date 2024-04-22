@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 
 module processing_unit_synthesizable_test #(
-    parameter D = 51,
+    parameter D = 2001,
     parameter NEIGHBOR_COUNT = 6,
     parameter NUM_CONTEXTS = 2
 ) (

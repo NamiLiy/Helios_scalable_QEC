@@ -2,7 +2,8 @@ module root_hub_test #(
     parameter CODE_DISTANCE = 5,
     parameter NUM_LEAVES = 1,
     parameter MAX_COUNT = 1000,
-    parameter MULTI_FPGA_RUN = 0
+    parameter MULTI_FPGA_RUN = 0,
+    parameter ROUTER_DELAY = 3
 ) (
     clk,
     reset,
@@ -179,9 +180,10 @@ fifo_wrapper #(
 generate
     genvar i;
     for(i = 0; i < NUM_LEAVES; i = i + 1) begin: fpga
-        fifo_wrapper #(
+        fifo_wrapper_with_delay #(
             .WIDTH(64),
-            .DEPTH(128)
+            .DEPTH(128),
+            .DELAY(ROUTER_DELAY)
         ) input_fifo (
             .clk(clk),
             .reset(reset),
@@ -193,9 +195,10 @@ generate
             .output_ready(rx_ready_d[i])
         );
 
-        fifo_wrapper #(
+        fifo_wrapper_with_delay #(
             .WIDTH(64),
-            .DEPTH(128)
+            .DEPTH(128),
+            .DELAY(ROUTER_DELAY)
         ) output_fifo (
             .clk(clk),
             .reset(reset),
@@ -209,122 +212,154 @@ generate
     end
 endgenerate
 
-wire [63 : 0] tx_data_1;
-wire tx_valid_1;
-wire tx_ready_1;
+generate
 
-wire [63 : 0] rx_data_1;
-wire rx_valid_1;
-wire rx_ready_1;
+    if (NUM_LEAVES < 5) begin
 
-wire [63 : 0] tx_data_2;
-wire tx_valid_2;
-wire tx_ready_2;
+        wire [63 : 0] tx_data_1;
+        wire tx_valid_1;
+        wire tx_ready_1;
 
-wire [63 : 0] rx_data_2;
-wire rx_valid_2;
-wire rx_ready_2;
+        wire [63 : 0] rx_data_1;
+        wire rx_valid_1;
+        wire rx_ready_1;
 
-wire [63 : 0] tx_data_3;
-wire tx_valid_3;
-wire tx_ready_3;
+        wire [63 : 0] tx_data_2;
+        wire tx_valid_2;
+        wire tx_ready_2;
 
-wire [63 : 0] rx_data_3;
-wire rx_valid_3;
-wire rx_ready_3;
+        wire [63 : 0] rx_data_2;
+        wire rx_valid_2;
+        wire rx_ready_2;
 
-wire [63 : 0] tx_data_4;
-wire tx_valid_4;
-wire tx_ready_4;
+        wire [63 : 0] tx_data_3;
+        wire tx_valid_3;
+        wire tx_ready_3;
 
-wire [63 : 0] rx_data_4;
-wire rx_valid_4;
-wire rx_ready_4;
+        wire [63 : 0] rx_data_3;
+        wire rx_valid_3;
+        wire rx_ready_3;
 
-`define CONNECT_NODE_TB(id, tx_data_i, tx_valid_i, tx_ready_i, rx_data_i, rx_valid_i, rx_ready_i) \
-    assign rx_data_i = rx_data_d[64*id+:64]; \
-    assign rx_valid_i = rx_valid_d[id]; \
-    assign rx_ready_d[id] = rx_ready_i; \
-    assign tx_data_d[64*id+:64] = tx_data_i; \
-    assign tx_valid_d[id] = tx_valid_i; \
-    assign tx_ready_i = tx_ready_d[id];
+        wire [63 : 0] tx_data_4;
+        wire tx_valid_4;
+        wire tx_ready_4;
 
-    generate
-        if(NUM_LEAVES > 0) begin
-            `CONNECT_NODE_TB(0, tx_data_1, tx_valid_1, tx_ready_1, rx_data_1, rx_valid_1, rx_ready_1)
-        end else begin
-            assign rx_valid_1 = 0;
-            assign tx_ready_1 = 1;
-        end
-        if(NUM_LEAVES > 1) begin
-            `CONNECT_NODE_TB(1, tx_data_2, tx_valid_2, tx_ready_2, rx_data_2, rx_valid_2, rx_ready_2)
-        end else begin
-            assign rx_valid_2 = 0;
-            assign tx_ready_2 = 1;
-        end
-        if(NUM_LEAVES > 2) begin
-            `CONNECT_NODE_TB(2, tx_data_3, tx_valid_3, tx_ready_3, rx_data_3, rx_valid_3, rx_ready_3)
-        end else begin
-            assign rx_valid_3 = 0;
-            assign tx_ready_3 = 1;
-        end
-        if(NUM_LEAVES > 3) begin
-            `CONNECT_NODE_TB(3, tx_data_4, tx_valid_4, tx_ready_4, rx_data_4, rx_valid_4, rx_ready_4)
-        end else begin
-            assign rx_valid_4 = 0;
-            assign tx_ready_4 = 1;
-        end
-    endgenerate
+        wire [63 : 0] rx_data_4;
+        wire rx_valid_4;
+        wire rx_ready_4;
 
-root_hub_core #(
-    .NUM_FPGAS(NUM_LEAVES+1),
-    .MAXIMUM_DELAY(3),
-    .CHANNEL_WIDTH(64),
-    .DEST_WIDTH(8)
-) root_hub (
-    .clk(clk),
-    .reset(reset),
+        `define CONNECT_NODE_TB(id, tx_data_i, tx_valid_i, tx_ready_i, rx_data_i, rx_valid_i, rx_ready_i) \
+            assign rx_data_i = rx_data_d[64*id+:64]; \
+            assign rx_valid_i = rx_valid_d[id]; \
+            assign rx_ready_d[id] = rx_ready_i; \
+            assign tx_data_d[64*id+:64] = tx_data_i; \
+            assign tx_valid_d[id] = tx_valid_i; \
+            assign tx_ready_i = tx_ready_d[id];
 
-    // The ports are swapped because it is the way the root_hub is instantiated in the root_hub_core_split
-    .tx_0_dout(local_rx_data),
-    .tx_0_wr_en(local_rx_valid),
-    .tx_0_full(!local_rx_ready),
+            if(NUM_LEAVES > 0) begin
+                `CONNECT_NODE_TB(0, tx_data_1, tx_valid_1, tx_ready_1, rx_data_1, rx_valid_1, rx_ready_1)
+            end else begin
+                assign rx_valid_1 = 0;
+                assign tx_ready_1 = 1;
+            end
+            if(NUM_LEAVES > 1) begin
+                `CONNECT_NODE_TB(1, tx_data_2, tx_valid_2, tx_ready_2, rx_data_2, rx_valid_2, rx_ready_2)
+            end else begin
+                assign rx_valid_2 = 0;
+                assign tx_ready_2 = 1;
+            end
+            if(NUM_LEAVES > 2) begin
+                `CONNECT_NODE_TB(2, tx_data_3, tx_valid_3, tx_ready_3, rx_data_3, rx_valid_3, rx_ready_3)
+            end else begin
+                assign rx_valid_3 = 0;
+                assign tx_ready_3 = 1;
+            end
+            if(NUM_LEAVES > 3) begin
+                `CONNECT_NODE_TB(3, tx_data_4, tx_valid_4, tx_ready_4, rx_data_4, rx_valid_4, rx_ready_4)
+            end else begin
+                assign rx_valid_4 = 0;
+                assign tx_ready_4 = 1;
+            end
 
-    .rx_0_din(local_tx_data),
-    .rx_0_empty(!local_tx_valid),
-    .rx_0_rd_en(local_tx_ready),
+        root_hub_core #(
+            .NUM_FPGAS(NUM_LEAVES+1),
+            .MAXIMUM_DELAY(3),
+            .CHANNEL_WIDTH(64),
+            .DEST_WIDTH(8)
+        ) root_hub (
+            .clk(clk),
+            .reset(reset),
 
-    .tx_1_dout(tx_data_1),
-    .tx_1_wr_en(tx_valid_1),
-    .tx_1_full(!tx_ready_1),
+            // The ports are swapped because it is the way the root_hub is instantiated in the root_hub_core_split
+            .tx_0_dout(local_rx_data),
+            .tx_0_wr_en(local_rx_valid),
+            .tx_0_full(!local_rx_ready),
 
-    .rx_1_din(rx_data_1),
-    .rx_1_empty(!rx_valid_1),
-    .rx_1_rd_en(rx_ready_1),
+            .rx_0_din(local_tx_data),
+            .rx_0_empty(!local_tx_valid),
+            .rx_0_rd_en(local_tx_ready),
 
-    .tx_2_dout(tx_data_2),
-    .tx_2_wr_en(tx_valid_2),
-    .tx_2_full(!tx_ready_2),
+            .tx_1_dout(tx_data_1),
+            .tx_1_wr_en(tx_valid_1),
+            .tx_1_full(!tx_ready_1),
 
-    .rx_2_din(rx_data_2),
-    .rx_2_empty(!rx_valid_2),
-    .rx_2_rd_en(rx_ready_2),
+            .rx_1_din(rx_data_1),
+            .rx_1_empty(!rx_valid_1),
+            .rx_1_rd_en(rx_ready_1),
 
-    .tx_3_dout(tx_data_3),
-    .tx_3_wr_en(tx_valid_3),
-    .tx_3_full(!tx_ready_3),
+            .tx_2_dout(tx_data_2),
+            .tx_2_wr_en(tx_valid_2),
+            .tx_2_full(!tx_ready_2),
 
-    .rx_3_din(rx_data_3),
-    .rx_3_empty(!rx_valid_3),
-    .rx_3_rd_en(rx_ready_3),
+            .rx_2_din(rx_data_2),
+            .rx_2_empty(!rx_valid_2),
+            .rx_2_rd_en(rx_ready_2),
 
-    .tx_4_dout(tx_data_4),
-    .tx_4_wr_en(tx_valid_4),
-    .tx_4_full(!tx_ready_4),
+            .tx_3_dout(tx_data_3),
+            .tx_3_wr_en(tx_valid_3),
+            .tx_3_full(!tx_ready_3),
 
-    .rx_4_din(rx_data_4),
-    .rx_4_empty(!rx_valid_4),
-    .rx_4_rd_en(rx_ready_4)
-);
+            .rx_3_din(rx_data_3),
+            .rx_3_empty(!rx_valid_3),
+            .rx_3_rd_en(rx_ready_3),
+
+            .tx_4_dout(tx_data_4),
+            .tx_4_wr_en(tx_valid_4),
+            .tx_4_full(!tx_ready_4),
+
+            .rx_4_din(rx_data_4),
+            .rx_4_empty(!rx_valid_4),
+            .rx_4_rd_en(rx_ready_4)
+        );
+    end else begin
+        root_hub_core_sim #(
+            .NUM_FPGAS(NUM_LEAVES+1),
+            .MAXIMUM_DELAY(3),
+            .CHANNEL_WIDTH(64),
+            .DEST_WIDTH(8)
+        ) root_hub (
+            .clk(clk),
+            .reset(reset),
+
+            // The ports are swapped because it is the way the root_hub is instantiated in the root_hub_core_split
+            .tx_0_dout(local_rx_data),
+            .tx_0_wr_en(local_rx_valid),
+            .tx_0_full(!local_rx_ready),
+
+            .rx_0_din(local_tx_data),
+            .rx_0_empty(!local_tx_valid),
+            .rx_0_rd_en(local_tx_ready),
+
+            .tx_1_dout(tx_data_d),
+            .tx_1_wr_en(tx_valid_d),
+            .tx_1_full(~tx_ready_d),
+
+            .rx_1_din(rx_data_d),
+            .rx_1_empty(~rx_valid_d),
+            .rx_1_rd_en(rx_ready_d)
+        );
+    end
+
+endgenerate
 
 endmodule
