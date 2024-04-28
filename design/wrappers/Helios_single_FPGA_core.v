@@ -1,8 +1,11 @@
+//`timescale 1ns / 10ps //siona added
+
 module Helios_single_FPGA #(
     parameter GRID_WIDTH_X = 4,
     parameter GRID_WIDTH_Z = 1,
     parameter GRID_WIDTH_U = 3,
-    parameter MAX_WEIGHT = 2
+    parameter MAX_WEIGHT = 2,
+    parameter STREAMING = 1
 ) (
     clk,
     reset,
@@ -12,7 +15,6 @@ module Helios_single_FPGA #(
     output_data,
     output_valid,
     output_ready
-
     // roots // A debug port. Do not use in the real implementation
 );
 
@@ -43,6 +45,8 @@ output [7 : 0] output_data;
 output output_valid;
 input output_ready;
 
+wire [GRID_WIDTH_Z*GRID_WIDTH_X*GRID_WIDTH_U -1: 0]output_streaming_corrected_syndrome; //new
+
 wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 
 wire [STAGE_WIDTH-1:0] global_stage;
@@ -51,12 +55,14 @@ wire [CORRECTION_COUNT_PER_ROUND - 1 : 0] correction;
 wire [PU_COUNT_PER_ROUND-1:0] measurements;
 wire [PU_COUNT - 1 : 0] odd_clusters;
 wire [PU_COUNT - 1 : 0] busy;
+wire [GRID_WIDTH_Z-1:0] top_row_measurements;
 
 single_FPGA_decoding_graph_dynamic_rsc #( 
     .GRID_WIDTH_X(GRID_WIDTH_X),
     .GRID_WIDTH_Z(GRID_WIDTH_Z),
     .GRID_WIDTH_U(GRID_WIDTH_U),
-    .MAX_WEIGHT(MAX_WEIGHT)
+    .MAX_WEIGHT(MAX_WEIGHT),
+    .STREAMING(STREAMING)
 ) decoding_graph_rsc (
     .clk(clk),
     .reset(reset),
@@ -65,15 +71,17 @@ single_FPGA_decoding_graph_dynamic_rsc #(
     .roots(roots),
     .correction(correction),
     .busy(busy),
-    .global_stage(global_stage)
-);
+    .global_stage(global_stage),
+    .output_streaming_corrected_syndrome(output_streaming_corrected_syndrome)
+    );
 
 unified_controller #( 
     .GRID_WIDTH_X(GRID_WIDTH_X),
     .GRID_WIDTH_Z(GRID_WIDTH_Z),
     .GRID_WIDTH_U(GRID_WIDTH_U),
     .ITERATION_COUNTER_WIDTH(8),
-    .MAXIMUM_DELAY(3)
+    .MAXIMUM_DELAY(3),
+    .STREAMING(STREAMING)
 ) controller (
     .clk(clk),
     .reset(reset),
