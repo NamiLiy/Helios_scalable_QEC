@@ -11,8 +11,8 @@ int max(int a, int b) {
 double normal_random(double mean, double std_dev);
 
 int main(int argc, char *argv[]) {
-    if (argc != 6) {
-        fprintf(stderr, "Usage: %s <distance> <p> <test_runs> <syndrome_filename>\n", argv[0]);
+    if (argc != 7) {
+        fprintf(stderr, "Usage: %s <distance> <p> <test_runs> <syndrome_filename> <multiplication_factor> <m_fusion>\n", argv[0]);
         return 1;
     }
 
@@ -23,11 +23,13 @@ int main(int argc, char *argv[]) {
     char *filename = argv[4];
 
     int multiplication_factor = atoi(argv[5]);
+    int m_fusion = atoi(argv[6]); //0 no fusion, 1 fusion
 
     int distance_i = (distance+1)*multiplication_factor; //This is ancillas in i direction
     int distance_j = (distance-1)/2; //This is ancillas in j direction
     int data_qubits_i = distance_i - 1;//This is data qubits in i direction
     int data_qubits_j = distance;
+    int meas_rounds = distance*(m_fusion + 1);
 
     double mean, std_dev;
     mean = p;
@@ -39,10 +41,10 @@ int main(int argc, char *argv[]) {
 
     int data_qubits = data_qubits_i*data_qubits_j;
     int m_error_per_round = distance_i*distance_j;
-    int data_errors[distance][data_qubits_i][data_qubits_j];
-    int m_errors[distance+1][distance_i][distance_j];
+    int data_errors[meas_rounds][data_qubits_i][data_qubits_j];
+    int m_errors[meas_rounds+1][distance_i][distance_j];
 
-    int syndrome [distance][distance_i][distance_j];
+    int syndrome [meas_rounds][distance_i][distance_j];
 
     int errors = 0;
     int syndrome_count = 0;
@@ -161,7 +163,7 @@ int main(int argc, char *argv[]) {
     }
 
     for (int t = 0; t < test_runs; t++) {
-        for (int k = 0; k < distance; k++) {
+        for (int k = 0; k < meas_rounds; k++) {
             double* values = next_random_values(rs);
             int count = 0;
             for (int i = 0; i < data_qubits_i; i++) {
@@ -190,7 +192,7 @@ int main(int argc, char *argv[]) {
 
         for (int i = 0; i < distance_i; i++) {
             for (int j = 0; j < distance_j; j++) {
-                m_errors[distance][i][j] = 0.0;
+                m_errors[meas_rounds][i][j] = 0.0;
             }
         }
 
@@ -214,7 +216,7 @@ int main(int argc, char *argv[]) {
         //     printf("\n");
         // }
 
-        for (int k = 0; k < distance; k++) {
+        for (int k = 0; k < meas_rounds; k++) {
             for (int i = 0; i < distance_i; i++) {
                 for (int j = 0; j < distance_j; j++) {
                     if(i==0){
@@ -230,13 +232,14 @@ int main(int argc, char *argv[]) {
                     }
                     if(syndrome[k][i][j] == 1) {
                         syndrome_count++;
+                        // printf("Syndrome at %d %d %d\n", k, i, j);
                     }
                 }
             }
         }
 
         fprintf(out_fp, "%08X\n", t+1);
-        for (int k = 0; k < distance; k++) {
+        for (int k = 0; k < meas_rounds; k++) {
             for (int i = 0; i < distance_i; i++) {
                 for (int j = 0; j < distance_j; j++) {
                     fprintf(out_fp, "%08X\n", syndrome[k][i][j]);
