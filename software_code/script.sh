@@ -1,8 +1,8 @@
 #!/bin/bash
 
-distance=5
-p=0.00001
-test_runs=1
+distance=21
+p=0.001
+test_runs=1000
 num_fpgas=1 #only the leaves
 multi_fpga_mode=0
 measurement_fusion=1
@@ -38,9 +38,10 @@ if [ $multi_fpga_mode -eq 0 ]; then
             # # Copy files to new '_unmodified' paths
             # cp "$input_file" "$input_file_unmodified"
             # cp "$output_file" "$output_file_unmodified"
+            num_contexts=$num_contexts+1
             
             sleep 1
-            ./cf $distance $input_file_unmodified $input_file $output_file_unmodified $output_file
+            ./cf $distance $num_contexts $input_file_unmodified $input_file $output_file_unmodified $output_file
             sleep 1
         fi
     done

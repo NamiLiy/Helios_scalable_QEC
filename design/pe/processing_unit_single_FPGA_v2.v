@@ -177,6 +177,9 @@ always@(posedge clk) begin
         end else if(stage == STAGE_WRITE_TO_MEM) begin
             root <= root_mem;
             parent_vector <= parent_vector_mem;
+        end else if (stage == STAGE_RESET_ROOTS) begin
+            root <= input_address;
+            parent_vector <= 0;
         end
     end
 end

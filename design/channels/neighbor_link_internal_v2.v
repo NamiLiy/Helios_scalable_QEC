@@ -34,7 +34,9 @@ module neighbor_link_internal #(
 
     weight_out,
     boundary_condition_out,
-    do_not_store
+    do_not_store,
+
+    reset_edge
 );
 
 `include "../../parameters/parameters.sv"
@@ -65,6 +67,8 @@ input [LINK_BIT_WIDTH-1:0] weight_in;
 input [1:0] boundary_condition_in;
 input is_error_systolic_in;
 input do_not_store;
+
+input reset_edge;
 
 output reg [LINK_BIT_WIDTH-1:0] weight_out;
 output reg [1:0] boundary_condition_out;
@@ -113,7 +117,7 @@ always@(posedge clk) begin
     if(reset) begin
         growth <= 0;
     end else begin
-        if(stage == STAGE_MEASUREMENT_LOADING) begin
+        if(reset_edge) begin
                 growth <= 0;
         end else if(stage == STAGE_WRITE_TO_MEM) begin
             growth <= growth_mem;
@@ -130,7 +134,7 @@ always@(posedge clk) begin
         is_error <= is_error_mem;
     end else begin
         if (boundary_condition_out == 0)  begin // No boundary default case 
-            if(stage == STAGE_MEASUREMENT_LOADING) begin
+            if(reset_edge) begin
                 is_error <= 0;
             end else if(stage == STAGE_RESULT_VALID) begin
                 is_error <= is_error_systolic_in;
@@ -138,7 +142,7 @@ always@(posedge clk) begin
                 is_error <= a_is_error_in | b_is_error_in;
             end
         end else if (boundary_condition_out == 1) begin // edge touching a boundary
-            if(stage == STAGE_MEASUREMENT_LOADING) begin
+            if(reset_edge) begin
                 is_error <= 0;
             end else if(stage == STAGE_RESULT_VALID) begin
                 is_error <= is_error_systolic_in;

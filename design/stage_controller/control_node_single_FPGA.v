@@ -36,7 +36,9 @@ module unified_controller #(
 
     router_busy,
     border_continous,
-    FPGA_ID
+    FPGA_ID,
+    measurement_fusion,
+    reset_all_edges
 );
 
 `include "../../parameters/parameters.sv"
@@ -102,10 +104,13 @@ input output_ctrl_tx_ready;
 input router_busy;
 output reg [1:0] border_continous;
 input [7:0] FPGA_ID;
+output reg measurement_fusion;
+output reg reset_all_edges;
 
 reg result_valid;
 reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
 reg [31:0] cycle_counter;
+reg [31:0] lower_half_counter;
 
 reg busy;
 reg odd_clusters;
@@ -153,7 +158,7 @@ always @(posedge clk) begin
         cycle_counter <= 0;
     end else begin
         if(cycle_counter_reset) begin
-            cycle_counter <= 2; // to account for propagation time from controller to PEs 
+            cycle_counter <= 1; // By setting counter to 1 in a given cycle, we can ensure that the cycle counter always display the current cycle count instead of cycles elapsed. 
         end else if(cycle_counter_on) begin
             cycle_counter <= cycle_counter + 1;
         end
@@ -168,6 +173,28 @@ always @(posedge clk) begin
     end
 end
 
+always@(*) begin
+    if(global_stage == STAGE_GROW || global_stage == STAGE_MERGE || global_stage == STAGE_PEELING || global_stage == STAGE_RESET_ROOTS) begin
+        cycle_counter_on = 1;
+    end else if(global_stage == STAGE_WRITE_TO_MEM) begin
+        if(global_stage_saved == STAGE_GROW || global_stage_saved == STAGE_MERGE || global_stage_saved == STAGE_PEELING || global_stage_saved == STAGE_RESET_ROOTS) begin
+            cycle_counter_on = 1;
+        end else begin
+            cycle_counter_on = 0;
+        end
+    end else begin
+        cycle_counter_on = 0;
+    end
+end
+
+always@(*) begin
+    if(global_stage == STAGE_IDLE && input_ctrl_rx_valid && input_ctrl_rx_ready && input_ctrl_rx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == MEASUREMENT_DATA_HEADER && input_ctrl_rx_data [0] == 1'b0) begin // The last 0 is to ensure only to set it in the first stage
+        cycle_counter_reset = 1;
+    end else begin
+        cycle_counter_reset = 0;
+    end
+end
+
 always @(posedge clk) begin
     if (reset) begin
         iteration_counter <= 0;
@@ -177,6 +204,14 @@ always @(posedge clk) begin
         end else if (global_stage == STAGE_GROW && global_stage_previous != STAGE_GROW) begin
             iteration_counter <= iteration_counter + 1;
         end
+    end
+end
+
+always@(*) begin
+    if(measurement_fusion_stage == 2'b10) begin
+        measurement_fusion = 1;
+    end else begin
+        measurement_fusion = 0;
     end
 end
 
@@ -198,6 +233,22 @@ reg [NUM_CONTEXTS -1 : 0] unsynced_merge;
 reg [NUM_CONTEXTS -1 : 0] odd_clusters_in_context;
 localparam CONTEXT_COUNTER_WIDTH = $clog2(NUM_CONTEXTS + 1);
 
+reg measurement_fusion_on;
+reg [1:0] measurement_fusion_stage; // 0 : First block, 1 : Second block, 3 : Merged block
+
+reg fusion_on;
+always@(*) begin
+    if (reset) begin
+        fusion_on = 0;
+    end else begin
+        if(NUM_CONTEXTS > 1 && (measurement_fusion_on==0 || (measurement_fusion_on == 1'b1 && measurement_fusion_stage == 2'b10))) begin
+            fusion_on = 1;
+        end else begin
+            fusion_on = 0;
+        end
+    end
+end
+
 
 reg growing_incomplete; //Todo : In an optimized version use this. For the current version I'm not using it.
 
@@ -209,10 +260,10 @@ always @(posedge clk) begin
         delay_counter <= 0;
         result_valid <= 0;
         growing_incomplete <= 0;
-        cycle_counter_on <= 0;
-        cycle_counter_reset <= 0;
         multi_fpga_mode <= 0;
         border_continous <= 2'b0;
+        measurement_fusion_on <= 0;
+        measurement_fusion_stage <= 0;
     end else begin
         case (global_stage)
             STAGE_IDLE: begin // 0
@@ -222,6 +273,8 @@ always @(posedge clk) begin
                         delay_counter <= 0;
                         result_valid <= 0;
                         multi_fpga_mode <= input_ctrl_rx_data [0];
+                        measurement_fusion_on <= input_ctrl_rx_data [1];
+                        current_context <= 0; 
                         if(input_ctrl_rx_data[0] == 1'b1) begin
                             if(FPGA_ID != 1) begin
                                 border_continous[0] <= 1'b1;
@@ -232,6 +285,8 @@ always @(posedge clk) begin
                         end
                     end else if(input_ctrl_rx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == MEASUREMENT_DATA_HEADER) begin
                         global_stage <= STAGE_MEASUREMENT_PREPARING;
+                        measurement_fusion_stage <= input_ctrl_rx_data [0];
+                        current_context <= input_ctrl_rx_data [0];
                         delay_counter <= 0;
                         result_valid <= 0;
                         measurement_rounds <= 0;
@@ -241,9 +296,6 @@ always @(posedge clk) begin
                         result_valid <= 0;
                     end
                 end
-                current_context <= 0; 
-                cycle_counter_on <= 0;
-                cycle_counter_reset <= 0;
             end
 
             STAGE_PARAMETERS_LOADING: begin // 6
@@ -282,27 +334,30 @@ always @(posedge clk) begin
                 end else begin
                     global_stage_saved <= STAGE_MEASUREMENT_LOADING;
                     if(multi_fpga_mode == 1'b0) begin
-                        global_stage <= (NUM_CONTEXTS == 1 ? STAGE_GROW : STAGE_WRITE_TO_MEM);
+                        if(!fusion_on) begin
+                            global_stage <= STAGE_GROW;
+                        end else begin
+                            global_stage <= STAGE_WRITE_TO_MEM;
+                        end
                     end else begin
                         global_stage <= STAGE_IDLE;
                     end
                     measurement_rounds <= 0;
                     delay_counter <= 0;
                     result_valid <= 0;
-                    if(NUM_CONTEXTS == 1) begin
-                        cycle_counter_on <= 1;
-                        cycle_counter_reset <= 1;
-                    end
                 end
             end
 
             STAGE_GROW: begin //2
-                global_stage <= (NUM_CONTEXTS == 1 ? STAGE_MERGE : STAGE_WRITE_TO_MEM);
+                if(!fusion_on) begin
+                    global_stage <= STAGE_MERGE;
+                end else begin
+                    global_stage <= STAGE_WRITE_TO_MEM;
+                end
                 global_stage_saved <= STAGE_GROW;
                 delay_counter <= 0;
                 measurement_rounds <= 0;
                 growing_incomplete <= 1;
-                cycle_counter_reset <= 0;
             end
 
             STAGE_MERGE: begin //3
@@ -316,14 +371,24 @@ always @(posedge clk) begin
                                 end else begin // somebody is odd
                                     global_stage <= STAGE_GROW;
                                 end
+                            end else if(measurement_fusion_on && (measurement_fusion_stage == 2'b00 || measurement_fusion_stage == 2'b01)) begin
+                                if(|odd_clusters == 1'b0) begin // everybody is even
+                                    global_stage <= STAGE_WRITE_TO_MEM;
+                                end else begin // somebody is odd
+                                    global_stage <= STAGE_GROW;
+                                end
                             end else begin
                                 global_stage <= STAGE_WRITE_TO_MEM;
                             end
                             global_stage_saved <= STAGE_MERGE;
-                            odd_clusters_in_context[current_context] <= odd_clusters;  
+                            if(fusion_on) begin
+                                odd_clusters_in_context[current_context] <= odd_clusters;
+                            end  
                         end
                         if(border_busy) begin
-                            unsynced_merge[current_context] <= 1'b1;
+                            if(fusion_on) begin
+                                unsynced_merge[current_context] <= 1'b1;
+                            end
                         end
                     end else begin
                         if (input_ctrl_rx_valid && input_ctrl_rx_ready && input_ctrl_rx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == MOVE_TO_STAGE) begin
@@ -357,15 +422,18 @@ always @(posedge clk) begin
                     end
                     measurement_rounds <= 0;
                 end
-                if(NUM_CONTEXTS == 1) begin
-                    cycle_counter_on <= 0;
-                end
                 delay_counter <= 0;
                 result_valid <= 1;
             end
 
+            STAGE_RESET_ROOTS: begin //8
+                global_stage <= STAGE_WRITE_TO_MEM;
+                global_stage_saved <= STAGE_RESET_ROOTS;
+            end
+
             STAGE_WRITE_TO_MEM: begin //1
-                    if(current_context < NUM_CONTEXTS -1 ) begin
+                if(fusion_on) begin
+                    if(current_context < NUM_CONTEXTS -1) begin
                         if(global_stage_saved == STAGE_MERGE) begin
                             // if(growing_incomplete == 1'b1) begin
                             //     global_stage <= STAGE_GROW;
@@ -381,6 +449,8 @@ always @(posedge clk) begin
                             global_stage <= STAGE_RESULT_VALID;
                         end else if(global_stage_saved == STAGE_GROW) begin
                             global_stage <= STAGE_GROW;
+                        end else if(global_stage_saved == STAGE_RESET_ROOTS) begin
+                            global_stage <= STAGE_RESET_ROOTS;
                         end
                         current_context <= current_context + 1;
                     end else begin
@@ -398,26 +468,52 @@ always @(posedge clk) begin
                             end
                         end else if(global_stage_saved == STAGE_MEASUREMENT_LOADING) begin
                             global_stage <= STAGE_GROW;
-                            cycle_counter_on <= 1;
-                            cycle_counter_reset <= 1;
                         end else if(global_stage_saved == STAGE_PEELING) begin
                             global_stage <= STAGE_RESULT_VALID;
-                            cycle_counter_on <= 0;
                         end else if(global_stage_saved == STAGE_RESULT_VALID) begin
                             global_stage <= STAGE_IDLE;
                         end else if(global_stage_saved == STAGE_GROW) begin
+                            global_stage <= STAGE_MERGE;
+                        end else if(global_stage_saved == STAGE_RESET_ROOTS) begin
                             global_stage <= STAGE_MERGE;
                         end
                     end
                 // end else begin
                     delay_counter <= 0;
                 // end
+                end else begin
+                    if(measurement_fusion_stage == 2'b00) begin
+                        if(global_stage_saved == STAGE_MERGE) begin
+                            global_stage <= STAGE_IDLE;
+                            lower_half_counter <= cycle_counter;
+                            current_context <= current_context + 1;
+                        end
+                    end else if(measurement_fusion_stage == 2'b01) begin
+                        if(global_stage_saved == STAGE_MERGE) begin
+                            global_stage <= STAGE_RESET_ROOTS;
+                            measurement_fusion_stage <= 2'b10;
+                            current_context <= 0;
+                        end
+                    end
+                end
             end
             
             default: begin
                 global_stage <= STAGE_IDLE;
             end
         endcase
+    end
+end
+
+always@(*) begin
+    if(global_stage == STAGE_MEASUREMENT_LOADING) begin
+        if(measurement_fusion_on && measurement_fusion_stage != 2'b0) begin
+            reset_all_edges = 0;
+        end else begin
+            reset_all_edges = 1;
+        end
+    end else begin
+        reset_all_edges = 0;
     end
 end
 
@@ -465,16 +561,16 @@ always@(*) begin
     end
 end
 
-reg send_results;
+reg result_is_send;
 
 always@(posedge clk) begin
     if (reset) begin
-        send_results <= 0;
+        result_is_send <= 0;
     end else begin
-        if(global_stage == STAGE_RESULT_VALID) begin
-            send_results <= 1;
-        end else begin
-            send_results <= 0;
+        if(global_stage == STAGE_RESULT_VALID && current_context == 0) begin
+            result_is_send <= 1;
+        end else if(global_stage == STAGE_IDLE) begin
+            result_is_send <= 0;
         end
     end
 end
@@ -487,9 +583,13 @@ always@(*) begin
         output_ctrl_tx_valid = 0;
     end else begin
         if(multi_fpga_mode == 1'b0) begin
-            if(global_stage == STAGE_RESULT_VALID && send_results == 0) begin
+            if(global_stage == STAGE_RESULT_VALID && result_is_send == 0) begin
                 output_ctrl_tx_valid = 1;
-                output_ctrl_tx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] = iteration_counter;
+                if(measurement_fusion_on) begin
+                    output_ctrl_tx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] = lower_half_counter[7:0];
+                end else begin
+                    output_ctrl_tx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] = iteration_counter;
+                end
                 output_ctrl_tx_data [CTRL_MSG_MSB - 8 : CTRL_MSG_MSB - 23] = cycle_counter;
             end
         end else begin
@@ -512,7 +612,7 @@ end
 // FIFO
 fifo_wrapper #(
     .WIDTH(CORRECTION_COUNT_PER_ROUND),
-    .DEPTH(32)
+    .DEPTH(128)
 ) output_fifo (
     .clk(clk),
     .reset(reset),
@@ -561,7 +661,7 @@ end
 always@(*) begin
     case(output_message_counter)
         0: begin
-            output_data = iteration_counter;
+            output_data = lower_half_counter[7:0];
             output_valid = output_valid_d2;
             output_ready_d2 = 0;
         end

@@ -30,6 +30,8 @@ module neighbor_link_external #(
 
     b_init_address,
 
+    reset_edge,
+
     fifo_output_data,
     fifo_output_valid,
     fifo_output_ready,
@@ -77,6 +79,7 @@ input fifo_input_valid;
 output fifo_input_ready;
 
 input [ADDRESS_WIDTH-1:0] b_init_address;
+input reset_edge;
 
 reg [STAGE_WIDTH-1:0] stage;
 reg [STAGE_WIDTH-1:0] last_stage;
@@ -196,7 +199,8 @@ neighbor_link_internal #(
         .do_not_store(local_context_switch), 
         .boundary_condition_in(boundary_condition_to_internal), 
         .boundary_condition_out(boundary_condition_out),
-        .is_error_systolic_in(is_error_systolic_in)
+        .is_error_systolic_in(is_error_systolic_in),
+        .reset_edge(reset_edge)
 );
 
 

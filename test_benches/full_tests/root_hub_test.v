@@ -3,6 +3,7 @@ module root_hub_test #(
     parameter NUM_LEAVES = 1,
     parameter MAX_COUNT = 1000,
     parameter MULTI_FPGA_RUN = 0,
+    parameter MEASUREMENT_FUSION = 0,
     parameter ROUTER_DELAY = 3
 ) (
     clk,
@@ -71,6 +72,8 @@ localparam MEASUREMENT_DATA = 4'd2;
 localparam WAIT_FOR_RESULT = 4'd3;
 
 reg multi_fpga_run;
+reg measurement_fusion_on;
+reg measurement_fusion_stage;
 
 
 always@(posedge clk) begin
@@ -79,6 +82,8 @@ always@(posedge clk) begin
         count <= 0;
         fpga_count <= 0;
         multi_fpga_run <= MULTI_FPGA_RUN;
+        measurement_fusion_on <= MEASUREMENT_FUSION;
+        measurement_fusion_stage <= 0; // 0 is bottom // 1 is top
     end else begin
         case(root_hub_state)
             IDLE: begin //Send the start decoding msg
@@ -86,6 +91,7 @@ always@(posedge clk) begin
                     root_hub_state <= START_DECODING;
                     fpga_count <= 0;
                     count <= count + 1;
+                    measurement_fusion_stage <= 0;
                     // this is just a fun workaround
                     // if(count >= MAX_COUNT/3 && count < 2*MAX_COUNT/3) begin
                     //     multi_fpga_run <= 1;
@@ -101,13 +107,22 @@ always@(posedge clk) begin
             end
             MEASUREMENT_DATA: begin // Measurement data
                 if(local_tx_ready_d) begin
-                    root_hub_state <= WAIT_FOR_RESULT;
+                    if(measurement_fusion_on == 1) begin
+                        if(measurement_fusion_stage == 0) begin
+                            measurement_fusion_stage <= 1;
+                        end else begin
+                            measurement_fusion_stage <= 0;
+                            root_hub_state <= WAIT_FOR_RESULT;
+                        end
+                    end else begin
+                        root_hub_state <= WAIT_FOR_RESULT;
+                    end
                 end
             end
             WAIT_FOR_RESULT: begin // Wait for the result
                 if(local_rx_valid_d) begin
                     fpga_count <= fpga_count + 1;
-                    $display("%t\tID = %d Test case  = %d, %d cycles %d iterations", $time, 0, count, local_rx_data_d[39:24], local_rx_data_d[47:40]);
+                    // $display("%t\tID = %d Test case  = %d, %d cycles %d iterations", $time, 0, count, local_rx_data_d[39:24], local_rx_data_d[47:40]);
                     if(multi_fpga_run == 1'b0) begin
                         if(fpga_count == NUM_LEAVES - 1) begin
                             root_hub_state <= IDLE;
@@ -129,12 +144,12 @@ always@(*) begin
             local_rx_ready_d = 0;
         end
         START_DECODING: begin
-            local_tx_data_d = {8'hff, 8'hff, START_DECODING_MSG, 8'b0, 8'b0, 8'b0, 8'b0, 7'b0, multi_fpga_run};
+            local_tx_data_d = {8'hff, 8'hff, START_DECODING_MSG, 8'b0, 8'b0, 8'b0, 8'b0, 6'b0, measurement_fusion_on, multi_fpga_run};
             local_tx_valid_d = 1;
             local_rx_ready_d = 0;
         end
         MEASUREMENT_DATA: begin
-            local_tx_data_d = {8'hff, 8'hff, MEASUREMENT_DATA_HEADER, 8'b0, 8'b0, 8'b0, 8'b0, 8'b0};
+            local_tx_data_d = {8'hff, 8'hff, MEASUREMENT_DATA_HEADER, 8'b0, 8'b0, 8'b0, 8'b0, 7'b0, measurement_fusion_stage};
             local_tx_valid_d = 1;
             local_rx_ready_d = 0;
         end

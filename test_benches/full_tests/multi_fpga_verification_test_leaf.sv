@@ -15,7 +15,8 @@ module verification_bench_leaf#(
     parameter CODE_DISTANCE = 5,
     parameter NUM_FPGAS = 2,
     parameter ROUTER_DELAY = 18,
-    parameter FPGA_ID = 1
+    parameter FPGA_ID = 1,
+    parameter NUM_CONTEXTS = 1
 )(
     input clk,
     input reset,
@@ -34,11 +35,10 @@ module verification_bench_leaf#(
                
 localparam CODE_DISTANCE_X = CODE_DISTANCE + 1;
 localparam CODE_DISTANCE_Z = (CODE_DISTANCE_X - 1)/2;
-localparam NUM_CONTEXTS = 1;
 
 parameter GRID_WIDTH_X = CODE_DISTANCE + 1;
 parameter GRID_WIDTH_Z = (CODE_DISTANCE_X - 1)/2;
-parameter GRID_WIDTH_U = CODE_DISTANCE;
+parameter GRID_WIDTH_U = 2*CODE_DISTANCE;
 localparam PHYSICAL_GRID_WIDTH_U = (GRID_WIDTH_U % NUM_CONTEXTS == 0) ? 
                                    (GRID_WIDTH_U / NUM_CONTEXTS) : 
                                    (GRID_WIDTH_U / NUM_CONTEXTS + 1);
@@ -334,13 +334,13 @@ always @(posedge clk) begin
                         expected_fpga = read_value[FPGA_BIT_WIDTH - 1 + 24 :24];
                         eof = $feof(file);
                         
-                        context_k = k;
+                        // context_k = k;
                         // These logic are for multi context verification
-//                        if(decoder.controller.current_context % 2 == 1) begin
-//                            context_k = decoder.controller.current_context*PHYSICAL_GRID_WIDTH_U + PHYSICAL_GRID_WIDTH_U - k - 1;
-//                        end else begin
-//                            context_k = decoder.controller.current_context*PHYSICAL_GRID_WIDTH_U  + k;
-//                        end
+                        if(decoder.controller.current_context % 2 == 1) begin
+                            context_k = decoder.controller.current_context*PHYSICAL_GRID_WIDTH_U + PHYSICAL_GRID_WIDTH_U - k - 1;
+                        end else begin
+                            context_k = decoder.controller.current_context*PHYSICAL_GRID_WIDTH_U  + k;
+                        end
 //                        if(decoder.controller.current_context == NUM_CONTEXTS - 1 && expected_u == 0 && expected_x==0 && expected_z==0) begin //hack for d=7,11
 //                            continue;
                         //end else begin
@@ -364,7 +364,7 @@ always @(posedge clk) begin
     end
     if (message_counter == 3 && output_valid == 1 && completed == 0) begin // Cycle counter and iteration counter is recevied
         if (!test_fail) begin
-            // $display("%t\tID  = %d Test case  = %d, %d pass %d cycles %d iterations %d syndromes", $time, FPGA_ID, test_case, pass_count, cycle_counter, iteration_counter, syndrome_count);
+            $display("%t\tID  = %d Test case  = %d, %d pass %d cycles %d first round %d syndromes", $time, FPGA_ID, test_case, pass_count, cycle_counter, iteration_counter, syndrome_count);
             pass_count = pass_count + 1;
         end else begin
             $display("%t\tID  = %d Test case  = %d, %d fail %d cycles %d iterations %d syndromes", $time, FPGA_ID, test_case, fail_count, cycle_counter, iteration_counter, syndrome_count);

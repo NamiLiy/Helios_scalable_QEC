@@ -111,6 +111,8 @@ wire controller_to_handler_ready;
 wire [1:0] border_continous;
 
 wire router_busy;
+wire measurement_fusion;
+wire reset_all_edges;
 
 single_FPGA_decoding_graph_dynamic_rsc #( 
     .GRID_WIDTH_X(GRID_WIDTH_X),
@@ -135,7 +137,9 @@ single_FPGA_decoding_graph_dynamic_rsc #(
     .border_input_data(border_input_data),
     .border_input_valid(border_input_valid),
     .border_input_ready(border_input_ready),
-    .border_continous(border_continous)
+    .border_continous(border_continous),
+    .measurement_fusion(measurement_fusion),
+    .reset_all_edges(reset_all_edges)
 );
 
 unified_controller #( 
@@ -169,7 +173,9 @@ unified_controller #(
     .correction(correction),
     .router_busy(router_busy),
     .border_continous(border_continous),
-    .FPGA_ID(FPGA_ID)
+    .FPGA_ID(FPGA_ID),
+    .measurement_fusion(measurement_fusion),
+    .reset_all_edges(reset_all_edges)
 );
 
 message_handler #(

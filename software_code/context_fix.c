@@ -3,17 +3,20 @@
 #include <math.h>
 #include <time.h>
 
-#define D 5
-#define TOTAL_MEASUREMENTS D*2
-#define NUM_CONTEXTS 2
+#define D 100
 #define fpga_id 1
 
-#define distance_per_context ((TOTAL_MEASUREMENTS + NUM_CONTEXTS - 1)/NUM_CONTEXTS)
-#define rounded_distance (distance_per_context*NUM_CONTEXTS)
+int distance;
+int total_measurements;
+int num_contexts;
+int distance_per_context;
+int rounded_distance;
 
 
 
-int loadFileData(FILE* file, int (*array)[rounded_distance][D+1][(D-1)/2]) {
+
+int loadFileData(FILE* file, int (*array)[D][D+1][(D-1)/2]) {
+
     int test_id;
     if (fscanf(file, "%x", &test_id) != 1) {
         printf("Error reading file. No more test cases.\n");
@@ -21,15 +24,15 @@ int loadFileData(FILE* file, int (*array)[rounded_distance][D+1][(D-1)/2]) {
         return -1;
     }
     for(int k=0;k<rounded_distance;k++){
-        for(int i=0; i< D + 1;i++){
-            for(int j=0; j< (D-1)/2;j++){
+        for(int i=0; i< distance + 1;i++){
+            for(int j=0; j< (distance-1)/2;j++){
                 (*array)[k][i][j] = 0;
             }
         }
     }
-    for(int k=0;k<TOTAL_MEASUREMENTS; k++){
-        for(int i=0; i< D + 1;i++){
-            for(int j=0; j< (D-1)/2;j++){
+    for(int k=0;k<total_measurements; k++){
+        for(int i=0; i< distance + 1;i++){
+            for(int j=0; j< (distance-1)/2;j++){
                 int value;
                 if (fscanf(file, "%x", &value) != 1) {
                     printf("Error reading file.\n");
@@ -49,54 +52,54 @@ int loadFileData(FILE* file, int (*array)[rounded_distance][D+1][(D-1)/2]) {
     return test_id;
 }
 
-int print_output(FILE* file, int (*array)[rounded_distance][D+1][(D-1)/2], int test, int flag) {
+int print_output(FILE* file, int (*array)[D][D+1][(D-1)/2], int test, int flag) {
 
     fprintf(file, "%08X\n", test);
 
-#if NUM_CONTEXTS == 2
-    for(int k=0;k<(TOTAL_MEASUREMENTS/2);k++){
-        for(int i=0; i< D + 1;i++){
-            for(int j=0; j< (D-1)/2;j++){
-                fprintf(file, "00%06X\n", (*array)[k][i][j]);
+    if(num_contexts <= 2){
+        for(int k=0;k<(total_measurements/2);k++){
+            for(int i=0; i< distance + 1;i++){
+                for(int j=0; j< (distance-1)/2;j++){
+                    fprintf(file, "00%06X\n", (*array)[k][i][j]);
+                }
             }
         }
-    }
-    for(int k=TOTAL_MEASUREMENTS-1;k>=(TOTAL_MEASUREMENTS/2);k--){
-        for(int i=0; i< D + 1;i++){
-            for(int j=0; j< (D-1)/2;j++){
-                fprintf(file, "00%06X\n", (*array)[k][i][j]);
+        for(int k=total_measurements-1;k>=(total_measurements/2);k--){
+            for(int i=0; i< distance + 1;i++){
+                for(int j=0; j< (distance-1)/2;j++){
+                    fprintf(file, "00%06X\n", (*array)[k][i][j]);
+                }
             }
         }
-    }
-#endif
-#if NUM_CONTEXTS > 2
     
-    for(int l=0;l<NUM_CONTEXTS;l++){
-		if(l%2==0) {
-            for(int k=0;k< distance_per_context;k++){
-                for(int i=0; i< D + 1;i++){
-                    for(int j=0; j< (D-1)/2;j++){
-                        if(flag)
-                            fprintf(file, "01%06X\n", (*array)[l*distance_per_context + k][i][j]);
-                        else
-                            fprintf(file, "00%06X\n", (*array)[l*distance_per_context + k][i][j]);
+    }else {
+    
+        for(int l=0;l<num_contexts;l++){
+            if(l%2==0) {
+                for(int k=0;k< distance_per_context;k++){
+                    for(int i=0; i< distance + 1;i++){
+                        for(int j=0; j< (distance-1)/2;j++){
+                            if(flag)
+                                fprintf(file, "01%06X\n", (*array)[l*distance_per_context + k][i][j]);
+                            else
+                                fprintf(file, "00%06X\n", (*array)[l*distance_per_context + k][i][j]);
+                        }
                     }
                 }
-            }
-        } else{
-            for(int k=distance_per_context-1; k>=0; k--){
-                for(int i=0; i< D + 1;i++){
-                    for(int j=0; j< (D-1)/2;j++){
-                        if(flag)
-                            fprintf(file, "01%06X\n", (*array)[l*distance_per_context + k][i][j]);
-                        else
-                            fprintf(file, "00%06X\n", (*array)[l*distance_per_context + k][i][j]);
+            } else{
+                for(int k=distance_per_context-1; k>=0; k--){
+                    for(int i=0; i< distance + 1;i++){
+                        for(int j=0; j< (distance-1)/2;j++){
+                            if(flag)
+                                fprintf(file, "01%06X\n", (*array)[l*distance_per_context + k][i][j]);
+                            else
+                                fprintf(file, "00%06X\n", (*array)[l*distance_per_context + k][i][j]);
+                        }
                     }
                 }
             }
         }
     }
-#endif
 
     return 0;
 }
@@ -105,9 +108,9 @@ int print_detailed_output(FILE* file, int (*array)[rounded_distance][D+1][(D-1)/
 
     fprintf(file, "Test id %d\n", test);
 
-    for(int k=0;k<TOTAL_MEASUREMENTS;k++){
-        for(int i=0; i< D + 1;i++){
-            for(int j=0; j< (D-1)/2;j++){
+    for(int k=0;k<total_measurements;k++){
+        for(int i=0; i< distance + 1;i++){
+            for(int j=0; j< (distance-1)/2;j++){
                 if ((*array)[k][i][j] == 1) {
                     fprintf(file, "k = %d i = %d j = %d\n", k, i, j);
                 }
@@ -121,7 +124,6 @@ int print_detailed_output(FILE* file, int (*array)[rounded_distance][D+1][(D-1)/
 
 int input_handle(FILE* file, FILE* file_op){
     // load syndrome
-    int distance = D;
     // char filename[100];
     // // sprintf(filename, "../test_benches/test_data/input_data_%d_rsc.txt", distance);
     // sprintf(filename, "sample_out.csv");
@@ -165,7 +167,6 @@ int input_handle(FILE* file, FILE* file_op){
 
 int output_handle(FILE* file, FILE* file_op){
     // load syndrome
-    int distance = D;
     // char filename[100];
     // sprintf(filename, "../test_benches/test_data/output_data_%d_rsc.txt", distance);
     // FILE* file = fopen(filename, "r");
@@ -197,19 +198,23 @@ int output_handle(FILE* file, FILE* file_op){
 
 int main(int argc, char *argv[]) {
 
-    if (argc != 6) {
-        printf("Usage: %s <distance> <input_filename_original> <input_filename_modified> <output_filename_original> <output_filename_modified>\n", argv[0]);
+    if (argc != 7) {
+        printf("Usage: %s <distance> ,<contexts>, <input_filename_original> <input_filename_modified> <output_filename_original> <output_filename_modified>\n", argv[0]);
         return 1;
     }
 
     // Convert first argument to integer for distance
-    int d = atoi(argv[1]);
+    distance = atoi(argv[1]);
+    total_measurements = 2*distance;
+    num_contexts = atoi(argv[2]);
+    distance_per_context = ((total_measurements + num_contexts - 1)/num_contexts);
+    rounded_distance = distance_per_context*num_contexts;
     
     // The second and third arguments are file names
-    char *input_filename_original = argv[2];
-    char *input_filename_modified = argv[3];
-    char *output_filename_original = argv[4];
-    char *output_filename_modified = argv[5];
+    char *input_filename_original = argv[3];
+    char *input_filename_modified = argv[4];
+    char *output_filename_original = argv[5];
+    char *output_filename_modified = argv[6];
 
     // Open the original input file
     FILE* file_input_original = fopen(input_filename_original, "r");

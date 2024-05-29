@@ -64,6 +64,7 @@ reg busy;
 reg odd_clusters;
 
 reg multi_fpga_mode;
+reg measurement_fusion_on;
 
 reg cycle_counter_on;
 reg cycle_counter_reset;
@@ -101,15 +102,21 @@ always @(posedge clk) begin
         cycle_counter_on <= 0;
         cycle_counter_reset <= 0;
         multi_fpga_mode <= 0;
+        measurement_fusion_on <= 0;
     end else begin
         case (global_stage)
             STAGE_IDLE: begin // 0
                 if (valid_from_cpu && ready_to_fpgas) begin
                     if(data_from_cpu [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == START_DECODING_MSG) begin
                         multi_fpga_mode <= data_from_cpu [0];
+                        measurement_fusion_on <= data_from_cpu [1];
                     end else if(data_from_cpu [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == MEASUREMENT_DATA_HEADER) begin
                         if(multi_fpga_mode) begin
                             global_stage <= STAGE_MEASUREMENT_LOADING; // This is to wait reasonable time to load the data
+                        end else if(measurement_fusion_on) begin
+                            if(data_from_cpu[1:0] == 2'b01) begin
+                                global_stage <= STAGE_RESULT_VALID; // The root controller does nothing in single FPGA mode
+                            end
                         end else begin
                             global_stage <= STAGE_RESULT_VALID; // The root controller does nothing in single FPGA mode
                         end
@@ -127,7 +134,7 @@ always @(posedge clk) begin
 
             STAGE_MEASUREMENT_LOADING: begin
                 // We come to this state only in multi-FPGA mode
-                if(delay_counter < 50) begin
+                if(delay_counter < 200) begin
                     delay_counter <= delay_counter + 1;
                 end else begin
                     delay_counter <= 0;

@@ -42,7 +42,7 @@ int max(int a, int b) {
 
 struct Node node_array[D][D+1][(D-1)/2];
 struct Edge hor_edges[D][D][D];
-struct Edge ver_edges[D][D+1][(D-1)/2];
+struct Edge ver_edges[D+1][D+1][(D-1)/2];
 
 struct Address get_root(struct Address a){
     if(node_array[a.k][a.i][a.j].id.k == node_array[a.k][a.i][a.j].root.k &&
@@ -115,20 +115,24 @@ int grow(int k, int i, int j, int direction){ //fusion_direction 0 is no fusion,
             }
         }
     } else {
+        if(k==10){
+            printf("Growth called %d %d %d %d %d\n", k, i, j, ver_edges[k][i][j].is_boundary, get_parity(ver_edges[k][i][j].a) );
+        }
         if(ver_edges[k][i][j].is_boundary == 1){
             int is_odd = get_parity(ver_edges[k][i][j].a);
             if (is_odd && ver_edges[k][i][j].growth < 2) {
-                printf("Growth called %d %d %d %d\n", ver_edges[k][i][j].a.k, ver_edges[k][i][j].a.i, ver_edges[k][i][j].a.j, ver_edges[k][i][j].a.fpga_id);
+                printf("Growth called boundary %d %d %d %d\n", ver_edges[k][i][j].a.k, ver_edges[k][i][j].a.i, ver_edges[k][i][j].a.j, ver_edges[k][i][j].a.fpga_id);
                 ver_edges[k][i][j].growth = ver_edges[k][i][j].growth + 1;
                 grow_ret = 1;
                 if(ver_edges[k][i][j].growth == 2){
                     ver_edges[k][i][j].to_be_updated = 1;
+                    printf("Fully grown %d %d %d %d\n", ver_edges[k][i][j].a.k, ver_edges[k][i][j].a.i, ver_edges[k][i][j].a.j, ver_edges[k][i][j].a.fpga_id);
                 }
             }
         } else if(ver_edges[k][i][j].is_fusion_boundary == 1){
             int is_odd = get_parity(ver_edges[k][i][j].a);
             if (is_odd && ver_edges[k][i][j].growth < 2) {
-                printf("Growth called %d %d %d %d\n", ver_edges[k][i][j].a.k, ver_edges[k][i][j].a.i, ver_edges[k][i][j].a.j, ver_edges[k][i][j].a.fpga_id);
+                printf("Growth called fusion boundary low %d %d %d %d\n", ver_edges[k][i][j].a.k, ver_edges[k][i][j].a.i, ver_edges[k][i][j].a.j, ver_edges[k][i][j].a.fpga_id);
                 ver_edges[k][i][j].growth = ver_edges[k][i][j].growth + 1;
                 grow_ret = 1;
                 if(ver_edges[k][i][j].growth == 2){
@@ -139,7 +143,7 @@ int grow(int k, int i, int j, int direction){ //fusion_direction 0 is no fusion,
         } else if(ver_edges[k][i][j].is_fusion_boundary == 2){
             int is_odd = get_parity(ver_edges[k][i][j].b);
             if (is_odd && ver_edges[k][i][j].growth < 2) {
-                //printf("Growth called %d %d %d %d\n", ver_edges[k][i][j].b.k, ver_edges[k][i][j].b.i, ver_edges[k][i][j].b.j, ver_edges[k][i][j].b.fpga_id);
+                printf("Growth called fusion boundary high %d %d %d %d\n", ver_edges[k][i][j].b.k, ver_edges[k][i][j].b.i, ver_edges[k][i][j].b.j, ver_edges[k][i][j].b.fpga_id);
                 ver_edges[k][i][j].growth = ver_edges[k][i][j].growth + 1;
                 grow_ret = 1;
                 if(ver_edges[k][i][j].growth == 2){
@@ -149,7 +153,7 @@ int grow(int k, int i, int j, int direction){ //fusion_direction 0 is no fusion,
         } else{
             int is_odd = get_parity(ver_edges[k][i][j].a);
             if (is_odd && ver_edges[k][i][j].growth < 2) {
-                //printf("Growth called %d %d %d %d\n", ver_edges[k][i][j].a.k, ver_edges[k][i][j].a.i, ver_edges[k][i][j].a.j, ver_edges[k][i][j].a.fpga_id);
+                printf("Growth called interim edge a %d %d %d %d\n", ver_edges[k][i][j].a.k, ver_edges[k][i][j].a.i, ver_edges[k][i][j].a.j, ver_edges[k][i][j].a.fpga_id);
                 ver_edges[k][i][j].growth = ver_edges[k][i][j].growth + 1;
                 grow_ret = 1;
                 if(ver_edges[k][i][j].growth == 2){
@@ -158,7 +162,7 @@ int grow(int k, int i, int j, int direction){ //fusion_direction 0 is no fusion,
             }
             is_odd = get_parity(ver_edges[k][i][j].b);
             if (is_odd && ver_edges[k][i][j].growth < 2) {
-                //printf("Growth called %d %d %d %d\n", ver_edges[k][i][j].b.k, ver_edges[k][i][j].b.i, ver_edges[k][i][j].b.j, ver_edges[k][i][j].b.fpga_id);
+                printf("Growth called interim edge b %d %d %d %d\n", ver_edges[k][i][j].b.k, ver_edges[k][i][j].b.i, ver_edges[k][i][j].b.j, ver_edges[k][i][j].b.fpga_id);
                 ver_edges[k][i][j].growth = ver_edges[k][i][j].growth + 1;
                 grow_ret = 1;
                 if(ver_edges[k][i][j].growth == 2){
@@ -177,7 +181,7 @@ int update_boundary(struct Address a){
         (root.is_boundary_address == 0  && a.fpga_id == root.fpga_id && a.k < root.k) || 
         (root.is_boundary_address == 0  && a.fpga_id == root.fpga_id && a.k == root.k && a.i < root.i) || 
         (root.is_boundary_address == 0  && a.fpga_id == root.fpga_id && a.k == root.k && a.i == root.i && a.j < root.j)){
-            //printf("Root goes to %d %d %d %d\n", a.k, a.i, a.j, a.fpga_id);
+            printf("Root goes to %d %d %d %d\n", a.k, a.i, a.j, a.fpga_id);
             // This node should now be the root
             node_array[root.k][root.i][root.j].root.k = a.k;
             node_array[root.k][root.i][root.j].root.i = a.i;
@@ -219,7 +223,7 @@ int merge_internal(struct Address a, struct Address b){
             node_array[root_a.k][root_a.i][root_a.j].parity = node_array[root_a.k][root_a.i][root_a.j].parity ^ node_array[root_b.k][root_b.i][root_b.j].parity;
         }
 
-        //printf("Root goes to %d %d %d %d\n", root_a.k, root_a.i, root_a.j, root_a.fpga_id);
+        printf("Root goes to %d %d %d %d\n", root_a.k, root_a.i, root_a.j, root_a.fpga_id);
 
         node_array[root_b.k][root_b.i][root_b.j].root.k = root_a.k;
         node_array[root_b.k][root_b.i][root_b.j].root.i = root_a.i;
@@ -237,7 +241,7 @@ int merge_internal(struct Address a, struct Address b){
             node_array[root_b.k][root_b.i][root_b.j].parity = node_array[root_b.k][root_b.i][root_b.j].parity ^ node_array[root_a.k][root_a.i][root_a.j].parity;
         }
 
-        //printf("Root goes to %d %d %d %d\n", root_b.k, root_b.i, root_b.j, root_b.fpga_id);
+        printf("Root goes to %d %d %d %d\n", root_b.k, root_b.i, root_b.j, root_b.fpga_id);
         node_array[root_a.k][root_a.i][root_a.j].root.k = root_b.k;
         node_array[root_a.k][root_a.i][root_a.j].root.i = root_b.i;
         node_array[root_a.k][root_a.i][root_a.j].root.j = root_b.j;
@@ -412,9 +416,16 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance
             for(int j=0; j< distance.j;j++){
 		        ver_edges[k][i][j].growth = 0;
 		        ver_edges[k][i][j].to_be_updated = 0;
-                if(k==0 || k==distance.k){ // Bottom layer is an open boundary
+                if(k==0){ // Bottom layer is an open boundary
                     ver_edges[k][i][j].is_boundary = 1;
+                    // printf("Vertical boundary %d %d %d\n", k, i, j);
                     ver_edges[k][i][j].a.k = k;
+                    ver_edges[k][i][j].a.i = i;
+                    ver_edges[k][i][j].a.j = j;
+                } else if(k==distance.k){ // Top layer is an open boundary
+                    ver_edges[k][i][j].is_boundary = 1;
+                    // printf("Vertical boundary %d %d %d\n", k, i, j);
+                    ver_edges[k][i][j].a.k = k-1;
                     ver_edges[k][i][j].a.i = i;
                     ver_edges[k][i][j].a.j = j;
                 } else {
@@ -429,7 +440,7 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance
 
                 if(is_fusion == 1 && k == distance.k / 2){
                     ver_edges[k][i][j].is_fusion_boundary = 1; //later we have to change it to two
-                    printf("Fusion boundary %d %d %d\n", k, i, j);
+                    // printf("Fusion boundary %d %d %d\n", k, i, j);
                 } else {
                     ver_edges[k][i][j].is_fusion_boundary = 0;
                 }
@@ -495,10 +506,19 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance
         for(int i=0; i< distance.i;i++){
             for(int j=0; j< distance.j;j++){
                 ver_edges[distance.k / 2][i][j].is_fusion_boundary = 2;
+                if(ver_edges[distance.k / 2][i][j].growth == 2) {
+                    ver_edges[distance.k / 2][i][j].to_be_updated = 1;
+                    printf("To be updated %d %d %d\n", distance.k / 2, i, j);
+                }
             }
         }
 
         print_roots(distance);
+        printf("Top half starting\n");
+
+        
+
+        change_occur = 1;
 
         // Top half
         while(change_occur == 1){
@@ -524,7 +544,7 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance
             // print_edges_array();
 
             // Merge cycle
-            for(int k=distance.k/2 + 1;k< distance.k + 1;k++){
+            for(int k=distance.k/2;k< distance.k + 1;k++){
                 for(int i=0; i< distance.i;i++){
                     for(int j=0; j< distance.j;j++){
                         merge(k,i,j,1); //vertical_edge
@@ -540,6 +560,8 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance
                 }
             }
             // print_roots_parity_boundary();
+            print_roots(distance);
+            printf("Grow merge cycle completed top half\n");
         }
 
 
@@ -612,6 +634,7 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance
         }
 
         // Now do the fusion
+        printf("Fusion starting\n");
         change_occur = 1;
         while(change_occur == 1){
             change_occur = grow_merge_cycle(distance);
