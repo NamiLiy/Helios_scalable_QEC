@@ -4,7 +4,8 @@ module root_hub_test #(
     parameter MAX_COUNT = 1000,
     parameter MULTI_FPGA_RUN = 0,
     parameter MEASUREMENT_FUSION = 0,
-    parameter ROUTER_DELAY = 3
+    parameter ROUTER_DELAY = 3,
+    parameter LOGICAL_QUBITS_PER_DIM = 2
 ) (
     clk,
     reset,

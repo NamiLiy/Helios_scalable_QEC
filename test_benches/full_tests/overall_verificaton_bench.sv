@@ -16,12 +16,13 @@ module overall_verification_bench;
 `include "../../parameters/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
-localparam CODE_DISTANCE = 21;
+localparam CODE_DISTANCE = 5;
+localparam LOGICAL_QUBITS_PER_DIM = 2;
 localparam NUM_LEAVES = 1;
 localparam ROUTER_DELAY = 53;
 localparam MAX_COUNT = 1000;
 localparam MULTI_FPGA_RUN = 0;
-localparam MEASUREMENT_FUSION=1;
+localparam MEASUREMENT_FUSION=0;
 
 `define SLICE_VEC(vec, idx, width) (vec[idx*width +: width])
 
@@ -43,7 +44,8 @@ root_hub_test #(
     .MAX_COUNT(MAX_COUNT),
     .MULTI_FPGA_RUN(MULTI_FPGA_RUN),
     .ROUTER_DELAY(ROUTER_DELAY),
-    .MEASUREMENT_FUSION(MEASUREMENT_FUSION)
+    .MEASUREMENT_FUSION(MEASUREMENT_FUSION),
+    .LOGICAL_QUBITS_PER_DIM(LOGICAL_QUBITS_PER_DIM)
 ) root_hub_tb(
     .clk(clk),
     .reset(reset),
@@ -65,7 +67,8 @@ generate
             .NUM_FPGAS(NUM_LEAVES + 1),
             .ROUTER_DELAY(ROUTER_DELAY),
             .FPGA_ID(i + 1),
-            .NUM_CONTEXTS(MEASUREMENT_FUSION + 1)
+            .NUM_CONTEXTS(MEASUREMENT_FUSION + 1),
+            .LOGICAL_QUBITS_PER_DIM(LOGICAL_QUBITS_PER_DIM)
         ) decoder_tb(
             .clk(clk),
             .reset(reset),

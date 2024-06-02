@@ -16,7 +16,8 @@ module verification_bench_leaf#(
     parameter NUM_FPGAS = 2,
     parameter ROUTER_DELAY = 18,
     parameter FPGA_ID = 1,
-    parameter NUM_CONTEXTS = 1
+    parameter NUM_CONTEXTS = 1,
+    parameter LOGICAL_QUBITS_PER_DIM = 2
 )(
     input clk,
     input reset,
@@ -36,7 +37,7 @@ module verification_bench_leaf#(
 localparam CODE_DISTANCE_X = CODE_DISTANCE + 1;
 localparam CODE_DISTANCE_Z = (CODE_DISTANCE_X - 1)/2;
 
-parameter GRID_WIDTH_X = CODE_DISTANCE + 1;
+parameter GRID_WIDTH_X = (CODE_DISTANCE + 1)*LOGICAL_QUBITS_PER_DIM;
 parameter GRID_WIDTH_Z = (CODE_DISTANCE_X - 1)/2;
 parameter GRID_WIDTH_U = 2*CODE_DISTANCE;
 localparam PHYSICAL_GRID_WIDTH_U = (GRID_WIDTH_U % NUM_CONTEXTS == 0) ? 
@@ -108,7 +109,8 @@ Helios_single_FPGA #(
     .MAX_WEIGHT(MAX_WEIGHT),
     .NUM_CONTEXTS(NUM_CONTEXTS),
     .NUM_FPGAS(NUM_FPGAS),
-    .ROUTER_DELAY_COUNTER(ROUTER_DELAY)
+    .ROUTER_DELAY_COUNTER(ROUTER_DELAY),
+    .LOGICAL_QUBITS_PER_DIM(LOGICAL_QUBITS_PER_DIM)
  ) decoder (
     .clk(clk),
     .reset(reset),
