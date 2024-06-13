@@ -5,7 +5,8 @@ module Helios_single_FPGA #(
     parameter MAX_WEIGHT = 2,
     parameter NUM_CONTEXTS = 2,
     parameter NUM_FPGAS = 5,
-    parameter ROUTER_DELAY_COUNTER = 18
+    parameter ROUTER_DELAY_COUNTER = 18,
+    parameter LOGICAL_QUBITS_PER_DIM = 2
 ) (
     clk,
     reset,
@@ -120,7 +121,8 @@ single_FPGA_decoding_graph_dynamic_rsc #(
     .GRID_WIDTH_U(GRID_WIDTH_U),
     .MAX_WEIGHT(MAX_WEIGHT),
     .NUM_CONTEXTS(NUM_CONTEXTS),
-    .NUM_FPGAS(NUM_FPGAS)
+    .NUM_FPGAS(NUM_FPGAS),
+    .LOGICAL_QUBITS_PER_DIM(LOGICAL_QUBITS_PER_DIM)
 ) decoding_graph_rsc (
     .clk(clk),
     .reset(reset),
@@ -150,7 +152,8 @@ unified_controller #(
     .MAXIMUM_DELAY(3),
     .NUM_CONTEXTS(NUM_CONTEXTS),
     .NUM_FPGAS(NUM_FPGAS),
-    .ROUTER_DELAY_COUNTER(ROUTER_DELAY_COUNTER)
+    .ROUTER_DELAY_COUNTER(ROUTER_DELAY_COUNTER),
+    .LOGICAL_QUBITS_PER_DIM(LOGICAL_QUBITS_PER_DIM)
 ) controller (
     .clk(clk),
     .reset(reset),

@@ -6,7 +6,8 @@ module single_FPGA_decoding_graph_dynamic_rsc #(
     parameter GRID_WIDTH_U = 3,
     parameter MAX_WEIGHT = 2,
     parameter NUM_CONTEXTS = 4,
-    parameter NUM_FPGAS = 5 
+    parameter NUM_FPGAS = 5,
+    parameter LOGICAL_QUBITS_PER_DIM = 2
 ) (
     clk,
     reset,
@@ -142,7 +143,6 @@ generate
                 wire [ADDRESS_WIDTH-1 : 0] root;
                 wire busy_PE;
 
-                reg [ADDRESS_WIDTH_WITH_B-1:0] address_global;
                 always@(*) begin
                     address_global[Z_BIT_WIDTH-1:0] = j;
                     address_global[X_BIT_WIDTH+Z_BIT_WIDTH-1:Z_BIT_WIDTH] = i;
@@ -436,6 +436,16 @@ generate
                 assign north_cut_type = (border_continous[0]==1) ? 2'b11 : 2'b10;
                 assign south_cut_type = (border_continous[1]==1) ? 2'b11 : 2'b10;
 
+                always@(*) begin 
+                    if(i==0 || i==GRID_WIDTH_X) begin
+                        type_for_boundary_links = 3'b10; // This is the northernmost row. It never exists
+                   end else if(i==GRID_WIDTH_X/LOGICAL_QUBITS_PER_DIM) begin
+                        type_for_boundary_links = measurement_fusion ? 3'b00 : 3'b01; // This is the border row. When Fusion is on it is
+                   end else begin
+                       type_for_boundary_links = 3'b00; //  Internal
+                   end
+               end
+
                 reg [ADDRESS_WIDTH_WITH_B-1:0] init_address;
                 always@(*) begin
                     init_address [ADDRESS_WIDTH-1:X_BIT_WIDTH+Z_BIT_WIDTH] = k;
@@ -465,13 +475,13 @@ generate
                 end else if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z-1) begin
                     `NEIGHBOR_LINK_EXTERNAL(i-1, j, k, `NEIGHBOR_IDX_SOUTH, south_cut_type, NUM_CONTEXTS, 1, j + k*FPGA_FIFO_COUNT_PER_LAYER, init_address, reset_edge_local)                 
                 end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0) begin // odd rows which are always internal
-                    `NEIGHBOR_LINK_INTERNAL_0(i-1, j-1, k, i, j-1, k, `NEIGHBOR_IDX_SOUTH, `NEIGHBOR_IDX_NORTH, 0, NUM_CONTEXTS, reset_edge_local)
+                    `NEIGHBOR_LINK_INTERNAL_0(i-1, j-1, k, i, j-1, k, `NEIGHBOR_IDX_SOUTH, `NEIGHBOR_IDX_NORTH, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
                 end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j == 0) begin // First element of even rows
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_NORTH, 2, NUM_CONTEXTS, reset_edge_local)
                 end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j == GRID_WIDTH_Z) begin // Last element of even rows
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j-1, k, `NEIGHBOR_IDX_SOUTH, 1, NUM_CONTEXTS, reset_edge_local)
                 end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j > 0 && j < GRID_WIDTH_Z) begin // Middle elements of even rows
-                    `NEIGHBOR_LINK_INTERNAL_0(i-1, j-1, k, i, j, k, `NEIGHBOR_IDX_SOUTH, `NEIGHBOR_IDX_NORTH, 0, NUM_CONTEXTS, reset_edge_local)
+                    `NEIGHBOR_LINK_INTERNAL_0(i-1, j-1, k, i, j, k, `NEIGHBOR_IDX_SOUTH, `NEIGHBOR_IDX_NORTH, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
                 end
             end
         end
@@ -512,13 +522,23 @@ generate
                     end
                 end
 
+                always@(*) begin 
+                    if(i==0 || i==GRID_WIDTH_X) begin
+                        type_for_boundary_links = 3'b10; // This is the northernmost row. It never exists
+                   end else if(i==GRID_WIDTH_X/LOGICAL_QUBITS_PER_DIM) begin
+                        type_for_boundary_links = measurement_fusion ? 3'b00 : 3'b01; // This is the border row. When Fusion is on it is
+                   end else begin
+                       type_for_boundary_links = 3'b00; //  Internal
+                   end
+               end
+
                 assign weight_in = `WEIGHT_EW(i,j);
                 if(i==0 && j < GRID_WIDTH_Z) begin // First row
                     `NEIGHBOR_LINK_EXTERNAL(i, j, k, `NEIGHBOR_IDX_EAST, north_cut_type, NUM_CONTEXTS, 0, j + GRID_WIDTH_Z - 1 + k*FPGA_FIFO_COUNT_PER_LAYER, init_address, reset_edge_local)
                 end else if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z) begin // Last row
                     `NEIGHBOR_LINK_EXTERNAL(i-1, j, k, `NEIGHBOR_IDX_WEST, south_cut_type, NUM_CONTEXTS, 1, j + GRID_WIDTH_Z - 1 + k*FPGA_FIFO_COUNT_PER_LAYER, init_address, reset_edge_local)
                 end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j < GRID_WIDTH_Z) begin // even rows which are always internal
-                    `NEIGHBOR_LINK_INTERNAL_0(i, j, k, i-1, j, k, `NEIGHBOR_IDX_EAST, `NEIGHBOR_IDX_WEST, 0, NUM_CONTEXTS, reset_edge_local)
+                    `NEIGHBOR_LINK_INTERNAL_0(i, j, k, i-1, j, k, `NEIGHBOR_IDX_EAST, `NEIGHBOR_IDX_WEST, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
                 end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j == 0) begin // First element of odd rows
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_WEST, 1, NUM_CONTEXTS, reset_edge_local)
                 end else if(i < GRID_WIDTH_X -1 && i > 0 && i%2 == 1 && j == GRID_WIDTH_Z) begin // Last element of odd rows excluding last row
@@ -526,7 +546,7 @@ generate
                 end else if(i == GRID_WIDTH_X -1 && j == GRID_WIDTH_Z) begin // Last element of last odd row
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j-1, k, `NEIGHBOR_IDX_EAST, 1, NUM_CONTEXTS, reset_edge_local)
                 end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0 && j < GRID_WIDTH_Z) begin // Middle elements of odd rows
-                    `NEIGHBOR_LINK_INTERNAL_0(i, j-1, k, i-1, j, k, `NEIGHBOR_IDX_EAST, `NEIGHBOR_IDX_WEST, 0, NUM_CONTEXTS, reset_edge_local)
+                    `NEIGHBOR_LINK_INTERNAL_0(i, j-1, k, i-1, j, k, `NEIGHBOR_IDX_EAST, `NEIGHBOR_IDX_WEST, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
                 end
             end
         end
@@ -546,7 +566,9 @@ generate
                     if(k==0) begin
                         type_for_boundary_links = 3'b01; // This is the bottom row. It is always the boundary.
                    end else if(k==PHYSICAL_GRID_WIDTH_U) begin
-                        type_for_boundary_links = measurement_fusion ? 3'b00 : 3'b01; // This is the top row. When Fusion is on it is internal. Otherwise it is boundary
+                        // type_for_boundary_links = measurement_fusion ? 3'b00 : 3'b01; // This is the top row. When Fusion is on it is internal. Otherwise it is boundary
+                        // Laksheen
+                        type_for_boundary_links = 3'b01; // Temporary make this external for horizontal merge eval purposes
                    end else begin
                        type_for_boundary_links = 3'b00; //  Internal
                    end
