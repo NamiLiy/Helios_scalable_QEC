@@ -1,7 +1,7 @@
 module Helios_single_FPGA #(
-    parameter GRID_WIDTH_X = 4,
-    parameter GRID_WIDTH_Z = 1,
-    parameter GRID_WIDTH_U = 3,
+    parameter GRID_WIDTH_X = 12,
+    parameter GRID_WIDTH_Z = 2,
+    parameter GRID_WIDTH_U = 10,
     parameter MAX_WEIGHT = 2,
     parameter NUM_CONTEXTS = 2,
     parameter NUM_FPGAS = 5,

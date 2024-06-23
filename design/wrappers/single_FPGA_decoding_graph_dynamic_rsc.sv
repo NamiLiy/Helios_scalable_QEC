@@ -142,6 +142,7 @@ generate
                 wire odd;
                 wire [ADDRESS_WIDTH-1 : 0] root;
                 wire busy_PE;
+                reg [ADDRESS_WIDTH_WITH_B-1:0] address_global;
 
                 always@(*) begin
                     address_global[Z_BIT_WIDTH-1:0] = j;
@@ -435,6 +436,8 @@ generate
 
                 assign north_cut_type = (border_continous[0]==1) ? 2'b11 : 2'b10;
                 assign south_cut_type = (border_continous[1]==1) ? 2'b11 : 2'b10;
+                
+                reg [3:0] type_for_boundary_links;
 
                 always@(*) begin 
                     if(i==0 || i==GRID_WIDTH_X) begin
@@ -521,6 +524,8 @@ generate
                         init_address [ADDRESS_WIDTH - 1 : X_BIT_WIDTH+Z_BIT_WIDTH+U_BIT_WIDTH] = FPGA_ID + 1;
                     end
                 end
+                
+                reg [3:0] type_for_boundary_links;
 
                 always@(*) begin 
                     if(i==0 || i==GRID_WIDTH_X) begin

@@ -7,7 +7,8 @@ module unified_controller #(
     parameter NUM_CONTEXTS = 2,
     parameter CTRL_FIFO_WIDTH = 64,
     parameter NUM_FPGAS = 5,
-    parameter ROUTER_DELAY_COUNTER = 18
+    parameter ROUTER_DELAY_COUNTER = 18,
+    parameter LOGICAL_QUBITS_PER_DIM = 2
 ) (
     clk,
     reset,
@@ -208,7 +209,9 @@ always @(posedge clk) begin
 end
 
 always@(*) begin
-    if(measurement_fusion_stage == 2'b10) begin
+    // Laksheen
+    // if(measurement_fusion_stage == 2'b10) begin
+    if(measurement_fusion_stage == 2'b01) begin
         measurement_fusion = 1;
     end else begin
         measurement_fusion = 0;
