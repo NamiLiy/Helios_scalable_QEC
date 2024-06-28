@@ -34,12 +34,12 @@ module verification_bench_leaf#(
 `include "../../parameters/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
                
-localparam CODE_DISTANCE_X = CODE_DISTANCE + 1;
-localparam CODE_DISTANCE_Z = (CODE_DISTANCE_X - 1)/2;
+localparam CODE_DISTANCE_X = (CODE_DISTANCE + 1)*LOGICAL_QUBITS_PER_DIM;
+localparam CODE_DISTANCE_Z = (CODE_DISTANCE - 1)/2;
 
 parameter GRID_WIDTH_X = (CODE_DISTANCE + 1)*LOGICAL_QUBITS_PER_DIM;
-parameter GRID_WIDTH_Z = (CODE_DISTANCE_X - 1)/2;
-parameter GRID_WIDTH_U = 2*CODE_DISTANCE;
+parameter GRID_WIDTH_Z = (CODE_DISTANCE - 1)/2;
+parameter GRID_WIDTH_U = CODE_DISTANCE; // Laksheen
 localparam PHYSICAL_GRID_WIDTH_U = (GRID_WIDTH_U % NUM_CONTEXTS == 0) ? 
                                    (GRID_WIDTH_U / NUM_CONTEXTS) : 
                                    (GRID_WIDTH_U / NUM_CONTEXTS + 1);

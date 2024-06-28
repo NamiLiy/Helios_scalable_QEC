@@ -3,7 +3,7 @@ module neighbor_link_internal #(
     parameter MAX_WEIGHT = 2,
     parameter NUM_CONTEXTS = 2
     // parameter WEIGHT = 2,
-    // parameter BOUNDARY_CONDITION = 0, //0 : No boundary 1: A boundary 2: Non existant edge 3: Connected to a FIFO
+    // parameter BOUNDARY_CONDITION = 0, //0 : No boundary 1: A boundary 2: Non existant edge 3: Connected to a FIFO and temporary changed to fusion edge
     // parameter ADDRESS_A = 0,
     // parameter ADDRESS_B = 0,
     // parameter HEADER_ID = 0,
@@ -100,7 +100,7 @@ always@(posedge clk) begin
 end
 
 always@(*) begin
-    if (boundary_condition_out == 0)  begin // No boundary default case 
+    if (boundary_condition_out == 0 || boundary_condition_out == 2'b11)  begin // No boundary default case 
         growth_new = growth + a_increase + b_increase;
     end else if (boundary_condition_out == 1) begin // edge touching a boundary
         growth_new = growth + a_increase;
@@ -156,7 +156,7 @@ always@(posedge clk) begin
 end
 
 assign fully_grown = growth >= weight_out;
-assign is_boundary = (boundary_condition_out==1'b1) && fully_grown;
+assign is_boundary = (boundary_condition_out==2'b01 || boundary_condition_out == 2'b11) && fully_grown;
 
 assign a_output_data = (boundary_condition_out ==0)? b_input_data : 0;
 assign b_output_data = (boundary_condition_out ==0)? a_input_data : 0;

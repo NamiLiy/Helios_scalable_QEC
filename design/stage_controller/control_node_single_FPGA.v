@@ -370,7 +370,13 @@ always @(posedge clk) begin
                             delay_counter <= 0;
                             if(NUM_CONTEXTS == 1) begin
                                 if(|odd_clusters == 1'b0) begin // everybody is even
-                                    global_stage <= STAGE_PEELING;
+                                    // Laksheen
+                                    if(measurement_fusion_stage == 2'b00) begin
+                                        global_stage <= STAGE_RESET_ROOTS;
+                                    end else begin
+                                        global_stage <= STAGE_PEELING;
+                                    end
+                                    // global_stage <= STAGE_PEELING;
                                 end else begin // somebody is odd
                                     global_stage <= STAGE_GROW;
                                 end
@@ -430,8 +436,11 @@ always @(posedge clk) begin
             end
 
             STAGE_RESET_ROOTS: begin //8
-                global_stage <= STAGE_WRITE_TO_MEM;
+                // Laksheen
+                // global_stage <= STAGE_WRITE_TO_MEM;
+                global_stage <= STAGE_MERGE;
                 global_stage_saved <= STAGE_RESET_ROOTS;
+                measurement_fusion_stage <= 2'b01;
             end
 
             STAGE_WRITE_TO_MEM: begin //1
@@ -499,6 +508,10 @@ always @(posedge clk) begin
                         end
                     end
                 end
+            end
+            //Laksheen
+            STAGE_TEMPORARY: begin
+                global_stage <=STAGE_GROW;
             end
             
             default: begin

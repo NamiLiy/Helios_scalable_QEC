@@ -11,7 +11,7 @@ int max(int a, int b) {
 double normal_random(double mean, double std_dev);
 
 int main(int argc, char *argv[]) {
-    if (argc != 7) {
+    if (argc != 8) {
         fprintf(stderr, "Usage: %s <distance> <p> <test_runs> <syndrome_filename> <multiplication_factor> <m_fusion>\n", argv[0]);
         return 1;
     }
@@ -24,8 +24,9 @@ int main(int argc, char *argv[]) {
 
     int multiplication_factor = atoi(argv[5]);
     int m_fusion = atoi(argv[6]); //0 no fusion, 1 fusion
+    int qubits_per_dim = atoi(argv[7]);
 
-    int distance_i = (distance+1)*multiplication_factor; //This is ancillas in i direction
+    int distance_i = (distance+1)*multiplication_factor*qubits_per_dim; //This is ancillas in i direction
     int distance_j = (distance-1)/2; //This is ancillas in j direction
     int data_qubits_i = distance_i - 1;//This is data qubits in i direction
     int data_qubits_j = distance;

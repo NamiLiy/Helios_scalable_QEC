@@ -17,7 +17,7 @@ module overall_verification_bench;
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
 localparam CODE_DISTANCE = 5;
-localparam LOGICAL_QUBITS_PER_DIM = 2;
+localparam LOGICAL_QUBITS_PER_DIM = 3;
 localparam NUM_LEAVES = 1;
 localparam ROUTER_DELAY = 53;
 localparam MAX_COUNT = 1000;

@@ -78,7 +78,7 @@ int print_roots(struct Distance distance){
     return 0;
 }
 
-int grow(int k, int i, int j, int direction){ //fusion_direction 0 is no fusion, 1 is lower, 2 is upper
+int grow(int k, int i, int j, int direction){ //fusion_direction 0 is no fusion, 1 is lower, 2 is upper, 3 fusion from both ends
     // If odd increase growth
     // If fully grown mark as to_be_updated
     // Update change_occur
@@ -260,6 +260,10 @@ int merge(int k, int i, int j, int direction){
             if(hor_edges[k][i][j].is_boundary == 1){
                 printf("Update_boundary hor called %d %d %d %d\n", hor_edges[k][i][j].a.k, hor_edges[k][i][j].a.i, hor_edges[k][i][j].a.j, hor_edges[k][i][j].a.fpga_id);
                 update_boundary(hor_edges[k][i][j].a);
+            } else if (hor_edges[k][i][j].is_fusion_boundary == 3){
+                printf("Update_boundary hor called %d %d %d %d\n", hor_edges[k][i][j].a.k, hor_edges[k][i][j].a.i, hor_edges[k][i][j].a.j, hor_edges[k][i][j].a.fpga_id);
+                update_boundary(hor_edges[k][i][j].a);
+                update_boundary(hor_edges[k][i][j].b);
             } else {
                 printf("Merge_internal hor called %d %d %d %d and %d %d %d %d\n", hor_edges[k][i][j].a.k, hor_edges[k][i][j].a.i, hor_edges[k][i][j].a.j, hor_edges[k][i][j].a.fpga_id, hor_edges[k][i][j].b.k, hor_edges[k][i][j].b.i, hor_edges[k][i][j].b.j, hor_edges[k][i][j].b.fpga_id);
                 merge_internal(hor_edges[k][i][j].a, hor_edges[k][i][j].b);
@@ -328,7 +332,7 @@ int grow_merge_cycle(struct Distance distance){ // This is only valid for the fu
     // print_roots_parity_boundary();
 }
 
-void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance distance, int num_fpgas, int is_fusion){
+void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance distance, int num_fpgas, int is_fusion, int qubits_per_dim){
     // //printf("%d", syndrome[0][0][0]);
 
     //Initialize Nodearray
@@ -407,6 +411,12 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance
                 hor_edges[k][i][j].to_be_updated = 0;
                 hor_edges[k][i][j].a.fpga_id = hor_edges[k][i][j].a.i/(distance.i/num_fpgas);
                 hor_edges[k][i][j].b.fpga_id = hor_edges[k][i][j].b.i/(distance.i/num_fpgas);
+                hor_edges[k][i][j].is_fusion_boundary = 0;
+                int real_distance = distance.i / qubits_per_dim;
+                // printf("Real distance %d\n", real_distance);
+                if(i % real_distance == real_distance - 1){
+                    hor_edges[k][i][j].is_fusion_boundary = 3;
+                }
             }
         }
 	}
@@ -458,6 +468,89 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance
         while(change_occur == 1){
             change_occur = grow_merge_cycle(distance);
         }
+
+        // Remove fusion details
+        for(int k=0;k<distance.k;k++){
+            for(int i=0; i< distance.i-1;i++){
+                for(int j=0; j< 2*distance.j+1;j++){
+                    int real_distance = distance.i / qubits_per_dim;
+                    if(i % real_distance == real_distance - 1){
+                        hor_edges[k][i][j].is_fusion_boundary = 0;
+                    }
+                }
+            }
+        }
+
+        //Delete all roots
+        for(int k=0;k<distance.k;k++){
+            for(int i=0; i< distance.i;i++){
+                for(int j=0; j< distance.j;j++){
+                    node_array[k][i][j].parity = syndrome[k][i][j];
+                    node_array[k][i][j].id.k = k;
+                    node_array[k][i][j].id.i = i;
+                    node_array[k][i][j].id.j = j;
+                    node_array[k][i][j].id.fpga_id = i/(distance.i/num_fpgas);
+                    //printf("Node array %d %d %d %d\n", node_array[k][i][j].id.k, node_array[k][i][j].id.i, node_array[k][i][j].id.j, node_array[k][i][j].id.fpga_id);
+                    node_array[k][i][j].id.is_boundary_address = 1;
+                    node_array[k][i][j].root.k = k;
+                    node_array[k][i][j].root.i = i;
+                    node_array[k][i][j].root.j = j;
+                    node_array[k][i][j].root.fpga_id = i/(distance.i/num_fpgas);
+                    node_array[k][i][j].root.is_boundary_address = 1;
+                    node_array[k][i][j].boundary = 0;
+                }
+            }
+        }
+
+        // Mark all 
+        for(int k=0;k<distance.k;k++){
+            for(int i=0; i< distance.i-1;i++){
+                for(int j=0; j< 2*distance.j + 1;j++){
+                    if(hor_edges[k][i][j].growth == 2) {
+                        hor_edges[k][i][j].to_be_updated = 1;
+                    }
+                }
+            }
+        }
+
+        for(int k=0;k<distance.k + 1;k++){
+            for(int i=0; i< distance.i;i++){
+                for(int j=0; j< distance.j;j++){
+                    if(ver_edges[k][i][j].growth == 2) {
+                        ver_edges[k][i][j].to_be_updated = 1;
+                    }
+                }
+            }
+        }
+
+        // print_edges_array();
+
+        // Merge cycle
+        for(int k=0;k<distance.k + 1;k++){
+            for(int i=0; i< distance.i;i++){
+                for(int j=0; j< distance.j;j++){
+                    merge(k,i,j,1); //vertical_edge
+                }
+            }
+        }
+
+        for(int k=0;k<distance.k;k++){
+            for(int i=0; i< distance.i-1;i++){
+                for(int j=0; j< 2*distance.j+1;j++){
+                    merge(k,i,j,0); //horizontal_edge
+                }
+            }
+        }
+
+        // Now do the fusion
+        printf("Fusion starting\n");
+        change_occur = 1;
+        while(change_occur == 1){
+            change_occur = grow_merge_cycle(distance);
+        }
+
+
+
     } else {
         // Lower half
         while(change_occur == 1){
@@ -683,7 +776,7 @@ int print_output(FILE* file, int test, struct Distance distance) {
 
 int main(int argc, char *argv[]) {
 
-    if (argc != 6) {
+    if (argc != 7) {
         fprintf(stderr, "Usage: %s <distance> <input_filename> <output_filename>\n", argv[0]);
         return 1;
     }
@@ -697,8 +790,9 @@ int main(int argc, char *argv[]) {
 
     int num_fpgas = atoi(argv[4]);
     int m_fusion = atoi(argv[5]); //0 no fusion, 1 fusion
+    int qubits_per_dim = atoi(argv[6]);
 
-    struct Distance distance = {d*(m_fusion + 1), (d+1)*num_fpgas, (d-1)/2};
+    struct Distance distance = {d*(m_fusion + 1), (d+1)*num_fpgas*qubits_per_dim, (d-1)/2};
     if(distance.k > D || distance.i > D || distance.j > D) {
         fprintf(stderr, "Some distance is greater than %d please change the parameter in source\n", D);
         return 1;
@@ -726,7 +820,7 @@ int main(int argc, char *argv[]) {
         if(ret_val < 0) {
             break;
         }
-        union_find(syndrome, distance, num_fpgas, m_fusion);
+        union_find(syndrome, distance, num_fpgas, m_fusion, qubits_per_dim);
         print_output(file_op, ret_val, distance);
     }
 

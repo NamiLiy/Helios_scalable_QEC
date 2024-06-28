@@ -443,7 +443,7 @@ generate
                     if(i==0 || i==GRID_WIDTH_X) begin
                         type_for_boundary_links = 3'b10; // This is the northernmost row. It never exists
                    end else if(i==GRID_WIDTH_X/LOGICAL_QUBITS_PER_DIM) begin
-                        type_for_boundary_links = measurement_fusion ? 3'b00 : 3'b01; // This is the border row. When Fusion is on it is
+                        type_for_boundary_links = measurement_fusion ? 3'b00 : 3'b11; // This is the border row. When Fusion is on it is
                    end else begin
                        type_for_boundary_links = 3'b00; //  Internal
                    end
@@ -531,7 +531,7 @@ generate
                     if(i==0 || i==GRID_WIDTH_X) begin
                         type_for_boundary_links = 3'b10; // This is the northernmost row. It never exists
                    end else if(i==GRID_WIDTH_X/LOGICAL_QUBITS_PER_DIM) begin
-                        type_for_boundary_links = measurement_fusion ? 3'b00 : 3'b01; // This is the border row. When Fusion is on it is
+                        type_for_boundary_links = measurement_fusion ? 3'b00 : 3'b11; // This is the border row. When Fusion is on it is
                    end else begin
                        type_for_boundary_links = 3'b00; //  Internal
                    end
@@ -564,16 +564,29 @@ generate
                 wire is_error_systolic_in;
                 wire is_error_out;
                 wire [LINK_BIT_WIDTH-1:0] weight_in;
-                reg [3:0] type_for_boundary_links;
+                //reg [3:0] type_for_boundary_links;
                 wire fully_grown_data;
                 reg reset_edge_local;
-               always@(*) begin 
+//               always@(*) begin 
+//                   if(k==0) begin
+//                        type_for_boundary_links = 3'b01; // This is the bottom row. It is always the boundary.
+//                   end else if(k==PHYSICAL_GRID_WIDTH_U) begin
+//                        // type_for_boundary_links = measurement_fusion ? 3'b00 : 3'b01; // This is the top row. When Fusion is on it is internal. Otherwise it is boundary
+//                        // Laksheen
+//                        type_for_boundary_links = 3'b01; // Temporary make this external for horizontal merge eval purposes //Check whether this should be boundary or non existant
+//                   end else begin
+//                       type_for_boundary_links = 3'b00; //  Internal
+//                   end
+//               end
+
+                reg [3:0] type_for_boundary_links;
+
+                always@(*) begin 
                     if(k==0) begin
-                        type_for_boundary_links = 3'b01; // This is the bottom row. It is always the boundary.
+                        type_for_boundary_links = 3'b01; // This is the northernmost row. It never exists
                    end else if(k==PHYSICAL_GRID_WIDTH_U) begin
-                        // type_for_boundary_links = measurement_fusion ? 3'b00 : 3'b01; // This is the top row. When Fusion is on it is internal. Otherwise it is boundary
-                        // Laksheen
-                        type_for_boundary_links = 3'b01; // Temporary make this external for horizontal merge eval purposes
+                        type_for_boundary_links = measurement_fusion ? 3'b01 : 3'b01; // This is the border row. When Fusion is on it is
+                        // type_for_boundary_links = 3'b01; // This is the border row. When Fusion is on it is
                    end else begin
                        type_for_boundary_links = 3'b00; //  Internal
                    end
