@@ -301,7 +301,7 @@ int grow_merge_cycle(struct Distance distance){ // This is only valid for the fu
         }
     }
 
-    for(int k=0;k<distance.k;k++){
+    for(int k=0;k<distance.k + 1;k++){
         for(int i=0; i< distance.i;i++){
             for(int j=0; j< distance.j;j++){
                 int grow_ret = grow(k,i,j,1); //vertical_edge
@@ -313,7 +313,7 @@ int grow_merge_cycle(struct Distance distance){ // This is only valid for the fu
     // print_edges_array();
 
     // Merge cycle
-    for(int k=0;k<distance.k;k++){
+    for(int k=0;k<distance.k + 1;k++){
         for(int i=0; i< distance.i;i++){
             for(int j=0; j< distance.j;j++){
                 merge(k,i,j,1); //vertical_edge
