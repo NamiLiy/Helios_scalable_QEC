@@ -3,7 +3,7 @@
 #include <math.h>
 #include <time.h>
 
-#define D 100
+#define D 150
 #define TOTAL_MEASUREMENTS D
 
 struct Distance {
