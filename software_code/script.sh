@@ -1,12 +1,12 @@
 #!/bin/bash
 
-distance=13
+distance=5
 p=0.001
 test_runs=1000
 num_fpgas=1 #only the leaves
 multi_fpga_mode=0
 measurement_fusion=0
-logical_quibits_per_dimension=3
+logical_quibits_per_dimension=1
 
 if [ $multi_fpga_mode -eq 0 ]; then
 
@@ -51,7 +51,7 @@ if [ $multi_fpga_mode -eq 0 ]; then
 
         if [ $measurement_fusion -eq 0 ]; then
             # Call the programs with these arguments
-            ./main $distance $p $test_runs $input_file 1 $measurement_fusion $logical_quibits_per_dimension
+            #./main $distance $p $test_runs $input_file 1 $measurement_fusion $logical_quibits_per_dimension
             ./uf $distance $input_file $output_file 1 $measurement_fusion $logical_quibits_per_dimension
             sleep 1
         fi

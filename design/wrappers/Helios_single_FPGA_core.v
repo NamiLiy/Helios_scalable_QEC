@@ -59,10 +59,10 @@ localparam FPGA_FIFO_COUNT = (2*GRID_WIDTH_Z - 1)*GRID_WIDTH_U;
 input clk;
 input reset;
 
-input [7 : 0] input_data;
+input [31 : 0] input_data;
 input input_valid;
 output input_ready;
-output [7 : 0] output_data;
+output [31 : 0] output_data;
 output output_valid;
 input output_ready;
 

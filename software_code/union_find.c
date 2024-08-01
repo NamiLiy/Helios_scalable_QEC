@@ -747,14 +747,25 @@ int loadFileData(FILE* file, int (*array)[D][D+1][(D-1)/2], struct Distance dist
     for(int k=0;k<distance.k; k++){
         for(int i=0; i< distance.i; i++){
             for(int j=0; j< distance.j ;j++){
-                int value;
-                if (fscanf(file, "%x", &value) != 1) {
-                    //printf("Error reading file.\n");
-                    fclose(file);
-                    return -1;
-                }
-                (*array)[k][i][j] = value;
+                (*array)[k][i][j] = 0;
             }
+        }
+    }
+    int value;
+    while(1){
+        if (fscanf(file, "%x", &value) == 1){
+            printf("Value = %X\n", value);
+            if(value == 0xFFFFFFFF){
+                break;
+            }
+            int j_range = (int)(ceil(log2(distance.j)));
+            int j = value & ((1 << j_range) - 1);
+            int i_range = (int)(ceil(log2(distance.i)));
+            int i = (value >> j_range) & ((1 << i_range) - 1);
+            int k_range = (int)(ceil(log2(distance.k)));
+            int k = (value >> (j_range + i_range)) & ((1 << k_range) - 1);
+            (*array)[k][i][j] = 1;
+            printf("Test id : %d error at %d %d %d\n",test_id,k,i,j);
         }
     }
     // //printf("Test id : %x loaded\n",test_id);

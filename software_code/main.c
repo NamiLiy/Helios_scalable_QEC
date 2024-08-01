@@ -243,12 +243,17 @@ int main(int argc, char *argv[]) {
         for (int k = 0; k < meas_rounds; k++) {
             for (int i = 0; i < distance_i; i++) {
                 for (int j = 0; j < distance_j; j++) {
-                    fprintf(out_fp, "%08X\n", syndrome[k][i][j]);
+                    //fprintf(out_fp, "%08X\n", syndrome[k][i][j]);
+                    if(syndrome[k][i][j] == 1) {
+                        int defect_address = j + (i<<((int)(ceil(log2(distance_j))))) + (k<<((int)(ceil(log2(distance_j)))+(int)(ceil(log2(distance_i)))));
+                        fprintf(out_fp, "%08X\n", defect_address);
+                    }
                 }
                 // printf("\n");
             }
             // printf("\n");
         }
+        fprintf(out_fp, "FFFFFFFF\n");
 
         // These data is for the FPGA
         /*int write_address = 0x10;

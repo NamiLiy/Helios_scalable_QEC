@@ -86,17 +86,17 @@ reg [`ALIGNED_PU_PER_ROUND*PHYSICAL_GRID_WIDTH_U * NUM_CONTEXTS-1:0] measurement
 
 
 
-reg [7:0] input_data;
+reg [31:0] input_data;
 reg input_valid;
 wire input_ready;
-wire [7:0] output_data;
+wire [31:0] output_data;
 wire output_valid;
 reg output_ready;
 
-wire [7:0] input_data_fifo;
+wire [31:0] input_data_fifo;
 wire input_valid_fifo;
 wire input_ready_fifo;
-wire [7:0] output_data_fifo;
+wire [31:0] output_data_fifo;
 wire output_valid_fifo;
 wire output_ready_fifo;
 
@@ -134,7 +134,7 @@ Helios_single_FPGA #(
 
 // FIFO
 fifo_wrapper #(
-    .WIDTH(8),
+    .WIDTH(32),
     .DEPTH(128)
 ) input_fifo (
     .clk(clk),
@@ -148,7 +148,7 @@ fifo_wrapper #(
 );
 
 fifo_wrapper #(
-    .WIDTH(8),
+    .WIDTH(32),
     .DEPTH(128)
 ) output_fifo (
     .clk(clk),
@@ -184,62 +184,46 @@ reg [31:0] fail_count = 0;
 reg [31:0] total_count;
 
 reg [2:0] loading_state;
-reg [31:0] input_fifo_counter;
 
 reg new_round_start;
 reg [31:0] cycle_counter;
 reg [31:0] iteration_counter;
 reg [31:0] message_counter;
 
-reg completed;
+reg full_test_completed;
+reg data_loading_complete;
+reg test_case_id_loaded;
 
 always @(posedge clk) begin
     if(reset) begin
         loading_state <= 3'b0;
-        completed = 0;
+        message_counter <= 0;
     end else begin
         case(loading_state)
-            3'b0: begin
+            3'b0: begin // reset
                 loading_state <= 3'b1;
-                input_fifo_counter <= 0;
             end
-            3'b1: begin // start decoding header
-                loading_state <= 3'b10;
-            end
-            3'b10: begin // measurement data header
-                loading_state <= 3'b11;
-                input_fifo_counter <= 0;
-            end
-            3'b11: begin
-                if (input_fifo_counter == (`BYTES_PER_ROUND*PHYSICAL_GRID_WIDTH_U*NUM_CONTEXTS-1)) begin
-                    loading_state <= 3'b100;
-                end
-                input_fifo_counter <= input_fifo_counter + 1; 
-            end
-            3'b100: begin
-                if(output_valid == 1) begin
-                    loading_state <= 3'b101;
-                    message_counter <= 0;
-                end
-            end
-            3'b101: begin
-                if(message_counter == (CORRECTION_BYTES_PER_ROUND*PHYSICAL_GRID_WIDTH_U*NUM_CONTEXTS-1) + 3) begin
+            3'b1: begin // data loading stage
+                if(data_loading_complete == 1) begin
                     loading_state <= 3'b10;
-                end else begin
-                    if(output_valid == 1) begin
-                        message_counter <= message_counter + 1;
-                        if (message_counter == 0) begin
-                        iteration_counter <= {24'b0, output_data[7:0]};
-                        end
-                        if (message_counter == 1) begin
-                            cycle_counter[15:8] <= {24'b0, output_data[7:0]};
-                        end
-                        if (message_counter == 2) begin
-                            cycle_counter[7:0] <= {24'b0, output_data[7:0]};
-                        end
-                    end
-                    cycle_counter[31:16] <= 16'b0;
                 end
+            end
+            3'b10: begin // data reading stage
+                if(output_valid == 1) begin
+                    if (message_counter == 0) begin
+                        cycle_counter <= output_data[15:0];
+                        iteration_counter <= output_data[23:16];
+                    end
+                    if (output_data == 32'hffffffff) begin
+                        loading_state <= 3'b1;
+                        message_counter <= 0;
+                    end else begin
+                        message_counter <= message_counter + 1;
+                    end
+                end
+            end
+            default: begin
+                loading_state <= 3'b0;
             end
         endcase
     end
@@ -247,21 +231,16 @@ end
 
 always@(*) begin
     if(loading_state == 3'b1) begin
-        input_valid = 0;
-        input_data = START_DECODING_MSG;
-    end else if (loading_state == 3'b10) begin
-        input_valid = 0;
-        input_data = MEASUREMENT_DATA_HEADER;
-    end else if (loading_state == 3'b11) begin
         input_valid = 1;
-        input_data = measurements[input_fifo_counter*8 +: 8];
+        input_data = input_read_value;
     end else begin
         input_valid = 0;
+        input_data = 0;
     end
 end
 
 always @(*) begin
-    if (loading_state == 3'b101) begin
+    if (loading_state == 3'b10) begin
         output_ready = 1;
     end else begin
         output_ready = 0;
@@ -272,42 +251,42 @@ string input_filename, output_filename;
 
 // Input loading logic
 always @(negedge clk) begin
-    if (loading_state == 3'b10 && completed == 0) begin
-        measurements = 0;
+    if(reset) begin
+        test_case_id_loaded = 0;
+        data_loading_complete = 0;
+    end else if(loading_state == 3'b0 || loading_state == 3'b10) begin
+        test_case_id_loaded = 0;
+        data_loading_complete = 0;
+    end else if (loading_state == 3'b1 && full_test_completed == 0) begin
         if(input_open == 1) begin
             input_filename = $sformatf("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_%0d_%0d.txt", CODE_DISTANCE, FPGA_ID);
             input_file = $fopen(input_filename, "r");
             input_open = 0;
         end
-        if (input_eof == 0)begin 
+        if (test_case_id_loaded ==0 && input_eof == 0)begin 
             $fscanf (input_file, "%h\n", test_case);
             input_eof = $feof(input_file);
+            test_case_id_loaded = 1;
             if (input_eof == 0)begin 
                 syndrome_count = 0;
             end
         end
-        for (k=0 ;k <MEASUREMENT_ROUNDS; k++) begin
-            for (i=0 ;i <CODE_DISTANCE_X; i++) begin
-                for (j=0 ;j <CODE_DISTANCE_Z; j++) begin
-                    if (input_eof == 0)begin 
-                        $fscanf (input_file, "%h\n", input_read_value);
-                        `measurements(i, j, k) = input_read_value;
-                        if (input_read_value == 1) begin //This is to avoid duplication in the border PEs
-                            syndrome_count = syndrome_count + 1;
-                        end
-                    end
-                end
+        if(input_eof == 0) begin
+            $fscanf (input_file, "%h\n", input_read_value);
+            if (input_read_value == 32'hffffffff) begin
+                data_loading_complete = 1;
+                test_case_id_loaded = 0;
+            end else begin
+                syndrome_count = syndrome_count + 1;
             end
         end
-    end else begin
-        new_round_start = 0;
     end
 end
 
 
 // Output verification logic
 always @(posedge clk) begin
-    if (decoder.controller.global_stage_d == STAGE_PEELING && completed == 0) begin // When we move to peeling we are doen with clustering
+    if (decoder.controller.global_stage_d == STAGE_PEELING && full_test_completed == 0) begin // When we move to peeling we are doen with clustering
 //       $display("%t\tTest case %d pass %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
        if(open == 1) begin
             output_filename = $sformatf("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_%0d_%0d.txt", CODE_DISTANCE, FPGA_ID);
@@ -364,7 +343,7 @@ always @(posedge clk) begin
             end
         end
     end
-    if (message_counter == 3 && output_valid == 1 && completed == 0) begin // Cycle counter and iteration counter is recevied
+    if (message_counter == 1 && output_valid == 1 && full_test_completed == 0) begin // Cycle counter and iteration counter is recevied
         if (!test_fail) begin
             $display("%t\tID  = %d Test case  = %d, %d pass %d cycles %d first round %d syndromes", $time, FPGA_ID, test_case, pass_count, cycle_counter, iteration_counter, syndrome_count);
             pass_count = pass_count + 1;
@@ -374,13 +353,15 @@ always @(posedge clk) begin
             $finish;
         end
     end
-    if (input_eof == 1 && completed == 0)begin
+    if (reset) begin
+        full_test_completed = 0;
+    end else if (input_eof == 1 && full_test_completed == 0)begin
         total_count = pass_count + fail_count;
         $display("%t\t Done:", $time);
         $display("Total : %d",total_count);
         $display("Passed : %d",pass_count);
         $display("Failed : %d",fail_count);
-        completed = 1;
+        full_test_completed = 1;
         $finish;
     end
 end
