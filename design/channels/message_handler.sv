@@ -2,6 +2,8 @@ module message_handler #(
     parameter FPGA_FIFO_SIZE = 32,
     parameter FPGA_FIFO_COUNT = 5,
     parameter GT_FIFO_SIZE = 64,
+    parameter CTRL_FIFO_SIZE = 64,
+    parameter FPGA_ID = 1,
     parameter FIFO_TAG_MSB = 55,
     parameter FIFO_TAG_LSB = 48
 ) (
@@ -66,26 +68,26 @@ module message_handler #(
     input [7:0] fpga_id;
     output router_busy;
 
-    // we buffer the in_data using a FIFO
-    wire [GT_FIFO_SIZE-1 : 0] in_data_buffered;
-    wire in_valid_buffered;
-    reg in_ready_buffered;
+    // // we buffer the in_data using a FIFO
+    // wire [GT_FIFO_SIZE-1 : 0] in_data_buffered;
+    // wire in_valid_buffered;
+    // reg in_ready_buffered;
 
     assign router_busy = |border_input_valid;
 
-    fifo_wrapper #(
-        .WIDTH(GT_FIFO_SIZE),
-        .DEPTH(64)
-    ) in_data_buffer (
-        .clk(clk),
-        .reset(reset),
-        .input_data(in_data),
-        .input_valid(in_valid),
-        .input_ready(in_ready),
-        .output_data(in_data_buffered),
-        .output_valid(in_valid_buffered),
-        .output_ready(in_ready_buffered)
-    );
+    // fifo_wrapper #(
+    //     .WIDTH(GT_FIFO_SIZE),
+    //     .DEPTH(64)
+    // ) in_data_buffer (
+    //     .clk(clk),
+    //     .reset(reset),
+    //     .input_data(in_data),
+    //     .input_valid(in_valid),
+    //     .input_ready(in_ready),
+    //     .output_data(in_data_buffered),
+    //     .output_valid(in_valid_buffered),
+    //     .output_ready(in_ready_buffered)
+    // );
 
     // we buffer the out_data using a FIFO
     reg [GT_FIFO_SIZE-1 : 0] out_data_buffered;
@@ -212,22 +214,17 @@ module message_handler #(
     wire southern_border_output_ready;
 
     always@(*) begin
-        northern_border_output_data = in_data_buffered;
+        northern_border_output_data = in_data;
         northern_border_output_valid = 1'b0;
-        southern_border_output_data = in_data_buffered;
+        southern_border_output_data = in_data;
         southern_border_output_valid = 1'b0;
-        handler_to_control_data = in_data_buffered;
+        handler_to_control_data = in_data;
         handler_to_control_valid = 1'b0;
-        if(in_valid_buffered) begin
-            if(in_data_buffered[55:48] == 8'hff) begin
+        in_ready = 1'b0;
+        if(in_valid) begin
+            if(in_data[MSG_DEST_MSB:MSG_DEST_LSB] == 8'hff || in_data[MSG_DEST_MSB:MSG_DEST_LSB] == FPGA_ID) begin
                 handler_to_control_valid = 1'b1;
-                in_ready_buffered = handler_to_control_ready;
-            end else if(in_data_buffered[FIFO_TAG_MSB] == 1'b0) begin
-                northern_border_output_valid = 1'b1;
-                in_ready_buffered = 1'b1;
-            end else if(in_data_buffered[FIFO_TAG_MSB] == 1'b1) begin
-                southern_border_output_valid = 1'b1;
-                in_ready_buffered = 1'b1;
+                in_ready = handler_to_control_ready;
             end
         end
     end

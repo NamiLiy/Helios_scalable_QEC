@@ -197,7 +197,8 @@ always@(*) begin
 end
 
 always@(*) begin
-    if(global_stage == STAGE_IDLE && input_ctrl_rx_valid && input_ctrl_rx_ready && input_ctrl_rx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == MEASUREMENT_DATA_HEADER && input_ctrl_rx_data [0] == 1'b0) begin // The last 0 is to ensure only to set it in the first stage
+    // Laksheen
+    if(global_stage == STAGE_IDLE && input_ctrl_rx_valid && input_ctrl_rx_ready && input_ctrl_rx_data [MSG_HEADER_MSB : MSG_HEADER_LSB] == HEADER_DECODE_BLOCK && input_ctrl_rx_data [0] == 1'b0) begin // The last 0 is to ensure only to set it in the first stage
         cycle_counter_reset = 1;
     end else begin
         cycle_counter_reset = 0;
@@ -239,6 +240,9 @@ reg output_fifo_ready_d;
 
 reg [NUM_CONTEXTS -1 : 0] unsynced_merge;
 reg [NUM_CONTEXTS -1 : 0] odd_clusters_in_context;
+
+reg peel_and_finish;
+reg report_latency;
 
 
 reg measurement_fusion_on;
@@ -304,38 +308,47 @@ always @(posedge clk) begin
         measurement_fusion_on <= 0;
         measurement_fusion_stage <= 0;
         current_measurement_round <= 0;
+        peel_and_finish <= 0;
+        report_latency <= 0;
     end else begin
         case (global_stage)
             STAGE_IDLE: begin // 0
                 if (input_ctrl_rx_valid && input_ctrl_rx_ready) begin
-                    if(input_ctrl_rx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == START_DECODING_MSG) begin
+                    if(input_ctrl_rx_data [MSG_HEADER_MSB : MSG_HEADER_LSB] == HEADER_INITIALIZE_DECODING) begin
                         global_stage <= STAGE_PARAMETERS_LOADING;
                         delay_counter <= 0;
                         result_valid <= 0;
-                        multi_fpga_mode <= input_ctrl_rx_data [0];
-                        measurement_fusion_on <= input_ctrl_rx_data [1];
+                        multi_fpga_mode <= 0;
+                        measurement_fusion_on <= 0;
                         current_context <= 0; 
-                        if(input_ctrl_rx_data[0] == 1'b1) begin
-                            if(FPGA_ID != 1) begin
-                                border_continous[0] <= 1'b1;
-                            end
-                            if(FPGA_ID != NUM_FPGAS - 1) begin
-                                border_continous[1] <= 1'b1;
-                            end
-                        end
-                    end else if(input_ctrl_rx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == MEASUREMENT_DATA_HEADER) begin
+                        // if(input_ctrl_rx_data[0] == 1'b1) begin
+                        //     if(FPGA_ID != 1) begin
+                        //         border_continous[0] <= 1'b1;
+                        //     end
+                        //     if(FPGA_ID != NUM_FPGAS - 1) begin
+                        //         border_continous[1] <= 1'b1;
+                        //     end
+                        // end
+                    end else if(input_ctrl_rx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == HEADER_DECODE_BLOCK) begin
                         global_stage <= STAGE_MEASUREMENT_PREPARING;
-                        measurement_fusion_stage <= input_ctrl_rx_data [0];
-                        current_context <= input_ctrl_rx_data [0];
+                        measurement_fusion_stage <= 0;
+                        current_context <= 0;
                         delay_counter <= 0;
                         result_valid <= 0;
                         current_measurement_round <= 0;
                         measurement_internal <= {PU_COUNT_PER_ROUND{1'b0}};
-                    end else if(input_ctrl_rx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == MOVE_TO_STAGE) begin
-                        global_stage <= STAGE_GROW;
+                        peel_and_finish <= input_ctrl_rx_data[0];
+                        report_latency <= input_ctrl_rx_data[1];
+                    end else if (input_ctrl_rx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == HEADER_SET_BOUNDARIES) begin
+                        global_stage <= STAGE_IDLE;
                         delay_counter <= 0;
                         result_valid <= 0;
                     end
+                    // else if(input_ctrl_rx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == MOVE_TO_STAGE) begin
+                    //     global_stage <= STAGE_GROW;
+                    //     delay_counter <= 0;
+                    //     result_valid <= 0;
+                    // end
                 end
                 current_measurement_round <= 0;
             end

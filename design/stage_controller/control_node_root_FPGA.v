@@ -30,11 +30,6 @@ module root_controller #(
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
-localparam MSG_DEST_MSB = CTRL_FIFO_WIDTH - 1;
-localparam MSG_DEST_LSB = MSG_DEST_MSB - 7;
-localparam MSG_HEADER_MSB = MSG_DEST_LSB - 1;
-localparam MSG_HEADER_LSB = MSG_HEADER_MSB - 7;
-
 
 input clk;
 input reset;
