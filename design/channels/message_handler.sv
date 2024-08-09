@@ -90,23 +90,23 @@ module message_handler #(
     // );
 
     // we buffer the out_data using a FIFO
-    reg [GT_FIFO_SIZE-1 : 0] out_data_buffered;
-    reg out_valid_buffered;
-    wire out_ready_buffered;
+    // reg [GT_FIFO_SIZE-1 : 0] out_data_buffered;
+    // reg out_valid_buffered;
+    // wire out_ready_buffered;
 
-    fifo_wrapper #(
-        .WIDTH(GT_FIFO_SIZE),
-        .DEPTH(64)
-    ) out_data_buffer (
-        .clk(clk),
-        .reset(reset),
-        .input_data(out_data_buffered),
-        .input_valid(out_valid_buffered),
-        .input_ready(out_ready_buffered),
-        .output_data(out_data),
-        .output_valid(out_valid),
-        .output_ready(out_ready)
-    );
+    // fifo_wrapper #(
+    //     .WIDTH(GT_FIFO_SIZE),
+    //     .DEPTH(64)
+    // ) out_data_buffer (
+    //     .clk(clk),
+    //     .reset(reset),
+    //     .input_data(out_data_buffered),
+    //     .input_valid(out_valid_buffered),
+    //     .input_ready(out_ready_buffered),
+    //     .output_data(out_data),
+    //     .output_valid(out_valid),
+    //     .output_ready(out_ready)
+    // );
 
     // we use a combiner to filter the data_to_be_send_to_hub
 
@@ -181,25 +181,28 @@ module message_handler #(
     end
 
     always@(*) begin
-        out_data_buffered = modified_northern_border_input_data;
-        out_valid_buffered = 1'b0;
+        out_data  = control_to_handler_data;
+        out_valid = 1'b0;
         northern_border_input_ready = 1'b0;
         southern_border_input_ready = 1'b0;
         control_to_handler_ready = 1'b0;
-        if (out_ready_buffered) begin
-            if(northern_border_input_valid) begin
-                out_data_buffered = modified_northern_border_input_data;
-                out_valid_buffered = 1'b1;
-                northern_border_input_ready = 1'b1;
-            end else if(southern_border_input_valid) begin
-                out_data_buffered = modified_southern_border_input_data;
-                out_valid_buffered = 1'b1;
-                southern_border_input_ready = 1'b1;
-            end else if(control_to_handler_valid) begin
-                out_data_buffered = control_to_handler_data;
-                out_valid_buffered = 1'b1;
-                control_to_handler_ready = 1'b1;
-            end
+        if (out_ready) begin
+            out_valid = control_to_handler_valid;
+            out_data  = control_to_handler_data;
+            control_to_handler_ready = 1'b1;
+            // if(northern_border_input_valid) begin
+            //     out_data_buffered = modified_northern_border_input_data;
+            //     out_valid_buffered = 1'b1;
+            //     northern_border_input_ready = 1'b1;
+            // end else if(southern_border_input_valid) begin
+            //     out_data_buffered = modified_southern_border_input_data;
+            //     out_valid_buffered = 1'b1;
+            //     southern_border_input_ready = 1'b1;
+            // end else if(control_to_handler_valid) begin
+            //     out_data_buffered = control_to_handler_data;
+            //     out_valid_buffered = 1'b1;
+            //     control_to_handler_ready = 1'b1;
+            // end
         end 
     end
 

@@ -5,6 +5,7 @@ module Helios_single_FPGA #(
     parameter MAX_WEIGHT = 2,
     parameter NUM_CONTEXTS = 2,
     parameter NUM_FPGAS = 5,
+    parameter FPGA_ID = 1,
     parameter ROUTER_DELAY_COUNTER = 18,
     parameter LOGICAL_QUBITS_PER_DIM = 2
 ) (
@@ -25,9 +26,7 @@ module Helios_single_FPGA #(
 
     parent_tx_data,
     parent_tx_valid,
-    parent_tx_ready,
-
-    FPGA_ID
+    parent_tx_ready
 
 
     // roots // A debug port. Do not use in the real implementation
@@ -73,8 +72,6 @@ output parent_rx_ready;
 output [63 : 0] parent_tx_data;
 output parent_tx_valid;
 input parent_tx_ready;
-
-input [7 : 0] FPGA_ID;
 
 wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 
@@ -183,7 +180,9 @@ unified_controller #(
 
 message_handler #(
     .FPGA_FIFO_SIZE(FPGA_FIFO_SIZE),
-    .FPGA_FIFO_COUNT(FPGA_FIFO_COUNT)
+    .FPGA_FIFO_COUNT(FPGA_FIFO_COUNT),
+    .CTRL_FIFO_SIZE(64),
+    .FPGA_ID(1)
 ) handler (
     .clk(clk),
     .reset(reset),

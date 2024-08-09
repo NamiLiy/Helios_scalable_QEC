@@ -110,7 +110,8 @@ Helios_single_FPGA #(
     .NUM_CONTEXTS(NUM_CONTEXTS),
     .NUM_FPGAS(NUM_FPGAS),
     .ROUTER_DELAY_COUNTER(ROUTER_DELAY),
-    .LOGICAL_QUBITS_PER_DIM(LOGICAL_QUBITS_PER_DIM)
+    .LOGICAL_QUBITS_PER_DIM(LOGICAL_QUBITS_PER_DIM),
+    .FPGA_ID(FPGA_ID)
  ) decoder (
     .clk(clk),
     .reset(reset),
@@ -126,9 +127,7 @@ Helios_single_FPGA #(
     .parent_rx_ready(parent_rx_ready),
     .parent_tx_data(parent_tx_data),
     .parent_tx_valid(parent_tx_valid),
-    .parent_tx_ready(parent_tx_ready),
-    .FPGA_ID(FPGA_ID)
-    
+    .parent_tx_ready(parent_tx_ready)    
     //.roots(roots)
 );
 

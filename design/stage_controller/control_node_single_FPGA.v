@@ -407,49 +407,52 @@ always @(posedge clk) begin
 
             STAGE_MERGE: begin //3
                 if (delay_counter >= MAXIMUM_DELAY) begin
-                    if(multi_fpga_mode == 1'b0) begin
-                        if(!busy) begin
-                            delay_counter <= 0;
-                            if(NUM_CONTEXTS == 1) begin
-                                if(|odd_clusters == 1'b0) begin // everybody is even
-                                    // Laksheen
-                                    // if(measurement_fusion_stage == 2'b00) begin
-                                    //     global_stage <= STAGE_RESET_ROOTS;
-                                    // end else begin
-                                    //     global_stage <= STAGE_PEELING;
-                                    // end
+                    //if(multi_fpga_mode == 1'b0) begin
+                    if(!busy) begin
+                        delay_counter <= 0;
+                        if(NUM_CONTEXTS == 1) begin
+                            if(|odd_clusters == 1'b0) begin // everybody is even
+                                // Laksheen
+                                // if(measurement_fusion_stage == 2'b00) begin
+                                //     global_stage <= STAGE_RESET_ROOTS;
+                                // end else begin
+                                //     global_stage <= STAGE_PEELING;
+                                // end
+                                if(peel_and_finish) begin
                                     global_stage <= STAGE_PEELING;
-                                end else begin // somebody is odd
-                                    global_stage <= STAGE_GROW;
                                 end
-                            end else if(measurement_fusion_on && (measurement_fusion_stage == 2'b00 || measurement_fusion_stage == 2'b01)) begin
-                                if(|odd_clusters == 1'b0) begin // everybody is even
-                                    global_stage <= STAGE_WRITE_TO_MEM;
-                                end else begin // somebody is odd
-                                    global_stage <= STAGE_GROW;
-                                end
-                            end else begin
-                                global_stage <= STAGE_WRITE_TO_MEM;
-                            end
-                            global_stage_saved <= STAGE_MERGE;
-                            if(fusion_on) begin
-                                odd_clusters_in_context[current_context] <= odd_clusters;
-                            end  
-                        end
-                        if(border_busy) begin
-                            if(fusion_on) begin
-                                unsynced_merge[current_context] <= 1'b1;
-                            end
-                        end
-                    end else begin
-                        if (input_ctrl_rx_valid && input_ctrl_rx_ready && input_ctrl_rx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == MOVE_TO_STAGE) begin
-                            if(input_ctrl_rx_data[0] == 1'b0) begin
-                                global_stage <= STAGE_PEELING;
-                            end else begin
+                            end else begin // somebody is odd
                                 global_stage <= STAGE_GROW;
                             end
+                        end else if(measurement_fusion_on && (measurement_fusion_stage == 2'b00 || measurement_fusion_stage == 2'b01)) begin
+                            if(|odd_clusters == 1'b0) begin // everybody is even
+                                global_stage <= STAGE_WRITE_TO_MEM;
+                            end else begin // somebody is odd
+                                global_stage <= STAGE_GROW;
+                            end
+                        end else begin
+                            global_stage <= STAGE_WRITE_TO_MEM;
+                        end
+                        global_stage_saved <= STAGE_MERGE;
+                        if(fusion_on) begin
+                            odd_clusters_in_context[current_context] <= odd_clusters;
+                        end  
+                    end
+                    if(border_busy) begin
+                        if(fusion_on) begin
+                            unsynced_merge[current_context] <= 1'b1;
                         end
                     end
+                    //end 
+                    // else begin
+                    //     if (input_ctrl_rx_valid && input_ctrl_rx_ready && input_ctrl_rx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == MOVE_TO_STAGE) begin
+                    //         if(input_ctrl_rx_data[0] == 1'b0) begin
+                    //             global_stage <= STAGE_PEELING;
+                    //         end else begin
+                    //             global_stage <= STAGE_GROW;
+                    //         end
+                    //     end
+                    // end
                 end else begin
                     delay_counter <= delay_counter + 1;
                     unsynced_merge[current_context] <= 1'b0;
@@ -604,12 +607,12 @@ always@(*) begin
     end else begin 
         if(global_stage == STAGE_IDLE) begin
             input_ctrl_rx_ready = 1;
-        end else if(global_stage == STAGE_MERGE) begin
-            if(multi_fpga_mode && delay_counter >= MAXIMUM_DELAY) begin
-                input_ctrl_rx_ready = 1;
-            end else begin
-                input_ctrl_rx_ready = 0;
-            end
+        // end else if(global_stage == STAGE_MERGE) begin
+        //     if(multi_fpga_mode && delay_counter >= MAXIMUM_DELAY) begin
+        //         input_ctrl_rx_ready = 1;
+        //     end else begin
+        //         input_ctrl_rx_ready = 0;
+        //     end
         end else begin
             input_ctrl_rx_ready = 0;
         end
@@ -637,30 +640,33 @@ always@(*) begin
     if(reset) begin
         output_ctrl_tx_valid = 0;
     end else begin
-        if(multi_fpga_mode == 1'b0) begin
-            if(global_stage == STAGE_RESULT_VALID && result_is_send == 0) begin
-                output_ctrl_tx_valid = 1;
-                if(measurement_fusion_on) begin
-                    output_ctrl_tx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] = lower_half_counter[7:0];
-                end else begin
-                    output_ctrl_tx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] = iteration_counter;
-                end
-                output_ctrl_tx_data [CTRL_MSG_MSB - 8 : CTRL_MSG_MSB - 23] = cycle_counter;
-            end
-        end else begin
-            if(global_stage == STAGE_MERGE && delay_counter >= MAXIMUM_DELAY) begin
-                if(input_ctrl_rx_valid && input_ctrl_rx_ready && input_ctrl_rx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == SEND_ODD_AND_BUSY) begin
-                    output_ctrl_tx_valid = 1;
-                    output_ctrl_tx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] = NODE_RESULT_MSG;
-                    output_ctrl_tx_data [1] = odd_clusters;
-                    if(busy || router_busy_reg > 0) begin
-                        output_ctrl_tx_data [0] = 1;
-                    end else begin
-                        output_ctrl_tx_data [0] = 0;
-                    end
-                end
-            end
+        // if(multi_fpga_mode == 1'b0) begin
+        if(global_stage == STAGE_RESULT_VALID && result_is_send == 0) begin
+            output_ctrl_tx_valid = 1;
+            // if(measurement_fusion_on) begin
+            //     output_ctrl_tx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] = lower_half_counter[7:0];
+            // end else begin
+            //     output_ctrl_tx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] = iteration_counter;
+            // end
+            output_ctrl_tx_data [MSG_DEST_MSB : MSG_DEST_LSB] = 8'h0;
+            output_ctrl_tx_data [MSG_HEADER_MSB : MSG_HEADER_LSB] = HEADER_RESULT;
+            output_ctrl_tx_data [15:0] = cycle_counter;
         end
+        // end 
+        // else begin
+        //     if(global_stage == STAGE_MERGE && delay_counter >= MAXIMUM_DELAY) begin
+        //         if(input_ctrl_rx_valid && input_ctrl_rx_ready && input_ctrl_rx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == SEND_ODD_AND_BUSY) begin
+        //             output_ctrl_tx_valid = 1;
+        //             output_ctrl_tx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] = NODE_RESULT_MSG;
+        //             output_ctrl_tx_data [1] = odd_clusters;
+        //             if(busy || router_busy_reg > 0) begin
+        //                 output_ctrl_tx_data [0] = 1;
+        //             end else begin
+        //                 output_ctrl_tx_data [0] = 0;
+        //             end
+        //         end
+        //     end
+        // end
     end
 end
 
