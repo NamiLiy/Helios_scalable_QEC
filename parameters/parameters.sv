@@ -60,7 +60,7 @@ localparam [7:0]
 // [0] = 1 => move to grow stage
 
 
-localparam MSG_DEST_MSB = CTRL_FIFO_WIDTH - 1;
+localparam MSG_DEST_MSB = 64 - 1;
 localparam MSG_DEST_LSB = MSG_DEST_MSB - 7;
 localparam MSG_HEADER_MSB = MSG_DEST_LSB - 1;
 localparam MSG_HEADER_LSB = MSG_HEADER_MSB - 7;

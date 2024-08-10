@@ -1,5 +1,5 @@
 module root_hub_core #(
-    parameter NUM_FPGAS = 5,
+    parameter NUM_FPGAS = 2,
     parameter MAXIMUM_DELAY = 3,
     parameter CHANNEL_WIDTH = 64,
     parameter DEST_WIDTH = 8

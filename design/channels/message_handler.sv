@@ -38,15 +38,17 @@ module message_handler #(
     router_busy
 );
 
+`include "../../parameters/parameters.sv"
+
     input clk;
     input reset;
 
     input [GT_FIFO_SIZE-1 : 0] in_data;
     input in_valid;
-    output in_ready;
+    output reg in_ready;
 
-    output [GT_FIFO_SIZE-1 : 0] out_data;
-    output out_valid;
+    output reg [GT_FIFO_SIZE-1 : 0] out_data;
+    output reg out_valid;
     input out_ready;
 
     input [2*FPGA_FIFO_SIZE*FPGA_FIFO_COUNT-1:0] border_input_data;

@@ -40,16 +40,11 @@ wire on;
 
 root_hub_test #(
     .CODE_DISTANCE(CODE_DISTANCE),
-    .NUM_LEAVES(NUM_LEAVES),
-    .MAX_COUNT(MAX_COUNT),
     .MULTI_FPGA_RUN(MULTI_FPGA_RUN),
-    .ROUTER_DELAY(ROUTER_DELAY),
-    .MEASUREMENT_FUSION(MEASUREMENT_FUSION),
-    .LOGICAL_QUBITS_PER_DIM(LOGICAL_QUBITS_PER_DIM)
+    .ROUTER_DELAY(ROUTER_DELAY)
 ) root_hub_tb(
     .clk(clk),
     .reset(reset),
-
     .down_tx_data(parent_rx_data),
     .down_tx_valid(parent_rx_valid),
     .down_tx_ready(parent_rx_ready),

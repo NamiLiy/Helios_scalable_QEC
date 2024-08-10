@@ -1,11 +1,8 @@
 module root_hub_test #(
     parameter CODE_DISTANCE = 5,
     parameter NUM_LEAVES = 1,
-    parameter MAX_COUNT = 1000,
-    parameter MULTI_FPGA_RUN = 0,
-    parameter MEASUREMENT_FUSION = 0,
     parameter ROUTER_DELAY = 3,
-    parameter LOGICAL_QUBITS_PER_DIM = 2
+    parameter FPGA_ID = 0
 ) (
     clk,
     reset,
@@ -65,6 +62,7 @@ wire [NUM_LEAVES-1 : 0] tx_ready_d;
 reg input_open;
 string input_filename;
 integer input_file;
+reg input_eof = 0;
 reg [31:0] input_read_value;
 reg [31:0] test_case_count;
 
@@ -88,7 +86,7 @@ always @(negedge clk) begin
         end
         if(input_eof == 1) begin
             $fclose(input_file);
-            $display("%t\tID = %d Root status message : Test case  %d loaded", $time, test_case_count);
+            $display("%t\t Root status message : Test case  %d loaded", $time, test_case_count);
         end
     end
 end
@@ -106,7 +104,7 @@ end
 
 always@(negedge clk) begin
     if((!reset) && local_rx_valid_d) begin
-        $display("%t\tID = %d Root status message : Latency received  %d", $time, local_rx_data_d[15:0]);
+        $display("%t\t Root status message : Latency received  %d", $time, local_rx_data_d[15:0]);
     end
 end
 

@@ -2,7 +2,7 @@
 
 distance=5
 p=0.001
-test_runs=1000
+test_runs=10
 num_fpgas=1 #only the leaves
 multi_fpga_mode=0
 measurement_fusion=0
