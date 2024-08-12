@@ -52,7 +52,7 @@ module root_hub_core #(
 
 // Idx 0 is upstream rest are downstream in sequential order
 
-`include "../../parameters/parameters.sv"
+`include "parameters.sv"
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
 

@@ -38,7 +38,7 @@ module message_handler #(
     router_busy
 );
 
-`include "../../parameters/parameters.sv"
+`include "parameters.sv"
 
     input clk;
     input reset;

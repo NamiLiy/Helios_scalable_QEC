@@ -1,13 +1,13 @@
 module Helios_single_FPGA #(
-    parameter GRID_WIDTH_X = 12,
+    parameter GRID_WIDTH_X = 6,
     parameter GRID_WIDTH_Z = 2,
-    parameter GRID_WIDTH_U = 10,
+    parameter GRID_WIDTH_U = 5,
     parameter MAX_WEIGHT = 2,
-    parameter NUM_CONTEXTS = 2,
-    parameter NUM_FPGAS = 5,
+    parameter NUM_CONTEXTS = 1,
+    parameter NUM_FPGAS = 1,
     parameter FPGA_ID = 1,
     parameter ROUTER_DELAY_COUNTER = 18,
-    parameter LOGICAL_QUBITS_PER_DIM = 2
+    parameter LOGICAL_QUBITS_PER_DIM = 1
 ) (
     clk,
     reset,
@@ -32,7 +32,7 @@ module Helios_single_FPGA #(
     // roots // A debug port. Do not use in the real implementation
 );
 
-`include "../../parameters/parameters.sv"
+`include "parameters.sv"
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
 

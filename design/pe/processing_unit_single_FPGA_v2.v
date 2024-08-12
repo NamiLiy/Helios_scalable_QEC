@@ -28,7 +28,7 @@ module processing_unit #(
     busy
 );
 
-`include "../../parameters/parameters.sv"
+`include "parameters.sv"
 
 localparam EXPOSED_DATA_SIZE = ADDRESS_WIDTH + 1 + 1 + 1;
 

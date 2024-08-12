@@ -39,7 +39,7 @@ module neighbor_link_internal #(
     reset_edge
 );
 
-`include "../../parameters/parameters.sv"
+`include "parameters.sv"
 
 localparam LINK_BIT_WIDTH = $clog2(MAX_WEIGHT + 1);
 localparam EXPOSED_DATA_SIZE = ADDRESS_WIDTH + 1 + 1 + 1;

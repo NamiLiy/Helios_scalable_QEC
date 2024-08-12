@@ -26,7 +26,7 @@ module root_controller #(
     router_busy
 );
 
-`include "../../parameters/parameters.sv"
+`include "parameters.sv"
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
 

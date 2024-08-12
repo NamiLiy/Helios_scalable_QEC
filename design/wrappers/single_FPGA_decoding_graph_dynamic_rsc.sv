@@ -33,7 +33,7 @@ module single_FPGA_decoding_graph_dynamic_rsc #(
 
 );
 
-`include "../../parameters/parameters.sv"
+`include "parameters.sv"
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
 

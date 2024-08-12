@@ -15,7 +15,7 @@ module support_processing_unit #(
     do_not_store // Mem store wont happen when this flag is raised
 );
 
-`include "../../parameters/parameters.sv"
+`include "parameters.sv"
 
 localparam EXPOSED_DATA_SIZE = ADDRESS_WIDTH + 1 + 1 + 1;
 
