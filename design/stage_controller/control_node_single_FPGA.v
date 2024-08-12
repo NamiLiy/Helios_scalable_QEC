@@ -72,7 +72,7 @@ localparam BORDER_TOP_LSB = PU_COUNT_PER_ROUND * (PHYSICAL_GRID_WIDTH_U- 1);
 localparam BORDER_BOT_MSB = PU_COUNT_PER_ROUND - 1;
 localparam BORDER_BOT_LSB = 0;
 
-localparam CTRL_MSG_MSB = 47;
+//localparam CTRL_MSG_MSB = 47;
 
 localparam CONTEXT_COUNTER_WIDTH = $clog2(NUM_CONTEXTS + 1);
 
@@ -198,7 +198,7 @@ end
 
 always@(*) begin
     // Laksheen
-    if(global_stage == STAGE_IDLE && input_ctrl_rx_valid && input_ctrl_rx_ready && input_ctrl_rx_data [MSG_HEADER_MSB : MSG_HEADER_LSB] == HEADER_DECODE_BLOCK && input_ctrl_rx_data [0] == 1'b0) begin // The last 0 is to ensure only to set it in the first stage
+    if(global_stage == STAGE_IDLE && input_ctrl_rx_valid && input_ctrl_rx_ready && input_ctrl_rx_data [MSG_HEADER_MSB : MSG_HEADER_LSB] == HEADER_DECODE_BLOCK && input_ctrl_rx_data [0] == 1'b1) begin // The last 0 is to ensure only to set it in the first stage
         cycle_counter_reset = 1;
     end else begin
         cycle_counter_reset = 0;
@@ -329,7 +329,7 @@ always @(posedge clk) begin
                         //         border_continous[1] <= 1'b1;
                         //     end
                         // end
-                    end else if(input_ctrl_rx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == HEADER_DECODE_BLOCK) begin
+                    end else if(input_ctrl_rx_data [MSG_HEADER_MSB : MSG_HEADER_LSB] == HEADER_DECODE_BLOCK) begin
                         global_stage <= STAGE_MEASUREMENT_PREPARING;
                         measurement_fusion_stage <= 0;
                         current_context <= 0;
@@ -339,7 +339,7 @@ always @(posedge clk) begin
                         measurement_internal <= {PU_COUNT_PER_ROUND{1'b0}};
                         peel_and_finish <= input_ctrl_rx_data[0];
                         report_latency <= input_ctrl_rx_data[1];
-                    end else if (input_ctrl_rx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == HEADER_SET_BOUNDARIES) begin
+                    end else if (input_ctrl_rx_data [MSG_HEADER_MSB : MSG_HEADER_LSB] == HEADER_SET_BOUNDARIES) begin
                         global_stage <= STAGE_IDLE;
                         delay_counter <= 0;
                         result_valid <= 0;

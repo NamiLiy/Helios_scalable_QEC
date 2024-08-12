@@ -41,7 +41,7 @@ wire local_tx_ready_d;
 
 wire [63 : 0] local_rx_data_d;
 wire local_rx_valid_d;
-reg local_rx_ready_d;
+wire local_rx_ready_d;
 
 wire [63:0] local_tx_data;
 wire local_tx_valid;
@@ -63,7 +63,8 @@ reg input_open;
 string input_filename;
 integer input_file;
 reg input_eof = 0;
-reg [31:0] input_read_value;
+reg input_closed = 0;
+reg [63:0] input_read_value;
 reg [31:0] test_case_count;
 
 
@@ -73,19 +74,22 @@ always @(negedge clk) begin
         input_open = 0;
         input_eof = 0;
         test_case_count = 0;
+        input_closed = 0;
     end else begin
         if(input_open == 0) begin
-            input_filename = $sformatf("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/configuration_%0d_%0d.txt", CODE_DISTANCE, FPGA_ID);
+            input_filename = $sformatf("/home/helios/Helios_scalable_QEC/test_benches/test_data/configuration_%0d_%0d.txt", CODE_DISTANCE, FPGA_ID);
             input_file = $fopen(input_filename, "r");
             input_open = 1;
         end
-        if (input_open ==1 && input_eof == 0 && local_tx_ready_d) begin
-            input_eof = $feof(input_file); 
-            $fscanf (input_file, "%h\n", input_read_value);
+        if ((input_open ==1) && (input_eof == 0) && local_tx_ready_d) begin
+            $fscanf (input_file, "%h\n", input_read_value[31:0]);
+            $fscanf (input_file, "%h\n", input_read_value[63:32]);
             test_case_count = test_case_count + 1;
-        end
-        if(input_eof == 1) begin
+            input_eof = $feof(input_file); 
+        end else if(input_eof == 1 && input_closed == 0) begin
+            test_case_count = test_case_count - 1; //Remove the initialization message
             $fclose(input_file);
+            input_closed = 1;
             $display("%t\t Root status message : Test case  %d loaded", $time, test_case_count);
         end
     end
@@ -95,7 +99,7 @@ end
 
 always@(*) begin
     local_tx_data_d = input_read_value;
-    if(input_open ==1 && input_eof == 0) begin
+    if(input_open ==1 && input_closed == 0) begin
         local_tx_valid_d = 1;
     end else begin
         local_tx_valid_d = 0;
@@ -108,9 +112,7 @@ always@(negedge clk) begin
     end
 end
 
-always@(*) begin
-    local_rx_ready_d = 1;
-end
+assign local_rx_ready_d = 1;
 
 
 

@@ -2,11 +2,15 @@
 
 distance=5
 p=0.001
-test_runs=10
+test_runs=100
 num_fpgas=1 #only the leaves
 multi_fpga_mode=0
 measurement_fusion=0
 logical_quibits_per_dimension=1
+
+configuration_file="../test_benches/test_data/configuration_${distance}_0.txt"
+gcc configuration.c -o config -lm
+./config $configuration_file $test_runs
 
 if [ $multi_fpga_mode -eq 0 ]; then
 
@@ -51,7 +55,7 @@ if [ $multi_fpga_mode -eq 0 ]; then
 
         if [ $measurement_fusion -eq 0 ]; then
             # Call the programs with these arguments
-            #./main $distance $p $test_runs $input_file 1 $measurement_fusion $logical_quibits_per_dimension
+            ./main $distance $p $test_runs $input_file 1 $measurement_fusion $logical_quibits_per_dimension
             ./uf $distance $input_file $output_file 1 $measurement_fusion $logical_quibits_per_dimension
             sleep 1
         fi

@@ -165,12 +165,12 @@ integer i;
 integer j;
 integer k;
 integer context_k;
-integer file, input_file;
+integer output_file_2, input_file;
 reg open = 1;
 reg input_open = 1;
 reg eof = 0;
 reg input_eof = 0;
-reg [31:0] read_value, test_case, input_read_value;
+reg [31:0] read_value, test_case, input_read_value, input_test_case;
 reg [X_BIT_WIDTH-1 : 0] expected_x;
 reg [Z_BIT_WIDTH-1 : 0] expected_z;
 reg [U_BIT_WIDTH-1 : 0] expected_u;
@@ -258,12 +258,12 @@ always @(negedge clk) begin
         data_loading_complete = 0;
     end else if (loading_state == 3'b1 && full_test_completed == 0) begin
         if(input_open == 1) begin
-            input_filename = $sformatf("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/input_data_%0d_%0d.txt", CODE_DISTANCE, FPGA_ID);
+            input_filename = $sformatf("/home/helios/Helios_scalable_QEC/test_benches/test_data/input_data_%0d_%0d.txt", CODE_DISTANCE, FPGA_ID);
             input_file = $fopen(input_filename, "r");
             input_open = 0;
         end
         if (test_case_id_loaded ==0 && input_eof == 0)begin 
-            $fscanf (input_file, "%h\n", test_case);
+            $fscanf (input_file, "%h\n", input_test_case);
             input_eof = $feof(input_file);
             test_case_id_loaded = 1;
             if (input_eof == 0)begin 
@@ -288,22 +288,23 @@ always @(posedge clk) begin
     if (decoder.controller.global_stage_d == STAGE_PEELING && full_test_completed == 0) begin // When we move to peeling we are doen with clustering
 //       $display("%t\tTest case %d pass %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
        if(open == 1) begin
-            output_filename = $sformatf("/home/heterofpga/Desktop/qec_hardware/test_benches/test_data/output_data_%0d_%0d.txt", CODE_DISTANCE, FPGA_ID);
-            file = $fopen(output_filename, "r");
+            output_filename = $sformatf("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_%0d_%0d.txt", CODE_DISTANCE, FPGA_ID);
+            output_file_2 = $fopen(output_filename, "r");
             open = 0;
         end
         if (eof == 0)begin 
             if(decoder.controller.current_context == 0) begin
-                $fscanf (file, "%h\n", test_case);
+                $fscanf (output_file_2, "%h\n", test_case);
+                //$display("%t\tTest case %d", $time, test_case);
                 test_fail = 0;
             end
-            eof = $feof(file);
         end
         for (k=0 ;k <PHYSICAL_GRID_WIDTH_U; k++) begin
             for (i=0 ;i <CODE_DISTANCE_X; i++) begin
                 for (j=0 ;j <CODE_DISTANCE_Z; j++) begin
                     if (eof == 0)begin 
-                        $fscanf (file, "%h\n", read_value);
+                        $fscanf (output_file_2, "%h\n", read_value);
+                        //$display("%t\t Read Value %h", $time, read_value);
                         if(Z_BIT_WIDTH>0) begin
                             expected_z = read_value[Z_BIT_WIDTH - 1:0];
                         end else begin
@@ -312,7 +313,6 @@ always @(posedge clk) begin
                         expected_x = read_value[X_BIT_WIDTH - 1 + 8 :8];
                         expected_u = read_value[U_BIT_WIDTH - 1 + 16 :16];
                         expected_fpga = read_value[FPGA_BIT_WIDTH - 1 + 24 :24];
-                        eof = $feof(file);
                         
                         // context_k = k;
                         // These logic are for multi context verification
@@ -341,6 +341,7 @@ always @(posedge clk) begin
                 end
             end
         end
+        eof = $feof(output_file_2);
     end
     if (message_counter == 1 && output_valid == 1 && full_test_completed == 0) begin // Cycle counter and iteration counter is recevied
         if (!test_fail) begin
