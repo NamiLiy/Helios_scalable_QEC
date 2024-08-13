@@ -7,7 +7,7 @@ module single_FPGA_decoding_graph_dynamic_rsc #(
     parameter MAX_WEIGHT = 2,
     parameter NUM_CONTEXTS = 4,
     parameter NUM_FPGAS = 5,
-    parameter LOGICAL_QUBITS_PER_DIM = 2
+    parameter ACTUAL_D = 5
 ) (
     clk,
     reset,
@@ -440,11 +440,15 @@ generate
                 reg [3:0] type_for_boundary_links;
 
                 always@(*) begin 
+                    // We only use type for boundary links on the internal links. Other types of links are hardcoded
                     if(i==0 || i==GRID_WIDTH_X) begin
                         type_for_boundary_links = 3'b10; // This is the northernmost row. It never exists
-                   end else if(i==GRID_WIDTH_X/LOGICAL_QUBITS_PER_DIM) begin
-                        type_for_boundary_links = measurement_fusion ? 3'b00 : 3'b11; // This is the border row. When Fusion is on it is
-                   end else begin
+                   end else if((i%(ACTUAL_D+1))==0) begin
+                        type_for_boundary_links = measurement_fusion ? 3'b00 : 3'b11; // This is the horizontal border row. When Fusion is on it is
+                   end else if((i%2 == 0) && (j%(ACTUAL_D-1) == 0)) begin
+                        type_for_boundary_links = measurement_fusion ? 3'b00 : 3'b11; // This is the vertical border row. When Fusion is on it is
+                   end
+                   else begin
                        type_for_boundary_links = 3'b00; //  Internal
                    end
                end
@@ -530,7 +534,9 @@ generate
                 always@(*) begin 
                     if(i==0 || i==GRID_WIDTH_X) begin
                         type_for_boundary_links = 3'b10; // This is the northernmost row. It never exists
-                   end else if(i==GRID_WIDTH_X/LOGICAL_QUBITS_PER_DIM) begin
+                   end else if((i%(ACTUAL_D+1))==0) begin
+                        type_for_boundary_links = measurement_fusion ? 3'b00 : 3'b11; // This is the border row. When Fusion is on it is
+                   end else if((i%2 == 1) && (j%(ACTUAL_D-1) == 0)) begin
                         type_for_boundary_links = measurement_fusion ? 3'b00 : 3'b11; // This is the border row. When Fusion is on it is
                    end else begin
                        type_for_boundary_links = 3'b00; //  Internal

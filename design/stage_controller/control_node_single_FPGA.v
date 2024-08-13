@@ -413,13 +413,13 @@ always @(posedge clk) begin
                         if(NUM_CONTEXTS == 1) begin
                             if(|odd_clusters == 1'b0) begin // everybody is even
                                 // Laksheen
-                                // if(measurement_fusion_stage == 2'b00) begin
-                                //     global_stage <= STAGE_RESET_ROOTS;
-                                // end else begin
-                                //     global_stage <= STAGE_PEELING;
-                                // end
                                 if(peel_and_finish) begin
-                                    global_stage <= STAGE_PEELING;
+                                    // global_stage <= STAGE_PEELING;
+                                    if(measurement_fusion_stage == 2'b00) begin
+                                        global_stage <= STAGE_RESET_ROOTS;
+                                    end else begin
+                                        global_stage <= STAGE_PEELING;
+                                    end
                                 end
                             end else begin // somebody is odd
                                 global_stage <= STAGE_GROW;

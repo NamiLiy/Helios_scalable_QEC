@@ -17,14 +17,17 @@ module overall_verification_bench;
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
 localparam CODE_DISTANCE = 5;
-localparam LOGICAL_QUBITS_PER_DIM = 1;
-localparam NUM_LEAVES = 1;
+localparam LOGICAL_QUBITS_PER_DIM = 2; //This is across all the FPGAs. IF this is not compatible with qubits per dim, then the test could fail
+localparam NUM_LEAVES = 4;
 localparam ROUTER_DELAY = 53;
 localparam MAX_COUNT = 1000;
 localparam MULTI_FPGA_RUN = 0;
 localparam MEASUREMENT_FUSION=0;
 
 `define SLICE_VEC(vec, idx, width) (vec[idx*width +: width])
+
+localparam NUM_LEAVES_PER_DIM = $sqrt(NUM_LEAVES);
+localparam LOGICAL_QUBITS_PER_DIM_PER_FPGA = LOGICAL_QUBITS_PER_DIM / NUM_LEAVES_PER_DIM;
 
 reg clk;
 reg reset;
@@ -57,13 +60,17 @@ root_hub_test #(
 generate
     genvar i;
     for(i = 0; i < NUM_LEAVES; i = i + 1) begin : leaf
+        localparam south_boundary = (i==0 || i==1) ? 1 : 0;
+        localparam east_boundary = (i==0 || i==2) ? 1 : 0;
         verification_bench_leaf #(
             .CODE_DISTANCE(CODE_DISTANCE),
             .NUM_FPGAS(NUM_LEAVES + 1),
             .ROUTER_DELAY(ROUTER_DELAY),
             .FPGA_ID(i + 1),
             .NUM_CONTEXTS(MEASUREMENT_FUSION + 1),
-            .LOGICAL_QUBITS_PER_DIM(LOGICAL_QUBITS_PER_DIM)
+            .LOGICAL_QUBITS_PER_DIM(LOGICAL_QUBITS_PER_DIM_PER_FPGA),
+            .ADDITIONAL_BOUNDARY_SOUTH(south_boundary),
+            .ADDITIONAL_BOUNDARY_EAST(east_boundary)
         ) decoder_tb(
             .clk(clk),
             .reset(reset),

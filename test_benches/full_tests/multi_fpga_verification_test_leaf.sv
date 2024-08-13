@@ -18,6 +18,8 @@ module verification_bench_leaf#(
     parameter FPGA_ID = 1,
     parameter NUM_CONTEXTS = 1,
     parameter LOGICAL_QUBITS_PER_DIM = 2
+    parameter ADDITIONAL_BOUNDARY_SOUTH = 0,
+    parameter ADDITIONAL_BOUNDARY_EAST = 0,
 )(
     input clk,
     input reset,
@@ -33,12 +35,15 @@ module verification_bench_leaf#(
 
 `include "../../parameters/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
-               
-localparam CODE_DISTANCE_X = (CODE_DISTANCE + 1)*LOGICAL_QUBITS_PER_DIM;
-localparam CODE_DISTANCE_Z = (CODE_DISTANCE - 1)/2;
 
-parameter GRID_WIDTH_X = (CODE_DISTANCE + 1)*LOGICAL_QUBITS_PER_DIM;
-parameter GRID_WIDTH_Z = (CODE_DISTANCE - 1)/2;
+localparam ANCILLAS_IN_EAST = ADDITIONAL_BOUNDARY_EAST*((CODE_DISTANCE + 1)/4);
+localparam ANCILLAS_IN_SOUTH = ADDITIONAL_BOUNDARY_SOUTH*((CODE_DISTANCE + 3)/4)*2;
+               
+localparam CODE_DISTANCE_X = (CODE_DISTANCE + 1)*LOGICAL_QUBITS_PER_DIM + ANCILLAS_IN_SOUTH;
+localparam CODE_DISTANCE_Z = ((CODE_DISTANCE - 1)/2)*LOGICAL_QUBITS_PER_DIM + ANCILLAS_IN_EAST;
+
+parameter GRID_WIDTH_X = CODE_DISTANCE_X;
+parameter GRID_WIDTH_Z = CODE_DISTANCE_Z;
 parameter GRID_WIDTH_U = CODE_DISTANCE; // Laksheen
 localparam PHYSICAL_GRID_WIDTH_U = (GRID_WIDTH_U % NUM_CONTEXTS == 0) ? 
                                    (GRID_WIDTH_U / NUM_CONTEXTS) : 
@@ -111,7 +116,8 @@ Helios_single_FPGA #(
     .NUM_FPGAS(NUM_FPGAS),
     .ROUTER_DELAY_COUNTER(ROUTER_DELAY),
     .LOGICAL_QUBITS_PER_DIM(LOGICAL_QUBITS_PER_DIM),
-    .FPGA_ID(FPGA_ID)
+    .FPGA_ID(FPGA_ID),
+    .ACTUAL_D(CODE_DISTANCE),
  ) decoder (
     .clk(clk),
     .reset(reset),
