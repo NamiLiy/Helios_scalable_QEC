@@ -8,11 +8,18 @@ int max(int a, int b) {
     return (a > b) ? a : b;
 }
 
+struct FPGA_ranges {
+    int i_min;
+    int i_max;
+    int j_min;
+    int j_max;
+}
+
 double normal_random(double mean, double std_dev);
 
 int main(int argc, char *argv[]) {
     if (argc != 8) {
-        fprintf(stderr, "Usage: %s <distance> <p> <test_runs> <syndrome_filename> <multiplication_factor> <m_fusion>\n", argv[0]);
+        fprintf(stderr, "Usage: %s <distance> <p> <test_runs> <syndrome_file_prefix> <m_fusion> <qubits_per_dim> <num_leaves>\n", argv[0]);
         return 1;
     }
 
@@ -22,15 +29,23 @@ int main(int argc, char *argv[]) {
 
     char *filename = argv[4];
 
-    int multiplication_factor = atoi(argv[5]);
-    int m_fusion = atoi(argv[6]); //0 no fusion, 1 fusion
-    int qubits_per_dim = atoi(argv[7]);
+    int m_fusion = atoi(argv[5]); //0 no fusion, 1 fusion
+    int qubits_per_dim = atoi(argv[6]);
+    int num_leaves = atoi(argv[7]);
 
-    int distance_i = (distance+1)*multiplication_factor*qubits_per_dim; //This is ancillas in i direction
-    int distance_j = (distance-1)/2; //This is ancillas in j direction
+    int distance_i = (distance+1)*qubits_per_dim; //This is ancillas in i direction
+    int distance_j = ((distance-1)/2)*qubits_per_dim; //This is ancillas in j direction
     int data_qubits_i = distance_i - 1;//This is data qubits in i direction
-    int data_qubits_j = distance;
+    int data_qubits_j = distance_j*2+1;//This is data qubits in j direction
     int meas_rounds = distance*(m_fusion + 1);
+
+    struct FPGA_ranges fpga_ranges[num_leaves];
+    for(int f=0; f <num_leaves; f++){
+        fpga_ranges[f].i_min = (f < 2) ? 0 : distance_i / 2;
+        fpga_ranges[f].i_max = (f < 2) ? (distance_i / 2 - 1 + ((distance + 3)/4)*2) : (distance_i -1);
+        fpga_ranges[f].j_min = (f % 2 == 0) ? 0 : (distance_j / 2);
+        fpga_ranges[f].j_max = (f % 2 == 0) ?  (distance_j / 2 - 1 + (distance + 1)/4) : (distance_j -1);
+    }
 
     double mean, std_dev;
     mean = p;
@@ -153,15 +168,23 @@ int main(int argc, char *argv[]) {
 
 
 
-    FILE *out_fp, *in_fp;
+    FILE* out_fp[num_leaves], 
     int c;
-    // char filename[100];
-    // sprintf(filename, "../test_benches/test_data/input_data_%d_rsc.txt", distance);
-    out_fp = fopen(filename, "wb");
-    if (out_fp == NULL) {
-        fprintf(stderr, "Can't open output file %s!\n", "output_3.txt");
-        exit(1);
+    for (int i = 0; i < num_leaves; i++) {
+        char filename[100];
+        sprintf(filename, "%s_%d.txt", filename, i);
+        out_fp[i] = fopen(filename, "wb");
+        if (out_fp[i] == NULL) {
+            fprintf(stderr, "Can't open output file %s!\n", filename);
+            exit(1);
+        }
     }
+
+    // out_fp = fopen(filename, "wb");
+    // if (out_fp == NULL) {
+    //     fprintf(stderr, "Can't open output file %s!\n", "output_3.txt");
+    //     exit(1);
+    // }
 
     for (int t = 0; t < test_runs; t++) {
         for (int k = 0; k < meas_rounds; k++) {
@@ -245,15 +268,27 @@ int main(int argc, char *argv[]) {
                 for (int j = 0; j < distance_j; j++) {
                     //fprintf(out_fp, "%08X\n", syndrome[k][i][j]);
                     if(syndrome[k][i][j] == 1) {
-                        int defect_address = j + (i<<((int)(ceil(log2(distance_j))))) + (k<<((int)(ceil(log2(distance_j)))+(int)(ceil(log2(distance_i)))));
-                        fprintf(out_fp, "%08X\n", defect_address);
+                        for(int f=0; f <num_leaves; f++){
+                            if(i >= fpga_ranges[f].i_min && i <= fpga_ranges[f].i_max && j >= fpga_ranges[f].j_min && j <= fpga_ranges[f].j_max){
+                                int new_i = i - fpga_ranges[f].i_min;
+                                int new_j = j - fpga_ranges[f].j_min;
+                                int new_distance_i = fpga_ranges[f].i_max - fpga_ranges[f].i_min + 1;
+                                int new_distance_j = fpga_ranges[f].j_max - fpga_ranges[f].j_min + 1;
+                                unsigned int defect_address = new_j + (new_i<<((int)(ceil(log2(new_distance_j))))) + (k<<((int)(ceil(log2(new_distance_j)))+(int)(ceil(log2(new_distance_i))));
+                                fprintf(out_fp[f], "%08X\n", defect_address);
+                            }
+                            // unsigned int defect_address = j + (i<<((int)(ceil(log2(distance_j))))) + (k<<((int)(ceil(log2(distance_j)))+(int)(ceil(log2(distance_i))));
+                            // fprintf(out_fp[f], "%08X\n", defect_address);
+                        }
                     }
                 }
                 // printf("\n");
             }
             // printf("\n");
         }
-        fprintf(out_fp, "FFFFFFFF\n");
+        for(int f=0; f <num_leaves; f++){
+            printf(out_fp[f], "FFFFFFFF\n");
+        }
 
         // These data is for the FPGA
         /*int write_address = 0x10;
@@ -284,7 +319,9 @@ int main(int argc, char *argv[]) {
             }
         }*/
     }
-    fclose(out_fp);
+    for (int i = 0; i < num_leaves; i++) {
+        fclose(out_fp[i]);
+    }
 
     // in_fp = fopen("../test_benches/test_data/test_file_d17_p001.bin", "rb");
     // while ((c = fgetc(in_fp)) != EOF) {

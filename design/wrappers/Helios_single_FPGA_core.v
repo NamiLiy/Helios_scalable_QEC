@@ -26,7 +26,23 @@ module Helios_single_FPGA #(
 
     parent_tx_data,
     parent_tx_valid,
-    parent_tx_ready
+    parent_tx_ready,
+
+    grid_1_out_data,
+    grid_1_out_valid,
+    grid_1_out_ready,
+
+    grid_1_in_data,
+    grid_1_in_valid,
+    grid_1_in_ready,
+
+    grid_2_out_data,
+    grid_2_out_valid,
+    grid_2_out_ready,
+
+    grid_2_in_data,
+    grid_2_in_valid,
+    grid_2_in_ready
 
 
     // roots // A debug port. Do not use in the real implementation
@@ -72,6 +88,22 @@ output parent_rx_ready;
 output [63 : 0] parent_tx_data;
 output parent_tx_valid;
 input parent_tx_ready;
+
+output [63 : 0] grid_1_out_data;
+output grid_1_out_valid;
+input grid_1_out_ready;
+
+input [63 : 0] grid_1_in_data;
+input grid_1_in_valid;
+output grid_1_in_ready;
+
+output [63 : 0] grid_2_out_data;
+output grid_2_out_valid;
+input grid_2_out_ready;
+
+input [63 : 0] grid_2_in_data;
+input grid_2_in_valid;
+output grid_2_in_ready;
 
 wire [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 
@@ -152,6 +184,7 @@ unified_controller #(
     .ROUTER_DELAY_COUNTER(ROUTER_DELAY_COUNTER),
     .LOGICAL_QUBITS_PER_DIM(LOGICAL_QUBITS_PER_DIM),
     .ACTUAL_D(ACTUAL_D)
+    .FPGA_ID(FPGA_ID)
 ) controller (
     .clk(clk),
     .reset(reset),
@@ -236,5 +269,13 @@ fifo_wrapper #(
     .output_valid(controller_to_handler_valid),
     .output_ready(controller_to_handler_ready)
 );
+
+assign grid_1_out_data = 64'hffffffffffffffff;
+assign grid_1_out_valid = parent_rx_valid;
+assign grid_1_out_ready = 1'b1;
+
+assign grid_2_out_data = 64'hffffffffffffffff;
+assign grid_2_out_valid = parent_rx_valid;
+assign grid_2_out_ready = 1'b1;
 
 endmodule

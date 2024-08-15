@@ -4,7 +4,6 @@ distance=5
 p=0.001
 test_runs=100
 num_fpgas=1 #only the leaves
-multi_fpga_mode=0
 measurement_fusion=0
 logical_quibits_per_dimension=1
 
@@ -12,69 +11,50 @@ configuration_file="../test_benches/test_data/configuration_${distance}_0.txt"
 gcc configuration.c -o config -lm
 ./config $configuration_file $test_runs
 
-if [ $multi_fpga_mode -eq 0 ]; then
+gcc main.c random_seeds.c -o main -lm
+input_prefix="../test_benches/test_data/input_data_${distance}"
+./main $distance $p $test_runs $input_prefix $measurement_fusion $logical_quibits_per_dimension $num_fpgas
 
-    # Loop over the range of FPGA IDs
-    for (( fpga_id=1; fpga_id<=num_fpgas; fpga_id++ ))
-    do
-        gcc main.c random_seeds.c -o main -lm
-        gcc union_find.c -o uf -lm
-        # Please correct d in this file
-        gcc context_fix.c -o cf -lm
+gcc union_find.c -o uf -lm
 
-        # Use variable substitution in file names
-        input_file="../test_benches/test_data/input_data_${distance}_${fpga_id}.txt"
-        output_file="../test_benches/test_data/output_data_${distance}_${fpga_id}.txt"
-
-        input_file_unmodified="${input_file%.*}_unmodified.txt"
-        output_file_unmodified="${output_file%.*}_unmodified.txt"
-
-        
-        
-
-        if [ $measurement_fusion -eq 1 ]; then
-
-            # Call the programs with these arguments
-            ./main $distance $p $test_runs $input_file_unmodified 1 $measurement_fusion
-            ./uf $distance $input_file_unmodified $output_file_unmodified 1 $measurement_fusion
-            sleep 1
-
-            # # Unmodified file paths as variables
-            # input_file_unmodified="${input_file%.*}_unmodified.txt"
-            # output_file_unmodified="${output_file%.*}_unmodified.txt"
-
-            # # Copy files to new '_unmodified' paths
-            # cp "$input_file" "$input_file_unmodified"
-            # cp "$output_file" "$output_file_unmodified"
-            num_contexts=$num_contexts+1
-            
-            sleep 1
-            ./cf $distance $num_contexts $input_file_unmodified $input_file $output_file_unmodified $output_file
-            sleep 1
-        fi
-
-        if [ $measurement_fusion -eq 0 ]; then
-            # Call the programs with these arguments
-            ./main $distance $p $test_runs $input_file 1 $measurement_fusion $logical_quibits_per_dimension
-            ./uf $distance $input_file $output_file 1 $measurement_fusion $logical_quibits_per_dimension
-            sleep 1
-        fi
-
-    done
-fi
-
-if [ $multi_fpga_mode -eq 1 ]; then
-
-    gcc main.c random_seeds.c -o main -lm
-    gcc union_find.c -o uf -lm
-    gcc divide_multiple.c -o dm -lm
+# Loop over the range of FPGA IDs
+for (( fpga_id=1; fpga_id<=num_fpgas; fpga_id++ ))
+do
+    
 
     # Use variable substitution in file names
-    input_file="../test_benches/test_data/input_data_${distance}.txt"
-    output_file="../test_benches/test_data/output_data_${distance}.txt"
+    input_file="../test_benches/test_data/input_data_${distance}_${fpga_id}.txt"
+    output_file="../test_benches/test_data/output_data_${distance}_${fpga_id}.txt"
 
-    # Call the programs with these arguments
-    ./main $distance $p $test_runs $input_file $num_fpgas
-    ./uf $distance $input_file $output_file $num_fpgas
-    ./dm $distance $input_file $output_file $num_fpgas
-fi
+    input_file_unmodified="${input_file%.*}_unmodified.txt"
+    output_file_unmodified="${output_file%.*}_unmodified.txt"
+
+
+    if [ $measurement_fusion -eq 1 ]; then
+
+        # Call the programs with these arguments
+        ./main $distance $p $test_runs $input_file_unmodified 1 $measurement_fusion
+        ./uf $distance $input_file_unmodified $output_file_unmodified 1 $measurement_fusion
+        sleep 1
+
+        # # Unmodified file paths as variables
+        # input_file_unmodified="${input_file%.*}_unmodified.txt"
+        # output_file_unmodified="${output_file%.*}_unmodified.txt"
+
+        # # Copy files to new '_unmodified' paths
+        # cp "$input_file" "$input_file_unmodified"
+        # cp "$output_file" "$output_file_unmodified"
+        num_contexts=$num_contexts+1
+        
+        sleep 1
+        ./cf $distance $num_contexts $input_file_unmodified $input_file $output_file_unmodified $output_file
+        sleep 1
+    fi
+
+    if [ $measurement_fusion -eq 0 ]; then
+        fprintf(stderr, "Usage: %s <distance> <input_filename> <output_filename> <num_fpgas> <m_fusion> <qubits_per_dim> <leaf_id>\n", argv[0]);
+        ./uf $distance $input_file $output_file $num_fpgas $measurement_fusion $logical_quibits_per_dimension
+        sleep 1
+    fi
+
+done

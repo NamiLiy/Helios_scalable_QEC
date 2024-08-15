@@ -3,7 +3,7 @@
 #include <math.h>
 #include <time.h>
 
-#define D 150
+#define D 100
 #define TOTAL_MEASUREMENTS D
 
 struct Distance {
@@ -787,8 +787,8 @@ int print_output(FILE* file, int test, struct Distance distance) {
 
 int main(int argc, char *argv[]) {
 
-    if (argc != 7) {
-        fprintf(stderr, "Usage: %s <distance> <input_filename> <output_filename>\n", argv[0]);
+    if (argc != 8) {
+        fprintf(stderr, "Usage: %s <distance> <input_filename> <output_filename> <num_fpgas> <m_fusion> <qubits_per_dim> <leaf_id>\n", argv[0]);
         return 1;
     }
 
@@ -799,11 +799,17 @@ int main(int argc, char *argv[]) {
     char *input_filename = argv[2];
     char *output_filename = argv[3];
 
-    int num_fpgas = atoi(argv[4]);
+    int num_fpgas = atoi(argv[4]); //This is num leaves
     int m_fusion = atoi(argv[5]); //0 no fusion, 1 fusion
     int qubits_per_dim = atoi(argv[6]);
+    int leaf_id = atoi(argv[7]);
 
-    struct Distance distance = {d*(m_fusion + 1), (d+1)*num_fpgas*qubits_per_dim, (d-1)/2};
+    int dist_i = (distance +1)*qubits_per_dim / 2;
+    int dist_j = ((distance -1)/2)*qubits_per_dim / 2;
+    int dist_i_extra = (f < 2) ? (((distance + 3)/4)*2) : 0;
+    int dist_j_extra = (f % 2 == 0) ? ((distance + 1)/4) : 0;
+ 
+    struct Distance distance = {d*(m_fusion + 1), dist_i + dist_i_extra, dist_j + dist_j_extra};
     if(distance.k > D || distance.i > D || distance.j > D) {
         fprintf(stderr, "Some distance is greater than %d please change the parameter in source\n", D);
         return 1;

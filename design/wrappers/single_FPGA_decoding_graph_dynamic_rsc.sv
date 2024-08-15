@@ -7,7 +7,8 @@ module single_FPGA_decoding_graph_dynamic_rsc #(
     parameter MAX_WEIGHT = 2,
     parameter NUM_CONTEXTS = 4,
     parameter NUM_FPGAS = 5,
-    parameter ACTUAL_D = 5
+    parameter ACTUAL_D = 5,
+    parameter FPGA_ID = 1
 ) (
     clk,
     reset,
@@ -27,7 +28,6 @@ module single_FPGA_decoding_graph_dynamic_rsc #(
     border_input_valid,
     border_input_ready,
 
-    border_continous,
     measurement_fusion,
     reset_all_edges
 
@@ -62,6 +62,11 @@ localparam FPGA_FIFO_COUNT = FPGA_FIFO_COUNT_PER_LAYER*PHYSICAL_GRID_WIDTH_U;
 
 localparam LINK_BIT_WIDTH = $clog2(MAX_WEIGHT + 1);
 
+parameter north_cut_type = 0;
+parameter south_cut_type = (FPGA_ID <= 2 ? 1 : 0);
+parameter east_cut_type = 1;
+parameter west_cut_type = ((FPGA_ID == 1 || FPGA_ID == 3) ? 1 : 0); 
+
 input clk;
 input reset;
 input [PU_COUNT_PER_ROUND-1:0] measurements;
@@ -82,7 +87,6 @@ input [2*FPGA_FIFO_SIZE*FPGA_FIFO_COUNT-1:0] border_input_data;
 input [2*FPGA_FIFO_COUNT-1:0] border_input_valid;
 output [2*FPGA_FIFO_COUNT-1:0] border_input_ready;
 
-input[1:0] border_continous;
 input measurement_fusion; // this being on indicates that the batch now needs tobe fused with the pevious batch
 input reset_all_edges; // all edges are reset
 
@@ -428,14 +432,8 @@ generate
                 wire local_context_switch;
                 assign local_context_switch = 1'b0;
 
-                wire [1:0] north_cut_type;
-                wire [1:0] south_cut_type;
-
                 wire reset_edge_local;
                 assign reset_edge_local = (global_stage == STAGE_MEASUREMENT_LOADING) ? 1'b1 : 1'b0;
-
-                assign north_cut_type = (border_continous[0]==1) ? 2'b11 : 2'b10;
-                assign south_cut_type = (border_continous[1]==1) ? 2'b11 : 2'b10;
                 
                 reg [3:0] type_for_boundary_links;
 
@@ -473,20 +471,16 @@ generate
                 // end else begin
                 //     assign local_context_switch = 1'b0;
                 // end
-                if(i==0 && j == 0) begin // First row top left. always never exists. it could be a boundary in mul-fpga but we can ignore it because it is already represented by an equivalent boundary in same fpga
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_NORTH, 2, NUM_CONTEXTS, reset_edge_local)
-                end else if(i==0 && j < GRID_WIDTH_Z && j > 0) begin // First row
-                    `NEIGHBOR_LINK_EXTERNAL(i, j, k, `NEIGHBOR_IDX_NORTH, north_cut_type, NUM_CONTEXTS, 0, j-1 + k*FPGA_FIFO_COUNT_PER_LAYER, init_address, reset_edge_local)
-                end else if(i==GRID_WIDTH_X && j == GRID_WIDTH_Z-1) begin // Last row far right. Never exists, (Could exist as boundary, ignored)
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_SOUTH, 2, NUM_CONTEXTS, reset_edge_local)
-                end else if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z-1) begin
-                    `NEIGHBOR_LINK_EXTERNAL(i-1, j, k, `NEIGHBOR_IDX_SOUTH, south_cut_type, NUM_CONTEXTS, 1, j + k*FPGA_FIFO_COUNT_PER_LAYER, init_address, reset_edge_local)                 
-                end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0) begin // odd rows which are always internal
+                if(i==0 && j < GRID_WIDTH_Z) begin // First row. Has z-1 elements
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_NORTH, north_cut_type, NUM_CONTEXTS, reset_edge_local)
+                end if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z) begin // Last row. Has z-1 elements
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_SOUTH, south_cut_type, NUM_CONTEXTS, reset_edge_local)                 
+                end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0) begin // odd rows which are always internal. z-1 elements
                     `NEIGHBOR_LINK_INTERNAL_0(i-1, j-1, k, i, j-1, k, `NEIGHBOR_IDX_SOUTH, `NEIGHBOR_IDX_NORTH, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
-                end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j == 0) begin // First element of even rows
+                end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j == 0) begin // First element of even rows //This is 2 instead of west cut because this is going up and duplicated in the down going equivalent at the boundary
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_NORTH, 2, NUM_CONTEXTS, reset_edge_local)
                 end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j == GRID_WIDTH_Z) begin // Last element of even rows
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j-1, k, `NEIGHBOR_IDX_SOUTH, 1, NUM_CONTEXTS, reset_edge_local)
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j-1, k, `NEIGHBOR_IDX_SOUTH, east_cut_type, NUM_CONTEXTS, reset_edge_local)
                 end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j > 0 && j < GRID_WIDTH_Z) begin // Middle elements of even rows
                     `NEIGHBOR_LINK_INTERNAL_0(i-1, j-1, k, i, j, k, `NEIGHBOR_IDX_SOUTH, `NEIGHBOR_IDX_NORTH, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
                 end
@@ -508,11 +502,7 @@ generate
                 wire reset_edge_local;
                 assign reset_edge_local = (global_stage == STAGE_MEASUREMENT_LOADING) ? 1'b1 : 1'b0;
 
-                wire [1:0] north_cut_type;
-                wire [1:0] south_cut_type;
-
-                assign north_cut_type = (border_continous[0]==1) ? 2'b11 : 2'b10;
-                assign south_cut_type = (border_continous[1]==1) ? 2'b11 : 2'b10;
+                
 
                 reg [ADDRESS_WIDTH_WITH_B-1:0] init_address;
                 always@(*) begin
@@ -545,17 +535,17 @@ generate
 
                 assign weight_in = `WEIGHT_EW(i,j);
                 if(i==0 && j < GRID_WIDTH_Z) begin // First row
-                    `NEIGHBOR_LINK_EXTERNAL(i, j, k, `NEIGHBOR_IDX_EAST, north_cut_type, NUM_CONTEXTS, 0, j + GRID_WIDTH_Z - 1 + k*FPGA_FIFO_COUNT_PER_LAYER, init_address, reset_edge_local)
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_EAST, north_cut_type, NUM_CONTEXTS, reset_edge_local)
                 end else if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z) begin // Last row
-                    `NEIGHBOR_LINK_EXTERNAL(i-1, j, k, `NEIGHBOR_IDX_WEST, south_cut_type, NUM_CONTEXTS, 1, j + GRID_WIDTH_Z - 1 + k*FPGA_FIFO_COUNT_PER_LAYER, init_address, reset_edge_local)
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_WEST, south_cut_type, NUM_CONTEXTS, reset_edge_local)
                 end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j < GRID_WIDTH_Z) begin // even rows which are always internal
                     `NEIGHBOR_LINK_INTERNAL_0(i, j, k, i-1, j, k, `NEIGHBOR_IDX_EAST, `NEIGHBOR_IDX_WEST, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
                 end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j == 0) begin // First element of odd rows
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_WEST, 1, NUM_CONTEXTS, reset_edge_local)
-                end else if(i < GRID_WIDTH_X -1 && i > 0 && i%2 == 1 && j == GRID_WIDTH_Z) begin // Last element of odd rows excluding last row
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_WEST, west_cut_type, NUM_CONTEXTS, reset_edge_local)
+                end else if(i < GRID_WIDTH_X -1 && i > 0 && i%2 == 1 && j == GRID_WIDTH_Z) begin // Last element of odd rows excluding last row. Is 2 because of equivalent down link
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j-1, k, `NEIGHBOR_IDX_EAST, 2, NUM_CONTEXTS, reset_edge_local)
                 end else if(i == GRID_WIDTH_X -1 && j == GRID_WIDTH_Z) begin // Last element of last odd row
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j-1, k, `NEIGHBOR_IDX_EAST, 1, NUM_CONTEXTS, reset_edge_local)
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j-1, k, `NEIGHBOR_IDX_EAST, east_cut_type, NUM_CONTEXTS, reset_edge_local)
                 end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0 && j < GRID_WIDTH_Z) begin // Middle elements of odd rows
                     `NEIGHBOR_LINK_INTERNAL_0(i, j-1, k, i-1, j, k, `NEIGHBOR_IDX_EAST, `NEIGHBOR_IDX_WEST, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
                 end
