@@ -3,7 +3,7 @@ module neighbor_link_internal #(
     parameter MAX_WEIGHT = 2,
     parameter NUM_CONTEXTS = 2
     // parameter WEIGHT = 2,
-    // parameter BOUNDARY_CONDITION = 0, //0 : No boundary 1: A boundary 2: Non existant edge 3: Connected to a FIFO and temporary changed to fusion edge
+    // parameter BOUNDARY_CONDITION = 0, //0 : No boundary 1: A boundary 2: Non existant edge 3: fusion edge (fusion edge is connected on both ends but acts like a boundary)
     // parameter ADDRESS_A = 0,
     // parameter ADDRESS_B = 0,
     // parameter HEADER_ID = 0,

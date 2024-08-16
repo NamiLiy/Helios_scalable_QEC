@@ -71,6 +71,13 @@ localparam EXPOSED_DATA_SIZE = ADDRESS_WIDTH_WITH_B + 1 + 1 + 1;
 localparam FPGA_FIFO_SIZE = EXPOSED_DATA_SIZE + 1;
 localparam FPGA_FIFO_COUNT = (2*GRID_WIDTH_Z - 1)*GRID_WIDTH_U;
 
+
+localparam logical_qubits_in_j_dim = (GRID_WIDTH_Z + (ACTUAL_D-1)/2 - 1) / ((ACTUAL_D-1)/2); // round up to the nearest integer
+localparam logical_qubits_in_i_dim = (GRID_WIDTH_X + ACTUAL_D+1 - 1) / (ACTUAL_D+1); // round up to the nearest integer
+localparam borders_in_j_dim = (logical_qubits_in_j_dim - 1)*logical_qubits_in_i_dim;
+localparam borders_in_i_dim = (logical_qubits_in_i_dim - 1)*logical_qubits_in_j_dim;
+
+
 input clk;
 input reset;
 
@@ -141,7 +148,8 @@ wire controller_to_handler_ready;
 wire [1:0] border_continous;
 
 wire router_busy;
-wire measurement_fusion;
+wire artificial_boundary;
+wire [borders_in_j_dim + borders_in_i_dim - 1 : 0] fusion_boundary;
 wire reset_all_edges;
 
 single_FPGA_decoding_graph_dynamic_rsc #( 
@@ -151,7 +159,8 @@ single_FPGA_decoding_graph_dynamic_rsc #(
     .MAX_WEIGHT(MAX_WEIGHT),
     .NUM_CONTEXTS(NUM_CONTEXTS),
     .NUM_FPGAS(NUM_FPGAS),
-    .ACTUAL_D(ACTUAL_D)
+    .ACTUAL_D(ACTUAL_D),
+    .FPGA_ID(FPGA_ID)
 ) decoding_graph_rsc (
     .clk(clk),
     .reset(reset),
@@ -161,7 +170,6 @@ single_FPGA_decoding_graph_dynamic_rsc #(
     .correction(correction),
     .busy(busy),
     .global_stage(global_stage),
-    .FPGA_ID(FPGA_ID),
     .border_output_data(border_output_data),
     .border_output_valid(border_output_valid),
     .border_output_ready(border_output_ready),
@@ -169,7 +177,8 @@ single_FPGA_decoding_graph_dynamic_rsc #(
     .border_input_valid(border_input_valid),
     .border_input_ready(border_input_ready),
     .border_continous(border_continous),
-    .measurement_fusion(measurement_fusion),
+    .artificial_boundary(artificial_boundary),
+    .fusion_boundary(fusion_boundary),
     .reset_all_edges(reset_all_edges)
 );
 
@@ -207,8 +216,8 @@ unified_controller #(
     .correction(correction),
     .router_busy(router_busy),
     .border_continous(border_continous),
-    .FPGA_ID(FPGA_ID),
-    .measurement_fusion(measurement_fusion),
+    .artificial_boundary(artificial_boundary),
+    .fusion_boundary(fusion_boundary),
     .reset_all_edges(reset_all_edges)
 );
 

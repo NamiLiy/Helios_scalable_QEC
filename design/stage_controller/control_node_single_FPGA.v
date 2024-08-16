@@ -8,7 +8,9 @@ module unified_controller #(
     parameter CTRL_FIFO_WIDTH = 64,
     parameter NUM_FPGAS = 5,
     parameter ROUTER_DELAY_COUNTER = 18,
-    parameter LOGICAL_QUBITS_PER_DIM = 2
+    parameter LOGICAL_QUBITS_PER_DIM = 2,
+    parameter ACTUAL_D = 3,
+    parameter FPGA_ID = 1
 ) (
     clk,
     reset,
@@ -37,8 +39,8 @@ module unified_controller #(
 
     router_busy,
     border_continous,
-    FPGA_ID,
-    measurement_fusion,
+    artificial_boundary,
+    fusion_boundary,
     reset_all_edges
 );
 
@@ -76,6 +78,11 @@ localparam BORDER_BOT_LSB = 0;
 
 localparam CONTEXT_COUNTER_WIDTH = $clog2(NUM_CONTEXTS + 1);
 
+localparam logical_qubits_in_j_dim = (GRID_WIDTH_Z + (ACTUAL_D-1)/2 - 1) / ((ACTUAL_D-1)/2); // round up to the nearest integer
+localparam logical_qubits_in_i_dim = (GRID_WIDTH_X + ACTUAL_D+1 - 1) / (ACTUAL_D+1); // round up to the nearest integer
+localparam borders_in_j_dim = (logical_qubits_in_j_dim - 1)*logical_qubits_in_i_dim;
+localparam borders_in_i_dim = (logical_qubits_in_i_dim - 1)*logical_qubits_in_j_dim;
+
 
 input clk;
 input reset;
@@ -106,8 +113,8 @@ input output_ctrl_tx_ready;
 
 input router_busy;
 output reg [1:0] border_continous;
-input [7:0] FPGA_ID;
-output reg measurement_fusion;
+output reg artificial_boundary;
+output reg [borders_in_j_dim + borders_in_i_dim - 1 : 0] fusion_boundary;
 output reg reset_all_edges;
 
 reg result_valid;
@@ -221,9 +228,9 @@ always@(*) begin
     // Laksheen
     // if(measurement_fusion_stage == 2'b10) begin
     if(measurement_fusion_stage == 2'b01) begin
-        measurement_fusion = 1;
+        artificial_boundary = 0;
     end else begin
-        measurement_fusion = 0;
+        artificial_boundary = 1;
     end
 end
 
@@ -351,6 +358,7 @@ always @(posedge clk) begin
                     // end
                 end
                 current_measurement_round <= 0;
+                fusion_boundary <= {borders_in_j_dim{1'b1},borders_in_i_dim{1'b1}};
             end
 
             STAGE_PARAMETERS_LOADING: begin // 6

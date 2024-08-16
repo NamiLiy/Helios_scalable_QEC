@@ -18,7 +18,6 @@ module single_FPGA_decoding_graph_dynamic_rsc #(
     busy,
     global_stage,
     correction,
-    FPGA_ID,
 
     border_output_data,
     border_output_valid,
@@ -28,7 +27,8 @@ module single_FPGA_decoding_graph_dynamic_rsc #(
     border_input_valid,
     border_input_ready,
 
-    measurement_fusion,
+    artificial_boundary,
+    fusion_boundary,
     reset_all_edges
 
 );
@@ -62,10 +62,15 @@ localparam FPGA_FIFO_COUNT = FPGA_FIFO_COUNT_PER_LAYER*PHYSICAL_GRID_WIDTH_U;
 
 localparam LINK_BIT_WIDTH = $clog2(MAX_WEIGHT + 1);
 
-parameter north_cut_type = 0;
-parameter south_cut_type = (FPGA_ID <= 2 ? 1 : 0);
-parameter east_cut_type = 1;
-parameter west_cut_type = ((FPGA_ID == 1 || FPGA_ID == 3) ? 1 : 0); 
+localparam north_cut_type = 0;
+localparam south_cut_type = (FPGA_ID <= 2 ? 1 : 0);
+localparam east_cut_type = 1;
+localparam west_cut_type = ((FPGA_ID == 1 || FPGA_ID == 3) ? 1 : 0); 
+
+localparam logical_qubits_in_j_dim = (GRID_WIDTH_Z + (ACTUAL_D-1)/2 - 1) / ((ACTUAL_D-1)/2); // round up to the nearest integer
+localparam logical_qubits_in_i_dim = (GRID_WIDTH_X + ACTUAL_D+1 - 1) / (ACTUAL_D+1); // round up to the nearest integer
+localparam borders_in_j_dim = (logical_qubits_in_j_dim - 1)*logical_qubits_in_i_dim;
+localparam borders_in_i_dim = (logical_qubits_in_i_dim - 1)*logical_qubits_in_j_dim;
 
 input clk;
 input reset;
@@ -77,7 +82,6 @@ output [(ADDRESS_WIDTH * PU_COUNT)-1:0] roots;
 output [PU_COUNT - 1 : 0] busy;
 output [CORRECTION_COUNT_PER_ROUND - 1 : 0] correction;
 
-input [FPGA_BIT_WIDTH-1:0] FPGA_ID;
 
 output [2*FPGA_FIFO_SIZE*FPGA_FIFO_COUNT-1:0] border_output_data;
 output [2*FPGA_FIFO_COUNT-1:0] border_output_valid;
@@ -87,7 +91,8 @@ input [2*FPGA_FIFO_SIZE*FPGA_FIFO_COUNT-1:0] border_input_data;
 input [2*FPGA_FIFO_COUNT-1:0] border_input_valid;
 output [2*FPGA_FIFO_COUNT-1:0] border_input_ready;
 
-input measurement_fusion; // this being on indicates that the batch now needs tobe fused with the pevious batch
+input artificial_boundary; // this being on indicates that artificial boundary is removed
+input [borders_in_j_dim + borders_in_i_dim - 1 : 0] fusion_boundary; // this is the boundary of the fusion
 input reset_all_edges; // all edges are reset
 
 genvar i;
@@ -419,6 +424,13 @@ endgenerate
         .reset_edge(reset_edge_local) \
     );
 
+`define logic_boundary_index(i,j,is_ns_edge, vertical_boundary)\
+    (is_ns_edge ? (vertical_boundary ? \
+        (((i / (ACTUAL_D+1)) -1)*(logical_qubits_in_j_dim) + (j / ((ACTUAL_D-1)/2)) + borders_in_j_dim) : \
+        (((i / (ACTUAL_D+1)))*(logical_qubits_in_j_dim - 1) + (j / ((ACTUAL_D-1)/2) - 1))) : \
+        (vertical_boundary ? \
+        (((i / (ACTUAL_D+1)) -1)*(logical_qubits_in_j_dim) + (j / ((ACTUAL_D-1)/2)) + borders_in_j_dim) : \
+        (((i / (ACTUAL_D+1)))*(logical_qubits_in_j_dim - 1) + (j / ((ACTUAL_D-1)/2) - 1))))
 
 generate
     // Generate North South neighbors
@@ -442,9 +454,9 @@ generate
                     if(i==0 || i==GRID_WIDTH_X) begin
                         type_for_boundary_links = 3'b10; // This is the northernmost row. It never exists
                    end else if((i%(ACTUAL_D+1))==0) begin
-                        type_for_boundary_links = measurement_fusion ? 3'b00 : 3'b11; // This is the horizontal border row. When Fusion is on it is
-                   end else if((i%2 == 0) && (j%(ACTUAL_D-1) == 0)) begin
-                        type_for_boundary_links = measurement_fusion ? 3'b00 : 3'b11; // This is the vertical border row. When Fusion is on it is
+                        type_for_boundary_links = artificial_boundary ? 3'b11 : (fusion_boundary[`logic_boundary_index(i,j,1,1)] ? 3'b0 : 3'b10); // This is the horizontal border row. When Fusion is on it is
+                   end else if((i%2 == 0) && (j%((ACTUAL_D-1)/2) == 0)) begin
+                        type_for_boundary_links = artificial_boundary ? 3'b11 : (fusion_boundary[`logic_boundary_index(i,j,1,0)] ? 3'b0 : 3'b1); // This is the vertical border row. When Fusion is on it is
                    end
                    else begin
                        type_for_boundary_links = 3'b00; //  Internal
@@ -525,9 +537,12 @@ generate
                     if(i==0 || i==GRID_WIDTH_X) begin
                         type_for_boundary_links = 3'b10; // This is the northernmost row. It never exists
                    end else if((i%(ACTUAL_D+1))==0) begin
-                        type_for_boundary_links = measurement_fusion ? 3'b00 : 3'b11; // This is the border row. When Fusion is on it is
-                   end else if((i%2 == 1) && (j%(ACTUAL_D-1) == 0)) begin
-                        type_for_boundary_links = measurement_fusion ? 3'b00 : 3'b11; // This is the border row. When Fusion is on it is
+                        type_for_boundary_links = artificial_boundary ? 3'b11 : (fusion_boundary[`logic_boundary_index(i,j,0,1)] ? 3'b0 : 3'b10);
+                   end else if((i%2 == 1) && (j%((ACTUAL_D-1)/2) == 0)) begin
+                        type_for_boundary_links = artificial_boundary ? 3'b11 : (fusion_boundary[`logic_boundary_index(i,j,0,0)] ? 3'b0 : 3'b1);
+                   end
+                   else begin
+                       type_for_boundary_links = 3'b00; //  Internal
                    end else begin
                        type_for_boundary_links = 3'b00; //  Internal
                    end
