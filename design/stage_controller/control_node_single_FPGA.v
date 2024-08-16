@@ -8,7 +8,6 @@ module unified_controller #(
     parameter CTRL_FIFO_WIDTH = 64,
     parameter NUM_FPGAS = 5,
     parameter ROUTER_DELAY_COUNTER = 18,
-    parameter LOGICAL_QUBITS_PER_DIM = 2,
     parameter ACTUAL_D = 3,
     parameter FPGA_ID = 1
 ) (
@@ -358,7 +357,7 @@ always @(posedge clk) begin
                     // end
                 end
                 current_measurement_round <= 0;
-                fusion_boundary <= {borders_in_j_dim{1'b1},borders_in_i_dim{1'b1}};
+                fusion_boundary <= {{borders_in_j_dim{1'b1}}, {borders_in_i_dim{1'b1}}};
             end
 
             STAGE_PARAMETERS_LOADING: begin // 6

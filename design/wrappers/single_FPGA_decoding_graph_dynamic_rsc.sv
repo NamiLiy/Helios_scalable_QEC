@@ -540,9 +540,6 @@ generate
                         type_for_boundary_links = artificial_boundary ? 3'b11 : (fusion_boundary[`logic_boundary_index(i,j,0,1)] ? 3'b0 : 3'b10);
                    end else if((i%2 == 1) && (j%((ACTUAL_D-1)/2) == 0)) begin
                         type_for_boundary_links = artificial_boundary ? 3'b11 : (fusion_boundary[`logic_boundary_index(i,j,0,0)] ? 3'b0 : 3'b1);
-                   end
-                   else begin
-                       type_for_boundary_links = 3'b00; //  Internal
                    end else begin
                        type_for_boundary_links = 3'b00; //  Internal
                    end
@@ -596,8 +593,8 @@ generate
                     if(k==0) begin
                         type_for_boundary_links = 3'b01; // This is the northernmost row. It never exists
                    end else if(k==PHYSICAL_GRID_WIDTH_U) begin
-                        type_for_boundary_links = measurement_fusion ? 3'b01 : 3'b01; // This is the border row. When Fusion is on it is
-                        // type_for_boundary_links = 3'b01; // This is the border row. When Fusion is on it is
+                        // type_for_boundary_links = measurement_fusion ? 3'b01 : 3'b01; // This is the border row. When Fusion is on it is
+                        type_for_boundary_links = 3'b01; // This is the border row. When Fusion is on it is
                    end else begin
                        type_for_boundary_links = 3'b00; //  Internal
                    end

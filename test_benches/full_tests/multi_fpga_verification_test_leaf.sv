@@ -17,9 +17,9 @@ module verification_bench_leaf#(
     parameter ROUTER_DELAY = 18,
     parameter FPGA_ID = 1,
     parameter NUM_CONTEXTS = 1,
-    parameter LOGICAL_QUBITS_PER_DIM = 2
+    parameter LOGICAL_QUBITS_PER_DIM = 2,
     parameter ADDITIONAL_BOUNDARY_SOUTH = 0,
-    parameter ADDITIONAL_BOUNDARY_EAST = 0,
+    parameter ADDITIONAL_BOUNDARY_EAST = 0
 )(
     input clk,
     input reset,
@@ -42,13 +42,13 @@ localparam ANCILLAS_IN_SOUTH = ADDITIONAL_BOUNDARY_SOUTH*((CODE_DISTANCE + 3)/4)
 localparam CODE_DISTANCE_X = (CODE_DISTANCE + 1)*LOGICAL_QUBITS_PER_DIM + ANCILLAS_IN_SOUTH;
 localparam CODE_DISTANCE_Z = ((CODE_DISTANCE - 1)/2)*LOGICAL_QUBITS_PER_DIM + ANCILLAS_IN_EAST;
 
-parameter GRID_WIDTH_X = CODE_DISTANCE_X;
-parameter GRID_WIDTH_Z = CODE_DISTANCE_Z;
-parameter GRID_WIDTH_U = CODE_DISTANCE; // Laksheen
+localparam GRID_WIDTH_X = CODE_DISTANCE_X;
+localparam GRID_WIDTH_Z = CODE_DISTANCE_Z;
+localparam GRID_WIDTH_U = CODE_DISTANCE; // Laksheen
 localparam PHYSICAL_GRID_WIDTH_U = (GRID_WIDTH_U % NUM_CONTEXTS == 0) ? 
                                    (GRID_WIDTH_U / NUM_CONTEXTS) : 
                                    (GRID_WIDTH_U / NUM_CONTEXTS + 1);
-parameter MAX_WEIGHT = 2;
+localparam MAX_WEIGHT = 2;
 
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
@@ -117,7 +117,7 @@ Helios_single_FPGA #(
     .ROUTER_DELAY_COUNTER(ROUTER_DELAY),
     .LOGICAL_QUBITS_PER_DIM(LOGICAL_QUBITS_PER_DIM),
     .FPGA_ID(FPGA_ID),
-    .ACTUAL_D(CODE_DISTANCE),
+    .ACTUAL_D(CODE_DISTANCE)
  ) decoder (
     .clk(clk),
     .reset(reset),
