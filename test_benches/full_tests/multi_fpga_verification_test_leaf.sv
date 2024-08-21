@@ -17,7 +17,7 @@ module verification_bench_leaf#(
     parameter ROUTER_DELAY = 18,
     parameter FPGA_ID = 1,
     parameter NUM_CONTEXTS = 1,
-    parameter LOGICAL_QUBITS_PER_DIM = 2,
+    parameter LOGICAL_QUBITS_PER_DIM = 1,
     parameter ADDITIONAL_BOUNDARY_SOUTH = 0,
     parameter ADDITIONAL_BOUNDARY_EAST = 0
 )(
@@ -36,18 +36,22 @@ module verification_bench_leaf#(
 `include "../../parameters/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
-localparam ANCILLAS_IN_EAST = ADDITIONAL_BOUNDARY_EAST*((CODE_DISTANCE + 1)/4);
-localparam ANCILLAS_IN_SOUTH = ADDITIONAL_BOUNDARY_SOUTH*((CODE_DISTANCE + 3)/4)*2;
+localparam PROSPECTIVE_ANCILLAS_TO_EAST = ((CODE_DISTANCE + 1)>>2);
+localparam ANCILLAS_IN_EAST = ADDITIONAL_BOUNDARY_EAST * PROSPECTIVE_ANCILLAS_TO_EAST;
+localparam PROSPECTIVE_ANCILLAS_TO_SOUTH = (((CODE_DISTANCE + 3)>>2)<<1);
+localparam ANCILLAS_IN_SOUTH = ADDITIONAL_BOUNDARY_SOUTH * PROSPECTIVE_ANCILLAS_TO_SOUTH;
                
 localparam CODE_DISTANCE_X = (CODE_DISTANCE + 1)*LOGICAL_QUBITS_PER_DIM + ANCILLAS_IN_SOUTH;
-localparam CODE_DISTANCE_Z = ((CODE_DISTANCE - 1)/2)*LOGICAL_QUBITS_PER_DIM + ANCILLAS_IN_EAST;
+localparam CODE_DISTANCE_Z = ((CODE_DISTANCE - 1)>>1)*LOGICAL_QUBITS_PER_DIM + ANCILLAS_IN_EAST;
 
 localparam GRID_WIDTH_X = CODE_DISTANCE_X;
 localparam GRID_WIDTH_Z = CODE_DISTANCE_Z;
 localparam GRID_WIDTH_U = CODE_DISTANCE; // Laksheen
-localparam PHYSICAL_GRID_WIDTH_U = (GRID_WIDTH_U % NUM_CONTEXTS == 0) ? 
-                                   (GRID_WIDTH_U / NUM_CONTEXTS) : 
-                                   (GRID_WIDTH_U / NUM_CONTEXTS + 1);
+// Nami : I have no idea why the below code is not working. It is essential to run context switching
+// localparam PHYSICAL_GRID_WIDTH_U = ((GRID_WIDTH_U % NUM_CONTEXTS == 0) ? 
+//                                    ($floor(GRID_WIDTH_U / NUM_CONTEXTS)) : 
+//                                    ($floor(GRID_WIDTH_U / NUM_CONTEXTS) + 1));
+localparam PHYSICAL_GRID_WIDTH_U = GRID_WIDTH_U;
 localparam MAX_WEIGHT = 2;
 
 
@@ -69,7 +73,6 @@ localparam NS_ERROR_COUNT_PER_ROUND = (GRID_WIDTH_X-1) * GRID_WIDTH_Z;
 localparam EW_ERROR_COUNT_PER_ROUND = (GRID_WIDTH_X-1) * GRID_WIDTH_Z + 1;
 localparam UD_ERROR_COUNT_PER_ROUND = GRID_WIDTH_X * GRID_WIDTH_Z;
 localparam CORRECTION_COUNT_PER_ROUND = NS_ERROR_COUNT_PER_ROUND + EW_ERROR_COUNT_PER_ROUND + UD_ERROR_COUNT_PER_ROUND;
-localparam CORRECTION_BYTES_PER_ROUND = ((CORRECTION_COUNT_PER_ROUND  + 7) >> 3);
 
 
 wire [(ADDRESS_WIDTH * PU_COUNT_ACROSS_CONTEXT)-1:0] roots;
@@ -77,7 +80,7 @@ wire [(ADDRESS_WIDTH * PU_COUNT_ACROSS_CONTEXT)-1:0] roots;
 `define BYTES_PER_ROUND ((CODE_DISTANCE_X * CODE_DISTANCE_Z  + 7) >> 3)
 `define ALIGNED_PU_PER_ROUND (`BYTES_PER_ROUND << 3)
 
-reg [`ALIGNED_PU_PER_ROUND*PHYSICAL_GRID_WIDTH_U * NUM_CONTEXTS-1:0] measurements;
+reg [`ALIGNED_PU_PER_ROUND * PHYSICAL_GRID_WIDTH_U * NUM_CONTEXTS - 1:0] measurements;
 
 `define INDEX(i, j, k) (i * CODE_DISTANCE_Z + j + k * CODE_DISTANCE_Z*CODE_DISTANCE_X)
 `define PADDED_INDEX(i, j, k) (i * CODE_DISTANCE_Z + j + k * `ALIGNED_PU_PER_ROUND)
@@ -115,7 +118,6 @@ Helios_single_FPGA #(
     .NUM_CONTEXTS(NUM_CONTEXTS),
     .NUM_FPGAS(NUM_FPGAS),
     .ROUTER_DELAY_COUNTER(ROUTER_DELAY),
-    .LOGICAL_QUBITS_PER_DIM(LOGICAL_QUBITS_PER_DIM),
     .FPGA_ID(FPGA_ID),
     .ACTUAL_D(CODE_DISTANCE)
  ) decoder (

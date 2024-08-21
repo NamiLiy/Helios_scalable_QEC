@@ -62,10 +62,10 @@ localparam FPGA_FIFO_COUNT = FPGA_FIFO_COUNT_PER_LAYER*PHYSICAL_GRID_WIDTH_U;
 
 localparam LINK_BIT_WIDTH = $clog2(MAX_WEIGHT + 1);
 
-localparam north_cut_type = 0;
-localparam south_cut_type = (FPGA_ID <= 2 ? 1 : 0);
+localparam north_cut_type = 2;
+localparam south_cut_type = (FPGA_ID <= 2 ? 1 : 2);
 localparam east_cut_type = 1;
-localparam west_cut_type = ((FPGA_ID == 1 || FPGA_ID == 3) ? 1 : 0); 
+localparam west_cut_type = ((FPGA_ID == 1 || FPGA_ID == 3) ? 1 : 2); 
 
 localparam logical_qubits_in_j_dim = (GRID_WIDTH_Z + (ACTUAL_D-1)/2 - 1) / ((ACTUAL_D-1)/2); // round up to the nearest integer
 localparam logical_qubits_in_i_dim = (GRID_WIDTH_X + ACTUAL_D+1 - 1) / (ACTUAL_D+1); // round up to the nearest integer
@@ -453,9 +453,9 @@ generate
                     // We only use type for boundary links on the internal links. Other types of links are hardcoded
                     if(i==0 || i==GRID_WIDTH_X) begin
                         type_for_boundary_links = 3'b10; // This is the northernmost row. It never exists
-                   end else if((i%(ACTUAL_D+1))==0) begin
+                   end else if((i%(ACTUAL_D+1))==0 && (j > 0) && (j < GRID_WIDTH_Z)) begin
                         type_for_boundary_links = artificial_boundary ? 3'b11 : (fusion_boundary[`logic_boundary_index(i,j,1,1)] ? 3'b0 : 3'b10); // This is the horizontal border row. When Fusion is on it is
-                   end else if((i%2 == 0) && (j%((ACTUAL_D-1)/2) == 0)) begin
+                   end else if((i%2 == 0) && (j > 0) && (j < GRID_WIDTH_Z) && (j%((ACTUAL_D-1)/2) == 0)) begin
                         type_for_boundary_links = artificial_boundary ? 3'b11 : (fusion_boundary[`logic_boundary_index(i,j,1,0)] ? 3'b0 : 3'b1); // This is the vertical border row. When Fusion is on it is
                    end
                    else begin
@@ -536,9 +536,9 @@ generate
                 always@(*) begin 
                     if(i==0 || i==GRID_WIDTH_X) begin
                         type_for_boundary_links = 3'b10; // This is the northernmost row. It never exists
-                   end else if((i%(ACTUAL_D+1))==0) begin
+                   end else if((i%(ACTUAL_D+1))==0 && (j < GRID_WIDTH_Z)) begin
                         type_for_boundary_links = artificial_boundary ? 3'b11 : (fusion_boundary[`logic_boundary_index(i,j,0,1)] ? 3'b0 : 3'b10);
-                   end else if((i%2 == 1) && (j%((ACTUAL_D-1)/2) == 0)) begin
+                   end else if((i%2 == 1) && (j > 0) && (j < GRID_WIDTH_Z) && (j%((ACTUAL_D-1)/2) == 0)) begin
                         type_for_boundary_links = artificial_boundary ? 3'b11 : (fusion_boundary[`logic_boundary_index(i,j,0,0)] ? 3'b0 : 3'b1);
                    end else begin
                        type_for_boundary_links = 3'b00; //  Internal
@@ -589,16 +589,16 @@ generate
 
                 reg [3:0] type_for_boundary_links;
 
-                always@(*) begin 
-                    if(k==0) begin
-                        type_for_boundary_links = 3'b01; // This is the northernmost row. It never exists
-                   end else if(k==PHYSICAL_GRID_WIDTH_U) begin
-                        // type_for_boundary_links = measurement_fusion ? 3'b01 : 3'b01; // This is the border row. When Fusion is on it is
-                        type_for_boundary_links = 3'b01; // This is the border row. When Fusion is on it is
-                   end else begin
-                       type_for_boundary_links = 3'b00; //  Internal
-                   end
-               end
+                // always@(*) begin 
+                //     if(k==0) begin
+                //         type_for_boundary_links = 3'b01; // This is the northernmost row. It never exists
+                //    end else if(k==PHYSICAL_GRID_WIDTH_U) begin
+                //         // type_for_boundary_links = measurement_fusion ? 3'b01 : 3'b01; // This is the border row. When Fusion is on it is
+                //         type_for_boundary_links = 3'b01; // This is the border row. When Fusion is on it is
+                //    end else begin
+                //        type_for_boundary_links = 3'b00; //  Internal
+                //    end
+                // end
 
                always@(*) begin
                    if(k==PHYSICAL_GRID_WIDTH_U) begin
@@ -622,10 +622,10 @@ generate
                 end
                 if(k==0) begin
                     // `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k, i,j,0, `NEIGHBOR_IDX_DOWN, type_for_boundary_links, NUM_CONTEXTS / 2 + 1) //+1 is only for d=ctx
-                    `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k, i,j,0, `NEIGHBOR_IDX_DOWN, type_for_boundary_links, NUM_CONTEXTS / 2 + 1, reset_edge_local)
+                    `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k, i,j,0, `NEIGHBOR_IDX_DOWN, 3'b01, NUM_CONTEXTS / 2 + 1, reset_edge_local)
                 end else if(k==PHYSICAL_GRID_WIDTH_U) begin
                     // `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k-1, i,j,1, `NEIGHBOR_IDX_UP, type_for_boundary_links, NUM_CONTEXTS / 2 + 1) //+1 is for d=ctx
-                    `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k-1, i,j,1, `NEIGHBOR_IDX_UP, type_for_boundary_links, (NUM_CONTEXTS + 1)/ 2, reset_edge_local) //+1 is for d=ctx
+                    `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k-1, i,j,1, `NEIGHBOR_IDX_UP, 3'b01, (NUM_CONTEXTS + 1)/ 2, reset_edge_local) //+1 is for d=ctx
                 end else if (k < PHYSICAL_GRID_WIDTH_U) begin
                     `NEIGHBOR_LINK_INTERNAL_0(i, j, k-1, i, j, k, `NEIGHBOR_IDX_UP, `NEIGHBOR_IDX_DOWN, 3'b00, NUM_CONTEXTS, reset_edge_local)
                 end

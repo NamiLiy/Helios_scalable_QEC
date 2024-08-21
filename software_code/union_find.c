@@ -33,7 +33,8 @@ struct Edge {
     struct Address b;
     int to_be_updated;
     int is_boundary;
-    int is_fusion_boundary; //0 no fusion 1 fusion from bottom 2 fusion from top
+    int is_fusion_boundary; //0 no fusion 1 fusion from bottom 2 fusion from top 3 fusion from both ends
+    int is_ignored; //non-existant edges in FPGA logic
 };
 
 int max(int a, int b) {
@@ -84,6 +85,9 @@ int grow(int k, int i, int j, int direction){ //fusion_direction 0 is no fusion,
     // Update change_occur
     int grow_ret = 0;
     if(direction ==0){
+        if(hor_edges[k][i][j].is_ignored == 1){
+            return 0;
+        }
         if(hor_edges[k][i][j].is_boundary == 1){
             int is_odd = get_parity(hor_edges[k][i][j].a);
             if (is_odd && hor_edges[k][i][j].growth < 2) {
@@ -115,8 +119,11 @@ int grow(int k, int i, int j, int direction){ //fusion_direction 0 is no fusion,
             }
         }
     } else {
-        if(k==10){
-            printf("Growth called %d %d %d %d %d\n", k, i, j, ver_edges[k][i][j].is_boundary, get_parity(ver_edges[k][i][j].a) );
+        // if(k==10){
+        //     printf("Growth called %d %d %d %d %d\n", k, i, j, ver_edges[k][i][j].is_boundary, get_parity(ver_edges[k][i][j].a) );
+        // }
+        if(ver_edges[k][i][j].is_ignored == 1){
+            return 0;
         }
         if(ver_edges[k][i][j].is_boundary == 1){
             int is_odd = get_parity(ver_edges[k][i][j].a);
@@ -207,7 +214,7 @@ int merge_internal(struct Address a, struct Address b){
         // They are the same cluster. No merge
         return 0;
     }
-
+    printf("Roots are %d %d %d %d and %d %d %d %d\n", root_a.k, root_a.i, root_a.j, root_a.fpga_id, root_b.k, root_b.i, root_b.j, root_b.fpga_id);
     if(root_a.is_boundary_address < root_b.is_boundary_address ||
         (root_a.is_boundary_address == root_b.is_boundary_address  && root_a.fpga_id < root_b.fpga_id) ||
         (root_a.is_boundary_address == root_b.is_boundary_address  && root_a.fpga_id == root_b.fpga_id && root_a.k < root_b.k) ||
@@ -223,7 +230,7 @@ int merge_internal(struct Address a, struct Address b){
             node_array[root_a.k][root_a.i][root_a.j].parity = node_array[root_a.k][root_a.i][root_a.j].parity ^ node_array[root_b.k][root_b.i][root_b.j].parity;
         }
 
-        printf("Root goes to %d %d %d %d\n", root_a.k, root_a.i, root_a.j, root_a.fpga_id);
+        printf("A has lower root. B's root goes to %d %d %d %d\n", root_a.k, root_a.i, root_a.j, root_a.fpga_id);
 
         node_array[root_b.k][root_b.i][root_b.j].root.k = root_a.k;
         node_array[root_b.k][root_b.i][root_b.j].root.i = root_a.i;
@@ -241,20 +248,23 @@ int merge_internal(struct Address a, struct Address b){
             node_array[root_b.k][root_b.i][root_b.j].parity = node_array[root_b.k][root_b.i][root_b.j].parity ^ node_array[root_a.k][root_a.i][root_a.j].parity;
         }
 
-        printf("Root goes to %d %d %d %d\n", root_b.k, root_b.i, root_b.j, root_b.fpga_id);
+        printf("B has lower root. A's root goes to %d %d %d %d\n", root_b.k, root_b.i, root_b.j, root_b.fpga_id);
         node_array[root_a.k][root_a.i][root_a.j].root.k = root_b.k;
         node_array[root_a.k][root_a.i][root_a.j].root.i = root_b.i;
         node_array[root_a.k][root_a.i][root_a.j].root.j = root_b.j;
         node_array[root_a.k][root_a.i][root_a.j].root.fpga_id = root_b.fpga_id;
         node_array[root_a.k][root_a.i][root_a.j].root.is_boundary_address = root_b.is_boundary_address;
     }
-
+    printf("Updated roots are %d %d %d %d and %d %d %d %d\n", node_array[root_a.k][root_a.i][root_a.j].root.k, node_array[root_a.k][root_a.i][root_a.j].root.i, node_array[root_a.k][root_a.i][root_a.j].root.j, node_array[root_a.k][root_a.i][root_a.j].root.fpga_id, node_array[root_b.k][root_b.i][root_b.j].root.k, node_array[root_b.k][root_b.i][root_b.j].root.i, node_array[root_b.k][root_b.i][root_b.j].root.j, node_array[root_b.k][root_b.i][root_b.j].root.fpga_id);
     return 0;
 }
 
 
 int merge(int k, int i, int j, int direction){
     if(direction ==0){
+        if(hor_edges[k][i][j].is_ignored == 1){
+            return 0;
+        }
         if(hor_edges[k][i][j].to_be_updated == 1){
            hor_edges[k][i][j].to_be_updated == 0;
             if(hor_edges[k][i][j].is_boundary == 1){
@@ -270,6 +280,9 @@ int merge(int k, int i, int j, int direction){
             }
         }
     } else {
+        if(ver_edges[k][i][j].is_ignored == 1){
+            return 0;
+        }
         if(ver_edges[k][i][j].to_be_updated == 1){
            ver_edges[k][i][j].to_be_updated == 0;
             if(ver_edges[k][i][j].is_boundary == 1){
@@ -293,7 +306,7 @@ int merge(int k, int i, int j, int direction){
 int grow_merge_cycle(struct Distance distance){ // This is only valid for the full graph
     int change_occur = 0;
     for(int k=0;k<distance.k;k++){
-        for(int i=0; i< distance.i-1;i++){
+        for(int i=0; i< distance.i + 1;i++){
             for(int j=0; j< 2*distance.j + 1;j++){
                 int grow_ret = grow(k,i,j,0); //horizontal_edge
                 change_occur = change_occur | grow_ret;
@@ -322,7 +335,7 @@ int grow_merge_cycle(struct Distance distance){ // This is only valid for the fu
     }
 
     for(int k=0;k<distance.k;k++){
-        for(int i=0; i< distance.i-1;i++){
+        for(int i=0; i< distance.i+1;i++){
             for(int j=0; j< 2*distance.j+1;j++){
                 merge(k,i,j,0); //horizontal_edge
             }
@@ -332,7 +345,7 @@ int grow_merge_cycle(struct Distance distance){ // This is only valid for the fu
     // print_roots_parity_boundary();
 }
 
-void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance distance, int num_fpgas, int is_fusion, int qubits_per_dim){
+void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance distance, int num_fpgas, int is_fusion, int d, int leaf_id){
     // //printf("%d", syndrome[0][0][0]);
 
     //Initialize Nodearray
@@ -344,13 +357,13 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance
                 node_array[k][i][j].id.k = k;
                 node_array[k][i][j].id.i = i;
                 node_array[k][i][j].id.j = j;
-                node_array[k][i][j].id.fpga_id = i/(distance.i/num_fpgas);
+                node_array[k][i][j].id.fpga_id = 0;
                 //printf("Node array %d %d %d %d\n", node_array[k][i][j].id.k, node_array[k][i][j].id.i, node_array[k][i][j].id.j, node_array[k][i][j].id.fpga_id);
                 node_array[k][i][j].id.is_boundary_address = 1;
                 node_array[k][i][j].root.k = k;
                 node_array[k][i][j].root.i = i;
                 node_array[k][i][j].root.j = j;
-                node_array[k][i][j].root.fpga_id = i/(distance.i/num_fpgas);
+                node_array[k][i][j].root.fpga_id = 0;
                 node_array[k][i][j].root.is_boundary_address = 1;
                 node_array[k][i][j].boundary = 0;
             }
@@ -362,59 +375,105 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance
 
 
     for(int k=0;k<distance.k;k++){
-        for(int i=0; i< distance.i -1 ;i++){
+        for(int i=0; i< distance.i + 1 ;i++){
             for(int j=0; j< 2*distance.j + 1;j++){
 		        hor_edges[k][i][j].growth = 0;
 		        hor_edges[k][i][j].to_be_updated = 0;
-                if(j==0 || j== 2*distance.j){ //left and right borders
-                    hor_edges[k][i][j].is_boundary = 1;
+                hor_edges[k][i][j].is_ignored = 0;
+                if(j==0|| j== 2*distance.j){ //left and right borders
+                    if(j==0){
+                        if (leaf_id == 0 || leaf_id == 2){
+                            hor_edges[k][i][j].is_boundary = 1;
+                            hor_edges[k][i][j].is_ignored = 0;
+                        } else {
+                            hor_edges[k][i][j].is_boundary = 0;
+                            hor_edges[k][i][j].is_ignored = 1;
+                        }
+
+                        if(i==distance.i){
+                            hor_edges[k][i][j].is_boundary = 0;
+                            hor_edges[k][i][j].is_ignored = 1;
+                        }
+                    }
+                    if(j==2*distance.j){
+                        hor_edges[k][i][j].is_boundary = 1;
+                        hor_edges[k][i][j].is_ignored = 0;
+
+                        if(i==0){
+                            hor_edges[k][i][j].is_boundary = 0;
+                            hor_edges[k][i][j].is_ignored = 1;
+                        }
+                    }
+
                     hor_edges[k][i][j].a.k = k;
-                    if(i%2==0 && j==0){
+
+                    if(i%2==1 && j==0){
+                        hor_edges[k][i][j].a.i = i-1;
+                        hor_edges[k][i][j].a.j = 0;
+                    } else if(i%2==0 && j==0 && i < distance.i){                                        
                         hor_edges[k][i][j].a.i = i;
                         hor_edges[k][i][j].a.j = 0;
-                    } else if(i%2==1 && j==0){
-                        hor_edges[k][i][j].a.i = i+1;
-                        hor_edges[k][i][j].a.j = 0;
-                    } else if(i%2==0 && j==2*distance.j){
-                        hor_edges[k][i][j].a.i = i+1;
-                        hor_edges[k][i][j].a.j = j/2 - 1;
                     } else if(i%2==1 && j==2*distance.j){
                         hor_edges[k][i][j].a.i = i;
+                        hor_edges[k][i][j].a.j = j/2 - 1;
+                    } else if(i%2==0 && j==2*distance.j && i > 0){
+                        hor_edges[k][i][j].a.i = i-1;
                         hor_edges[k][i][j].a.j = j/2 - 1;
                     }
                 } else {
                     hor_edges[k][i][j].is_boundary = 0;
                     hor_edges[k][i][j].a.k = k;
                     hor_edges[k][i][j].b.k = k;
-                    if(i%2==0 && j%2 == 0){
+
+                    if(i==0){
+                        hor_edges[k][i][j].is_ignored = 1;
+                    }
+                    if(i==distance.i){
+                        if(leaf_id == 0 || leaf_id == 1){
+                            hor_edges[k][i][j].is_ignored = 0;
+                            hor_edges[k][i][j].is_boundary = 1;
+                        } else {
+                            hor_edges[k][i][j].is_ignored = 1;
+                        }
+                    }
+                    if(i==0){
                         hor_edges[k][i][j].a.i = i;
                         hor_edges[k][i][j].a.j = j/2;
-                        hor_edges[k][i][j].b.i = i+1;
+                    } else if(i==distance.i){
+                        hor_edges[k][i][j].a.i = i-1;
+                        hor_edges[k][i][j].a.j = (j-1)/2;
+                    }
+                    else if(i%2==1 && j%2 == 0){
+                        hor_edges[k][i][j].a.i = i-1;
+                        hor_edges[k][i][j].a.j = j/2;
+                        hor_edges[k][i][j].b.i = i;
                         hor_edges[k][i][j].b.j = j/2 - 1;
-                    } else if (i%2==0 && j%2 == 1){
-                        hor_edges[k][i][j].a.i = i;
+                    } else if (i%2==1 && j%2 == 1){
+                        hor_edges[k][i][j].a.i = i-1;
                         hor_edges[k][i][j].a.j = j/2;
-                        hor_edges[k][i][j].b.i = i+1;
+                        hor_edges[k][i][j].b.i = i;
                         hor_edges[k][i][j].b.j = j/2;
-                    } else if (i%2==1 && j%2 == 0){
-                        hor_edges[k][i][j].a.i = i;
+                    } else if (i%2==0 && j%2 == 0){
+                        hor_edges[k][i][j].a.i = i-1;
                         hor_edges[k][i][j].a.j = j/2  - 1;
-                        hor_edges[k][i][j].b.i = i+1;
+                        hor_edges[k][i][j].b.i = i;
                         hor_edges[k][i][j].b.j = j/2;
-                    } else if (i%2==1 && j%2 == 1) {
-                        hor_edges[k][i][j].a.i = i;
+                    } else if (i%2==0 && j%2 == 1) {
+                        hor_edges[k][i][j].a.i = i-1;
                         hor_edges[k][i][j].a.j = j/2;
-                        hor_edges[k][i][j].b.i = i+1;
+                        hor_edges[k][i][j].b.i = i;
                         hor_edges[k][i][j].b.j = j/2;
                     }
                 }
                 hor_edges[k][i][j].to_be_updated = 0;
-                hor_edges[k][i][j].a.fpga_id = hor_edges[k][i][j].a.i/(distance.i/num_fpgas);
-                hor_edges[k][i][j].b.fpga_id = hor_edges[k][i][j].b.i/(distance.i/num_fpgas);
+                hor_edges[k][i][j].a.fpga_id = 0;
+                hor_edges[k][i][j].b.fpga_id = 0;
                 hor_edges[k][i][j].is_fusion_boundary = 0;
-                int real_distance = distance.i / qubits_per_dim;
+
                 // printf("Real distance %d\n", real_distance);
-                if(i % real_distance == real_distance - 1){
+                if((i>0) && (i < distance.i) && (i % (d+1) == 0) && (j>0) &&(j < 2*distance.j)){
+                    hor_edges[k][i][j].is_fusion_boundary = 3;
+                }else if(j > 0 && j < 2*distance.j && j % (d-1) == 0 && (i>0) && (i < distance.i)){
                     hor_edges[k][i][j].is_fusion_boundary = 3;
                 }
             }
@@ -454,8 +513,8 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance
                 } else {
                     ver_edges[k][i][j].is_fusion_boundary = 0;
                 }
-                ver_edges[k][i][j].a.fpga_id = ver_edges[k][i][j].a.i/(distance.i/num_fpgas);
-                ver_edges[k][i][j].b.fpga_id = ver_edges[k][i][j].b.i/(distance.i/num_fpgas);
+                ver_edges[k][i][j].a.fpga_id = 0;
+                ver_edges[k][i][j].b.fpga_id = 0;
             }
         }
 	}
@@ -471,10 +530,11 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance
 
         // Remove fusion details
         for(int k=0;k<distance.k;k++){
-            for(int i=0; i< distance.i-1;i++){
+            for(int i=0; i< distance.i+1;i++){
                 for(int j=0; j< 2*distance.j+1;j++){
-                    int real_distance = distance.i / qubits_per_dim;
-                    if(i % real_distance == real_distance - 1){
+                    if((i>0) && (i < distance.i) && (i % (d+1) == 0) && (j>0) &&(j < 2*distance.j)){
+                        hor_edges[k][i][j].is_fusion_boundary = 0;
+                    }else if(j > 0 && j < 2*distance.j && j % (d-1) == 0 && (i>0) && (i < distance.i)){
                         hor_edges[k][i][j].is_fusion_boundary = 0;
                     }
                 }
@@ -489,13 +549,13 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance
                     node_array[k][i][j].id.k = k;
                     node_array[k][i][j].id.i = i;
                     node_array[k][i][j].id.j = j;
-                    node_array[k][i][j].id.fpga_id = i/(distance.i/num_fpgas);
+                    node_array[k][i][j].id.fpga_id = 0;
                     //printf("Node array %d %d %d %d\n", node_array[k][i][j].id.k, node_array[k][i][j].id.i, node_array[k][i][j].id.j, node_array[k][i][j].id.fpga_id);
                     node_array[k][i][j].id.is_boundary_address = 1;
                     node_array[k][i][j].root.k = k;
                     node_array[k][i][j].root.i = i;
                     node_array[k][i][j].root.j = j;
-                    node_array[k][i][j].root.fpga_id = i/(distance.i/num_fpgas);
+                    node_array[k][i][j].root.fpga_id = 0;
                     node_array[k][i][j].root.is_boundary_address = 1;
                     node_array[k][i][j].boundary = 0;
                 }
@@ -504,7 +564,7 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance
 
         // Mark all 
         for(int k=0;k<distance.k;k++){
-            for(int i=0; i< distance.i-1;i++){
+            for(int i=0; i< distance.i + 1;i++){
                 for(int j=0; j< 2*distance.j + 1;j++){
                     if(hor_edges[k][i][j].growth == 2) {
                         hor_edges[k][i][j].to_be_updated = 1;
@@ -535,7 +595,7 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance
         }
 
         for(int k=0;k<distance.k;k++){
-            for(int i=0; i< distance.i-1;i++){
+            for(int i=0; i< distance.i+1;i++){
                 for(int j=0; j< 2*distance.j+1;j++){
                     merge(k,i,j,0); //horizontal_edge
                 }
@@ -543,7 +603,7 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance
         }
 
         // Now do the fusion
-        printf("Fusion starting\n");
+        // printf("Fusion starting\n");
         change_occur = 1;
         while(change_occur == 1){
             change_occur = grow_merge_cycle(distance);
@@ -673,13 +733,13 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance
                     node_array[k][i][j].id.k = k;
                     node_array[k][i][j].id.i = i;
                     node_array[k][i][j].id.j = j;
-                    node_array[k][i][j].id.fpga_id = i/(distance.i/num_fpgas);
+                    node_array[k][i][j].id.fpga_id = 0;
                     //printf("Node array %d %d %d %d\n", node_array[k][i][j].id.k, node_array[k][i][j].id.i, node_array[k][i][j].id.j, node_array[k][i][j].id.fpga_id);
                     node_array[k][i][j].id.is_boundary_address = 1;
                     node_array[k][i][j].root.k = k;
                     node_array[k][i][j].root.i = i;
                     node_array[k][i][j].root.j = j;
-                    node_array[k][i][j].root.fpga_id = i/(distance.i/num_fpgas);
+                    node_array[k][i][j].root.fpga_id = 0;
                     node_array[k][i][j].root.is_boundary_address = 1;
                     node_array[k][i][j].boundary = 0;
                 }
@@ -727,7 +787,7 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance
         }
 
         // Now do the fusion
-        printf("Fusion starting\n");
+        // printf("Fusion starting\n");
         change_occur = 1;
         while(change_occur == 1){
             change_occur = grow_merge_cycle(distance);
@@ -754,7 +814,7 @@ int loadFileData(FILE* file, int (*array)[D][D+1][(D-1)/2], struct Distance dist
     int value;
     while(1){
         if (fscanf(file, "%x", &value) == 1){
-            printf("Value = %X\n", value);
+            // printf("Value = %X\n", value);
             if(value == 0xFFFFFFFF){
                 break;
             }
@@ -788,7 +848,7 @@ int print_output(FILE* file, int test, struct Distance distance) {
 int main(int argc, char *argv[]) {
 
     if (argc != 8) {
-        fprintf(stderr, "Usage: %s <distance> <input_filename> <output_filename> <num_fpgas> <m_fusion> <qubits_per_dim> <leaf_id>\n", argv[0]);
+        fprintf(stderr, "Usage: %s <distance> <input_filename> <output_filename> <num_fpgas> <m_fusion> <qubits_per_dim> <fpga_id>\n", argv[0]);
         return 1;
     }
 
@@ -802,14 +862,18 @@ int main(int argc, char *argv[]) {
     int num_fpgas = atoi(argv[4]); //This is num leaves
     int m_fusion = atoi(argv[5]); //0 no fusion, 1 fusion
     int qubits_per_dim = atoi(argv[6]);
-    int leaf_id = atoi(argv[7]);
+    int fpga_id = atoi(argv[7]);
 
-    int dist_i = (distance +1)*qubits_per_dim / 2;
-    int dist_j = ((distance -1)/2)*qubits_per_dim / 2;
-    int dist_i_extra = (f < 2) ? (((distance + 3)/4)*2) : 0;
-    int dist_j_extra = (f % 2 == 0) ? ((distance + 1)/4) : 0;
+    int leaf_id = fpga_id - 1;
+    printf("Parameters %d %d %d %d %d\n", d, num_fpgas, m_fusion, qubits_per_dim, leaf_id);
+
+    int dist_i = (d +1)*qubits_per_dim / 2;
+    int dist_j = ((d -1)/2)*qubits_per_dim / 2;
+    int dist_i_extra = (leaf_id < 2) ? (((d + 3)/4)*2) : 0;
+    int dist_j_extra = (leaf_id % 2 == 0) ? ((d + 1)/4) : 0;
  
     struct Distance distance = {d*(m_fusion + 1), dist_i + dist_i_extra, dist_j + dist_j_extra};
+    printf("Distance %d %d %d\n", distance.k, distance.i, distance.j);
     if(distance.k > D || distance.i > D || distance.j > D) {
         fprintf(stderr, "Some distance is greater than %d please change the parameter in source\n", D);
         return 1;
@@ -837,7 +901,7 @@ int main(int argc, char *argv[]) {
         if(ret_val < 0) {
             break;
         }
-        union_find(syndrome, distance, num_fpgas, m_fusion, qubits_per_dim);
+        union_find(syndrome, distance, num_fpgas, m_fusion, d, leaf_id);
         print_output(file_op, ret_val, distance);
     }
 

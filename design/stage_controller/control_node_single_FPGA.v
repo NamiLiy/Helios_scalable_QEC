@@ -53,8 +53,8 @@ localparam U_BIT_WIDTH = $clog2(GRID_WIDTH_U);
 localparam FPGA_BIT_WIDTH = $clog2(NUM_FPGAS);
 localparam ADDRESS_WIDTH = X_BIT_WIDTH + Z_BIT_WIDTH + U_BIT_WIDTH + FPGA_BIT_WIDTH;
 
-localparam BYTES_PER_ROUND = ((GRID_WIDTH_X * GRID_WIDTH_Z  + 7) >> 3);
-localparam ALIGNED_PU_PER_ROUND = (BYTES_PER_ROUND << 3);
+// localparam BYTES_PER_ROUND = ((GRID_WIDTH_X * GRID_WIDTH_Z  + 7) >> 3);
+// localparam ALIGNED_PU_PER_ROUND = (BYTES_PER_ROUND << 3);
 
 localparam PU_COUNT_PER_ROUND = GRID_WIDTH_X * GRID_WIDTH_Z;
 localparam PHYSICAL_GRID_WIDTH_U = (GRID_WIDTH_U % NUM_CONTEXTS == 0) ? 
@@ -81,6 +81,9 @@ localparam logical_qubits_in_j_dim = (GRID_WIDTH_Z + (ACTUAL_D-1)/2 - 1) / ((ACT
 localparam logical_qubits_in_i_dim = (GRID_WIDTH_X + ACTUAL_D+1 - 1) / (ACTUAL_D+1); // round up to the nearest integer
 localparam borders_in_j_dim = (logical_qubits_in_j_dim - 1)*logical_qubits_in_i_dim;
 localparam borders_in_i_dim = (logical_qubits_in_i_dim - 1)*logical_qubits_in_j_dim;
+
+localparam CORRECTION_COUNT_PER_ROUND_PADDED = (CORRECTION_COUNT_PER_ROUND + 7) & (~3'b111);
+localparam CORRECTION_COUNT_PER_ROUND_PADDED_BYTES = CORRECTION_COUNT_PER_ROUND_PADDED >> 3;
 
 
 input clk;
@@ -357,7 +360,9 @@ always @(posedge clk) begin
                     // end
                 end
                 current_measurement_round <= 0;
-                fusion_boundary <= {{borders_in_j_dim{1'b1}}, {borders_in_i_dim{1'b1}}};
+                // ASAP fix
+                fusion_boundary[borders_in_i_dim -1 : 0] <= {borders_in_i_dim{1'b1}};
+                fusion_boundary[borders_in_i_dim + borders_in_j_dim -1 : borders_in_i_dim] <= {borders_in_j_dim{1'b1}};
             end
 
             STAGE_PARAMETERS_LOADING: begin // 6
@@ -694,8 +699,6 @@ fifo_wrapper #(
 
 
 reg [U_BIT_WIDTH + 1:0] output_u; //The +1 comes from the need to send iteration counter and the data counter
-localparam CORRECTION_COUNT_PER_ROUND_PADDED = ((CORRECTION_COUNT_PER_ROUND + 7) >> 3) << 3;
-localparam CORRECTION_COUNT_PER_ROUND_PADDED_BYTES = CORRECTION_COUNT_PER_ROUND_PADDED >> 3;
 reg [CORRECTION_COUNT_PER_ROUND_PADDED-1 :0] intermediate_out_data_reg;
 reg [CORRECTION_COUNT_PER_ROUND_PADDED-1 :0] intermediate_out_data_wire;
 reg intermediate_out_valid_reg;

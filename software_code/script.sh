@@ -2,10 +2,10 @@
 
 distance=5
 p=0.001
-test_runs=100
-num_fpgas=1 #only the leaves
+test_runs=1000
+num_fpgas=4 #only the leaves
 measurement_fusion=0
-logical_quibits_per_dimension=1
+logical_quibits_per_dimension=4
 
 configuration_file="../test_benches/test_data/configuration_${distance}_0.txt"
 gcc configuration.c -o config -lm
@@ -52,8 +52,7 @@ do
     fi
 
     if [ $measurement_fusion -eq 0 ]; then
-        fprintf(stderr, "Usage: %s <distance> <input_filename> <output_filename> <num_fpgas> <m_fusion> <qubits_per_dim> <leaf_id>\n", argv[0]);
-        ./uf $distance $input_file $output_file $num_fpgas $measurement_fusion $logical_quibits_per_dimension
+        ./uf $distance $input_file $output_file $num_fpgas $measurement_fusion $logical_quibits_per_dimension $fpga_id
         sleep 1
     fi
 

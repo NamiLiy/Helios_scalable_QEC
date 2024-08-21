@@ -21,8 +21,8 @@ int main(int argc, char *argv[]) {
 
     // Your code here
     // Initialize decoding
-    fprintf(file, "%08x\n", 0x00000000);
-    fprintf(file, "%08x\n", 0x00000000);
+    fprintf(file, "%08x\n", 0x00000000); //LSB
+    fprintf(file, "%08x\n", 0x00000000); //MSB
 
     for (int i = 0; i < test_runs; i++) {
         fprintf(file, "%08x\n", 0x0000000f);

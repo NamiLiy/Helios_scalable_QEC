@@ -50,16 +50,6 @@ localparam [7:0]
 // |47:42| ID of the sender
 
 
-
-// NODE_RESULT_MSG ->
-// [0] = 1 => busy
-// [1] = 1 => odd
-
-// MOVE_TO_STAGE ->
-// [0] = 0 => move to peel stage
-// [0] = 1 => move to grow stage
-
-
 localparam MSG_DEST_MSB = 64 - 1;
 localparam MSG_DEST_LSB = MSG_DEST_MSB - 7;
 localparam MSG_HEADER_MSB = MSG_DEST_LSB - 1;

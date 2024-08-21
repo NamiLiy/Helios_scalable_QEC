@@ -176,7 +176,7 @@ single_FPGA_decoding_graph_dynamic_rsc #(
     .border_input_data(border_input_data),
     .border_input_valid(border_input_valid),
     .border_input_ready(border_input_ready),
-    .border_continous(border_continous),
+    
     .artificial_boundary(artificial_boundary),
     .fusion_boundary(fusion_boundary),
     .reset_all_edges(reset_all_edges)
@@ -189,6 +189,7 @@ unified_controller #(
     .ITERATION_COUNTER_WIDTH(8),
     .MAXIMUM_DELAY(3),
     .NUM_CONTEXTS(NUM_CONTEXTS),
+    .CTRL_FIFO_WIDTH(64),
     .NUM_FPGAS(NUM_FPGAS),
     .ROUTER_DELAY_COUNTER(ROUTER_DELAY_COUNTER),
     .ACTUAL_D(ACTUAL_D),

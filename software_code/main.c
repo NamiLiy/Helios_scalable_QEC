@@ -13,7 +13,7 @@ struct FPGA_ranges {
     int i_max;
     int j_min;
     int j_max;
-}
+};
 
 double normal_random(double mean, double std_dev);
 
@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
     double p = atof(argv[2]);
     int test_runs = atoi(argv[3]);
 
-    char *filename = argv[4];
+    char *file_prefix = argv[4];
 
     int m_fusion = atoi(argv[5]); //0 no fusion, 1 fusion
     int qubits_per_dim = atoi(argv[6]);
@@ -168,11 +168,11 @@ int main(int argc, char *argv[]) {
 
 
 
-    FILE* out_fp[num_leaves], 
+    FILE* out_fp[num_leaves]; 
     int c;
     for (int i = 0; i < num_leaves; i++) {
         char filename[100];
-        sprintf(filename, "%s_%d.txt", filename, i);
+        sprintf(filename, "%s_%d.txt", file_prefix, (i+1));
         out_fp[i] = fopen(filename, "wb");
         if (out_fp[i] == NULL) {
             fprintf(stderr, "Can't open output file %s!\n", filename);
@@ -262,7 +262,9 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        fprintf(out_fp, "%08X\n", t+1);
+        for(int f=0; f <num_leaves; f++){
+            fprintf(out_fp[f], "%08X\n", t+1);
+        }
         for (int k = 0; k < meas_rounds; k++) {
             for (int i = 0; i < distance_i; i++) {
                 for (int j = 0; j < distance_j; j++) {
@@ -274,7 +276,7 @@ int main(int argc, char *argv[]) {
                                 int new_j = j - fpga_ranges[f].j_min;
                                 int new_distance_i = fpga_ranges[f].i_max - fpga_ranges[f].i_min + 1;
                                 int new_distance_j = fpga_ranges[f].j_max - fpga_ranges[f].j_min + 1;
-                                unsigned int defect_address = new_j + (new_i<<((int)(ceil(log2(new_distance_j))))) + (k<<((int)(ceil(log2(new_distance_j)))+(int)(ceil(log2(new_distance_i))));
+                                unsigned int defect_address = new_j + (new_i<<((int)(ceil(log2(new_distance_j))))) + (k<<((int)(ceil(log2(new_distance_j)))+(int)(ceil(log2(new_distance_i)))));
                                 fprintf(out_fp[f], "%08X\n", defect_address);
                             }
                             // unsigned int defect_address = j + (i<<((int)(ceil(log2(distance_j))))) + (k<<((int)(ceil(log2(distance_j)))+(int)(ceil(log2(distance_i))));
@@ -287,7 +289,7 @@ int main(int argc, char *argv[]) {
             // printf("\n");
         }
         for(int f=0; f <num_leaves; f++){
-            printf(out_fp[f], "FFFFFFFF\n");
+            fprintf(out_fp[f], "FFFFFFFF\n");
         }
 
         // These data is for the FPGA

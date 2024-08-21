@@ -17,17 +17,17 @@ module overall_verification_bench;
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
 localparam CODE_DISTANCE = 5;
-localparam LOGICAL_QUBITS_PER_DIM = 2; //This is across all the FPGAs. IF this is not compatible with qubits per dim, then the test could fail
-localparam NUM_LEAVES = 4;
-localparam ROUTER_DELAY = 53;
-localparam MAX_COUNT = 1000;
+localparam LOGICAL_QUBITS_PER_DIM_PER_FPGA = 2; //This is across all the FPGAs. IF this is not compatible with qubits per dim, then the test could fail
+localparam NUM_LEAVES_PER_DIM = 2;
+localparam ROUTER_DELAY = 2;
+localparam MAX_COUNT = 10;
 localparam MULTI_FPGA_RUN = 0;
 localparam MEASUREMENT_FUSION=0;
 
 `define SLICE_VEC(vec, idx, width) (vec[idx*width +: width])
 
-localparam NUM_LEAVES_PER_DIM = $sqrt(NUM_LEAVES);
-localparam LOGICAL_QUBITS_PER_DIM_PER_FPGA = LOGICAL_QUBITS_PER_DIM / NUM_LEAVES_PER_DIM;
+localparam NUM_LEAVES = NUM_LEAVES_PER_DIM * NUM_LEAVES_PER_DIM;
+localparam LOGICAL_QUBITS_PER_DIM = LOGICAL_QUBITS_PER_DIM_PER_FPGA * NUM_LEAVES_PER_DIM;
 
 reg clk;
 reg reset;
@@ -43,8 +43,9 @@ wire on;
 
 root_hub_test #(
     .CODE_DISTANCE(CODE_DISTANCE),
-    .MULTI_FPGA_RUN(MULTI_FPGA_RUN),
-    .ROUTER_DELAY(ROUTER_DELAY)
+    .ROUTER_DELAY(ROUTER_DELAY),
+    .NUM_LEAVES(NUM_LEAVES),
+    .FPGA_ID(0)
 ) root_hub_tb(
     .clk(clk),
     .reset(reset),
