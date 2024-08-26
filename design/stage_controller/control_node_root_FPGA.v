@@ -71,7 +71,8 @@ wire [7:0] message_header;
 assign message_header = data_from_cpu [MSG_HEADER_MSB : MSG_HEADER_LSB];
 
 wire [7:0] dest;
-assign message_dest = data_from_cpu [MSG_DEST_MSB : MSG_DEST_LSB];
+assign message_dest = data_from_cpu [MSG_DEST_MSB : MSG_DEST_LSB]; 
+
 
 // always @(posedge clk) begin
 //     if (reset) begin
@@ -114,13 +115,13 @@ always @(posedge clk) begin
                 if (valid_from_cpu && ready_to_fpgas) begin
                     if(message_dest == 8'h0) begin
                         case(message_header)
-                            HEADER_INITIALIZE_DECODING: begin
-                                global_stage <= STAGE_MEASUREMENT_LOADING;
-                            end
+                            // HEADER_INITIALIZE_DECODING: begin
+                            //     global_stage <= STAGE_MEASUREMENT_LOADING;
+                            // end
 
-                            HEADER_SET_BOUNDARIES: begin
-                                global_stage <= STAGE_SET_BOUNDARIES;
-                            end
+                            // HEADER_SET_BOUNDARIES: begin
+                            //     global_stage <= STAGE_SET_BOUNDARIES;
+                            // end
 
                             HEADER_DECODE_BLOCK: begin
                                 if(data_from_cpu[2] == 1'b1) begin//wait for result
@@ -138,9 +139,9 @@ always @(posedge clk) begin
                 return_msg_count <= 0;
             end
 
-            STAGE_SET_BOUNDARIES: begin
-                global_stage <= STAGE_IDLE;
-            end
+            // STAGE_SET_BOUNDARIES: begin
+            //     global_stage <= STAGE_IDLE;
+            // end
 
             STAGE_WAIT_TILL_NODE_RESULTS: begin //4  
                 if (valid_from_fpgas && ready_from_fpgas && return_msg_count < NUM_CHILDREN) begin
@@ -181,6 +182,11 @@ always@(*) begin
                         end
                         HEADER_DECODE_BLOCK: begin
                             data_to_fpgas = {8'hff, data_from_cpu [MSG_HEADER_MSB : 0]};
+                            valid_to_fpgas = 1'b1;
+                        end
+
+                        HEADER_SET_BOUNDARIES: begin
+                            data_to_fpgas = data_from_cpu;
                             valid_to_fpgas = 1'b1;
                         end
 

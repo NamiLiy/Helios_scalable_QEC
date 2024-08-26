@@ -79,8 +79,11 @@ localparam CONTEXT_COUNTER_WIDTH = $clog2(NUM_CONTEXTS + 1);
 
 localparam logical_qubits_in_j_dim = (GRID_WIDTH_Z + (ACTUAL_D-1)/2 - 1) / ((ACTUAL_D-1)/2); // round up to the nearest integer
 localparam logical_qubits_in_i_dim = (GRID_WIDTH_X + ACTUAL_D+1 - 1) / (ACTUAL_D+1); // round up to the nearest integer
-localparam borders_in_j_dim = (logical_qubits_in_j_dim - 1)*logical_qubits_in_i_dim;
-localparam borders_in_i_dim = (logical_qubits_in_i_dim - 1)*logical_qubits_in_j_dim;
+localparam borders_in_j_dim = (logical_qubits_in_j_dim + 1)*logical_qubits_in_i_dim;
+localparam borders_in_i_dim = (logical_qubits_in_i_dim + 1)*logical_qubits_in_j_dim;
+localparam total_borders = borders_in_i_dim + borders_in_j_dim;
+// What happens here is we pad it to at least the twice of the data field width so that parameters are not needed to avoid shift when the all the border information fits to one message
+localparam total_borders_padded = ((borders_in_i_dim + borders_in_j_dim) > (48*2) ? (borders_in_i_dim + borders_in_j_dim) : (48*2))
 
 localparam CORRECTION_COUNT_PER_ROUND_PADDED = (CORRECTION_COUNT_PER_ROUND + 7) & (~3'b111);
 localparam CORRECTION_COUNT_PER_ROUND_PADDED_BYTES = CORRECTION_COUNT_PER_ROUND_PADDED >> 3;
@@ -116,8 +119,11 @@ input output_ctrl_tx_ready;
 input router_busy;
 output reg [1:0] border_continous;
 output reg artificial_boundary;
-output reg [borders_in_j_dim + borders_in_i_dim - 1 : 0] fusion_boundary;
+output [total_borders - 1 : 0] fusion_boundary;
 output reg reset_all_edges;
+
+reg [total_borders_padded - 1 : 0] fusion_boundary_reg;
+assign fusion_boundary = fusion_boundary_reg[total_borders-1:0];
 
 reg result_valid;
 reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
@@ -352,6 +358,8 @@ always @(posedge clk) begin
                         global_stage <= STAGE_IDLE;
                         delay_counter <= 0;
                         result_valid <= 0;
+                        fusion_boundary_reg[47:0] = input_ctrl_rx_data[47:0];
+                        fusion_boundary_reg[total_borders_padded-1 : 48] = fusion_boundary_reg[total_borders_padded-48-1 : 0];
                     end
                     // else if(input_ctrl_rx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == MOVE_TO_STAGE) begin
                     //     global_stage <= STAGE_GROW;
@@ -360,9 +368,6 @@ always @(posedge clk) begin
                     // end
                 end
                 current_measurement_round <= 0;
-                // ASAP fix
-                fusion_boundary[borders_in_i_dim -1 : 0] <= {borders_in_i_dim{1'b1}};
-                fusion_boundary[borders_in_i_dim + borders_in_j_dim -1 : borders_in_i_dim] <= {borders_in_j_dim{1'b1}};
             end
 
             STAGE_PARAMETERS_LOADING: begin // 6

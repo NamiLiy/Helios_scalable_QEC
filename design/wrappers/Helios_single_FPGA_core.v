@@ -74,8 +74,8 @@ localparam FPGA_FIFO_COUNT = (2*GRID_WIDTH_Z - 1)*GRID_WIDTH_U;
 
 localparam logical_qubits_in_j_dim = (GRID_WIDTH_Z + (ACTUAL_D-1)/2 - 1) / ((ACTUAL_D-1)/2); // round up to the nearest integer
 localparam logical_qubits_in_i_dim = (GRID_WIDTH_X + ACTUAL_D+1 - 1) / (ACTUAL_D+1); // round up to the nearest integer
-localparam borders_in_j_dim = (logical_qubits_in_j_dim - 1)*logical_qubits_in_i_dim;
-localparam borders_in_i_dim = (logical_qubits_in_i_dim - 1)*logical_qubits_in_j_dim;
+localparam borders_in_j_dim = (logical_qubits_in_j_dim + 1)*logical_qubits_in_i_dim;
+localparam borders_in_i_dim = (logical_qubits_in_i_dim + 1)*logical_qubits_in_j_dim;
 
 
 input clk;

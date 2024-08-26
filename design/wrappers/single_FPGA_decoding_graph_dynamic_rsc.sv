@@ -62,15 +62,15 @@ localparam FPGA_FIFO_COUNT = FPGA_FIFO_COUNT_PER_LAYER*PHYSICAL_GRID_WIDTH_U;
 
 localparam LINK_BIT_WIDTH = $clog2(MAX_WEIGHT + 1);
 
-localparam north_cut_type = 2;
-localparam south_cut_type = (FPGA_ID <= 2 ? 1 : 2);
-localparam east_cut_type = 1;
-localparam west_cut_type = ((FPGA_ID == 1 || FPGA_ID == 3) ? 1 : 2); 
+// localparam north_cut_type = 2;
+// localparam south_cut_type = (FPGA_ID <= 2 ? 1 : 2);
+// localparam east_cut_type = 1;
+// localparam west_cut_type = ((FPGA_ID == 1 || FPGA_ID == 3) ? 1 : 2); 
 
 localparam logical_qubits_in_j_dim = (GRID_WIDTH_Z + (ACTUAL_D-1)/2 - 1) / ((ACTUAL_D-1)/2); // round up to the nearest integer
 localparam logical_qubits_in_i_dim = (GRID_WIDTH_X + ACTUAL_D+1 - 1) / (ACTUAL_D+1); // round up to the nearest integer
-localparam borders_in_j_dim = (logical_qubits_in_j_dim - 1)*logical_qubits_in_i_dim;
-localparam borders_in_i_dim = (logical_qubits_in_i_dim - 1)*logical_qubits_in_j_dim;
+localparam borders_in_j_dim = (logical_qubits_in_j_dim + 1)*logical_qubits_in_i_dim;
+localparam borders_in_i_dim = (logical_qubits_in_i_dim + 1)*logical_qubits_in_j_dim;
 
 input clk;
 input reset;
@@ -424,13 +424,14 @@ endgenerate
         .reset_edge(reset_edge_local) \
     );
 
+// Recalc the logic boundary index
 `define logic_boundary_index(i,j,is_ns_edge, vertical_boundary)\
     (is_ns_edge ? (vertical_boundary ? \
-        (((i / (ACTUAL_D+1)) -1)*(logical_qubits_in_j_dim) + (j / ((ACTUAL_D-1)/2)) + borders_in_j_dim) : \
-        (((i / (ACTUAL_D+1)))*(logical_qubits_in_j_dim - 1) + (j / ((ACTUAL_D-1)/2) - 1))) : \
+        ((i / (ACTUAL_D+1))*(logical_qubits_in_j_dim) + ((j-1) / ((ACTUAL_D-1)/2)) + borders_in_j_dim) : \
+        (((i / (ACTUAL_D+1)))*(logical_qubits_in_j_dim + 1) + (j / ((ACTUAL_D-1)/2)))) : \
         (vertical_boundary ? \
-        (((i / (ACTUAL_D+1)) -1)*(logical_qubits_in_j_dim) + (j / ((ACTUAL_D-1)/2)) + borders_in_j_dim) : \
-        (((i / (ACTUAL_D+1)))*(logical_qubits_in_j_dim - 1) + (j / ((ACTUAL_D-1)/2) - 1))))
+        ((i / (ACTUAL_D+1))*(logical_qubits_in_j_dim) + (j / ((ACTUAL_D-1)/2)) + borders_in_j_dim) : \
+        (((i / (ACTUAL_D+1)))*(logical_qubits_in_j_dim + 1) + (j / ((ACTUAL_D-1)/2)))))
 
 generate
     // Generate North South neighbors
@@ -450,17 +451,28 @@ generate
                 reg [3:0] type_for_boundary_links;
 
                 always@(*) begin 
-                    // We only use type for boundary links on the internal links. Other types of links are hardcoded
-                    if(i==0 || i==GRID_WIDTH_X) begin
-                        type_for_boundary_links = 3'b10; // This is the northernmost row. It never exists
-                   end else if((i%(ACTUAL_D+1))==0 && (j > 0) && (j < GRID_WIDTH_Z)) begin
+
+                    // first handle the lattice boundaries
+                    if(i==0) begin // First row
+                        type_for_boundary_links = 3'b10; // This never exists in all 4 FPGAs
+                    end if(i==GRID_WIDTH_X) begin // Last row. Has z-1 elements. Always depend on FPGA ID
+                        type_for_boundary_links = (FPGA_ID <= 2 ? 1 : 2); 
+                    end else if (i < GRID_WIDTH_X && i > 0 &&  (i%2==0) && j==0) begin //Leftmost column. North ones go upwards and are discarded for equivalent going down ones
+                        type_for_boundary_links = 2;
+                    end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j == GRID_WIDTH_Z) begin // Last element of even rows
+                        type_for_boundary_links = 1; //always a boundary
+                    
+                    // then artificial boundaries
+                    
+                    end else if((i%(ACTUAL_D+1))==0 && (j > 0) && (j < GRID_WIDTH_Z)) begin 
                         type_for_boundary_links = artificial_boundary ? 3'b11 : (fusion_boundary[`logic_boundary_index(i,j,1,1)] ? 3'b0 : 3'b10); // This is the horizontal border row. When Fusion is on it is
-                   end else if((i%2 == 0) && (j > 0) && (j < GRID_WIDTH_Z) && (j%((ACTUAL_D-1)/2) == 0)) begin
+                    end else if((i%2 == 0) && (j > 0) && (j < GRID_WIDTH_Z) && (j%((ACTUAL_D-1)/2) == 0)) begin
                         type_for_boundary_links = artificial_boundary ? 3'b11 : (fusion_boundary[`logic_boundary_index(i,j,1,0)] ? 3'b0 : 3'b1); // This is the vertical border row. When Fusion is on it is
-                   end
-                   else begin
-                       type_for_boundary_links = 3'b00; //  Internal
-                   end
+                     
+                    // then fully internal nodes
+                    end else  begin
+                        type_for_boundary_links = 3'b00; //  Internal
+                    end
                end
 
                 reg [ADDRESS_WIDTH_WITH_B-1:0] init_address;
@@ -484,15 +496,15 @@ generate
                 //     assign local_context_switch = 1'b0;
                 // end
                 if(i==0 && j < GRID_WIDTH_Z) begin // First row. Has z-1 elements
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_NORTH, north_cut_type, NUM_CONTEXTS, reset_edge_local)
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_NORTH, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
                 end if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z) begin // Last row. Has z-1 elements
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_SOUTH, south_cut_type, NUM_CONTEXTS, reset_edge_local)                 
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_SOUTH, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)                 
                 end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0) begin // odd rows which are always internal. z-1 elements
                     `NEIGHBOR_LINK_INTERNAL_0(i-1, j-1, k, i, j-1, k, `NEIGHBOR_IDX_SOUTH, `NEIGHBOR_IDX_NORTH, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
                 end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j == 0) begin // First element of even rows //This is 2 instead of west cut because this is going up and duplicated in the down going equivalent at the boundary
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_NORTH, 2, NUM_CONTEXTS, reset_edge_local)
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_NORTH, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
                 end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j == GRID_WIDTH_Z) begin // Last element of even rows
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j-1, k, `NEIGHBOR_IDX_SOUTH, east_cut_type, NUM_CONTEXTS, reset_edge_local)
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j-1, k, `NEIGHBOR_IDX_SOUTH, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
                 end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j > 0 && j < GRID_WIDTH_Z) begin // Middle elements of even rows
                     `NEIGHBOR_LINK_INTERNAL_0(i-1, j-1, k, i, j, k, `NEIGHBOR_IDX_SOUTH, `NEIGHBOR_IDX_NORTH, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
                 end
@@ -534,30 +546,43 @@ generate
                 reg [3:0] type_for_boundary_links;
 
                 always@(*) begin 
-                    if(i==0 || i==GRID_WIDTH_X) begin
-                        type_for_boundary_links = 3'b10; // This is the northernmost row. It never exists
-                   end else if((i%(ACTUAL_D+1))==0 && (j < GRID_WIDTH_Z)) begin
+                    // first handle the lattice boundaries
+                    if(i==0) begin
+                        type_for_boundary_links = 3'b10;   // This is the northernmost row. It never exists
+                    end else if(i==GRID_WIDTH_X) begin // Southernmost row. Always depend on FPGA ID
+                        type_for_boundary_links = (FPGA_ID <= 2 ? 1 : 2);
+                    end else if (i < GRID_WIDTH_X && i > 0 &&  (i%2==1) && j==0) begin//Left border
+                        type_for_boundary_links = artificial_boundary ? 3'b11 : (fusion_boundary[`logic_boundary_index(i,j,0,0)] ? 3'b10 : 3'b01);
+                    end else if (i < GRID_WIDTH_X-1 && i>0 && (i%2==1) && j==GRID_WIDTH_Z) begin //Right border excluding last two rows
+                        type_for_boundary_links = 3'b10; // Ignored as equivalent edge going down exists
+                    end else if(i == GRID_WIDTH_X -1 && j == GRID_WIDTH_Z) begin // Last element of last odd row
+                        type_for_boundary_links = 3'b01; //always a boundary
+
+                    // then artificial boundaries
+                    end else if(i < GRID_WIDTH_X && i > 0 && (i%(ACTUAL_D+1))==0 && (j < GRID_WIDTH_Z)) begin //vertical boundaries
                         type_for_boundary_links = artificial_boundary ? 3'b11 : (fusion_boundary[`logic_boundary_index(i,j,0,1)] ? 3'b0 : 3'b10);
-                   end else if((i%2 == 1) && (j > 0) && (j < GRID_WIDTH_Z) && (j%((ACTUAL_D-1)/2) == 0)) begin
-                        type_for_boundary_links = artificial_boundary ? 3'b11 : (fusion_boundary[`logic_boundary_index(i,j,0,0)] ? 3'b0 : 3'b1);
-                   end else begin
-                       type_for_boundary_links = 3'b00; //  Internal
-                   end
+                    end else if((i%2 == 1) && (j > 0) && (j < GRID_WIDTH_Z) && (j%((ACTUAL_D-1)/2) == 0)) begin //horizontal boundaries 
+                        type_for_boundary_links = artificial_boundary ? 3'b11 : (fusion_boundary[`logic_boundary_index(i,j,0,0)] ? 3'b0 : 3'b10);
+
+                    // Finally handle the internal boundaries
+                    end else begin
+                        type_for_boundary_links = 3'b00; //  Internal
+                    end
                end
 
                 assign weight_in = `WEIGHT_EW(i,j);
                 if(i==0 && j < GRID_WIDTH_Z) begin // First row
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_EAST, north_cut_type, NUM_CONTEXTS, reset_edge_local)
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_EAST, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
                 end else if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z) begin // Last row
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_WEST, south_cut_type, NUM_CONTEXTS, reset_edge_local)
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_WEST, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
                 end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 0 && j < GRID_WIDTH_Z) begin // even rows which are always internal
                     `NEIGHBOR_LINK_INTERNAL_0(i, j, k, i-1, j, k, `NEIGHBOR_IDX_EAST, `NEIGHBOR_IDX_WEST, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
                 end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j == 0) begin // First element of odd rows
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_WEST, west_cut_type, NUM_CONTEXTS, reset_edge_local)
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_WEST, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
                 end else if(i < GRID_WIDTH_X -1 && i > 0 && i%2 == 1 && j == GRID_WIDTH_Z) begin // Last element of odd rows excluding last row. Is 2 because of equivalent down link
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j-1, k, `NEIGHBOR_IDX_EAST, 2, NUM_CONTEXTS, reset_edge_local)
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j-1, k, `NEIGHBOR_IDX_EAST, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
                 end else if(i == GRID_WIDTH_X -1 && j == GRID_WIDTH_Z) begin // Last element of last odd row
-                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j-1, k, `NEIGHBOR_IDX_EAST, east_cut_type, NUM_CONTEXTS, reset_edge_local)
+                    `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j-1, k, `NEIGHBOR_IDX_EAST, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
                 end else if(i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0 && j < GRID_WIDTH_Z) begin // Middle elements of odd rows
                     `NEIGHBOR_LINK_INTERNAL_0(i, j-1, k, i-1, j, k, `NEIGHBOR_IDX_EAST, `NEIGHBOR_IDX_WEST, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
                 end
