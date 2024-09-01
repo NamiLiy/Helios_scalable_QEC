@@ -382,13 +382,16 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance
                 hor_edges[k][i][j].is_ignored = 0;
                 if(j==0|| j== 2*distance.j){ //left and right borders
                     if(j==0){
-                        if (leaf_id == 0 || leaf_id == 2){
-                            hor_edges[k][i][j].is_boundary = 1;
-                            hor_edges[k][i][j].is_ignored = 0;
-                        } else {
-                            hor_edges[k][i][j].is_boundary = 0;
-                            hor_edges[k][i][j].is_ignored = 1;
-                        }
+                        // This is the case only when the logical qubit is merged with another qubit on the boundary
+                        // if (leaf_id == 0 || leaf_id == 2){
+                        //     hor_edges[k][i][j].is_boundary = 1;
+                        //     hor_edges[k][i][j].is_ignored = 0;
+                        // } else {
+                        //     hor_edges[k][i][j].is_boundary = 0;
+                        //     hor_edges[k][i][j].is_ignored = 1;
+                        // }
+                        hor_edges[k][i][j].is_boundary = 1;
+                        hor_edges[k][i][j].is_ignored = 0;
 
                         if(i==distance.i){
                             hor_edges[k][i][j].is_boundary = 0;
@@ -533,7 +536,7 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance
             for(int i=0; i< distance.i+1;i++){
                 for(int j=0; j< 2*distance.j+1;j++){
                     if((i>0) && (i < distance.i) && (i % (d+1) == 0) && (j>0) &&(j < 2*distance.j)){
-                        hor_edges[k][i][j].is_fusion_boundary = 0;
+                        hor_edges[k][i][j].is_fusion_boundary = fusion_status(k, i, j, 0,);
                     }else if(j > 0 && j < 2*distance.j && j % (d-1) == 0 && (i>0) && (i < distance.i)){
                         hor_edges[k][i][j].is_fusion_boundary = 0;
                     }
@@ -845,10 +848,41 @@ int print_output(FILE* file, int test, struct Distance distance) {
     return 0;
 }
 
+int loadConfigData(FILE* file, int (*array)[], int num_borders, int fpga_id) {
+    for(int j = (num_borders+47)/48-1; j >= 0; j--){
+        int word1;
+        int word2;
+        while(1){
+            fscanf(file, "%x", &word1);
+            fscanf(file, "%x", &word2);
+            if((word2>>24) == fpga_id){
+                break;
+            }
+        }
+
+        for(int i=0; i < 48; i++){
+            if(i<32){
+                (*array)[j*48+ i] = (word1>>i) & 1;
+            } else {
+                (*array)[j*48+i] = (word2>>(i-32)) & 1;
+            }
+            if(j*48+i == num_borders - 1){
+                break;
+            }
+        }
+    }
+
+    // for(int i=0; i<num_borders; i++){
+    //     printf("%d ", (*array)[i]);
+    // }
+    // printf("\n");
+    return 0;
+}
+
 int main(int argc, char *argv[]) {
 
-    if (argc != 8) {
-        fprintf(stderr, "Usage: %s <distance> <input_filename> <output_filename> <num_fpgas> <m_fusion> <qubits_per_dim> <fpga_id>\n", argv[0]);
+    if (argc != 9) {
+        fprintf(stderr, "Usage: %s <distance> <input_filename> <output_filename> <num_fpgas> <m_fusion> <qubits_per_dim> <fpga_id> <config_filename>\n", argv[0]);
         return 1;
     }
 
@@ -863,6 +897,7 @@ int main(int argc, char *argv[]) {
     int m_fusion = atoi(argv[5]); //0 no fusion, 1 fusion
     int qubits_per_dim = atoi(argv[6]);
     int fpga_id = atoi(argv[7]);
+    char *config_filename = argv[8];
 
     int leaf_id = fpga_id - 1;
     printf("Parameters %d %d %d %d %d\n", d, num_fpgas, m_fusion, qubits_per_dim, leaf_id);
@@ -895,16 +930,34 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
+    FILE* config_file = fopen(config_filename, "r");
+    if (config_file == NULL) {
+        //printf("Error opening file %s.\n", config_filename);
+        return -1;
+    }
+
+    int num_borders = 0;
+    if(leaf_id == 0){
+        num_borders = (qubits_per_dim/2 + 2)*(qubits_per_dim/2+1) + (qubits_per_dim/2 + 2)*(qubits_per_dim/2+1);
+    } else if(leaf_id==1 || leaf_id==2){
+        num_borders = (qubits_per_dim/2 + 1)*(qubits_per_dim/2+1) + (qubits_per_dim/2 + 2)*(qubits_per_dim/2);
+    } else if(leaf_id==3){
+        num_borders = (qubits_per_dim/2 + 1)*(qubits_per_dim/2) + (qubits_per_dim/2 + 1)*(qubits_per_dim/2);
+    }
+
     while(1){
         int syndrome[D][D+1][(D-1)/2];
         int ret_val = loadFileData(file, &syndrome, distance);
         if(ret_val < 0) {
             break;
         }
-        union_find(syndrome, distance, num_fpgas, m_fusion, d, leaf_id);
+        int fpga_borders[num_borders];
+        int ret_cfg_val = loadConfigData(config_file, &fpga_borders, num_borders, fpga_id);
+        union_find(syndrome, distance, num_fpgas, m_fusion, d, leaf_id, fpga_borders);
         print_output(file_op, ret_val, distance);
     }
 
     fclose(file_op);
+    fclose(config_file);
     return 0;
 }

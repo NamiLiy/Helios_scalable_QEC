@@ -455,7 +455,7 @@ generate
                     // first handle the lattice boundaries
                     if(i==0) begin // First row
                         type_for_boundary_links = 3'b10; // This never exists in all 4 FPGAs
-                    end if(i==GRID_WIDTH_X) begin // Last row. Has z-1 elements. Always depend on FPGA ID
+                    end else if(i==GRID_WIDTH_X) begin // Last row. Has z-1 elements. Always depend on FPGA ID
                         type_for_boundary_links = (FPGA_ID <= 2 ? 1 : 2); 
                     end else if (i < GRID_WIDTH_X && i > 0 &&  (i%2==0) && j==0) begin //Leftmost column. North ones go upwards and are discarded for equivalent going down ones
                         type_for_boundary_links = 2;
@@ -467,8 +467,7 @@ generate
                     end else if((i%(ACTUAL_D+1))==0 && (j > 0) && (j < GRID_WIDTH_Z)) begin 
                         type_for_boundary_links = artificial_boundary ? 3'b11 : (fusion_boundary[`logic_boundary_index(i,j,1,1)] ? 3'b0 : 3'b10); // This is the horizontal border row. When Fusion is on it is
                     end else if((i%2 == 0) && (j > 0) && (j < GRID_WIDTH_Z) && (j%((ACTUAL_D-1)/2) == 0)) begin
-                        type_for_boundary_links = artificial_boundary ? 3'b11 : (fusion_boundary[`logic_boundary_index(i,j,1,0)] ? 3'b0 : 3'b1); // This is the vertical border row. When Fusion is on it is
-                     
+                        type_for_boundary_links = artificial_boundary ? 3'b11 : (fusion_boundary[`logic_boundary_index(i,j,1,0)] ? 3'b0 : 3'b1); // This is the vertical border row. When Fusion is on it is                     
                     // then fully internal nodes
                     end else  begin
                         type_for_boundary_links = 3'b00; //  Internal
@@ -497,7 +496,7 @@ generate
                 // end
                 if(i==0 && j < GRID_WIDTH_Z) begin // First row. Has z-1 elements
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_NORTH, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
-                end if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z) begin // Last row. Has z-1 elements
+                end else if(i==GRID_WIDTH_X && j < GRID_WIDTH_Z) begin // Last row. Has z-1 elements
                     `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_SOUTH, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)                 
                 end else if (i < GRID_WIDTH_X && i > 0 && i%2 == 1 && j > 0) begin // odd rows which are always internal. z-1 elements
                     `NEIGHBOR_LINK_INTERNAL_0(i-1, j-1, k, i, j-1, k, `NEIGHBOR_IDX_SOUTH, `NEIGHBOR_IDX_NORTH, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
@@ -552,7 +551,7 @@ generate
                     end else if(i==GRID_WIDTH_X) begin // Southernmost row. Always depend on FPGA ID
                         type_for_boundary_links = (FPGA_ID <= 2 ? 1 : 2);
                     end else if (i < GRID_WIDTH_X && i > 0 &&  (i%2==1) && j==0) begin//Left border
-                        type_for_boundary_links = artificial_boundary ? 3'b11 : (fusion_boundary[`logic_boundary_index(i,j,0,0)] ? 3'b10 : 3'b01);
+                        type_for_boundary_links = artificial_boundary ? 3'b01 : (fusion_boundary[`logic_boundary_index(i,j,0,0)] ? 3'b10 : 3'b01);
                     end else if (i < GRID_WIDTH_X-1 && i>0 && (i%2==1) && j==GRID_WIDTH_Z) begin //Right border excluding last two rows
                         type_for_boundary_links = 3'b10; // Ignored as equivalent edge going down exists
                     end else if(i == GRID_WIDTH_X -1 && j == GRID_WIDTH_Z) begin // Last element of last odd row

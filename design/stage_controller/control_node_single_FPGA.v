@@ -83,7 +83,7 @@ localparam borders_in_j_dim = (logical_qubits_in_j_dim + 1)*logical_qubits_in_i_
 localparam borders_in_i_dim = (logical_qubits_in_i_dim + 1)*logical_qubits_in_j_dim;
 localparam total_borders = borders_in_i_dim + borders_in_j_dim;
 // What happens here is we pad it to at least the twice of the data field width so that parameters are not needed to avoid shift when the all the border information fits to one message
-localparam total_borders_padded = ((borders_in_i_dim + borders_in_j_dim) > (48*2) ? (borders_in_i_dim + borders_in_j_dim) : (48*2))
+localparam total_borders_padded = ((borders_in_i_dim + borders_in_j_dim) > (48*2) ? (borders_in_i_dim + borders_in_j_dim) : (48*2));
 
 localparam CORRECTION_COUNT_PER_ROUND_PADDED = (CORRECTION_COUNT_PER_ROUND + 7) & (~3'b111);
 localparam CORRECTION_COUNT_PER_ROUND_PADDED_BYTES = CORRECTION_COUNT_PER_ROUND_PADDED >> 3;
@@ -335,7 +335,8 @@ always @(posedge clk) begin
                         result_valid <= 0;
                         multi_fpga_mode <= 0;
                         measurement_fusion_on <= 0;
-                        current_context <= 0; 
+                        current_context <= 0;
+                        fusion_boundary_reg[total_borders_padded-1 : 0] = {total_borders_padded{1'b0}}; 
                         // if(input_ctrl_rx_data[0] == 1'b1) begin
                         //     if(FPGA_ID != 1) begin
                         //         border_continous[0] <= 1'b1;

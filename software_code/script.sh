@@ -1,15 +1,18 @@
 #!/bin/bash
 
 distance=5
-p=0.001
-test_runs=1000
+p=0.000001
+test_runs=1
 num_fpgas=4 #only the leaves
 measurement_fusion=0
 logical_quibits_per_dimension=4
+merge_probability=0.5
 
 configuration_file="../test_benches/test_data/configuration_${distance}_0.txt"
-gcc configuration.c -o config -lm
-./config $configuration_file $test_runs
+gcc configuration.c random_seeds.c -o config -lm
+./config $configuration_file $test_runs $logical_quibits_per_dimension $num_fpgas $merge_probability
+
+sleep 1
 
 gcc main.c random_seeds.c -o main -lm
 input_prefix="../test_benches/test_data/input_data_${distance}"
@@ -52,7 +55,7 @@ do
     fi
 
     if [ $measurement_fusion -eq 0 ]; then
-        ./uf $distance $input_file $output_file $num_fpgas $measurement_fusion $logical_quibits_per_dimension $fpga_id
+        ./uf $distance $input_file $output_file $num_fpgas $measurement_fusion $logical_quibits_per_dimension $fpga_id $configuration_file
         sleep 1
     fi
 
