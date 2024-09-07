@@ -21,7 +21,6 @@ localparam LOGICAL_QUBITS_PER_DIM_PER_FPGA = 2; //This is across all the FPGAs. 
 localparam NUM_LEAVES_PER_DIM = 2;
 localparam ROUTER_DELAY = 2;
 localparam MAX_COUNT = 10;
-localparam MULTI_FPGA_RUN = 0;
 localparam MEASUREMENT_FUSION=0;
 
 // `define SLICE_VEC(vec, idx, width) (vec[(idx+1)*width -1 : idx*width])
@@ -56,6 +55,22 @@ root_hub_test #(
     .up_rx_valid(parent_tx_valid),
     .up_rx_ready(parent_tx_ready)
 );
+
+wire [64*NUM_LEAVES - 1:0] horizontal_out_data;
+wire [NUM_LEAVES - 1 : 0] horizontal_out_valid;
+wire [NUM_LEAVES - 1 : 0] horizontal_out_ready;
+
+wire [64*NUM_LEAVES - 1:0] horizontal_in_data;
+wire [NUM_LEAVES - 1 : 0] horizontal_in_valid;
+wire [NUM_LEAVES - 1 : 0] horizontal_in_ready;
+
+wire [64*NUM_LEAVES - 1:0] vertical_out_data;
+wire [NUM_LEAVES - 1 : 0] vertical_out_valid;
+wire [NUM_LEAVES - 1 : 0] vertical_out_ready;
+
+wire [64*NUM_LEAVES - 1:0] vertical_in_data;
+wire [NUM_LEAVES - 1 : 0] vertical_in_valid;
+wire [NUM_LEAVES - 1 : 0] vertical_in_ready;
 
 
 generate
@@ -94,17 +109,72 @@ generate
         ) decoder_tb(
             .clk(clk),
             .reset(reset),
-            .parent_rx_data(local_parent_rx_data),
-            .parent_rx_valid(local_parent_rx_valid),
-            .parent_rx_ready(local_parent_rx_ready),
-            .parent_tx_data(local_parent_tx_data),
-            .parent_tx_valid(local_parent_tx_valid),
-            .parent_tx_ready(local_parent_tx_ready)
+            .parent_rx_data(`SLICE_VEC(parent_rx_data, i, 64)),
+            .parent_rx_valid(`SLICE_VEC(parent_rx_valid, i, 1)),
+            .parent_rx_ready(`SLICE_VEC(parent_rx_ready, i, 1)),
+            .parent_tx_data(`SLICE_VEC(parent_tx_data, i, 64)),
+            .parent_tx_valid(`SLICE_VEC(parent_tx_valid, i, 1)),
+            .parent_tx_ready(`SLICE_VEC(parent_tx_ready, i, 1))
             //.roots(roots)
         );
     end
 endgenerate
 
+generate
+    genvar i;
+    for(i = 0; i < NUM_LEAVES; i = i + 1) begin : horizontal_fifos
+        localparam hor_compliment = (i==0 || i==2) ? (i+1) : (i-1);
+        fifo_wrapper #(
+            .WIDTH(64),
+            .DEPTH(128)
+        ) output_fifo (
+            .clk(clk),
+            .reset(reset),
+            .input_data(`SLICE_VEC(horizontal_out_data, i, 64)),
+            .input_valid(`SLICE_VEC(horizontal_out_valid, i, 1)),
+            .input_ready(`SLICE_VEC(horizontal_out_ready, i, 1)),
+            .output_data(`SLICE_VEC(horizontal_in_data, hor_compliment ,64)),
+            .output_valid(`SLICE_VEC(horizontal_in_valid, hor_compliment, 1)),
+            .output_ready(`SLICE_VEC(horizontal_in_ready, hor_compliment, 1)),
+
+        );
+    end
+
+    for(i = 0; i < NUM_LEAVES; i = i + 1) begin : anticlockwise_fifos
+        localparam ver_compliment = (i==0 || i==1) ? (i+2) : (i-2);
+        fifo_wrapper #(
+            .WIDTH(64),
+            .DEPTH(128)
+        ) output_fifo (
+            .clk(clk),
+            .reset(reset),
+            .input_data(`SLICE_VEC(vertical_out_data, i, 64)),
+            .input_valid(`SLICE_VEC(vertical_out_valid, i, 1)),
+            .input_ready(`SLICE_VEC(vertical_out_ready, i, 1)),
+            .output_data(`SLICE_VEC(vertical_in_data, ver_compliment, 64)),
+            .output_valid(`SLICE_VEC(vertical_in_valid, ver_compliment, 1)),
+            .output_ready(`SLICE_VEC(vertical_in_ready, ver_compliment, 1)),
+
+            .grid_1_out_data(`SLICE_VEC(horizontal_out_data, i, 64)),
+            .grid_1_out_valid(`SLICE_VEC(horizontal_out_valid, i, 1)),
+            .grid_1_out_ready(`SLICE_VEC(horizontal_out_ready, i, 1)),
+
+            .grid_2_out_data(`SLICE_VEC(vertical_out_data, i, 64)),
+            .grid_2_out_valid(`SLICE_VEC(vertical_out_valid, i, 1)),
+            .grid_2_out_ready(`SLICE_VEC(vertical_out_ready, i, 1)),
+
+            .grid_1_in_data(`SLICE_VEC(horizontal_in_data, i, 64)),
+            .grid_1_in_valid(`SLICE_VEC(horizontal_in_valid, i, 1)),
+            .grid_1_in_ready(`SLICE_VEC(horizontal_in_ready, i, 1)),
+
+            .grid_2_in_data(`SLICE_VEC(vertical_in_data, i, 64)),
+            .grid_2_in_valid(`SLICE_VEC(vertical_in_valid, i, 1)),
+            .grid_2_in_ready(`SLICE_VEC(vertical_in_ready, i, 1))
+            
+        );
+    end
+
+endgenerate
 
 always #5 clk = ~clk;  // flip every 5ns, that is 100MHz clock
 

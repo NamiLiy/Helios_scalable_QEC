@@ -30,7 +30,23 @@ module verification_bench_leaf#(
 
     output [63:0] parent_tx_data,
     output parent_tx_valid,
-    input parent_tx_ready
+    input parent_tx_ready,
+
+    output [63 : 0] grid_1_out_data;
+    output grid_1_out_valid;
+    input grid_1_out_ready;
+
+    input [63 : 0] grid_1_in_data;
+    input grid_1_in_valid;
+    output grid_1_in_ready;
+
+    output [63 : 0] grid_2_out_data;
+    output grid_2_out_valid;
+    input grid_2_out_ready;
+
+    input [63 : 0] grid_2_in_data;
+    input grid_2_in_valid;
+    output grid_2_in_ready;
  );
 
 `include "../../parameters/parameters.sv"
@@ -135,7 +151,23 @@ Helios_single_FPGA #(
     .parent_rx_ready(parent_rx_ready),
     .parent_tx_data(parent_tx_data),
     .parent_tx_valid(parent_tx_valid),
-    .parent_tx_ready(parent_tx_ready)    
+    .parent_tx_ready(parent_tx_ready),
+
+    .grid_1_out_data(grid_1_out_data),
+    .grid_1_out_valid(grid_1_out_valid),
+    .grid_1_out_ready(grid_1_out_ready),
+
+    .grid_2_out_data(grid_2_out_data),
+    .grid_2_out_valid(grid_2_out_valid),
+    .grid_2_out_ready(grid_2_out_ready),
+
+    .grid_1_in_data(grid_1_in_data),
+    .grid_1_in_valid(grid_1_in_valid),
+    .grid_1_in_ready(grid_1_in_ready),
+
+    .grid_2_in_data(grid_2_in_data),
+    .grid_2_in_valid(grid_2_in_valid),
+    .grid_2_in_ready(grid_2_in_ready)
     //.roots(roots)
 );
 

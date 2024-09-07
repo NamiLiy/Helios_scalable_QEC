@@ -170,12 +170,22 @@ single_FPGA_decoding_graph_dynamic_rsc #(
     .correction(correction),
     .busy(busy),
     .global_stage(global_stage),
-    .border_output_data(border_output_data),
-    .border_output_valid(border_output_valid),
-    .border_output_ready(border_output_ready),
-    .border_input_data(border_input_data),
-    .border_input_valid(border_input_valid),
-    .border_input_ready(border_input_ready),
+
+    .grid_1_out_data(grid_1_out_data),
+    .grid_1_out_valid(grid_1_out_valid),
+    .grid_1_out_ready(grid_1_out_ready),
+
+    .grid_2_out_data(grid_2_out_data),
+    .grid_2_out_valid(grid_2_out_valid),
+    .grid_2_out_ready(grid_2_out_ready),
+
+    .grid_1_in_data(grid_1_in_data),
+    .grid_1_in_valid(grid_1_in_valid),
+    .grid_1_in_ready(grid_1_in_ready),
+
+    .grid_2_in_data(grid_2_in_data),
+    .grid_2_in_valid(grid_2_in_valid),
+    .grid_2_in_ready(grid_2_in_ready)
     
     .artificial_boundary(artificial_boundary),
     .fusion_boundary(fusion_boundary),
@@ -222,19 +232,11 @@ unified_controller #(
 );
 
 message_handler #(
-    .FPGA_FIFO_SIZE(FPGA_FIFO_SIZE),
-    .FPGA_FIFO_COUNT(FPGA_FIFO_COUNT),
-    .CTRL_FIFO_SIZE(64),
+    .GT_FIFO_SIZE(64),
     .FPGA_ID(FPGA_ID)
 ) handler (
     .clk(clk),
     .reset(reset),
-    .border_input_data(border_output_data),
-    .border_input_valid(border_output_valid),
-    .border_input_ready(border_output_ready),
-    .border_output_data(border_input_data),
-    .border_output_valid(border_input_valid),
-    .border_output_ready(border_input_ready),
     .handler_to_control_data(handler_to_controller_data),
     .handler_to_control_valid(handler_to_controller_valid),
     .handler_to_control_ready(handler_to_controller_ready),
@@ -247,7 +249,6 @@ message_handler #(
     .out_data(parent_tx_data),
     .out_valid(parent_tx_valid),
     .out_ready(parent_tx_ready),
-    .fpga_id(FPGA_ID),
     .router_busy(router_busy)
 );
 
@@ -279,12 +280,12 @@ fifo_wrapper #(
     .output_ready(controller_to_handler_ready)
 );
 
-assign grid_1_out_data = 64'hffffffffffffffff;
-assign grid_1_out_valid = parent_rx_valid;
-assign grid_1_out_ready = 1'b1;
+// assign grid_1_out_data = 64'hffffffffffffffff;
+// assign grid_1_out_valid = parent_rx_valid;
+// assign grid_1_out_ready = 1'b1;
 
-assign grid_2_out_data = 64'hffffffffffffffff;
-assign grid_2_out_valid = parent_rx_valid;
-assign grid_2_out_ready = 1'b1;
+// assign grid_2_out_data = 64'hffffffffffffffff;
+// assign grid_2_out_valid = parent_rx_valid;
+// assign grid_2_out_ready = 1'b1;
 
 endmodule
