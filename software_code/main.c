@@ -38,6 +38,8 @@ int main(int argc, char *argv[]) {
     int data_qubits_i = distance_i - 1;//This is data qubits in i direction
     int data_qubits_j = distance_j*2+1;//This is data qubits in j direction
     int meas_rounds = distance*(m_fusion + 1);
+    int horizontal_borders[qubits_per_dim][qubits_per_dim-1]; // ||
+    int vertical_borders[qubits_per_dim-1][qubits_per_dim]; // --
 
     struct FPGA_ranges fpga_ranges[num_leaves];
     for(int f=0; f <num_leaves; f++){
@@ -180,6 +182,23 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    FILE* dump_fp[num_leaves];
+    for (int i = 0; i < num_leaves; i++) {
+        char filename[100];
+        sprintf(filename, "input_%d_dump.txt",(i+1));
+        dump_fp[i] = fopen(filename, "wb");
+        if (dump_fp[i] == NULL) {
+            fprintf(stderr, "Can't open output file %s!\n", filename);
+            exit(1);
+        }
+    }
+
+    FILE* configuration_dump_read_fp = fopen("configuration_dump.txt", "r");
+    if (configuration_dump_read_fp == NULL) {
+        fprintf(stderr, "Can't open input file %s!\n", "configuration_dump.txt");
+        exit(1);
+    }
+
     // out_fp = fopen(filename, "wb");
     // if (out_fp == NULL) {
     //     fprintf(stderr, "Can't open output file %s!\n", "output_3.txt");
@@ -187,17 +206,85 @@ int main(int argc, char *argv[]) {
     // }
 
     for (int t = 0; t < test_runs; t++) {
+
+        printf("Test %d\n", t+1);
+        for(int f=0; f <num_leaves; f++){
+            fprintf(out_fp[f], "%08X\n", t+1);
+            fprintf(dump_fp[f], "Test id : %d\n", t+1);
+        }
+        // read a line from configuration_dump_read.txt
+        char line[200];
+        fgets(line, 200, configuration_dump_read_fp);
+        // printf("%s\n", line); //Test ID
+        fgets(line, 200, configuration_dump_read_fp);
+        printf("%s\n", line); // || inner borders
+        for (int k = 0; k <(qubits_per_dim*(qubits_per_dim-1)); k++) {
+            horizontal_borders[k/(qubits_per_dim-1)][k%(qubits_per_dim-1)] = (line[k*2] - '0');
+            // printf("%c\n", line[k*2]);
+        }
+        fgets(line, 200, configuration_dump_read_fp);
+        for(int k=0;k<qubits_per_dim;k++){
+            for(int l=0;l<qubits_per_dim-1;l++){
+                printf("%d ", horizontal_borders[k][l]);
+            }
+            printf("\n");
+        }
+        printf("%s\n", line); // -- inner borders
+        for (int k = 0; k <(qubits_per_dim*(qubits_per_dim-1)); k++) {
+            vertical_borders[k/qubits_per_dim][k%(qubits_per_dim)] = (line[k*2] - '0');
+            // printf("%c\n", line[k*2]);
+        }
+        for(int k=0;k<qubits_per_dim -1 ;k++){
+            for(int l=0;l<qubits_per_dim;l++){
+                printf("%d ", vertical_borders[k][l]);
+            }
+            printf("\n");
+        }
+        for(int f=0; f <num_leaves; f++){
+            fgets(line, 200, configuration_dump_read_fp);
+            fgets(line, 200, configuration_dump_read_fp);
+        }
+
         for (int k = 0; k < meas_rounds; k++) {
             double* values = next_random_values(rs);
             int count = 0;
             for (int i = 0; i < data_qubits_i; i++) {
                 for (int j = 0; j < data_qubits_j; j++) {
                     // printf("%f ", values[count]);
-                    if (values[count] < p_array[count]) data_errors[k][i][j] = 1;
-                    else data_errors[k][i][j] = 0;
+                    if (values[count] < p_array[count]) {
+                        data_errors[k][i][j] = 1;
+                        printf("Error at %d %d %d\n", k, i, j);
+                    }
+                    else {
+                        data_errors[k][i][j] = 0;
+                    }
                     count++;
                     if(data_errors[k][i][j] == 1) {
                         errors++;
+                    }
+                    if(j>0 && (j < data_qubits_j-1) && (j%(distance-1) == 0) && horizontal_borders[i/(distance+1)][j/(distance-1) - 1] == 0){ // | | 
+                        printf("Debug || : %d %d %d, %d %d, %d\n", k, i, j, i/(distance+1), j/(distance-1) - 1, horizontal_borders[i/(distance+1)][j/(distance-1) - 1]);
+                        if(data_errors[k][i][j] == 1){
+                            printf("Error removed at %d %d %d\n", k, i, j);
+                        }
+                        data_errors[k][i][j] = 0;
+                    }
+
+                    if(j>0 && (j < data_qubits_j-1) && (i%(distance+1) == distance) && vertical_borders[i/(distance+1)][j/(distance-1)] == 0){ // --
+                        printf("Debug -- : %d %d %d, %d %d, %d\n", k, i, j, i/(distance+1), j/(distance-1), vertical_borders[i/(distance+1)][j/(distance-1)]);
+                        if(data_errors[k][i][j] == 1){
+                            printf("Error removed at %d %d %d\n", k, i, j);
+                        }
+                        data_errors[k][i][j] = 0;
+                    }
+
+                    if(j>0 && (j < data_qubits_j-1) && (j%(distance-1) == 0) && (i%(distance+1) == distance)){
+                        if(horizontal_borders[i/(distance+1)][j/(distance-1) - 1] == 0 || horizontal_borders[i/(distance+1)+1][j/(distance-1) - 1] == 0 || vertical_borders[i/(distance+1)][j/(distance-1)] == 0 || vertical_borders[i/(distance+1)][j/(distance-1) + 1] == 0){
+                            if(data_errors[k][i][j] == 1){
+                                printf("Error removed at %d %d %d\n", k, i, j);
+                            }
+                            data_errors[k][i][j] = 0;
+                        }
                     }
                 }
             }
@@ -207,6 +294,7 @@ int main(int argc, char *argv[]) {
                     else m_errors[k][i][j] = 0;
                     count++;
                     if(m_errors[k][i][j] == 1) {
+                        printf("M Error at %d %d %d\n", k, i, j);
                         errors++;
                     }
                 }
@@ -214,6 +302,7 @@ int main(int argc, char *argv[]) {
             free(values);
         }
 
+        // we have to remove a set of errors to prevent errors occuring in non-existant data qubits
         for (int i = 0; i < distance_i; i++) {
             for (int j = 0; j < distance_j; j++) {
                 m_errors[meas_rounds][i][j] = 0.0;
@@ -262,9 +351,8 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        for(int f=0; f <num_leaves; f++){
-            fprintf(out_fp[f], "%08X\n", t+1);
-        }
+        
+
         for (int k = 0; k < meas_rounds; k++) {
             for (int i = 0; i < distance_i; i++) {
                 for (int j = 0; j < distance_j; j++) {
@@ -278,9 +366,11 @@ int main(int argc, char *argv[]) {
                                 int new_distance_j = fpga_ranges[f].j_max - fpga_ranges[f].j_min + 1;
                                 unsigned int defect_address = new_j + (new_i<<((int)(ceil(log2(new_distance_j))))) + (k<<((int)(ceil(log2(new_distance_j)))+(int)(ceil(log2(new_distance_i)))));
                                 fprintf(out_fp[f], "%08X\n", defect_address);
+                                // fprintf(dump_fp[f], "%d %d %d\n", k, i, j); // This is global
+                                fprintf(dump_fp[f], "%d %d %d\n", k, new_i, new_j); // This is local
                             }
                             // unsigned int defect_address = j + (i<<((int)(ceil(log2(distance_j))))) + (k<<((int)(ceil(log2(distance_j)))+(int)(ceil(log2(distance_i))));
-                            // fprintf(out_fp[f], "%08X\n", defect_address);
+                            
                         }
                     }
                 }

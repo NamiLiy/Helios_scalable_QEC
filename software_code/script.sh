@@ -1,8 +1,8 @@
 #!/bin/bash
 
 distance=5
-p=0.000001
-test_runs=1
+p=0.001
+test_runs=1000
 num_fpgas=4 #only the leaves
 measurement_fusion=0
 logical_quibits_per_dimension=4

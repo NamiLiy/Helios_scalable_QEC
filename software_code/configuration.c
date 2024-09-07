@@ -19,6 +19,7 @@ int main(int argc, char *argv[]) {
 
     struct RandomSeeds* rs = init_random_seeds((logical_qubits_per_dim-1)*logical_qubits_per_dim*2);
 
+    // It seems I have messed the words horizontal and vertical in this code
     int horizontal_borders[logical_qubits_per_dim][logical_qubits_per_dim-1];
     int vertical_borders[logical_qubits_per_dim-1][logical_qubits_per_dim];
 
@@ -33,14 +34,19 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    FILE *file2 = fopen("configuration_dump.txt", "w");
+    if (file2 == NULL) {
+        printf("Failed to open file: %s\n", "configuration_dump.txt");
+        return 1;
+    }
+
     // Your code here
     // Initialize decoding
     fprintf(file, "%08x\n", 0x00000000); //LSB
     fprintf(file, "%08x\n", 0x00000000); //MSB
 
     for (int i = 0; i < test_runs; i++) {
-        fprintf(file, "%08x\n", 0x0000000f);
-        fprintf(file, "%08x\n", 0x00020000);
+        
         double* values = next_random_values(rs);
         
         int index = 0;
@@ -78,6 +84,22 @@ int main(int argc, char *argv[]) {
                 index++;
             }
         }
+
+        // dump configuration
+        fprintf(file2, "Test %d\n",(i+1));
+        for (int j = 0; j < logical_qubits_per_dim; j++) {
+            for(int k = 0; k < logical_qubits_per_dim-1; k++){
+                fprintf(file2, "%d ", horizontal_borders[j][k]);
+            }
+        }
+        fprintf(file2, "\n");
+        for (int j = 0; j < logical_qubits_per_dim-1; j++) {
+            for(int k = 0; k < logical_qubits_per_dim; k++){
+                fprintf(file2, "%d ", vertical_borders[j][k]);
+            }
+        }
+        fprintf(file2, "\n");
+        
 
         // handle fpga_1
 
@@ -135,10 +157,11 @@ int main(int argc, char *argv[]) {
                 index++;
             }
 
+            fprintf(file2, "FPGA %d\n",(n+1));
             for(int j = 0; j < num_borders; j++){
-                printf("%d ", fpga_borders[j]);
+                fprintf(file2, "%d ", fpga_borders[j]);
             }
-            printf("\n");
+            fprintf(file2, "\n");
 
             for(int j = (num_borders+47)/48-1; j >= 0; j--){
                 int value = 0;
@@ -156,13 +179,14 @@ int main(int argc, char *argv[]) {
                     }
                     value = value | (fpga_borders[j*48+32+k] << k);
                 }
-                fprintf(file, "%02x03%04x\n", (n+1),value);
+                fprintf(file, "%02x01%04x\n", (n+1),value);
             }
         }
         
         free(values);
 
-        
+        fprintf(file, "%08x\n", 0x0000000f);
+        fprintf(file, "%08x\n", 0x00020000);
         
     }
 
@@ -170,5 +194,6 @@ int main(int argc, char *argv[]) {
 
     printf("Merge probability: %f\n", (double)merge_prob/(test_runs*(logical_qubits_per_dim-1)*logical_qubits_per_dim*2));
     fclose(file);
+    fclose(file2);
     return 0;
 }

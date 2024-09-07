@@ -271,7 +271,6 @@ endgenerate
 `define NEIGHBOR_IDX_UP 5
 
 `define SLICE_ADDRESS_VEC(vec, idx) (vec[(((idx)+1)*ADDRESS_WIDTH)-1:(idx)*ADDRESS_WIDTH])
-`define SLICE_VEC(vec, idx, width) (vec[idx*width +: width])
 
 
 `define CORR_INDEX_NS(i, j) ((i-1)*(GRID_WIDTH_Z) + j-1)
@@ -425,11 +424,11 @@ endgenerate
     );
 
 // Recalc the logic boundary index
-`define logic_boundary_index(i,j,is_ns_edge, vertical_boundary)\
-    (is_ns_edge ? (vertical_boundary ? \
+`define logic_boundary_index(i,j,is_ns_edge, horizontal_boundary)\
+    (is_ns_edge ? (horizontal_boundary ? \
         ((i / (ACTUAL_D+1))*(logical_qubits_in_j_dim) + ((j-1) / ((ACTUAL_D-1)/2)) + borders_in_j_dim) : \
         (((i / (ACTUAL_D+1)))*(logical_qubits_in_j_dim + 1) + (j / ((ACTUAL_D-1)/2)))) : \
-        (vertical_boundary ? \
+        (horizontal_boundary ? \
         ((i / (ACTUAL_D+1))*(logical_qubits_in_j_dim) + (j / ((ACTUAL_D-1)/2)) + borders_in_j_dim) : \
         (((i / (ACTUAL_D+1)))*(logical_qubits_in_j_dim + 1) + (j / ((ACTUAL_D-1)/2)))))
 
@@ -465,8 +464,10 @@ generate
                     // then artificial boundaries
                     
                     end else if((i%(ACTUAL_D+1))==0 && (j > 0) && (j < GRID_WIDTH_Z)) begin 
+                        // horiztonal (h=1) --
                         type_for_boundary_links = artificial_boundary ? 3'b11 : (fusion_boundary[`logic_boundary_index(i,j,1,1)] ? 3'b0 : 3'b10); // This is the horizontal border row. When Fusion is on it is
                     end else if((i%2 == 0) && (j > 0) && (j < GRID_WIDTH_Z) && (j%((ACTUAL_D-1)/2) == 0)) begin
+                        // vertical (h=0) | |
                         type_for_boundary_links = artificial_boundary ? 3'b11 : (fusion_boundary[`logic_boundary_index(i,j,1,0)] ? 3'b0 : 3'b1); // This is the vertical border row. When Fusion is on it is                     
                     // then fully internal nodes
                     end else  begin
@@ -559,9 +560,11 @@ generate
 
                     // then artificial boundaries
                     end else if(i < GRID_WIDTH_X && i > 0 && (i%(ACTUAL_D+1))==0 && (j < GRID_WIDTH_Z)) begin //vertical boundaries
+                        // horiztonal (h=1) - -
                         type_for_boundary_links = artificial_boundary ? 3'b11 : (fusion_boundary[`logic_boundary_index(i,j,0,1)] ? 3'b0 : 3'b10);
                     end else if((i%2 == 1) && (j > 0) && (j < GRID_WIDTH_Z) && (j%((ACTUAL_D-1)/2) == 0)) begin //horizontal boundaries 
-                        type_for_boundary_links = artificial_boundary ? 3'b11 : (fusion_boundary[`logic_boundary_index(i,j,0,0)] ? 3'b0 : 3'b10);
+                        // vertical (h=0) | |
+                        type_for_boundary_links = artificial_boundary ? 3'b11 : (fusion_boundary[`logic_boundary_index(i,j,0,0)] ? 3'b0 : 3'b1);
 
                     // Finally handle the internal boundaries
                     end else begin

@@ -70,7 +70,7 @@ reg [$clog2(NUM_CHILDREN + 1)-1:0] return_msg_count;
 wire [7:0] message_header;
 assign message_header = data_from_cpu [MSG_HEADER_MSB : MSG_HEADER_LSB];
 
-wire [7:0] dest;
+wire [7:0] message_dest;
 assign message_dest = data_from_cpu [MSG_DEST_MSB : MSG_DEST_LSB]; 
 
 
@@ -197,7 +197,7 @@ always@(*) begin
                     endcase
                 end else begin
                     data_to_fpgas = data_from_cpu;
-                    valid_to_fpgas = 1'b0;
+                    valid_to_fpgas = 1'b1;
                 end
             end
         end

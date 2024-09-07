@@ -225,7 +225,7 @@ message_handler #(
     .FPGA_FIFO_SIZE(FPGA_FIFO_SIZE),
     .FPGA_FIFO_COUNT(FPGA_FIFO_COUNT),
     .CTRL_FIFO_SIZE(64),
-    .FPGA_ID(1)
+    .FPGA_ID(FPGA_ID)
 ) handler (
     .clk(clk),
     .reset(reset),

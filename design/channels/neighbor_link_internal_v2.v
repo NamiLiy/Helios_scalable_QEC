@@ -155,7 +155,7 @@ always@(posedge clk) begin
     end
 end
 
-assign fully_grown = growth >= weight_out;
+assign fully_grown = (growth >= weight_out) && (boundary_condition_out != 2'b10); // Non-existent edge can never be fully grown
 assign is_boundary = (boundary_condition_out==2'b01 || boundary_condition_out == 2'b11) && fully_grown;
 
 assign a_output_data = (boundary_condition_out ==0)? b_input_data : 0;

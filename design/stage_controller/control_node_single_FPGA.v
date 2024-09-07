@@ -336,7 +336,7 @@ always @(posedge clk) begin
                         multi_fpga_mode <= 0;
                         measurement_fusion_on <= 0;
                         current_context <= 0;
-                        fusion_boundary_reg[total_borders_padded-1 : 0] = {total_borders_padded{1'b0}}; 
+                        fusion_boundary_reg[total_borders_padded-1 : 0] <= {total_borders_padded{1'b0}}; 
                         // if(input_ctrl_rx_data[0] == 1'b1) begin
                         //     if(FPGA_ID != 1) begin
                         //         border_continous[0] <= 1'b1;
@@ -359,8 +359,8 @@ always @(posedge clk) begin
                         global_stage <= STAGE_IDLE;
                         delay_counter <= 0;
                         result_valid <= 0;
-                        fusion_boundary_reg[47:0] = input_ctrl_rx_data[47:0];
-                        fusion_boundary_reg[total_borders_padded-1 : 48] = fusion_boundary_reg[total_borders_padded-48-1 : 0];
+                        fusion_boundary_reg[47:0] <= input_ctrl_rx_data[47:0];
+                        fusion_boundary_reg[total_borders_padded-1 : 48] <= fusion_boundary_reg[total_borders_padded-48-1 : 0];
                     end
                     // else if(input_ctrl_rx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == MOVE_TO_STAGE) begin
                     //     global_stage <= STAGE_GROW;
