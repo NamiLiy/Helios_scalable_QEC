@@ -29,7 +29,12 @@ module single_FPGA_decoding_graph_dynamic_rsc #(
 
     artificial_boundary,
     fusion_boundary,
-    reset_all_edges
+    reset_all_edges,
+
+    east_border,
+    west_border,
+    north_border,
+    south_border
 
 );
 
@@ -94,6 +99,14 @@ output [2*FPGA_FIFO_COUNT-1:0] border_input_ready;
 input artificial_boundary; // this being on indicates that artificial boundary is removed
 input [borders_in_j_dim + borders_in_i_dim - 1 : 0] fusion_boundary; // this is the boundary of the fusion
 input reset_all_edges; // all edges are reset
+
+localparam EW_BORDER_WIDTH = GRID_WIDTH_X / 2;
+localparam NS_BORDER_WIDTH = GRID_WIDTH_Z;
+
+output [EW_BORDER_WIDTH-1:0] east_border;
+input [EW_BORDER_WIDTH-1:0] west_border;
+input [NS_BORDER_WIDTH-1:0] north_border;
+output [NS_BORDER_WIDTH-1:0] south_border;
 
 genvar i;
 genvar j;
@@ -776,6 +789,14 @@ generate
             // end
             // assign pu_k[0].pu_i[i].pu_j[j].neighbor_is_boundary[4] = 1'b0;
         end
+    end
+
+    for(i=0; i < GRID_WIDTH_X / 2; i=i+1) begin: east_border_loop
+        assign east_border[i] = pu_k[0].pu_i[i*2].pu_j[(logical_qubits_in_j_dim - 1)*((ACTUAL_D-1)/2)].measurement_out;
+    end
+
+    for(j=0; j < GRID_WIDTH_Z; j = j+1) begin: south_border_loop
+        assign south_border[j] = pu_k[0].pu_i[(logical_qubits_in_i_dim-1)*(ACTUAL_D+1)].pu_j[j].measurement_out;
     end
 
 

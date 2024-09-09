@@ -32,21 +32,21 @@ module verification_bench_leaf#(
     output parent_tx_valid,
     input parent_tx_ready,
 
-    output [63 : 0] grid_1_out_data;
-    output grid_1_out_valid;
-    input grid_1_out_ready;
+    output [63 : 0] grid_1_out_data,
+    output grid_1_out_valid,
+    input grid_1_out_ready,
 
-    input [63 : 0] grid_1_in_data;
-    input grid_1_in_valid;
-    output grid_1_in_ready;
+    input [63 : 0] grid_1_in_data,
+    input grid_1_in_valid,
+    output grid_1_in_ready,
 
-    output [63 : 0] grid_2_out_data;
-    output grid_2_out_valid;
-    input grid_2_out_ready;
+    output [63 : 0] grid_2_out_data,
+    output grid_2_out_valid,
+    input grid_2_out_ready,
 
-    input [63 : 0] grid_2_in_data;
-    input grid_2_in_valid;
-    output grid_2_in_ready;
+    input [63 : 0] grid_2_in_data,
+    input grid_2_in_valid,
+    output grid_2_in_ready
  );
 
 `include "../../parameters/parameters.sv"
@@ -390,7 +390,7 @@ always @(posedge clk) begin
         end else begin
             $display("%t\tID  = %d Test case  = %d, %d fail %d cycles %d iterations %d syndromes", $time, FPGA_ID, test_case, fail_count, cycle_counter, iteration_counter, syndrome_count);
             fail_count = fail_count + 1;
-            $finish;
+            // $finish;
         end
     end
     if (reset) begin

@@ -40,7 +40,30 @@ module unified_controller #(
     border_continous,
     artificial_boundary,
     fusion_boundary,
-    reset_all_edges
+    reset_all_edges,
+
+    east_border,
+    west_border,
+    north_border,
+    south_border,
+
+    grid_1_out_data,
+    grid_1_out_valid,
+    grid_1_out_ready,
+
+    grid_1_in_data,
+    grid_1_in_valid,
+    grid_1_in_ready,
+
+    grid_2_out_data,
+    grid_2_out_valid,
+    grid_2_out_ready,
+
+    grid_2_in_data,
+    grid_2_in_valid,
+    grid_2_in_ready
+
+
 );
 
 `include "../../parameters/parameters.sv"
@@ -88,6 +111,8 @@ localparam total_borders_padded = ((borders_in_i_dim + borders_in_j_dim) > (48*2
 localparam CORRECTION_COUNT_PER_ROUND_PADDED = (CORRECTION_COUNT_PER_ROUND + 7) & (~3'b111);
 localparam CORRECTION_COUNT_PER_ROUND_PADDED_BYTES = CORRECTION_COUNT_PER_ROUND_PADDED >> 3;
 
+localparam EW_BORDER_WIDTH = GRID_WIDTH_X / 2;
+localparam NS_BORDER_WIDTH = GRID_WIDTH_Z;
 
 input clk;
 input reset;
@@ -121,6 +146,28 @@ output reg [1:0] border_continous;
 output reg artificial_boundary;
 output [total_borders - 1 : 0] fusion_boundary;
 output reg reset_all_edges;
+
+// These ports are to the decoding graph
+input [EW_BORDER_WIDTH-1:0] east_border;
+output [EW_BORDER_WIDTH-1:0] west_border;
+output [NS_BORDER_WIDTH-1:0] north_border;
+input [NS_BORDER_WIDTH-1:0] south_border;
+
+output reg [63 : 0] grid_1_out_data;
+output reg grid_1_out_valid;
+input grid_1_out_ready;
+
+input [63 : 0] grid_1_in_data;
+input grid_1_in_valid;
+output grid_1_in_ready;
+
+output reg [63 : 0] grid_2_out_data;
+output reg grid_2_out_valid;
+input grid_2_out_ready;
+
+input [63 : 0] grid_2_in_data;
+input grid_2_in_valid;
+output grid_2_in_ready;
 
 reg [total_borders_padded - 1 : 0] fusion_boundary_reg;
 assign fusion_boundary = fusion_boundary_reg[total_borders-1:0];
@@ -828,6 +875,33 @@ always@(*) begin
             end
         end
     endcase
+end
+
+always@(posedge clk) begin
+    if(reset) begin
+        grid_1_out_valid <= 0;
+        grid_2_out_valid <= 0;
+    end else begin
+        if(global_stage_d == STAGE_RESULT_VALID) begin
+            if(FPGA_ID == 1 || FPGA_ID == 3) begin
+                grid_1_out_valid <= 1;
+                grid_1_out_data[63:56] <= FPGA_ID + 1;
+                grid_1_out_data[55:0] <= east_border;
+            end else begin
+                grid_1_out_valid <= 0;
+            end
+            if(FPGA_ID == 1 || FPGA_ID == 2) begin
+                grid_2_out_valid <= 1;
+                grid_2_out_data[63:56] <= FPGA_ID + 2;
+                grid_2_out_data[55:0] <= south_border;
+            end else begin
+                grid_2_out_valid <= 0;
+            end
+        end else begin
+            grid_1_out_valid <= 0;
+            grid_2_out_valid <= 0;
+        end
+    end
 end
 
 endmodule

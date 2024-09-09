@@ -152,6 +152,14 @@ wire artificial_boundary;
 wire [borders_in_j_dim + borders_in_i_dim - 1 : 0] fusion_boundary;
 wire reset_all_edges;
 
+localparam EW_BORDER_WIDTH = GRID_WIDTH_X / 2;
+localparam NS_BORDER_WIDTH = GRID_WIDTH_Z;
+
+wire [EW_BORDER_WIDTH-1:0] east_border;
+wire [EW_BORDER_WIDTH-1:0] west_border;
+wire [NS_BORDER_WIDTH-1:0] north_border;
+wire [NS_BORDER_WIDTH-1:0] south_border;
+
 single_FPGA_decoding_graph_dynamic_rsc #( 
     .GRID_WIDTH_X(GRID_WIDTH_X),
     .GRID_WIDTH_Z(GRID_WIDTH_Z),
@@ -170,26 +178,15 @@ single_FPGA_decoding_graph_dynamic_rsc #(
     .correction(correction),
     .busy(busy),
     .global_stage(global_stage),
-
-    .grid_1_out_data(grid_1_out_data),
-    .grid_1_out_valid(grid_1_out_valid),
-    .grid_1_out_ready(grid_1_out_ready),
-
-    .grid_2_out_data(grid_2_out_data),
-    .grid_2_out_valid(grid_2_out_valid),
-    .grid_2_out_ready(grid_2_out_ready),
-
-    .grid_1_in_data(grid_1_in_data),
-    .grid_1_in_valid(grid_1_in_valid),
-    .grid_1_in_ready(grid_1_in_ready),
-
-    .grid_2_in_data(grid_2_in_data),
-    .grid_2_in_valid(grid_2_in_valid),
-    .grid_2_in_ready(grid_2_in_ready)
     
     .artificial_boundary(artificial_boundary),
     .fusion_boundary(fusion_boundary),
-    .reset_all_edges(reset_all_edges)
+    .reset_all_edges(reset_all_edges),
+
+    .east_border(east_border),
+    .west_border(west_border),
+    .north_border(north_border),
+    .south_border(south_border)
 );
 
 unified_controller #( 
@@ -228,7 +225,28 @@ unified_controller #(
     .border_continous(border_continous),
     .artificial_boundary(artificial_boundary),
     .fusion_boundary(fusion_boundary),
-    .reset_all_edges(reset_all_edges)
+    .reset_all_edges(reset_all_edges),
+
+    .east_border(east_border),
+    .west_border(west_border),
+    .north_border(north_border),
+    .south_border(south_border),
+
+    .grid_1_in_data(grid_1_in_data),
+    .grid_1_in_valid(grid_1_in_valid),
+    .grid_1_in_ready(grid_1_in_ready),
+
+    .grid_1_out_data(grid_1_out_data),
+    .grid_1_out_valid(grid_1_out_valid),
+    .grid_1_out_ready(grid_1_out_ready),
+
+    .grid_2_in_data(grid_2_in_data),
+    .grid_2_in_valid(grid_2_in_valid),
+    .grid_2_in_ready(grid_2_in_ready),
+
+    .grid_2_out_data(grid_2_out_data),
+    .grid_2_out_valid(grid_2_out_valid),
+    .grid_2_out_ready(grid_2_out_ready)
 );
 
 message_handler #(
@@ -279,13 +297,5 @@ fifo_wrapper #(
     .output_valid(controller_to_handler_valid),
     .output_ready(controller_to_handler_ready)
 );
-
-// assign grid_1_out_data = 64'hffffffffffffffff;
-// assign grid_1_out_valid = parent_rx_valid;
-// assign grid_1_out_ready = 1'b1;
-
-// assign grid_2_out_data = 64'hffffffffffffffff;
-// assign grid_2_out_valid = parent_rx_valid;
-// assign grid_2_out_ready = 1'b1;
 
 endmodule

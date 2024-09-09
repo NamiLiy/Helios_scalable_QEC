@@ -72,9 +72,9 @@ wire [64*NUM_LEAVES - 1:0] vertical_in_data;
 wire [NUM_LEAVES - 1 : 0] vertical_in_valid;
 wire [NUM_LEAVES - 1 : 0] vertical_in_ready;
 
+genvar i;
 
 generate
-    genvar i;
     for(i = 0; i < NUM_LEAVES; i = i + 1) begin : leaf
         localparam south_boundary = (i==0 || i==1) ? 1 : 0;
         localparam east_boundary = (i==0 || i==2) ? 1 : 0;
@@ -109,68 +109,67 @@ generate
         ) decoder_tb(
             .clk(clk),
             .reset(reset),
-            .parent_rx_data(`SLICE_VEC(parent_rx_data, i, 64)),
-            .parent_rx_valid(`SLICE_VEC(parent_rx_valid, i, 1)),
-            .parent_rx_ready(`SLICE_VEC(parent_rx_ready, i, 1)),
-            .parent_tx_data(`SLICE_VEC(parent_tx_data, i, 64)),
-            .parent_tx_valid(`SLICE_VEC(parent_tx_valid, i, 1)),
-            .parent_tx_ready(`SLICE_VEC(parent_tx_ready, i, 1))
+            .parent_rx_data(local_parent_rx_data),
+            .parent_rx_valid(local_parent_rx_valid),
+            .parent_rx_ready(local_parent_rx_ready),
+            .parent_tx_data(local_parent_tx_data),
+            .parent_tx_valid(local_parent_tx_valid),
+            .parent_tx_ready(local_parent_tx_ready),
+
+            .grid_1_out_data(horizontal_out_data[(i+1)*64 - 1 : i*64]),
+            .grid_1_out_valid(horizontal_out_valid[i]),
+            .grid_1_out_ready(horizontal_out_ready[i]),
+
+            .grid_2_out_data(vertical_out_data[(i+1)*64 - 1 : i*64]),
+            .grid_2_out_valid(vertical_out_valid[i]),
+            .grid_2_out_ready(vertical_out_ready[i]),
+
+            .grid_1_in_data(horizontal_in_data[i*64 +: 64]),
+            .grid_1_in_valid(horizontal_in_valid[i]),
+            .grid_1_in_ready(horizontal_in_ready[i]),
+
+            .grid_2_in_data(vertical_in_data[i*64 +: 64]),
+            .grid_2_in_valid(vertical_in_valid[i]),
+            .grid_2_in_ready(vertical_in_ready[i])
             //.roots(roots)
         );
     end
 endgenerate
 
 generate
-    genvar i;
     for(i = 0; i < NUM_LEAVES; i = i + 1) begin : horizontal_fifos
-        localparam hor_compliment = (i==0 || i==2) ? (i+1) : (i-1);
+        localparam hc = (i==0 || i==2) ? (i+1) : (i-1);
         fifo_wrapper #(
             .WIDTH(64),
             .DEPTH(128)
         ) output_fifo (
             .clk(clk),
             .reset(reset),
-            .input_data(`SLICE_VEC(horizontal_out_data, i, 64)),
-            .input_valid(`SLICE_VEC(horizontal_out_valid, i, 1)),
-            .input_ready(`SLICE_VEC(horizontal_out_ready, i, 1)),
-            .output_data(`SLICE_VEC(horizontal_in_data, hor_compliment ,64)),
-            .output_valid(`SLICE_VEC(horizontal_in_valid, hor_compliment, 1)),
-            .output_ready(`SLICE_VEC(horizontal_in_ready, hor_compliment, 1)),
-
+            .input_data(horizontal_out_data[(i+1)*64 - 1 : i*64]),
+            .input_valid(horizontal_out_valid[i]),
+            .input_ready(horizontal_out_ready[i]),
+            .output_data(horizontal_in_data[(hc+1)*64 - 1 : hc*64]),
+            .output_valid(horizontal_in_valid[hc]),
+            .output_ready(horizontal_in_ready[hc])
         );
     end
+endgenerate
 
-    for(i = 0; i < NUM_LEAVES; i = i + 1) begin : anticlockwise_fifos
-        localparam ver_compliment = (i==0 || i==1) ? (i+2) : (i-2);
+generate
+    for(i = 0; i < NUM_LEAVES; i = i + 1) begin : vertical_fifos
+        localparam vc = (i==0 || i==1) ? (i+2) : (i-2);
         fifo_wrapper #(
             .WIDTH(64),
             .DEPTH(128)
         ) output_fifo (
             .clk(clk),
             .reset(reset),
-            .input_data(`SLICE_VEC(vertical_out_data, i, 64)),
-            .input_valid(`SLICE_VEC(vertical_out_valid, i, 1)),
-            .input_ready(`SLICE_VEC(vertical_out_ready, i, 1)),
-            .output_data(`SLICE_VEC(vertical_in_data, ver_compliment, 64)),
-            .output_valid(`SLICE_VEC(vertical_in_valid, ver_compliment, 1)),
-            .output_ready(`SLICE_VEC(vertical_in_ready, ver_compliment, 1)),
-
-            .grid_1_out_data(`SLICE_VEC(horizontal_out_data, i, 64)),
-            .grid_1_out_valid(`SLICE_VEC(horizontal_out_valid, i, 1)),
-            .grid_1_out_ready(`SLICE_VEC(horizontal_out_ready, i, 1)),
-
-            .grid_2_out_data(`SLICE_VEC(vertical_out_data, i, 64)),
-            .grid_2_out_valid(`SLICE_VEC(vertical_out_valid, i, 1)),
-            .grid_2_out_ready(`SLICE_VEC(vertical_out_ready, i, 1)),
-
-            .grid_1_in_data(`SLICE_VEC(horizontal_in_data, i, 64)),
-            .grid_1_in_valid(`SLICE_VEC(horizontal_in_valid, i, 1)),
-            .grid_1_in_ready(`SLICE_VEC(horizontal_in_ready, i, 1)),
-
-            .grid_2_in_data(`SLICE_VEC(vertical_in_data, i, 64)),
-            .grid_2_in_valid(`SLICE_VEC(vertical_in_valid, i, 1)),
-            .grid_2_in_ready(`SLICE_VEC(vertical_in_ready, i, 1))
-            
+            .input_data(vertical_out_data[(i+1)*64 - 1 : i*64]),
+            .input_valid(vertical_out_valid[i]),
+            .input_ready(vertical_out_ready[i]),
+            .output_data(vertical_in_data[(vc+1)*64 - 1 : vc*64]),
+            .output_valid(vertical_in_valid[vc]),
+            .output_ready(vertical_in_ready[vc])
         );
     end
 

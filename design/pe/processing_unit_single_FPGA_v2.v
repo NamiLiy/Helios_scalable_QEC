@@ -104,7 +104,7 @@ reg m;
 always@(posedge clk) begin
     if(reset) begin
         m <= 0;
-    end else if(stage == STAGE_MEASUREMENT_LOADING) begin
+    end else if(stage == STAGE_MEASUREMENT_LOADING || stage == STAGE_RESULT_VALID) begin
         m <= measurement;
     end else if(stage == STAGE_WRITE_TO_MEM) begin
         m <= m_mem;
