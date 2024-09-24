@@ -34,7 +34,9 @@ module single_FPGA_decoding_graph_dynamic_rsc #(
     east_border,
     west_border,
     north_border,
-    south_border
+    south_border,
+
+    update_artifical_border
 
 );
 
@@ -107,6 +109,8 @@ output [EW_BORDER_WIDTH-1:0] east_border;
 input [EW_BORDER_WIDTH-1:0] west_border;
 input [NS_BORDER_WIDTH-1:0] north_border;
 output [NS_BORDER_WIDTH-1:0] south_border;
+
+input update_artifical_border;
 
 genvar i;
 genvar j;

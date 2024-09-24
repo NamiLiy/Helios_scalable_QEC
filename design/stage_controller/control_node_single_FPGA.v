@@ -47,6 +47,8 @@ module unified_controller #(
     north_border,
     south_border,
 
+    update_artifical_border,
+
     grid_1_out_data,
     grid_1_out_valid,
     grid_1_out_ready,
@@ -146,12 +148,14 @@ output reg [1:0] border_continous;
 output reg artificial_boundary;
 output [total_borders - 1 : 0] fusion_boundary;
 output reg reset_all_edges;
+ 
 
 // These ports are to the decoding graph
 input [EW_BORDER_WIDTH-1:0] east_border;
-output [EW_BORDER_WIDTH-1:0] west_border;
-output [NS_BORDER_WIDTH-1:0] north_border;
+output reg [EW_BORDER_WIDTH-1:0] west_border;
+output reg [NS_BORDER_WIDTH-1:0] north_border;
 input [NS_BORDER_WIDTH-1:0] south_border;
+output reg update_artifical_border;
 
 output reg [63 : 0] grid_1_out_data;
 output reg grid_1_out_valid;
@@ -159,7 +163,7 @@ input grid_1_out_ready;
 
 input [63 : 0] grid_1_in_data;
 input grid_1_in_valid;
-output grid_1_in_ready;
+output reg grid_1_in_ready;
 
 output reg [63 : 0] grid_2_out_data;
 output reg grid_2_out_valid;
@@ -167,7 +171,7 @@ input grid_2_out_ready;
 
 input [63 : 0] grid_2_in_data;
 input grid_2_in_valid;
-output grid_2_in_ready;
+output reg grid_2_in_ready;
 
 reg [total_borders_padded - 1 : 0] fusion_boundary_reg;
 assign fusion_boundary = fusion_boundary_reg[total_borders-1:0];
@@ -442,7 +446,11 @@ always @(posedge clk) begin
                 // Currently this is single cycle per measurement round as only from external buffer happens.
                 if(current_measurement_round ==  GRID_WIDTH_U-1) begin //Now here we have to be careful whether it's physical_grid_width or simply_grid_width
                     if(!fusion_on) begin
-                        global_stage <= STAGE_GROW;
+                        if(FPGA_ID == 1) begin
+                            global_stage <= STAGE_GROW;
+                        end else begin
+                            global_stage <= STAGE_LOAD_ARTIFICAL_DEFECTS;
+                        end
                         current_measurement_round <= 0;
                     end else begin
                         global_stage <= STAGE_WRITE_TO_MEM;
@@ -456,6 +464,44 @@ always @(posedge clk) begin
                 delay_counter <= 0;
                 result_valid <= 0;
                 measurement_internal <= {PU_COUNT_PER_ROUND{1'b0}};
+            end
+
+            STAGE_LOAD_ARTIFICAL_DEFECTS: begin
+                if(FPGA_ID == 2) begin
+                    if(grid_1_in_valid) begin
+                        if(current_measurement_round ==  GRID_WIDTH_U-1) begin
+                            global_stage <= STAGE_GROW;
+                            current_measurement_round <= 0;
+                        end else begin
+                            current_measurement_round <= current_measurement_round + 1;
+                        end
+                        west_border <= grid_1_in_data[NS_BORDER_WIDTH-1:0];
+                    end
+                    update_artifical_border <= 1;
+                end else if (FPGA_ID == 3) begin
+                    if(grid_2_in_valid) begin
+                        if(current_measurement_round ==  GRID_WIDTH_U-1) begin
+                            global_stage <= STAGE_GROW;
+                            current_measurement_round <= 0;
+                        end else begin
+                            current_measurement_round <= current_measurement_round + 1;
+                        end
+                        north_border <= grid_2_in_data[NS_BORDER_WIDTH-1:0];
+                    end
+                    update_artifical_border <= 0;
+                end else begin
+                    if(grid_1_in_valid && grid_2_in_valid) begin
+                        if(current_measurement_round ==  GRID_WIDTH_U-1) begin
+                            global_stage <= STAGE_GROW;
+                            current_measurement_round <= 0;
+                        end else begin
+                            current_measurement_round <= current_measurement_round + 1;
+                        end
+                        west_border <= grid_1_in_data[NS_BORDER_WIDTH-1:0];
+                        north_border <= grid_2_in_data[NS_BORDER_WIDTH-1:0];
+                    end
+                    update_artifical_border <= 1;
+                end
             end
 
             STAGE_GROW: begin //2
@@ -900,6 +946,23 @@ always@(posedge clk) begin
         end else begin
             grid_1_out_valid <= 0;
             grid_2_out_valid <= 0;
+        end
+    end
+end
+
+always@(*) begin
+    grid_1_in_ready = 0;
+    grid_2_in_ready = 0;
+    if(state == STAGE_LOAD_ARTIFICAL_DEFECTS) begin
+        if(FPGA_ID == 2) begin
+            grid_1_in_ready = 1;
+        end else if(FPGA_ID == 3) begin
+            grid_2_in_ready = 1;
+        end else if(FPGA_ID == 4) begin
+            if(grid_1_in_valid && grid_2_in_valid) begin
+                grid_1_in_ready = 1;
+                grid_2_in_ready = 1;
+            end
         end
     end
 end

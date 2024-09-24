@@ -160,6 +160,8 @@ wire [EW_BORDER_WIDTH-1:0] west_border;
 wire [NS_BORDER_WIDTH-1:0] north_border;
 wire [NS_BORDER_WIDTH-1:0] south_border;
 
+wire update_artifical_border;
+
 single_FPGA_decoding_graph_dynamic_rsc #( 
     .GRID_WIDTH_X(GRID_WIDTH_X),
     .GRID_WIDTH_Z(GRID_WIDTH_Z),
@@ -186,7 +188,9 @@ single_FPGA_decoding_graph_dynamic_rsc #(
     .east_border(east_border),
     .west_border(west_border),
     .north_border(north_border),
-    .south_border(south_border)
+    .south_border(south_border),
+
+    .update_artifical_border(update_artifical_border)
 );
 
 unified_controller #( 
@@ -231,6 +235,8 @@ unified_controller #(
     .west_border(west_border),
     .north_border(north_border),
     .south_border(south_border),
+
+    .update_artifical_border(update_artifical_border),
 
     .grid_1_in_data(grid_1_in_data),
     .grid_1_in_valid(grid_1_in_valid),
