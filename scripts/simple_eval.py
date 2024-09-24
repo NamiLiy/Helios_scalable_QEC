@@ -1,78 +1,47 @@
-# Python code to
-# demonstrate readlines()
+# Path to the file containing the data
+file_path = 'temp005.txt'
 
-# L = ["Geeks\n", "for\n", "Geeks\n"]
+# Initialize a dictionary to store the cycle counts
+cycle_distribution = {}
 
-# writing to file
-# file1 = open('myfile.txt', 'w')
-# file1.writelines(L)
-# file1.close()
+# Variables to compute the average
+total_cycles = 0
+total_entries = 0
 
-# Using readlines()
-from locale import atoi
-from statistics import mean
-import numpy
-import matplotlib.pyplot as plt
+# Read the file line by line
+with open(file_path, 'r') as file:
+    for line in file:
+        # Split the line into components based on multiple spaces
+        parts = line.split()
+        if len(parts) > 4:
+            # Extract the cycle count, which is located before the word 'cycles'
+            cycle_count = int(parts[5])
+            latency = cycle_count*10
+            # for i in range(0, 20):
+            #     for j in range(0, i//4):
+            #         print(f"{latency + 20-i}")
 
-period = 8
-file_list = ['results_d13_t14_gpio_40.txt']
+            # for i in range(0, 20):
+            #     for j in range(0, i//4):
+            #         print(f"{latency -20 + i}")
+            
+            # Update the distribution dictionary
+            if cycle_count in cycle_distribution:
+                cycle_distribution[cycle_count] += 1
+            else:
+                cycle_distribution[cycle_count] = 1
+            
+            # Add to total cycles and increment total entries
+            total_cycles += cycle_count
+            total_entries += 1
 
-for file in file_list:
-    file1 = open(file, 'r')
-    Lines = file1.readlines()
-    cycles= []
-
-    count = 0
-    # Strips the newline character
-    for line in Lines:
-        # count += 1
-        # print("Line{}: {}".format(count, line.strip()))
-        line2 = line.strip()
-        arr = line2.split()
-        cycles.append(atoi(arr[5]))
-
-
-    # print(cycles)
-    mean_val = mean(cycles)
-    p75 = numpy.percentile(cycles,75)
-    p25 = numpy.percentile(cycles,25)
-    print(round(mean_val*period,2),round(p25*period,2), round(p75*period,2))
-
-
-    # mu, sigma = 200, 25
-    # n, bins, patches = plt.hist(cycles)
-    # plt.show()
+# Calculate the average cycle count
+average_cycles = total_cycles / total_entries if total_entries > 0 else 0
 
 
-# file1 = open('results_d3_single_fpga', 'r')
-# Lines = file1.readlines()
-# cycles1= []
+print("cycles, amount")
+for cycles, amount in sorted(cycle_distribution.items()):
+    print(f"{cycles}, {amount}")
 
-# count = 0
-# # Strips the newline character
-# for line in Lines:
-#     # count += 1
-#     # print("Line{}: {}".format(count, line.strip()))
-#     line2 = line.strip()
-#     arr = line2.split()
-#     cycles1.append(atoi(arr[5]))
 
-# file1 = open('results_d3_3fpga.txt', 'r')
-# Lines = file1.readlines()
-# cycles2= []
-
-# count = 0
-# # Strips the newline character
-# for line in Lines:
-#     # count += 1
-#     # print("Line{}: {}".format(count, line.strip()))
-#     line2 = line.strip()
-#     arr = line2.split()
-#     cycles2.append(atoi(arr[5]))
-
-# bins = numpy.linspace(0, 500, 50)
-
-# plt.hist(cycles2, bins, alpha=0.5, label='3 FPGA tree')
-# plt.hist(cycles1, bins, alpha=0.5, label='single FPGA')
-# plt.legend(loc='upper right')
-# plt.show()
+print(f"\nAverage cycle count: {average_cycles:.2f}")
