@@ -147,7 +147,15 @@ always @(posedge clk) begin
                 if (valid_from_fpgas && ready_from_fpgas && return_msg_count < NUM_CHILDREN) begin
                     if(data_from_fpgas [MSG_HEADER_MSB : MSG_HEADER_LSB] == HEADER_RESULT) begin
                         return_msg_count <= return_msg_count + 1;
-                        cycle_counter <= data_from_fpgas[15:0];
+                        if(return_msg_count == 0) begin
+                            cycle_counter <= data_from_fpgas [31 : 16];
+                        end else if(return_msg_count == 3) begin
+                            if(data_from_fpgas [31 : 16] > cycle_counter) begin
+                                cycle_counter <= data_from_fpgas [31 : 16] - cycle_counter;
+                            end else begin
+                                cycle_counter <= 16'hffff - cycle_counter + data_from_fpgas [31 : 16];
+                            end
+                        end
                     end
                 end else if(return_msg_count == NUM_CHILDREN && ready_to_cpu) begin
                     return_msg_count <= 0;
@@ -190,6 +198,11 @@ always@(*) begin
                             valid_to_fpgas = 1'b1;
                         end
 
+                        HEADER_RESET_CLOCK: begin
+                            data_to_fpgas = {8'hff, data_from_cpu [MSG_HEADER_MSB : 0]};
+                            valid_to_fpgas = 1'b1;
+                        end
+
                         default: begin
                             data_to_fpgas = data_from_cpu;
                             valid_to_fpgas = 1'b0;
@@ -216,30 +229,28 @@ always@(*) begin
     data_to_cpu = 64'b0;
     valid_to_cpu = 1'b0;
 
-    if(report_all_latencies) begin
-        data_to_cpu = data_from_fpgas;
-        valid_to_cpu = valid_from_fpgas;
-        ready_from_fpgas = ready_to_cpu;
-    end else begin
-        case(global_stage)
-            STAGE_WAIT_TILL_NODE_RESULTS: begin
-                if(return_msg_count == NUM_CHILDREN) begin
-                    data_to_cpu = {8'h0,8'h6,16'h0,16'b0,cycle_counter};
-                    valid_to_cpu = 1'b1;
-                    ready_from_fpgas = 1'b0;
-                end else begin
-                    data_to_cpu = data_from_fpgas;
-                    valid_to_cpu = 1'b0;
-                    ready_from_fpgas = 1'b1;
-                end
-            end
-            default: begin
+    case(global_stage)
+        STAGE_WAIT_TILL_NODE_RESULTS: begin
+            if(return_msg_count == NUM_CHILDREN) begin
+                data_to_cpu = {8'h0,8'h6,1'b1,15'h0,16'b0,cycle_counter[15:0]};
+                valid_to_cpu = 1'b1;
+                ready_from_fpgas = 1'b0;
+            end else if(report_all_latencies) begin
+                data_to_cpu = data_from_fpgas;
+                valid_to_cpu = valid_from_fpgas;
+                ready_from_fpgas = ready_to_cpu;
+            end else begin
                 data_to_cpu = data_from_fpgas;
                 valid_to_cpu = 1'b0;
-                ready_from_fpgas = 1'b0;
+                ready_from_fpgas = 1'b1;
             end
-        endcase
-    end
+        end
+        default: begin
+            data_to_cpu = data_from_fpgas;
+            valid_to_cpu = 1'b0;
+            ready_from_fpgas = 1'b0;
+        end
+    endcase
 end
 
 endmodule

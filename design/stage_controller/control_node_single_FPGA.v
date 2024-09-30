@@ -190,6 +190,33 @@ reg [PU_COUNT_PER_ROUND-1:0] measurement_internal;
 
 reg [1:0] measurement_fusion_stage; // 0 : First block, 1 : Second block, 3 : Merged block
 
+reg [31:0] clock;
+reg [31:0] start_time;
+
+// reset clock
+always @(posedge clk) begin
+    if(reset) begin
+        clock <= 0;
+    end else begin
+        case (global_stage)
+            STAGE_IDLE: begin // 0
+                if (input_ctrl_rx_valid && input_ctrl_rx_ready) begin
+                    if(input_ctrl_rx_data [MSG_HEADER_MSB : MSG_HEADER_LSB] == HEADER_RESET_CLOCK) begin
+                        clock <= 0;
+                    end else begin
+                        clock <= clock + 1;
+                    end
+                end else begin
+                    clock <= clock + 1;
+                end
+            end
+            default: begin
+                clock <= clock + 1;
+            end
+        endcase
+    end
+end
+
 always@(posedge clk) begin
     busy <= |busy_PE;
     odd_clusters <= |odd_clusters_PE;
@@ -197,8 +224,6 @@ always@(posedge clk) begin
 end
 
 reg[$clog2(ROUTER_DELAY_COUNTER+1)-1 : 0] router_busy_reg;
-
-
 
 always@(posedge clk) begin
     if (reset) begin
@@ -450,6 +475,7 @@ always @(posedge clk) begin
                     if(!fusion_on) begin
                         if(FPGA_ID == 1) begin
                             global_stage <= STAGE_GROW;
+                            start_time <= clock;
                         end else begin
                             global_stage <= STAGE_LOAD_ARTIFICAL_DEFECTS;
                         end
@@ -771,6 +797,11 @@ always@(*) begin
             output_ctrl_tx_data [MSG_DEST_MSB : MSG_DEST_LSB] = 8'h0;
             output_ctrl_tx_data [MSG_HEADER_MSB : MSG_HEADER_LSB] = HEADER_RESULT;
             output_ctrl_tx_data [15:0] = cycle_counter;
+            if(FPGA_ID == 1) begin
+                output_ctrl_tx_data [31:16] = start_time[15:0];
+            end else if(FPGA_ID == 4) begin
+                output_ctrl_tx_data [31:16] = clock[15:0];
+            end
         end
         // end 
         // else begin
