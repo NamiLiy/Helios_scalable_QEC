@@ -156,6 +156,7 @@ generate
         for (i=0; i < GRID_WIDTH_X; i=i+1) begin: pu_i
             for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: pu_j
                 wire local_measurement;
+                wire update_measurements_special;
                 wire measurement_out;
                 wire [NEIGHBOR_COUNT-1:0] neighbor_fully_grown;
                 wire  neighbor_increase;
@@ -204,7 +205,8 @@ generate
 
                     .odd(odd),
                     .root(root),
-                    .busy(busy_PE)
+                    .busy(busy_PE),
+                    .update_measurements_special(update_measurements_special)
                 );
                 assign `roots(i, j, k) = root[ADDRESS_WIDTH-1:0];
                 assign `busy(i, j, k) = busy_PE;
@@ -269,10 +271,68 @@ generate
     for (k=PHYSICAL_GRID_WIDTH_U-1; k >= 0; k=k-1) begin: pu_k_extra
         for (i=0; i < GRID_WIDTH_X; i=i+1) begin: pu_i_extra
             for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: pu_j_extra
-                if(k==PHYSICAL_GRID_WIDTH_U-1) begin
-                    assign `PU(i, j, k).local_measurement = measurements[`INDEX_PLANAR(i,j)];
-                end else begin
-                    assign `PU(i, j, k).local_measurement = `PU(i, j, k+1).measurement_out;
+                if(FPGA_ID == 2) begin
+                    if(k==PHYSICAL_GRID_WIDTH_U-1) begin
+                        if(j==0 && i%2 == 0) begin
+                            assign `PU(i, j, k).local_measurement = west_border[i/2];
+                        end else begin
+                            assign `PU(i, j, k).local_measurement = measurements[`INDEX_PLANAR(i,j)];
+                        end
+                    end else begin
+                        assign `PU(i, j, k).local_measurement = `PU(i, j, k+1).measurement_out;
+                    end
+
+                    if(j==0 && i%2 == 0) begin
+                        assign `PU(i, j, k).update_measurements_special = update_artifical_border;
+                    end else begin
+                        assign `PU(i, j, k).update_measurements_special = 1'b0;
+                    end
+
+                end else if(FPGA_ID == 3) begin
+                    if(k==PHYSICAL_GRID_WIDTH_U-1) begin
+                        if(i==0) begin
+                            assign `PU(i, j, k).local_measurement = north_border[j];
+                        end else begin
+                            assign `PU(i, j, k).local_measurement = measurements[`INDEX_PLANAR(i,j)];
+                        end
+                    end else begin
+                        assign `PU(i, j, k).local_measurement = `PU(i, j, k+1).measurement_out;
+                    end
+
+                    if(i==0) begin
+                        assign `PU(i, j, k).update_measurements_special = update_artifical_border;
+                    end else begin
+                        assign `PU(i, j, k).update_measurements_special = 1'b0;
+                    end
+
+                end else if(FPGA_ID == 4) begin
+                    if(k==PHYSICAL_GRID_WIDTH_U-1) begin
+                        if(j==0 && i%2 == 0) begin
+                            assign `PU(i, j, k).local_measurement = west_border[i/2];
+                        end else if(i==0) begin
+                            assign `PU(i, j, k).local_measurement = north_border[j];
+                        end else begin
+                            assign `PU(i, j, k).local_measurement = measurements[`INDEX_PLANAR(i,j)];
+                        end
+                    end else begin
+                        assign `PU(i, j, k).local_measurement = `PU(i, j, k+1).measurement_out;
+                    end
+
+                    if(j==0 && i%2 == 0) begin
+                        assign `PU(i, j, k).update_measurements_special = update_artifical_border;
+                    end else if(i==0) begin
+                        assign `PU(i, j, k).update_measurements_special = update_artifical_border;
+                    end else begin
+                        assign `PU(i, j, k).update_measurements_special = 1'b0;
+                    end
+
+                end else begin //FPGA_ID ==1
+                    if(k==PHYSICAL_GRID_WIDTH_U-1) begin
+                        assign `PU(i, j, k).local_measurement = measurements[`INDEX_PLANAR(i,j)];
+                    end else begin
+                        assign `PU(i, j, k).local_measurement = `PU(i, j, k+1).measurement_out;
+                    end
+                    assign `PU(i, j, k).update_measurements_special = 1'b0;
                 end
             end
         end
@@ -796,11 +856,16 @@ generate
     end
 
     for(i=0; i < GRID_WIDTH_X / 2; i=i+1) begin: east_border_loop
-        assign east_border[i] = pu_k[0].pu_i[i*2].pu_j[(logical_qubits_in_j_dim - 1)*((ACTUAL_D-1)/2)].measurement_out;
+        assign east_border[i] = (pu_k[0].pu_i[i*2].pu_j[(logical_qubits_in_j_dim - 1)*((ACTUAL_D-1)/2)].measurement_out)^
+                                (ns_k[0].ns_i[i*2].ns_j[(logical_qubits_in_j_dim - 1)*((ACTUAL_D-1)/2)].is_error_out)^
+                                (ew_k[0].ew_i[i*2 + 1].ew_j[(logical_qubits_in_j_dim - 1)*((ACTUAL_D-1)/2)].is_error_out);
+
     end
 
     for(j=0; j < GRID_WIDTH_Z; j = j+1) begin: south_border_loop
-        assign south_border[j] = pu_k[0].pu_i[(logical_qubits_in_i_dim-1)*(ACTUAL_D+1)].pu_j[j].measurement_out;
+        assign south_border[j] = pu_k[0].pu_i[(logical_qubits_in_i_dim-1)*(ACTUAL_D+1)].pu_j[j].measurement_out^
+                                ns_k[0].ns_i[(logical_qubits_in_i_dim-1)*(ACTUAL_D+1)].ns_j[j].is_error_out^
+                                ew_k[0].ew_i[(logical_qubits_in_i_dim-1)*(ACTUAL_D+1)].ew_j[j].is_error_out;
     end
 
 

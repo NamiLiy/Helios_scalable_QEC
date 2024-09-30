@@ -376,6 +376,8 @@ always @(posedge clk) begin
         current_measurement_round <= 0;
         peel_and_finish <= 0;
         report_latency <= 0;
+        west_border <= 0;
+        north_border <= 0;
     end else begin
         case (global_stage)
             STAGE_IDLE: begin // 0
@@ -475,9 +477,11 @@ always @(posedge clk) begin
                         end else begin
                             current_measurement_round <= current_measurement_round + 1;
                         end
-                        west_border <= grid_1_in_data[NS_BORDER_WIDTH-1:0];
+                        west_border <= grid_1_in_data[EW_BORDER_WIDTH-1:0];
+                        update_artifical_border <= 1;
+                    end else begin
+                        update_artifical_border <= 0;
                     end
-                    update_artifical_border <= 1;
                 end else if (FPGA_ID == 3) begin
                     if(grid_2_in_valid) begin
                         if(current_measurement_round ==  GRID_WIDTH_U-1) begin
@@ -487,8 +491,10 @@ always @(posedge clk) begin
                             current_measurement_round <= current_measurement_round + 1;
                         end
                         north_border <= grid_2_in_data[NS_BORDER_WIDTH-1:0];
+                        update_artifical_border <= 1;
+                    end else begin
+                        update_artifical_border <= 0;
                     end
-                    update_artifical_border <= 0;
                 end else begin
                     if(grid_1_in_valid && grid_2_in_valid) begin
                         if(current_measurement_round ==  GRID_WIDTH_U-1) begin
@@ -497,10 +503,12 @@ always @(posedge clk) begin
                         end else begin
                             current_measurement_round <= current_measurement_round + 1;
                         end
-                        west_border <= grid_1_in_data[NS_BORDER_WIDTH-1:0];
+                        west_border <= grid_1_in_data[EW_BORDER_WIDTH-1:0];
                         north_border <= grid_2_in_data[NS_BORDER_WIDTH-1:0];
+                        update_artifical_border <= 1;
+                    end else begin
+                        update_artifical_border <= 0;
                     end
-                    update_artifical_border <= 1;
                 end
             end
 
@@ -514,6 +522,7 @@ always @(posedge clk) begin
                 delay_counter <= 0;
                 current_measurement_round <= 0;
                 growing_incomplete <= 1;
+                update_artifical_border <= 0;
             end
 
             STAGE_MERGE: begin //3
@@ -953,7 +962,7 @@ end
 always@(*) begin
     grid_1_in_ready = 0;
     grid_2_in_ready = 0;
-    if(state == STAGE_LOAD_ARTIFICAL_DEFECTS) begin
+    if(global_stage == STAGE_LOAD_ARTIFICAL_DEFECTS) begin
         if(FPGA_ID == 2) begin
             grid_1_in_ready = 1;
         end else if(FPGA_ID == 3) begin

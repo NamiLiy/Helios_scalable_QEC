@@ -25,7 +25,8 @@ module processing_unit #(
 
     odd,
     root,
-    busy
+    busy,
+    update_measurements_special
 );
 
 `include "../../parameters/parameters.sv"
@@ -51,6 +52,8 @@ input [ADDRESS_WIDTH-1:0] input_address;
 output reg [ADDRESS_WIDTH-1:0] root;
 output reg odd;
 output reg busy;
+
+input update_measurements_special;
 
 wire [NEIGHBOR_COUNT*ADDRESS_WIDTH-1:0] neighbor_root;
 wire [NEIGHBOR_COUNT-1:0] neighbor_parent_vector;
@@ -104,7 +107,7 @@ reg m;
 always@(posedge clk) begin
     if(reset) begin
         m <= 0;
-    end else if(stage == STAGE_MEASUREMENT_LOADING || stage == STAGE_RESULT_VALID) begin
+    end else if(stage == STAGE_MEASUREMENT_LOADING || stage == STAGE_RESULT_VALID || update_measurements_special) begin
         m <= measurement;
     end else if(stage == STAGE_WRITE_TO_MEM) begin
         m <= m_mem;
@@ -204,7 +207,7 @@ end
 // Calculate cluster odd if you are the root.
 // If not pass parents odd data
 always@(posedge clk) begin
-    if(stage == STAGE_MEASUREMENT_LOADING) begin
+    if(stage == STAGE_MEASUREMENT_LOADING || update_measurements_special) begin
         odd <= measurement;
     end else begin
         if (stage == STAGE_MERGE) begin
