@@ -1,7 +1,5 @@
 module Helios_single_FPGA #(
-    parameter GRID_WIDTH_X = 12,
-    parameter GRID_WIDTH_Z = 2,
-    parameter GRID_WIDTH_U = 10,
+    parameter FULL_LOGICAL_QUBITS_PER_DIM = 6,
     parameter MAX_WEIGHT = 2,
     parameter NUM_CONTEXTS = 2,
     parameter NUM_FPGAS = 5,
@@ -52,30 +50,30 @@ module Helios_single_FPGA #(
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
+localparam GRID_X_EXTRA = (FPGA_ID < 3) ? ((((ACTUAL_D + 1)>>2)<<1) + 1) : 0;
+localparam GRID_Z_EXTRA = (FPGA_ID % 2 == 1) ? ((ACTUAL_D + 3)>>2) : 0;
+localparam GRID_X_NORMAL = FULL_LOGICAL_QUBITS_PER_DIM * (ACTUAL_D + 1);
+localparam GRID_Z_NORMAL = (FULL_LOGICAL_QUBITS_PER_DIM * (ACTUAL_D - 1) >> 1) + (FULL_LOGICAL_QUBITS_PER_DIM >> 1);
+localparam GRID_WIDTH_X = GRID_X_NORMAL + GRID_X_EXTRA;
+localparam GRID_WIDTH_Z = (GRID_Z_NORMAL + GRID_Z_EXTRA);
+localparam GRID_WIDTH_U = ACTUAL_D;
+
 localparam X_BIT_WIDTH = $clog2(GRID_WIDTH_X);
 localparam Z_BIT_WIDTH = $clog2(GRID_WIDTH_Z);
 localparam U_BIT_WIDTH = $clog2(GRID_WIDTH_U);
-localparam FPGA_BIT_WIDTH = $clog2(NUM_FPGAS);
-localparam ADDRESS_WIDTH = X_BIT_WIDTH + Z_BIT_WIDTH + U_BIT_WIDTH + FPGA_BIT_WIDTH;
+localparam ADDRESS_WIDTH = X_BIT_WIDTH + Z_BIT_WIDTH + U_BIT_WIDTH;
 
 localparam PU_COUNT_PER_ROUND = GRID_WIDTH_X * GRID_WIDTH_Z;
 localparam PU_COUNT = PU_COUNT_PER_ROUND * GRID_WIDTH_U;
 
-localparam NS_ERROR_COUNT_PER_ROUND = (GRID_WIDTH_X-1) * GRID_WIDTH_Z;
-localparam EW_ERROR_COUNT_PER_ROUND = (GRID_WIDTH_X-1) * GRID_WIDTH_Z + 1;
-localparam UD_ERROR_COUNT_PER_ROUND = GRID_WIDTH_X * GRID_WIDTH_Z;
-localparam CORRECTION_COUNT_PER_ROUND = NS_ERROR_COUNT_PER_ROUND + EW_ERROR_COUNT_PER_ROUND + UD_ERROR_COUNT_PER_ROUND;
+localparam HOR_ERROR_COUNT = ACTUAL_D*ACTUAL_D*FULL_LOGICAL_QUBITS_PER_DIM*FULL_LOGICAL_QUBITS_PER_DIM;
+localparam UD_ERROR_COUNT_PER_ROUND = GRID_X_NORMAL*GRID_Z_NORMAL; // This has some extra PEs in short rows. That has to be discarded
+localparam CORRECTION_COUNT_PER_ROUND = HOR_ERROR_COUNT + UD_ERROR_COUNT_PER_ROUND;
 
-localparam ADDRESS_WIDTH_WITH_B = ADDRESS_WIDTH + 1;
-localparam EXPOSED_DATA_SIZE = ADDRESS_WIDTH_WITH_B + 1 + 1 + 1;
-localparam FPGA_FIFO_SIZE = EXPOSED_DATA_SIZE + 1;
-localparam FPGA_FIFO_COUNT = (2*GRID_WIDTH_Z - 1)*GRID_WIDTH_U;
-
-
-localparam logical_qubits_in_j_dim = (GRID_WIDTH_Z + (ACTUAL_D-1)/2 - 1) / ((ACTUAL_D-1)/2); // round up to the nearest integer
-localparam logical_qubits_in_i_dim = (GRID_WIDTH_X + ACTUAL_D+1 - 1) / (ACTUAL_D+1); // round up to the nearest integer
-localparam borders_in_j_dim = (logical_qubits_in_j_dim + 1)*logical_qubits_in_i_dim;
-localparam borders_in_i_dim = (logical_qubits_in_i_dim + 1)*logical_qubits_in_j_dim;
+localparam logical_qubits_in_j_dim = (FPGA_ID % 2 == 1) ? (FULL_LOGICAL_QUBITS_PER_DIM + 1) : FULL_LOGICAL_QUBITS_PER_DIM;
+localparam logical_qubits_in_i_dim = (FPGA_ID < 3) ? (FULL_LOGICAL_QUBITS_PER_DIM + 1) : FULL_LOGICAL_QUBITS_PER_DIM;
+localparam borders_in_j_dim = (logical_qubits_in_j_dim + 1)*logical_qubits_in_i_dim; // number of || border
+localparam borders_in_i_dim = (logical_qubits_in_i_dim + 1)*logical_qubits_in_j_dim; // number of -- borders
 
 
 input clk;
@@ -129,14 +127,6 @@ wire [63:0] output_ctrl_tx_data;
 wire output_ctrl_tx_valid;
 wire output_ctrl_tx_ready;
 
-wire [2*FPGA_FIFO_SIZE*FPGA_FIFO_COUNT-1:0] border_output_data;
-wire [2*FPGA_FIFO_COUNT-1:0] border_output_valid;
-wire [2*FPGA_FIFO_COUNT-1:0] border_output_ready;
-
-wire [2*FPGA_FIFO_SIZE*FPGA_FIFO_COUNT-1:0] border_input_data;
-wire [2*FPGA_FIFO_COUNT-1:0] border_input_valid;
-wire [2*FPGA_FIFO_COUNT-1:0] border_input_ready;
-
 wire [63:0] handler_to_controller_data;
 wire handler_to_controller_valid;
 wire handler_to_controller_ready;
@@ -152,7 +142,7 @@ wire artificial_boundary;
 wire [borders_in_j_dim + borders_in_i_dim - 1 : 0] fusion_boundary;
 wire reset_all_edges;
 
-localparam EW_BORDER_WIDTH = GRID_WIDTH_X / 2;
+localparam EW_BORDER_WIDTH = (GRID_WIDTH_X + 1) / 2;
 localparam NS_BORDER_WIDTH = GRID_WIDTH_Z;
 
 wire [EW_BORDER_WIDTH-1:0] east_border;
@@ -163,12 +153,9 @@ wire [NS_BORDER_WIDTH-1:0] south_border;
 wire update_artifical_border;
 
 single_FPGA_decoding_graph_dynamic_rsc #( 
-    .GRID_WIDTH_X(GRID_WIDTH_X),
-    .GRID_WIDTH_Z(GRID_WIDTH_Z),
-    .GRID_WIDTH_U(GRID_WIDTH_U),
+    .FULL_LOGICAL_QUBITS_PER_DIM(FULL_LOGICAL_QUBITS_PER_DIM),
     .MAX_WEIGHT(MAX_WEIGHT),
     .NUM_CONTEXTS(NUM_CONTEXTS),
-    .NUM_FPGAS(NUM_FPGAS),
     .ACTUAL_D(ACTUAL_D),
     .FPGA_ID(FPGA_ID)
 ) decoding_graph_rsc (
@@ -194,9 +181,7 @@ single_FPGA_decoding_graph_dynamic_rsc #(
 );
 
 unified_controller #( 
-    .GRID_WIDTH_X(GRID_WIDTH_X),
-    .GRID_WIDTH_Z(GRID_WIDTH_Z),
-    .GRID_WIDTH_U(GRID_WIDTH_U),
+    .FULL_LOGICAL_QUBITS_PER_DIM(FULL_LOGICAL_QUBITS_PER_DIM),
     .ITERATION_COUNTER_WIDTH(8),
     .MAXIMUM_DELAY(3),
     .NUM_CONTEXTS(NUM_CONTEXTS),

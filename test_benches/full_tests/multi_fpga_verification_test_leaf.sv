@@ -17,9 +17,7 @@ module verification_bench_leaf#(
     parameter ROUTER_DELAY = 18,
     parameter FPGA_ID = 1,
     parameter NUM_CONTEXTS = 1,
-    parameter LOGICAL_QUBITS_PER_DIM = 1,
-    parameter ADDITIONAL_BOUNDARY_SOUTH = 0,
-    parameter ADDITIONAL_BOUNDARY_EAST = 0
+    parameter LOGICAL_QUBITS_PER_DIM = 1
 )(
     input clk,
     input reset,
@@ -52,17 +50,16 @@ module verification_bench_leaf#(
 `include "../../parameters/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
-localparam PROSPECTIVE_ANCILLAS_TO_EAST = ((CODE_DISTANCE + 1)>>2);
-localparam ANCILLAS_IN_EAST = ADDITIONAL_BOUNDARY_EAST * PROSPECTIVE_ANCILLAS_TO_EAST;
-localparam PROSPECTIVE_ANCILLAS_TO_SOUTH = (((CODE_DISTANCE + 3)>>2)<<1);
-localparam ANCILLAS_IN_SOUTH = ADDITIONAL_BOUNDARY_SOUTH * PROSPECTIVE_ANCILLAS_TO_SOUTH;
-               
-localparam CODE_DISTANCE_X = (CODE_DISTANCE + 1)*LOGICAL_QUBITS_PER_DIM + ANCILLAS_IN_SOUTH;
-localparam CODE_DISTANCE_Z = ((CODE_DISTANCE - 1)>>1)*LOGICAL_QUBITS_PER_DIM + ANCILLAS_IN_EAST;
+localparam ACTUAL_D = CODE_DISTANCE;
+localparam FULL_LOGICAL_QUBITS_PER_DIM = LOGICAL_QUBITS_PER_DIM;
 
-localparam GRID_WIDTH_X = CODE_DISTANCE_X;
-localparam GRID_WIDTH_Z = CODE_DISTANCE_Z;
-localparam GRID_WIDTH_U = CODE_DISTANCE; // Laksheen
+localparam GRID_X_EXTRA = (FPGA_ID < 3) ? ((((ACTUAL_D + 1)>>2)<<1) + 1) : 0;
+localparam GRID_Z_EXTRA = (FPGA_ID % 2 == 1) ? ((ACTUAL_D + 3)>>2) : 0;
+localparam GRID_X_NORMAL = FULL_LOGICAL_QUBITS_PER_DIM * (ACTUAL_D + 1);
+localparam GRID_Z_NORMAL = (FULL_LOGICAL_QUBITS_PER_DIM * (ACTUAL_D - 1) >> 1) + (FULL_LOGICAL_QUBITS_PER_DIM >> 1);
+localparam GRID_WIDTH_X = GRID_X_NORMAL + GRID_X_EXTRA;
+localparam GRID_WIDTH_Z = (GRID_Z_NORMAL + GRID_Z_EXTRA);
+localparam GRID_WIDTH_U = ACTUAL_D; // Laksheen
 // Nami : I have no idea why the below code is not working. It is essential to run context switching
 // localparam PHYSICAL_GRID_WIDTH_U = ((GRID_WIDTH_U % NUM_CONTEXTS == 0) ? 
 //                                    ($floor(GRID_WIDTH_U / NUM_CONTEXTS)) : 
@@ -74,21 +71,23 @@ localparam MAX_WEIGHT = 2;
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
 localparam MEASUREMENT_ROUNDS = PHYSICAL_GRID_WIDTH_U * NUM_CONTEXTS;
 
+localparam CODE_DISTANCE_X = GRID_WIDTH_X;
+localparam CODE_DISTANCE_Z = GRID_WIDTH_Z;
+localparam CODE_DISTANCE_U = GRID_WIDTH_U;
+
 
 localparam PU_COUNT_ACROSS_CONTEXT = CODE_DISTANCE_X * CODE_DISTANCE_Z * PHYSICAL_GRID_WIDTH_U * NUM_CONTEXTS;
 
 localparam X_BIT_WIDTH = $clog2(GRID_WIDTH_X);
 localparam Z_BIT_WIDTH = $clog2(GRID_WIDTH_Z);
 localparam U_BIT_WIDTH = $clog2(GRID_WIDTH_U);
-localparam FPGA_BIT_WIDTH = $clog2(NUM_FPGAS);
-localparam ADDRESS_WIDTH = X_BIT_WIDTH + Z_BIT_WIDTH + U_BIT_WIDTH + FPGA_BIT_WIDTH;
+localparam ADDRESS_WIDTH = X_BIT_WIDTH + Z_BIT_WIDTH + U_BIT_WIDTH;
 
 localparam ITERATION_COUNTER_WIDTH = 8;  // counts up to CODE_DISTANCE iterations
 
-localparam NS_ERROR_COUNT_PER_ROUND = (GRID_WIDTH_X-1) * GRID_WIDTH_Z;
-localparam EW_ERROR_COUNT_PER_ROUND = (GRID_WIDTH_X-1) * GRID_WIDTH_Z + 1;
-localparam UD_ERROR_COUNT_PER_ROUND = GRID_WIDTH_X * GRID_WIDTH_Z;
-localparam CORRECTION_COUNT_PER_ROUND = NS_ERROR_COUNT_PER_ROUND + EW_ERROR_COUNT_PER_ROUND + UD_ERROR_COUNT_PER_ROUND;
+localparam HOR_ERROR_COUNT = ACTUAL_D*ACTUAL_D*FULL_LOGICAL_QUBITS_PER_DIM*FULL_LOGICAL_QUBITS_PER_DIM;
+localparam UD_ERROR_COUNT_PER_ROUND = GRID_X_NORMAL*GRID_Z_NORMAL; // This has some extra PEs in short rows. That has to be discarded
+localparam CORRECTION_COUNT_PER_ROUND = HOR_ERROR_COUNT + UD_ERROR_COUNT_PER_ROUND;
 
 
 wire [(ADDRESS_WIDTH * PU_COUNT_ACROSS_CONTEXT)-1:0] roots;
@@ -106,7 +105,6 @@ reg [`ALIGNED_PU_PER_ROUND * PHYSICAL_GRID_WIDTH_U * NUM_CONTEXTS - 1:0] measure
 `define root_x(i, j, k) decoder.roots[ADDRESS_WIDTH*`INDEX(i, j, k)+Z_BIT_WIDTH +: X_BIT_WIDTH]
 `define root_z(i, j, k) decoder.roots[ADDRESS_WIDTH*`INDEX(i, j, k) +: Z_BIT_WIDTH]
 `define root_u(i, j, k) decoder.roots[ADDRESS_WIDTH*`INDEX(i, j, k)+X_BIT_WIDTH+Z_BIT_WIDTH +: U_BIT_WIDTH]
-`define root_fpga(i, j, k) decoder.roots[ADDRESS_WIDTH*`INDEX(i, j, k)+X_BIT_WIDTH+Z_BIT_WIDTH+U_BIT_WIDTH +: FPGA_BIT_WIDTH]
 
 
 
@@ -127,9 +125,7 @@ wire output_ready_fifo;
 
 // instantiate
 Helios_single_FPGA #(
-    .GRID_WIDTH_X(GRID_WIDTH_X),
-    .GRID_WIDTH_Z(GRID_WIDTH_Z),
-    .GRID_WIDTH_U(GRID_WIDTH_U),
+    .FULL_LOGICAL_QUBITS_PER_DIM(FULL_LOGICAL_QUBITS_PER_DIM),
     .MAX_WEIGHT(MAX_WEIGHT),
     .NUM_CONTEXTS(NUM_CONTEXTS),
     .NUM_FPGAS(NUM_FPGAS),
@@ -214,7 +210,6 @@ reg [31:0] read_value, test_case, input_read_value, input_test_case;
 reg [X_BIT_WIDTH-1 : 0] expected_x;
 reg [Z_BIT_WIDTH-1 : 0] expected_z;
 reg [U_BIT_WIDTH-1 : 0] expected_u;
-reg [FPGA_BIT_WIDTH-1 : 0] expected_fpga;
 reg test_fail;
 reg processing = 0;
 reg [31:0] syndrome_count;
@@ -352,7 +347,6 @@ always @(posedge clk) begin
                         end
                         expected_x = read_value[X_BIT_WIDTH - 1 + 8 :8];
                         expected_u = read_value[U_BIT_WIDTH - 1 + 16 :16];
-                        expected_fpga = read_value[FPGA_BIT_WIDTH - 1 + 24 :24];
                         
                         // context_k = k;
                         // These logic are for multi context verification
@@ -366,7 +360,7 @@ always @(posedge clk) begin
                         //end else begin
                             if(Z_BIT_WIDTH>0) begin
                                 if (expected_u != `root_u(i, j, k) || expected_x != `root_x(i, j, k) || expected_z != `root_z(i, j, k)) begin
-                                    $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d,%0d) : Expected (%0d,%0d,%0d,%0d) : TC %d : ID %d" , $time, context_k, i ,j, `root_fpga(i,j,k), `root_u(i, j, k), `root_x(i, j, k), `root_z(i, j, k), expected_fpga, expected_u, expected_x, expected_z, test_case, FPGA_ID);
+                                    $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d) : TC %d : ID %d" , $time, context_k, i ,j, `root_u(i, j, k), `root_x(i, j, k), `root_z(i, j, k), expected_u, expected_x, expected_z, test_case, FPGA_ID);
                                     test_fail = 1;
                                 end
                             end else begin

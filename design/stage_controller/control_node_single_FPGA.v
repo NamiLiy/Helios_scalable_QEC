@@ -1,15 +1,13 @@
 module unified_controller #(
-    parameter GRID_WIDTH_X = 4,
-    parameter GRID_WIDTH_Z = 1,
-    parameter GRID_WIDTH_U = 3,
     parameter ITERATION_COUNTER_WIDTH = 8,  // counts to 255 iterations
     parameter MAXIMUM_DELAY = 3,
     parameter NUM_CONTEXTS = 2,
     parameter CTRL_FIFO_WIDTH = 64,
     parameter NUM_FPGAS = 5,
     parameter ROUTER_DELAY_COUNTER = 18,
-    parameter ACTUAL_D = 3,
-    parameter FPGA_ID = 1
+    parameter ACTUAL_D = 5,
+    parameter FPGA_ID = 1,
+    parameter FULL_LOGICAL_QUBITS_PER_DIM = 2
 ) (
     clk,
     reset,
@@ -72,26 +70,28 @@ module unified_controller #(
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
+localparam GRID_X_EXTRA = (FPGA_ID < 3) ? ((((ACTUAL_D + 1)>>2)<<1) + 1) : 0;
+localparam GRID_Z_EXTRA = (FPGA_ID % 2 == 1) ? ((ACTUAL_D + 3)>>2) : 0;
+localparam GRID_X_NORMAL = FULL_LOGICAL_QUBITS_PER_DIM * (ACTUAL_D + 1);
+localparam GRID_Z_NORMAL = (FULL_LOGICAL_QUBITS_PER_DIM * (ACTUAL_D - 1) >> 1) + (FULL_LOGICAL_QUBITS_PER_DIM >> 1);
+localparam GRID_WIDTH_X = GRID_X_NORMAL + GRID_X_EXTRA;
+localparam GRID_WIDTH_Z = (GRID_Z_NORMAL + GRID_Z_EXTRA);
+localparam GRID_WIDTH_U = ACTUAL_D;
+
 localparam X_BIT_WIDTH = $clog2(GRID_WIDTH_X);
 localparam Z_BIT_WIDTH = $clog2(GRID_WIDTH_Z);
 localparam U_BIT_WIDTH = $clog2(GRID_WIDTH_U);
-localparam FPGA_BIT_WIDTH = $clog2(NUM_FPGAS);
-localparam ADDRESS_WIDTH = X_BIT_WIDTH + Z_BIT_WIDTH + U_BIT_WIDTH + FPGA_BIT_WIDTH;
+localparam ADDRESS_WIDTH = X_BIT_WIDTH + Z_BIT_WIDTH + U_BIT_WIDTH;
 
 // localparam BYTES_PER_ROUND = ((GRID_WIDTH_X * GRID_WIDTH_Z  + 7) >> 3);
 // localparam ALIGNED_PU_PER_ROUND = (BYTES_PER_ROUND << 3);
 
-localparam PU_COUNT_PER_ROUND = GRID_WIDTH_X * GRID_WIDTH_Z;
 localparam PHYSICAL_GRID_WIDTH_U = (GRID_WIDTH_U % NUM_CONTEXTS == 0) ? 
                                    (GRID_WIDTH_U / NUM_CONTEXTS) : 
                                    (GRID_WIDTH_U / NUM_CONTEXTS + 1);
-
+localparam PU_COUNT_PER_ROUND = GRID_WIDTH_X * GRID_WIDTH_Z; // This has some excess PUs keep in mind to ignore them
 localparam PU_COUNT = PU_COUNT_PER_ROUND * PHYSICAL_GRID_WIDTH_U;
 
-localparam NS_ERROR_COUNT_PER_ROUND = (GRID_WIDTH_X-1) * GRID_WIDTH_Z;
-localparam EW_ERROR_COUNT_PER_ROUND = (GRID_WIDTH_X-1) * GRID_WIDTH_Z + 1;
-localparam UD_ERROR_COUNT_PER_ROUND = GRID_WIDTH_X * GRID_WIDTH_Z;
-localparam CORRECTION_COUNT_PER_ROUND = NS_ERROR_COUNT_PER_ROUND + EW_ERROR_COUNT_PER_ROUND + UD_ERROR_COUNT_PER_ROUND;
 
 localparam BORDER_TOP_MSB = PU_COUNT - 1;
 localparam BORDER_TOP_LSB = PU_COUNT_PER_ROUND * (PHYSICAL_GRID_WIDTH_U- 1);
@@ -102,10 +102,16 @@ localparam BORDER_BOT_LSB = 0;
 
 localparam CONTEXT_COUNTER_WIDTH = $clog2(NUM_CONTEXTS + 1);
 
-localparam logical_qubits_in_j_dim = (GRID_WIDTH_Z + (ACTUAL_D-1)/2 - 1) / ((ACTUAL_D-1)/2); // round up to the nearest integer
-localparam logical_qubits_in_i_dim = (GRID_WIDTH_X + ACTUAL_D+1 - 1) / (ACTUAL_D+1); // round up to the nearest integer
-localparam borders_in_j_dim = (logical_qubits_in_j_dim + 1)*logical_qubits_in_i_dim;
-localparam borders_in_i_dim = (logical_qubits_in_i_dim + 1)*logical_qubits_in_j_dim;
+localparam logical_qubits_in_j_dim = (FPGA_ID % 2 == 1) ? (FULL_LOGICAL_QUBITS_PER_DIM + 1) : FULL_LOGICAL_QUBITS_PER_DIM;
+localparam logical_qubits_in_i_dim = (FPGA_ID < 3) ? (FULL_LOGICAL_QUBITS_PER_DIM + 1) : FULL_LOGICAL_QUBITS_PER_DIM;
+localparam borders_in_j_dim = (logical_qubits_in_j_dim + 1)*logical_qubits_in_i_dim; // number of || border
+localparam borders_in_i_dim = (logical_qubits_in_i_dim + 1)*logical_qubits_in_j_dim; // number of -- borders
+
+// here we only consider the errors commited in this FPGA
+localparam HOR_ERROR_COUNT = ACTUAL_D*ACTUAL_D*FULL_LOGICAL_QUBITS_PER_DIM*FULL_LOGICAL_QUBITS_PER_DIM;
+localparam UD_ERROR_COUNT_PER_ROUND = GRID_X_NORMAL*GRID_Z_NORMAL; // This has some extra PEs in short rows. That has to be discarded
+localparam CORRECTION_COUNT_PER_ROUND = HOR_ERROR_COUNT + UD_ERROR_COUNT_PER_ROUND;
+
 localparam total_borders = borders_in_i_dim + borders_in_j_dim;
 // What happens here is we pad it to at least the twice of the data field width so that parameters are not needed to avoid shift when the all the border information fits to one message
 localparam total_borders_padded = ((borders_in_i_dim + borders_in_j_dim) > (48*2) ? (borders_in_i_dim + borders_in_j_dim) : (48*2));
@@ -113,7 +119,7 @@ localparam total_borders_padded = ((borders_in_i_dim + borders_in_j_dim) > (48*2
 localparam CORRECTION_COUNT_PER_ROUND_PADDED = (CORRECTION_COUNT_PER_ROUND + 7) & (~3'b111);
 localparam CORRECTION_COUNT_PER_ROUND_PADDED_BYTES = CORRECTION_COUNT_PER_ROUND_PADDED >> 3;
 
-localparam EW_BORDER_WIDTH = GRID_WIDTH_X / 2;
+localparam EW_BORDER_WIDTH = (GRID_WIDTH_X + 1) / 2;
 localparam NS_BORDER_WIDTH = GRID_WIDTH_Z;
 
 input clk;
@@ -403,6 +409,7 @@ always @(posedge clk) begin
         report_latency <= 0;
         west_border <= 0;
         north_border <= 0;
+        update_artifical_border <= 0;
     end else begin
         case (global_stage)
             STAGE_IDLE: begin // 0
@@ -447,6 +454,7 @@ always @(posedge clk) begin
                     // end
                 end
                 current_measurement_round <= 0;
+                update_artifical_border <= 0;
             end
 
             STAGE_PARAMETERS_LOADING: begin // 6
@@ -603,6 +611,8 @@ always @(posedge clk) begin
                     delay_counter <= delay_counter + 1;
                     unsynced_merge[current_context] <= 1'b0;
                 end
+
+                update_artifical_border <= 0;
 
             end           
 

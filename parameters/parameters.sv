@@ -57,3 +57,18 @@ localparam MSG_HEADER_MSB = MSG_DEST_LSB - 1;
 localparam MSG_HEADER_LSB = MSG_HEADER_MSB - 7;
 
 `define SLICE_VEC(vec, idx, width) (vec[idx*width +: width])
+
+
+`define NEIGHBOR_IDX_NW 0 // In RSC North means North West
+`define NEIGHBOR_IDX_SE 1 
+`define NEIGHBOR_IDX_SW 2
+`define NEIGHBOR_IDX_NE 3
+`define NEIGHBOR_IDX_DOWN 4
+`define NEIGHBOR_IDX_UP 5
+
+`define NORMAL_EDGE 0
+`define BOUNDARY_EDGE 1
+`define NO_EDGE 2
+`define FUSION_EDGE 3
+//fusion edge is connected on both ends but acts like a boundary
+

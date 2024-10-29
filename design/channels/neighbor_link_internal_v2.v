@@ -133,7 +133,7 @@ always@(posedge clk) begin
     end else if(stage == STAGE_WRITE_TO_MEM) begin
         is_error <= is_error_mem;
     end else begin
-        if (boundary_condition_out == 0)  begin // No boundary default case 
+        if (boundary_condition_out == 0 || boundary_condition_out == 2'b11)  begin // No boundary default case 
             if(reset_edge) begin
                 is_error <= 0;
             end else if(stage == STAGE_RESULT_VALID) begin

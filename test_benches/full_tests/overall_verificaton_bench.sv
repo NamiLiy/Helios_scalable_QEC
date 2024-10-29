@@ -17,7 +17,7 @@ module overall_verification_bench;
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
 localparam CODE_DISTANCE = 5;
-localparam LOGICAL_QUBITS_PER_DIM_PER_FPGA = 2; //This is across all the FPGAs. IF this is not compatible with qubits per dim, then the test could fail
+localparam LOGICAL_QUBITS_PER_DIM_PER_FPGA = 2;
 localparam NUM_LEAVES_PER_DIM = 2;
 localparam ROUTER_DELAY = 2;
 localparam MAX_COUNT = 10;
@@ -76,8 +76,6 @@ genvar i;
 
 generate
     for(i = 0; i < NUM_LEAVES; i = i + 1) begin : leaf
-        localparam south_boundary = (i==0 || i==1) ? 1 : 0;
-        localparam east_boundary = (i==0 || i==2) ? 1 : 0;
 
         wire [63:0] local_parent_rx_data;
         assign local_parent_rx_data = `SLICE_VEC(parent_rx_data, i, 64);
@@ -103,9 +101,7 @@ generate
             .ROUTER_DELAY(ROUTER_DELAY),
             .FPGA_ID(i + 1),
             .NUM_CONTEXTS(MEASUREMENT_FUSION + 1),
-            .LOGICAL_QUBITS_PER_DIM(LOGICAL_QUBITS_PER_DIM_PER_FPGA),
-            .ADDITIONAL_BOUNDARY_SOUTH(south_boundary),
-            .ADDITIONAL_BOUNDARY_EAST(east_boundary)
+            .LOGICAL_QUBITS_PER_DIM(LOGICAL_QUBITS_PER_DIM_PER_FPGA)
         ) decoder_tb(
             .clk(clk),
             .reset(reset),

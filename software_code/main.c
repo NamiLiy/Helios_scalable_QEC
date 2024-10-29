@@ -34,9 +34,12 @@ int main(int argc, char *argv[]) {
     int num_leaves = atoi(argv[7]);
 
     int distance_i = (distance+1)*qubits_per_dim; //This is ancillas in i direction
-    int distance_j = ((distance-1)/2)*qubits_per_dim; //This is ancillas in j direction
-    int data_qubits_i = distance_i - 1;//This is data qubits in i direction
-    int data_qubits_j = distance_j*2+1;//This is data qubits in j direction
+    int distance_j = ((distance-1)/2)*qubits_per_dim + qubits_per_dim/2; //This is ancillas in j direction
+
+
+    
+    int data_qubits_i = distance_i - 1;//This is data qubits in i direction + fake edge for merging qubits
+    int data_qubits_j = distance*qubits_per_dim;//This is data qubits in j direction
     int meas_rounds = distance*(m_fusion + 1);
     int horizontal_borders[qubits_per_dim][qubits_per_dim-1]; // ||
     int vertical_borders[qubits_per_dim-1][qubits_per_dim]; // --
@@ -44,9 +47,9 @@ int main(int argc, char *argv[]) {
     struct FPGA_ranges fpga_ranges[num_leaves];
     for(int f=0; f <num_leaves; f++){
         fpga_ranges[f].i_min = (f < 2) ? 0 : distance_i / 2;
-        fpga_ranges[f].i_max = (f < 2) ? (distance_i / 2 - 1 + ((distance + 3)/4)*2) : (distance_i -1);
+        fpga_ranges[f].i_max = (f < 2) ? (distance_i / 2 - 1 + ((distance + 1)/4)*2) + 1: (distance_i -1);
         fpga_ranges[f].j_min = (f % 2 == 0) ? 0 : (distance_j / 2);
-        fpga_ranges[f].j_max = (f % 2 == 0) ?  (distance_j / 2 - 1 + (distance + 1)/4) : (distance_j -1);
+        fpga_ranges[f].j_max = (f % 2 == 0) ?  (distance_j / 2 - 1 + (distance + 3)/4) : (distance_j -1);
     }
 
     double mean, std_dev;
@@ -262,30 +265,31 @@ int main(int argc, char *argv[]) {
                     if(data_errors[k][i][j] == 1) {
                         errors++;
                     }
-                    if(j>0 && (j < data_qubits_j-1) && (j%(distance-1) == 0) && horizontal_borders[i/(distance+1)][j/(distance-1) - 1] == 0){ // | | 
-                        printf("Debug || : %d %d %d, %d %d, %d\n", k, i, j, i/(distance+1), j/(distance-1) - 1, horizontal_borders[i/(distance+1)][j/(distance-1) - 1]);
+                    // if(j>0 && (j < data_qubits_j-1) && (j%(distance-1) == 0) && horizontal_borders[i/(distance+1)][j/(distance-1) - 1] == 0){ // | | 
+                    //     printf("Debug || : %d %d %d, %d %d, %d\n", k, i, j, i/(distance+1), j/(distance-1) - 1, horizontal_borders[i/(distance+1)][j/(distance-1) - 1]);
+                    //     if(data_errors[k][i][j] == 1){
+                    //         printf("Error removed at %d %d %d\n", k, i, j);
+                    //     }
+                    //     data_errors[k][i][j] = 0;
+                    // }
+
+                    // remove errors on fake edges
+                    if(i%(distance+1) == distance){ // --
+                        // printf("Debug -- : %d %d %d, %d %d, %d\n", k, i, j, i/(distance+1), j/(distance-1), vertical_borders[i/(distance+1)][j/(distance-1)]);
                         if(data_errors[k][i][j] == 1){
                             printf("Error removed at %d %d %d\n", k, i, j);
                         }
                         data_errors[k][i][j] = 0;
                     }
 
-                    if(j>0 && (j < data_qubits_j-1) && (i%(distance+1) == distance) && vertical_borders[i/(distance+1)][j/(distance-1)] == 0){ // --
-                        printf("Debug -- : %d %d %d, %d %d, %d\n", k, i, j, i/(distance+1), j/(distance-1), vertical_borders[i/(distance+1)][j/(distance-1)]);
-                        if(data_errors[k][i][j] == 1){
-                            printf("Error removed at %d %d %d\n", k, i, j);
-                        }
-                        data_errors[k][i][j] = 0;
-                    }
-
-                    if(j>0 && (j < data_qubits_j-1) && (j%(distance-1) == 0) && (i%(distance+1) == distance)){
-                        if(horizontal_borders[i/(distance+1)][j/(distance-1) - 1] == 0 || horizontal_borders[i/(distance+1)+1][j/(distance-1) - 1] == 0 || vertical_borders[i/(distance+1)][j/(distance-1)] == 0 || vertical_borders[i/(distance+1)][j/(distance-1) + 1] == 0){
-                            if(data_errors[k][i][j] == 1){
-                                printf("Error removed at %d %d %d\n", k, i, j);
-                            }
-                            data_errors[k][i][j] = 0;
-                        }
-                    }
+                    // if(j>0 && (j < data_qubits_j-1) && (j%(distance-1) == 0) && (i%(distance+1) == distance)){
+                    //     if(horizontal_borders[i/(distance+1)][j/(distance-1) - 1] == 0 || horizontal_borders[i/(distance+1)+1][j/(distance-1) - 1] == 0 || vertical_borders[i/(distance+1)][j/(distance-1)] == 0 || vertical_borders[i/(distance+1)][j/(distance-1) + 1] == 0){
+                    //         if(data_errors[k][i][j] == 1){
+                    //             printf("Error removed at %d %d %d\n", k, i, j);
+                    //         }
+                    //         data_errors[k][i][j] = 0;
+                    //     }
+                    // }
                 }
             }
             for (int i = 0; i < distance_i; i++) {
@@ -332,17 +336,78 @@ int main(int argc, char *argv[]) {
         for (int k = 0; k < meas_rounds; k++) {
             for (int i = 0; i < distance_i; i++) {
                 for (int j = 0; j < distance_j; j++) {
+                    syndrome[k][i][j] = 0;
                     if(i==0){
                         syndrome[k][i][j] = data_errors[k][i][j*2] ^ data_errors[k][i][j*2+1] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j];
+
+                        if((j*2)/distance != (j*2+1)/distance){ // This is a logical qubit border || 
+                            if(horizontal_borders[i/(distance+1)][(j*2)/distance] == 0){
+                                syndrome[k][i][j] = 0;
+                            }
+                        }
                     }
                     else if(i==distance_i-1) {
-                        syndrome[k][i][j] = data_errors[k][i-1][j*2+1] ^ data_errors[k][i-1][j*2+2] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j];
+                        syndrome[k][i][j] = data_errors[k][i-1][j*2] ^ data_errors[k][i-1][j*2+1] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j];
+
+                        if((j*2)/distance != (j*2+1)/distance){ // This is a logical qubit border || 
+                            if(horizontal_borders[i/(distance+1)][(j*2)/distance] == 0){
+                                syndrome[k][i][j] = 0;
+                            }
+                        }
                     }
-                    else if(i%2 == 1) {
-                        syndrome[k][i][j] = data_errors[k][i-1][j*2+1] ^ data_errors[k][i-1][j*2+2] ^ data_errors[k][i][j*2+1] ^ data_errors[k][i][j*2+2] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j];
-                    } else {
+                    else if(i%2 == (i / (distance+1))%2 ){ // long rows
                         syndrome[k][i][j] = data_errors[k][i-1][j*2] ^ data_errors[k][i-1][j*2+1] ^ data_errors[k][i][j*2] ^ data_errors[k][i][j*2+1] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j];
+
+                        if(i%(distance+1) != distance){ // This is a logical qubit border -- top ancilla 
+                            if(vertical_borders[i/(distance+1)][(j*2)/distance] == 0 || vertical_borders[i/(distance+1)][(j*2+1)/distance] == 0){
+                                syndrome[k][i][j] = data_errors[k][i-1][j*2] ^ data_errors[k][i-1][j*2+1] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j]; 
+                            } else {
+                                syndrome[k][i][j] = data_errors[k][i-1][j*2] ^ data_errors[k][i-1][j*2+1] ^ data_errors[k][i+1][j*2] ^ data_errors[k][i+1][j*2+1] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j];
+                            }
+                        }
+
+                        if(i%(distance+1) != 0){ // This is a logical qubit border -- bottom ancilla 
+                            if(vertical_borders[i/(distance+1)-1][(j*2)/distance] == 0 || vertical_borders[i/(distance+1)-1][(j*2+1)/distance] == 0){
+                                syndrome[k][i][j] = data_errors[k][i][j*2] ^ data_errors[k][i][j*2+1] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j];
+                            } else {
+                                syndrome[k][i][j] = 0; // If fully merged we set this to zero since the defect is already there in the top one
+                            }
+                        }
+                        
+                        if((j*2)/distance != (j*2+1)/distance){ // This is a logical qubit border || 
+                            if(horizontal_borders[i/(distance+1)][(j*2+1)/distance] == 0){
+                                syndrome[k][i][j] = 0;
+                            }
+                        }
+                    } 
+                    else if(j < distance_j - 1 && (i%2 != (i / (distance+1))%2 )){ //short rows
+                        syndrome[k][i][j] = data_errors[k][i-1][j*2+1] ^ data_errors[k][i-1][j*2+2] ^ data_errors[k][i][j*2+1] ^ data_errors[k][i][j*2+2] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j];
+
+                        if(i%(distance+1) != distance){ // This is a logical qubit border -- top ancilla 
+                            if(vertical_borders[i/(distance+1)][(j*2+1)/distance] == 0 || vertical_borders[i/(distance+1)][(j*2+2)/distance] == 0){
+                                syndrome[k][i][j] = data_errors[k][i-1][j*2+1] ^ data_errors[k][i-1][j*2+2] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j];
+                            } else {
+                                syndrome[k][i][j] = data_errors[k][i-1][j*2+1] ^ data_errors[k][i-1][j*2+2] ^ data_errors[k][i+1][j*2+1] ^ data_errors[k][i+1][j*2+2] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j];
+                            }
+                        }
+
+                        if(i%(distance+1) != 0){ // This is a logical qubit border -- bottom ancilla 
+                            if(vertical_borders[i/(distance+1)-1][(j*2+1)/distance] == 0 || vertical_borders[i/(distance+1)-1][(j*2+2)/distance] == 0){
+                                syndrome[k][i][j] = data_errors[k][i][j*2+1] ^ data_errors[k][i][j*2+2] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j];
+                            } else {
+                                syndrome[k][i][j] = 0;
+                            }
+                        }
+
+                        if((j*2+1)/distance != (j*2+2)/distance){ // This is a logical qubit border ||
+                            if(horizontal_borders[i/(distance+1)][(j*2+2)/distance] == 0){
+                                syndrome[k][i][j] = 0;
+                            }
+                        }
                     }
+
+
+
                     if(syndrome[k][i][j] == 1) {
                         syndrome_count++;
                         // printf("Syndrome at %d %d %d\n", k, i, j);
