@@ -1,11 +1,11 @@
 module Helios_single_FPGA #(
-    parameter FULL_LOGICAL_QUBITS_PER_DIM = 6,
+    parameter FULL_LOGICAL_QUBITS_PER_DIM = 1,
     parameter MAX_WEIGHT = 2,
     parameter NUM_CONTEXTS = 2,
     parameter NUM_FPGAS = 5,
     parameter FPGA_ID = 1,
     parameter ROUTER_DELAY_COUNTER = 18,
-    parameter ACTUAL_D = 5
+    parameter ACTUAL_D = 13
 ) (
     clk,
     reset,
