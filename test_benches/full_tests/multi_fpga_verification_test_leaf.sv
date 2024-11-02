@@ -206,7 +206,7 @@ reg open = 1;
 reg input_open = 1;
 reg eof = 0;
 reg input_eof = 0;
-reg [31:0] read_value, test_case, input_read_value, input_test_case;
+reg [31:0] write_root, write_id, test_case, input_read_value, input_test_case;
 reg [X_BIT_WIDTH-1 : 0] expected_x;
 reg [Z_BIT_WIDTH-1 : 0] expected_z;
 reg [U_BIT_WIDTH-1 : 0] expected_u;
@@ -323,59 +323,53 @@ always @(posedge clk) begin
     if (decoder.controller.global_stage_d == STAGE_PEELING && full_test_completed == 0) begin // When we move to peeling we are doen with clustering
 //       $display("%t\tTest case %d pass %d cycles %d iterations %d syndromes", $time, test_case, cycle_counter, iteration_counter, syndrome_count);
        if(open == 1) begin
-            output_filename = $sformatf("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_%0d_%0d.txt", CODE_DISTANCE, FPGA_ID);
-            output_file_2 = $fopen(output_filename, "r");
+            output_filename_data = $sformatf("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_data_%0d_%0d.txt", CODE_DISTANCE, FPGA_ID);
+            output_file_data = $fopen(output_filename_data, "w");
+            open = 0;
+            output_filename_results = $sformatf("/home/helios/Helios_scalable_QEC/test_benches/test_data/output_results_%0d_%0d.txt", CODE_DISTANCE, FPGA_ID);
+            output_file_results = $fopen(output_filename_results, "w");
             open = 0;
         end
-        if (eof == 0)begin 
-            if(decoder.controller.current_context == 0) begin
-                $fscanf (output_file_2, "%h\n", test_case);
-                //$display("%t\tTest case %d", $time, test_case);
-                test_fail = 0;
-            end
+        if(decoder.controller.current_context == 0) begin
+            $fwrite (output_file_data, "%h\n", test_case);
+            $fwrite (output_file_results, "%h\n", test_case);
+            //$display("%t\tTest case %d", $time, test_case);
         end
         for (k=0 ;k <PHYSICAL_GRID_WIDTH_U; k++) begin
             for (i=0 ;i <CODE_DISTANCE_X; i++) begin
                 for (j=0 ;j <CODE_DISTANCE_Z; j++) begin
-                    if (eof == 0)begin 
-                        $fscanf (output_file_2, "%h\n", read_value);
-                        //$display("%t\t Read Value %h", $time, read_value);
-                        if(Z_BIT_WIDTH>0) begin
-                            expected_z = read_value[Z_BIT_WIDTH - 1:0];
-                        end else begin
-                            expected_z = 0;
-                        end
-                        expected_x = read_value[X_BIT_WIDTH - 1 + 8 :8];
-                        expected_u = read_value[U_BIT_WIDTH - 1 + 16 :16];
-                        
-                        // context_k = k;
-                        // These logic are for multi context verification
-                        if(decoder.controller.current_context % 2 == 1) begin
-                            context_k = decoder.controller.current_context*PHYSICAL_GRID_WIDTH_U + PHYSICAL_GRID_WIDTH_U - k - 1;
-                        end else begin
-                            context_k = decoder.controller.current_context*PHYSICAL_GRID_WIDTH_U  + k;
-                        end
-//                        if(decoder.controller.current_context == NUM_CONTEXTS - 1 && expected_u == 0 && expected_x==0 && expected_z==0) begin //hack for d=7,11
-//                            continue;
-                        //end else begin
-                            if(Z_BIT_WIDTH>0) begin
-                                if (expected_u != `root_u(i, j, k) || expected_x != `root_x(i, j, k) || expected_z != `root_z(i, j, k)) begin
-                                    $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d) : TC %d : ID %d" , $time, context_k, i ,j, `root_u(i, j, k), `root_x(i, j, k), `root_z(i, j, k), expected_u, expected_x, expected_z, test_case, FPGA_ID);
-                                    test_fail = 1;
-                                end
-                            end else begin
-                                // This logic has to be modified to multi FPGA
-                                if (expected_u != `root_u(i, j, k) || expected_x != `root_x(i, j, k)) begin
-                                    $display("%t\t Root(%0d,%0d,%0d) = (%0d,%0d,%0d) : Expected (%0d,%0d,%0d) : TC %d : ID %d" , $time, context_k, i ,j, `root_u(i, j, k), `root_x(i, j, k), 0, expected_u, expected_x, expected_z, test_case, FPGA_ID);
-                                    test_fail = 1;
-                                end
-                            end
-                        //end
+                    if(decoder.controller.current_context % 2 == 1) begin
+                        context_k = decoder.controller.current_context*PHYSICAL_GRID_WIDTH_U + PHYSICAL_GRID_WIDTH_U - k - 1;
+                    end else begin
+                        context_k = decoder.controller.current_context*PHYSICAL_GRID_WIDTH_U  + k;
+                    end
+
+                    write_id[7:0] = j;
+                    write_id[15 :8] = i;
+                    write_id[23 :16] = context_k;
+                    write_id[31:24] = 8'b0;
+
+                    if(decoder.decoding_graph_rsc.measurement_debug[`INDEX(i,j,k)] == 1'b1) begin
+                        $fwrite (output_file_data, "%h\n", write_id);
+                    end
+
+                    if((`root_u(i, j, k) != context_k)|| (`root_x(i, j, k) != i) || (`root_z(i, j, k) != j)) begin
+                        $fwrite (output_file_results, "%h\n", write_id);
+                        write_root = 32'b0;
+                        write_root[Z_BIT_WIDTH-1:0] = `root_z(i, j, k);
+                        write_root[X_BIT_WIDTH +8 -1 :8] = `root_x(i, j, k);
+                        write_root[U_BIT_WIDTH-1 + 16 :16] = `root_u(i, j, k);
+                        write_root[31:24] = 8'b0;
+                        $fwrite (output_file_results, "%h\n", write_root);
                     end
                 end
             end
         end
-        eof = $feof(output_file_2);
+        if(decoder.controller.current_context == NUM_CONTEXTS-1) begin
+            $fwrite (output_file_data, "%h\n", 32'hffffffff);
+            $fwrite (output_file_results, "%h\n", 32'hffffffff);
+            //$display("%t\tTest case %d", $time, test_case);
+        end
     end
     if (message_counter == 1 && output_valid == 1 && full_test_completed == 0) begin // Cycle counter and iteration counter is recevied
         if (!test_fail) begin

@@ -123,6 +123,8 @@ always@(posedge clk) begin
     end
 end
 
+wire [PU_COUNT-1:0] measurement_debug;
+
 `define INDEX(i, j, k) (i * GRID_WIDTH_Z + j + k * GRID_WIDTH_Z*GRID_WIDTH_X)
 `define INDEX_PLANAR(i, j) (i * GRID_WIDTH_Z + j)
 `define ADDRESS(i,j,k) ( (k<< (X_BIT_WIDTH + Z_BIT_WIDTH)) + (i<< Z_BIT_WIDTH) + j)
@@ -131,6 +133,7 @@ end
 `define busy(i, j, k) busy[`INDEX(i, j, k)]
 `define PU(i, j, k) pu_k[k].pu_i[i].pu_j[j]
 `define SPU(i, j, k) s_pu_i[i].s_pu_j[j].s_pu_k[k]
+`define measurement_debug(i,j,k) measurement_debug[`INDEX(i, j, k)]
 
 function IS_LONG_ROW;
     input integer i;
@@ -163,6 +166,12 @@ generate
                 if(j == GRID_WIDTH_Z - 1 && (IS_LONG_ROW(i) == 1'b0) ) begin
                     assign `busy(i, j, k) = 1'b0;
                     assign `odd_clusters(i,j,k) = 1'b0;
+                    assign root[Z_BIT_WIDTH-1:0] = j;
+                    assign root[X_BIT_WIDTH+Z_BIT_WIDTH-1:Z_BIT_WIDTH] = i;
+                    assign root [X_BIT_WIDTH+Z_BIT_WIDTH+U_BIT_WIDTH-1:X_BIT_WIDTH+Z_BIT_WIDTH] = (context_stage_delayed%2 == 0) ? (k + context_stage_delayed*PHYSICAL_GRID_WIDTH_U) : (PHYSICAL_GRID_WIDTH_U - k - 1 + context_stage_delayed*PHYSICAL_GRID_WIDTH_U);
+                    assign `roots(i, j, k) = root[ADDRESS_WIDTH-1:0];
+                    assign measurement_out = 1'b0;
+                    assign `measurement_debug(i,j,k) = measurement_out;
                 end else begin
                     
 
@@ -205,6 +214,7 @@ generate
                     assign `roots(i, j, k) = root[ADDRESS_WIDTH-1:0];
                     assign `busy(i, j, k) = busy_PE;
                     assign `odd_clusters(i,j,k) = odd;
+                    assign `measurement_debug(i,j,k) = measurement_out;
                 end
             end
         end

@@ -266,7 +266,7 @@ int merge(int k, int i, int j, int direction){
             return 0;
         }
         if(hor_edges[k][i][j].to_be_updated == 1){
-           hor_edges[k][i][j].to_be_updated == 0;
+           hor_edges[k][i][j].to_be_updated = 0;
             if(hor_edges[k][i][j].is_boundary == 1){
                 printf("Update_boundary hor called %d %d %d %d\n", hor_edges[k][i][j].a.k, hor_edges[k][i][j].a.i, hor_edges[k][i][j].a.j, hor_edges[k][i][j].a.fpga_id);
                 update_boundary(hor_edges[k][i][j].a);
@@ -284,7 +284,7 @@ int merge(int k, int i, int j, int direction){
             return 0;
         }
         if(ver_edges[k][i][j].to_be_updated == 1){
-           ver_edges[k][i][j].to_be_updated == 0;
+           ver_edges[k][i][j].to_be_updated = 0;
             if(ver_edges[k][i][j].is_boundary == 1){
                 printf("Update_boundary ver called %d %d %d %d\n", ver_edges[k][i][j].a.k, ver_edges[k][i][j].a.i, ver_edges[k][i][j].a.j, ver_edges[k][i][j].a.fpga_id);
                 update_boundary(ver_edges[k][i][j].a);
@@ -951,17 +951,65 @@ int loadFileData(FILE* file, int (*array)[D][D+1][(D-1)/2], struct Distance dist
     return test_id;
 }
 
-int print_output(FILE* file, int test, struct Distance distance) {
-    fprintf(file, "%08X\n", test);
+int compare_output(FILE* file, int test, struct Distance distance) {
+    int test_id;
+    if (fscanf(file, "%x", &test_id) != 1) {
+        //printf("Error reading file. No more test cases.\n");
+        fclose(file);
+        return -1;
+    }
+
+    //Initialize the trivial roots
+    struct Address fpga_roots[D][5*D][5*D];
+
+    for(int k=0;k<distance.k;k++){
+        for(int i=0; i< distance.i; i++){
+            for(int j=0; j< distance.j; j++){
+                fpga_roots[k][i][j].k = k;
+                fpga_roots[k][i][j].i = i;
+                fpga_roots[k][i][j].j = j;
+            }
+        }
+    }
+
+    //Update expected roots
+    int value;
+    while(1){
+        if (fscanf(file, "%x", &value) == 1){
+            // printf("Value = %X\n", value);
+            if(value == 0xFFFFFFFF){
+                break;
+            }
+            int id_j = value & 255;
+            int id_i = (value >> 8) & 255;
+            int id_k = (value >> 16) & 255;
+            
+            if (fscanf(file, "%x", &value) == 1){
+                int root_j = value & 255;
+                int root_i = (value >> 8) & 255;
+                int root_k = (value >> 16) & 255;
+                fpga_roots[id_k][id_i][id_j].k = root_k;
+                fpga_roots[id_k][id_i][id_j].i = root_i;
+                fpga_roots[id_k][id_i][id_j].j = root_j;
+            } else{
+                return -1;
+            }
+            // if (test_id == 14) printf("Test id : %d error at %d %d %d\n",test_id,k,i,j);
+        }
+    }
+    int return_val = 0;
     for(int k=0;k<distance.k;k++){
         for(int i=0; i< distance.i; i++){
             for(int j=0; j< distance.j; j++){
                 struct Address root = get_root(node_array[k][i][j].root);
-                fprintf(file, "00%02X%02X%02X\n", root.k, root.i, root.j);
+                if((fpga_roots[i][j][k].k != root.k) || (fpga_roots[i][j][k].j != root.j) || (fpga_roots[i][j][k].i != root.i)){
+                    printf("Test %d : At %d %d %d :  C %d %d %d : FPGA %d %d %d",test_id,k,i,j,root.k,root.i,root.j,fpga_roots[i][j][k].k,fpga_roots[i][j][k].i,fpga_roots[i][j][k].j);
+                    return_val = -1;
+                }  
             }
         }
     }
-    return 0;
+    return return_val;
 }
 
 int loadConfigData(FILE* file, int (*array)[], int num_borders, int fpga_id) {
@@ -1040,7 +1088,7 @@ int main(int argc, char *argv[]) {
 
     // char output_filename[100];
     // s//printf(output_filename, "../test_benches/test_data/output_data_%d_rsc.txt", distance);
-    FILE* file_op = fopen(output_filename, "wb");
+    FILE* file_op = fopen(output_filename, "r");
     if (file_op == NULL) {
         //printf("Error opening file %s.\n", output_filename);
         return -1;
@@ -1061,6 +1109,9 @@ int main(int argc, char *argv[]) {
         num_borders = (qubits_per_dim/2 + 1)*(qubits_per_dim/2) + (qubits_per_dim/2 + 1)*(qubits_per_dim/2);
     }
 
+    int test_id = 0;
+    int pass_count = 0;
+    int fail_count = 0;
     while(1){
         int syndrome[D][D+1][(D-1)/2];
         int ret_val = loadFileData(file, &syndrome, distance);
@@ -1072,8 +1123,22 @@ int main(int argc, char *argv[]) {
         // if(ret_val ==14) {
             union_find(syndrome, distance, num_fpgas, m_fusion, d, leaf_id, fpga_borders, qubits_per_dim/2);
         // }
-        print_output(file_op, ret_val, distance);
+        ret_val = compare_output(file_op, ret_val, distance);
+        if(ret_val < 0) {
+            printf("Test Case %d failed\n", (test_id + 1));
+            fail_count++;
+            test_id++;
+            break;
+        } else {
+            printf("Test Case %d passed\n", (test_id + 1));
+            pass_count++;
+            test_id++;
+        }
     }
+
+    printf("Verification Completed\n");
+    printf("Passed %d\n",pass_count);
+    printf("Failed %d\n", fail_count);
 
     fclose(file_op);
     fclose(config_file);
