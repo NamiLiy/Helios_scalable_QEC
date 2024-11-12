@@ -7,8 +7,8 @@ logical_quibits_per_dimension=4
 
 configuration_file="../test_benches/test_data/configuration_${distance}_0.txt"
 
-input_prefix="../test_benches/test_data/input_data_${distance}"
-./main $distance $p $test_runs $input_prefix $measurement_fusion $logical_quibits_per_dimension $num_fpgas
+# input_prefix="../test_benches/test_data/input_data_${distance}"
+# ./main $distance $p $test_runs $input_prefix $measurement_fusion $logical_quibits_per_dimension $num_fpgas
 
 gcc union_find.c -o uf -lm
 
