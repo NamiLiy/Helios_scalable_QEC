@@ -201,7 +201,7 @@ integer i;
 integer j;
 integer k;
 integer context_k;
-integer output_file_2, input_file;
+integer output_file_data, output_file_results, input_file;
 reg open = 1;
 reg input_open = 1;
 reg eof = 0;
@@ -281,7 +281,7 @@ always @(*) begin
     end
 end
 
-string input_filename, output_filename;
+string input_filename, output_filename_data, output_filename_results;
 
 // Input loading logic
 always @(negedge clk) begin
@@ -331,8 +331,8 @@ always @(posedge clk) begin
             open = 0;
         end
         if(decoder.controller.current_context == 0) begin
-            $fwrite (output_file_data, "%h\n", test_case);
-            $fwrite (output_file_results, "%h\n", test_case);
+            $fwrite (output_file_data, "%h\n", input_test_case);
+            $fwrite (output_file_results, "%h\n", input_test_case);
             //$display("%t\tTest case %d", $time, test_case);
         end
         for (k=0 ;k <PHYSICAL_GRID_WIDTH_U; k++) begin
@@ -372,14 +372,15 @@ always @(posedge clk) begin
         end
     end
     if (message_counter == 1 && output_valid == 1 && full_test_completed == 0) begin // Cycle counter and iteration counter is recevied
-        if (!test_fail) begin
-            $display("%t\tID  = %d Test case  = %d, %d pass %d cycles %d first round %d syndromes", $time, FPGA_ID, test_case, pass_count, cycle_counter, iteration_counter, syndrome_count);
-            pass_count = pass_count + 1;
-        end else begin
-            $display("%t\tID  = %d Test case  = %d, %d fail %d cycles %d iterations %d syndromes", $time, FPGA_ID, test_case, fail_count, cycle_counter, iteration_counter, syndrome_count);
-            fail_count = fail_count + 1;
-            // $finish;
-        end
+        $display("%t\tID  = %d Test case  = %d, %d cycles, %d first round, %d syndromes\n", $time, FPGA_ID, input_test_case, pass_count, cycle_counter, iteration_counter, syndrome_count);
+//        if (!test_fail) begin
+//            $display("%t\tID  = %d Test case  = %d, %d pass %d cycles %d first round %d syndromes", $time, FPGA_ID, input_test_case, pass_count, cycle_counter, iteration_counter, syndrome_count);
+//            pass_count = pass_count + 1;
+//        end else begin
+//            $display("%t\tID  = %d Test case  = %d, %d fail %d cycles %d iterations %d syndromes", $time, FPGA_ID, input_test_case, fail_count, cycle_counter, iteration_counter, syndrome_count);
+//            fail_count = fail_count + 1;
+//            // $finish;
+//        end
     end
     if (reset) begin
         full_test_completed = 0;

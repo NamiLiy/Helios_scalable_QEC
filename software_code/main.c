@@ -358,7 +358,7 @@ int main(int argc, char *argv[]) {
                     else if(i%2 == (i / (distance+1))%2 ){ // long rows
                         syndrome[k][i][j] = data_errors[k][i-1][j*2] ^ data_errors[k][i-1][j*2+1] ^ data_errors[k][i][j*2] ^ data_errors[k][i][j*2+1] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j];
 
-                        if(i%(distance+1) != distance){ // This is a logical qubit border -- top ancilla 
+                        if(i%(distance+1) == distance){ // This is a logical qubit border -- top ancilla 
                             if(vertical_borders[i/(distance+1)][(j*2)/distance] == 0 || vertical_borders[i/(distance+1)][(j*2+1)/distance] == 0){
                                 syndrome[k][i][j] = data_errors[k][i-1][j*2] ^ data_errors[k][i-1][j*2+1] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j]; 
                             } else {
@@ -366,7 +366,7 @@ int main(int argc, char *argv[]) {
                             }
                         }
 
-                        if(i%(distance+1) != 0){ // This is a logical qubit border -- bottom ancilla 
+                        if(i%(distance+1) == 0){ // This is a logical qubit border -- bottom ancilla 
                             if(vertical_borders[i/(distance+1)-1][(j*2)/distance] == 0 || vertical_borders[i/(distance+1)-1][(j*2+1)/distance] == 0){
                                 syndrome[k][i][j] = data_errors[k][i][j*2] ^ data_errors[k][i][j*2+1] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j];
                             } else {
@@ -383,7 +383,7 @@ int main(int argc, char *argv[]) {
                     else if(j < distance_j - 1 && (i%2 != (i / (distance+1))%2 )){ //short rows
                         syndrome[k][i][j] = data_errors[k][i-1][j*2+1] ^ data_errors[k][i-1][j*2+2] ^ data_errors[k][i][j*2+1] ^ data_errors[k][i][j*2+2] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j];
 
-                        if(i%(distance+1) != distance){ // This is a logical qubit border -- top ancilla 
+                        if(i%(distance+1) == distance){ // This is a logical qubit border -- top ancilla 
                             if(vertical_borders[i/(distance+1)][(j*2+1)/distance] == 0 || vertical_borders[i/(distance+1)][(j*2+2)/distance] == 0){
                                 syndrome[k][i][j] = data_errors[k][i-1][j*2+1] ^ data_errors[k][i-1][j*2+2] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j];
                             } else {
@@ -391,7 +391,7 @@ int main(int argc, char *argv[]) {
                             }
                         }
 
-                        if(i%(distance+1) != 0){ // This is a logical qubit border -- bottom ancilla 
+                        if(i%(distance+1) == 0){ // This is a logical qubit border -- bottom ancilla 
                             if(vertical_borders[i/(distance+1)-1][(j*2+1)/distance] == 0 || vertical_borders[i/(distance+1)-1][(j*2+2)/distance] == 0){
                                 syndrome[k][i][j] = data_errors[k][i][j*2+1] ^ data_errors[k][i][j*2+2] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j];
                             } else {
