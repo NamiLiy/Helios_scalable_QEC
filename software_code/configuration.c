@@ -185,7 +185,8 @@ int main(int argc, char *argv[]) {
         
         free(values);
 
-        fprintf(file, "%08x\n", 0x0000000f);
+        // fprintf(file, "%08x\n", 0x0000000f); // Peel and finish
+        fprintf(file, "%08x\n", 0x0000000e); // Fuse with the previous round
         fprintf(file, "%08x\n", 0x00020000);
         
     }

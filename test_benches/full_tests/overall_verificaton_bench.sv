@@ -21,7 +21,7 @@ localparam LOGICAL_QUBITS_PER_DIM_PER_FPGA = 2;
 localparam NUM_LEAVES_PER_DIM = 2;
 localparam ROUTER_DELAY = 2;
 localparam MAX_COUNT = 10;
-localparam MEASUREMENT_FUSION=0;
+localparam MEASUREMENT_FUSION=1;
 
 // `define SLICE_VEC(vec, idx, width) (vec[(idx+1)*width -1 : idx*width])
 
