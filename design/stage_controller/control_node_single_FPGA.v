@@ -297,9 +297,7 @@ always @(posedge clk) begin
 end
 
 always@(*) begin
-    // Laksheen
-    // if(measurement_fusion_stage == 2'b10) begin
-    if(measurement_fusion_stage == 2'b01) begin
+    if(measurement_fusion_stage == 1'b1) begin
         artificial_boundary = 0;
     end else begin
         artificial_boundary = 1;
@@ -322,23 +320,6 @@ reg [NUM_CONTEXTS -1 : 0] odd_clusters_in_context;
 
 reg peel_and_finish;
 reg report_latency;
-
-
-reg measurement_fusion_on;
-
-
-reg fusion_on;
-always@(*) begin
-    if (reset) begin
-        fusion_on = 0;
-    end else begin
-        if(NUM_CONTEXTS > 1 && (measurement_fusion_on==0 || (measurement_fusion_on == 1'b1 && measurement_fusion_stage == 1'b1))) begin
-            fusion_on = 1;
-        end else begin
-            fusion_on = 0;
-        end
-    end
-end
 
 reg [U_BIT_WIDTH:0] message_measurement_round; // we have extra bit since wee need the last round to indicate completion (-1 removed)
 reg [U_BIT_WIDTH:0] current_measurement_round; // Laksheen : maybe we need to divide this in half when loading with fusion
@@ -381,7 +362,6 @@ always @(posedge clk) begin
         delay_counter <= 0;
         result_valid <= 0;
         border_continous <= 2'b0;
-        measurement_fusion_on <= 0;
         measurement_fusion_stage <= 0;
         current_measurement_round <= 0;
         peel_and_finish <= 0;
@@ -391,6 +371,8 @@ always @(posedge clk) begin
         update_artifical_border <= 0;
         not_first_block <= 0;
         current_context <= 0;
+        starting_context <= 0;
+        finishing_context <= 0;
     end else begin
         case (global_stage)
             STAGE_IDLE: begin // 0
@@ -399,7 +381,6 @@ always @(posedge clk) begin
                         global_stage <= STAGE_PARAMETERS_LOADING;
                         delay_counter <= 0;
                         result_valid <= 0;
-                        measurement_fusion_on <= 0;
                         current_context <= 0;
                         fusion_boundary_reg[total_borders_padded-1 : 0] <= {total_borders_padded{1'b0}}; 
                         // if(input_ctrl_rx_data[0] == 1'b1) begin
@@ -419,12 +400,13 @@ always @(posedge clk) begin
                         measurement_internal <= {PU_COUNT_PER_ROUND{1'b0}};
                         peel_and_finish <= input_ctrl_rx_data[0];
                         report_latency <= input_ctrl_rx_data[1];
-                        starting_context <= current_context;
-                        finishing_context <= ~current_context; //Laksheen : Modify this for mroe than two contexts
+                        starting_context <=  current_context;
+                        finishing_context <= (NUM_CONTEXTS > 2) ? (current_context + ACTUAL_D - 1) : current_context;
                     end else if (input_ctrl_rx_data [MSG_HEADER_MSB : MSG_HEADER_LSB] == HEADER_SET_BOUNDARIES) begin
                         global_stage <= STAGE_IDLE;
                         delay_counter <= 0;
                         result_valid <= 0;
+                        // Store fusion boundary with correct context
                         fusion_boundary_reg[47:0] <= input_ctrl_rx_data[47:0];
                         fusion_boundary_reg[total_borders_padded-1 : 48] <= fusion_boundary_reg[total_borders_padded-48-1 : 0];
                     end
@@ -459,9 +441,8 @@ always @(posedge clk) begin
             end
 
             STAGE_MEASUREMENT_LOADING: begin
-                // Currently this is single cycle per measurement round as only from external buffer happens.
-                if(current_measurement_round ==  ACTUAL_D-1) begin //Now here we have to be careful whether it's physical_grid_width or simply_grid_width
-                    if(!fusion_on) begin
+                if(NUM_CONTEXTS <= 2) begin //This situation represents two contexts
+                    if(current_measurement_round ==  ACTUAL_D-1) begin 
                         if(FPGA_ID == 1) begin
                             global_stage <= STAGE_GROW;
                             start_time <= clock;
@@ -470,13 +451,14 @@ always @(posedge clk) begin
                         end
                         current_measurement_round <= 0;
                     end else begin
-                        global_stage <= STAGE_WRITE_TO_MEM;
+                        current_measurement_round <= current_measurement_round + 1;
+                        if(current_measurement_round ==  message_measurement_round-1) begin //So this means that the next round has some errors we need to load
+                            global_stage <= STAGE_MEASUREMENT_PREPARING;
+                        end
                     end
-                end else begin
-                    current_measurement_round <= current_measurement_round + 1;
-                    if(current_measurement_round ==  message_measurement_round-1) begin //So this means that the next round has some errors we need to load
-                        global_stage <= STAGE_MEASUREMENT_PREPARING;
-                    end
+                end else begin //Multiple contexts
+                    global_stage <= STAGE_WRITE_TO_MEM;
+                    global_stage_saved <= STAGE_MEASUREMENT_LOADING;
                 end
                 delay_counter <= 0;
                 result_valid <= 0;
@@ -486,11 +468,16 @@ always @(posedge clk) begin
             STAGE_LOAD_ARTIFICAL_DEFECTS: begin
                 if(FPGA_ID == 2) begin
                     if(grid_1_in_valid) begin
-                        if(current_measurement_round ==  ACTUAL_D-1) begin
-                            global_stage <= STAGE_GROW;
-                            current_measurement_round <= 0;
+                        if(NUM_CONTEXTS <= 2) begin
+                            if(current_measurement_round ==  ACTUAL_D-1) begin
+                                global_stage <= STAGE_GROW;
+                                current_measurement_round <= 0;
+                            end else begin
+                                current_measurement_round <= current_measurement_round + 1;
+                            end
                         end else begin
-                            current_measurement_round <= current_measurement_round + 1;
+                            global_stage <= STAGE_WRITE_TO_MEM;
+                            global_stage_saved <= STAGE_LOAD_ARTIFICAL_DEFECTS;
                         end
                         west_border <= grid_1_in_data[EW_BORDER_WIDTH-1:0];
                         update_artifical_border <= 1;
@@ -499,11 +486,16 @@ always @(posedge clk) begin
                     end
                 end else if (FPGA_ID == 3) begin
                     if(grid_2_in_valid) begin
-                        if(current_measurement_round ==  ACTUAL_D-1) begin
-                            global_stage <= STAGE_GROW;
-                            current_measurement_round <= 0;
+                        if(NUM_CONTEXTS <= 2) begin
+                            if(current_measurement_round ==  ACTUAL_D-1) begin
+                                global_stage <= STAGE_GROW;
+                                current_measurement_round <= 0;
+                            end else begin
+                                current_measurement_round <= current_measurement_round + 1;
+                            end
                         end else begin
-                            current_measurement_round <= current_measurement_round + 1;
+                            global_stage <= STAGE_WRITE_TO_MEM;
+                            global_stage_saved <= STAGE_LOAD_ARTIFICAL_DEFECTS;
                         end
                         north_border <= grid_2_in_data[NS_BORDER_WIDTH-1:0];
                         update_artifical_border <= 1;
@@ -512,11 +504,16 @@ always @(posedge clk) begin
                     end
                 end else begin
                     if(grid_1_in_valid && grid_2_in_valid) begin
-                        if(current_measurement_round ==  ACTUAL_D-1) begin
-                            global_stage <= STAGE_GROW;
-                            current_measurement_round <= 0;
+                        if(NUM_CONTEXTS <= 2) begin
+                            if(current_measurement_round ==  ACTUAL_D-1) begin
+                                global_stage <= STAGE_GROW;
+                                current_measurement_round <= 0;
+                            end else begin
+                                current_measurement_round <= current_measurement_round + 1;
+                            end
                         end else begin
-                            current_measurement_round <= current_measurement_round + 1;
+                            global_stage <= STAGE_WRITE_TO_MEM;
+                            global_stage_saved <= STAGE_LOAD_ARTIFICAL_DEFECTS;
                         end
                         west_border <= grid_1_in_data[EW_BORDER_WIDTH-1:0];
                         north_border <= grid_2_in_data[NS_BORDER_WIDTH-1:0];
@@ -528,7 +525,7 @@ always @(posedge clk) begin
             end
 
             STAGE_GROW: begin //2
-                if(!fusion_on) begin
+                if(NUM_CONTEXTS <= 2 && measurement_fusion_stage == 0) begin
                     global_stage <= STAGE_MERGE;
                 end else begin
                     global_stage <= STAGE_WRITE_TO_MEM;
@@ -545,7 +542,6 @@ always @(posedge clk) begin
                         delay_counter <= 0;
                         if(NUM_CONTEXTS == 1) begin
                             if(|odd_clusters == 1'b0) begin // everybody is even
-                                // Laksheen
                                 if(peel_and_finish) begin
                                     // global_stage <= STAGE_PEELING;
                                     if(measurement_fusion_stage == 1'b0) begin
@@ -557,27 +553,20 @@ always @(posedge clk) begin
                             end else begin // somebody is odd
                                 global_stage <= STAGE_GROW;
                             end
-                        end else begin
-                            if(!not_first_block) begin
-                                global_stage_saved <= STAGE_MERGE;
-                                global_stage <= STAGE_WRITE_TO_MEM;
-                            end else if (!fusion_on) begin
-                                if(|odd_clusters == 1'b0) begin // everybody is even
-                                    global_stage <= STAGE_RESET_ROOTS;
-                                end else begin
-                                    global_stage <= STAGE_GROW;
-                                end
-                            end else begin //Now we are fusing
-                                odd_clusters_in_context[current_context] <= odd_clusters;
-                                global_stage_saved <= STAGE_MERGE;
-                                global_stage <= STAGE_WRITE_TO_MEM;
+                        end else if(NUM_CONTEXTS <=2 && measurement_fusion_stage == 0) begin
+                            if(|odd_clusters == 1'b0) begin
+                                global_stage <= STAGE_RESET_ROOTS;
+                            end else begin
+                                global_stage <= STAGE_GROW;
                             end
+                        end else if((NUM_CONTEXTS <=2 && measurement_fusion_stage == 1) || NUM_CONTEXTS > 2) begin
+                            odd_clusters_in_context[current_context] <= odd_clusters;
+                            global_stage_saved <= STAGE_MERGE;
+                            global_stage <= STAGE_WRITE_TO_MEM;
                         end
                     end
                     if(border_busy) begin
-                        if(fusion_on) begin
-                            unsynced_merge[current_context] <= 1'b1;
-                        end
+                        unsynced_merge[current_context] <= 1'b1;
                     end
                 end else begin
                     delay_counter <= delay_counter + 1;
@@ -587,22 +576,16 @@ always @(posedge clk) begin
             end           
 
             STAGE_PEELING: begin //4
-                // global_stage <= (NUM_CONTEXTS == 1 ? STAGE_RESULT_VALID : STAGE_WRITE_TO_MEM); //Laksheen
-                global_stage <= STAGE_RESULT_VALID;
+                global_stage <= (NUM_CONTEXTS <= 2 ? STAGE_RESULT_VALID : STAGE_WRITE_TO_MEM); //Laksheen
                 global_stage_saved <= STAGE_PEELING;
-                measurement_fusion_stage <= 1'b0;
+                current_measurement_round <= 0;
             end
 
             STAGE_RESULT_VALID: begin //5
                 current_measurement_round <= current_measurement_round + 1;
                 if(current_measurement_round >= ACTUAL_D - 1) begin
                     global_stage_saved <= STAGE_RESULT_VALID;
-                    // if(NUM_CONTEXTS == 1) begin
-                    //     global_stage <= STAGE_IDLE;
-                    // end else begin
-                    //     global_stage <= STAGE_WRITE_TO_MEM;
-                    // end
-                    global_stage <= STAGE_IDLE;
+                    global_stage <= STAGE_WRITE_TO_MEM;
                     current_measurement_round <= 0;
                 end
                 delay_counter <= 0;
@@ -612,70 +595,151 @@ always @(posedge clk) begin
             STAGE_RESET_ROOTS: begin //8
                 global_stage <= STAGE_WRITE_TO_MEM;
                 global_stage_saved <= STAGE_RESET_ROOTS;
-                measurement_fusion_stage <= 1'b1;
             end
 
             STAGE_WRITE_TO_MEM: begin //1
-                if(fusion_on) begin
-                    if(current_context < NUM_CONTEXTS -1) begin
-                        if(global_stage_saved == STAGE_MERGE) begin
-                            global_stage <= STAGE_MERGE;
-                        end else if(global_stage_saved == STAGE_MEASUREMENT_LOADING) begin
-                            global_stage <= STAGE_MEASUREMENT_PREPARING;
-                        end else if(global_stage_saved == STAGE_PEELING) begin
-                            global_stage <= STAGE_PEELING;
-                        end else if(global_stage_saved == STAGE_RESULT_VALID) begin
-                            global_stage <= STAGE_RESULT_VALID;
-                        end else if(global_stage_saved == STAGE_GROW) begin
-                            global_stage <= STAGE_GROW;
-                        end else if(global_stage_saved == STAGE_RESET_ROOTS) begin
-                            global_stage <= STAGE_RESET_ROOTS;
-                        end
-                        current_context <= current_context + 1;
-                    end else begin
-                        current_context <= 0;
-                        if(global_stage_saved == STAGE_MERGE) begin
-                            if(|unsynced_merge == 1'b0) begin // everybody is synced
-                                if(|odd_clusters_in_context == 1'b0) begin // everybody is even
+                if(current_context == finishing_context) begin //Last context for stage
+                    if(global_stage_saved == STAGE_MERGE) begin
+                        if(|unsynced_merge == 1'b0) begin // everybody is synced
+                            if(|odd_clusters_in_context == 1'b0) begin // everybody is even
+                                if(measurement_fusion_stage == 1'b0) begin
+                                    global_stage <= STAGE_RESET_ROOTS;
+                                    current_context <= starting_context;
+                                end else begin
                                     global_stage <= STAGE_PEELING;
-                                end else begin // somebody is odd
-                                    global_stage <= STAGE_GROW;
+                                    if(NUM_CONTEXTS > 2) begin
+                                        if(current_context == ACTUAL_D-1) begin
+                                            current_context <= ACTUAL_D;
+                                            finishing_context <= current_context + ACTUAL_D;
+                                        end else begin
+                                            current_context <= 0;
+                                            finishing_context <= ACTUAL_D - 1;
+                                        end
+                                    end else begin
+                                        finishing_context <= current_context + 1;
+                                        current_context <= current_context + 1;
+                                    end
+                                end
+                            end else begin // somebody is odd
+                                global_stage <= STAGE_GROW;
+                                current_context <= starting_context;
+                            end
+                        end else begin
+                            global_stage <= STAGE_MERGE;
+                            current_context <= starting_context;
+                        end
+                    end else if(global_stage_saved == STAGE_MEASUREMENT_LOADING) begin
+                        if(FPGA_ID == 1) begin
+                            global_stage <= STAGE_GROW;
+                            start_time <= clock;
+                        end else begin
+                            global_stage <= STAGE_LOAD_ARTIFICAL_DEFECTS;
+                        end
+                        current_measurement_round <= 0
+                        current_context <= starting_context;
+                    end else if(global_stage_saved == STAGE_LOAD_ARTIFICAL_DEFECTS) begin
+                        global_stage <= STAGE_GROW;
+                        current_measurement_round <= 0;
+                        update_artifical_border <= 0;
+                        current_context <= starting_context;
+                    end else if(global_stage_saved == STAGE_PEELING) begin
+                        global_stage <= STAGE_RESULT_VALID;
+                        current_context <= starting_context;
+                    end else if(global_stage_saved == STAGE_RESULT_VALID) begin
+                        global_stage <= STAGE_RESET_ROOTS;
+                        if(NUM_CONTEXTS > 2) begin
+                            if(current_context == ACTUAL_D-1) begin
+                                current_context <= ACTUAL_D;
+                                starting_context <= ACTUAL_D;
+                                finishing_context <= ACTUAL_D + ACTUAL_D-1;
+                            end else begin
+                                current_context <= 0;
+                                starting_context <= 0;
+                                finishing_context <= ACTUAL_D - 1;
+                            end
+                        end else begin
+                            starting_context <= current_context + 1;
+                            current_context <= current_context + 1;
+                            finishing_context <= current_context + 1;
+                        end
+                    end else if(global_stage_saved == STAGE_GROW) begin
+                        global_stage <= STAGE_MERGE;
+                    end else if(global_stage_saved == STAGE_RESET_ROOTS) begin
+                        if(!not_first_block) begin
+                            not_first_block <= 1;
+                            global_stage <= STAGE_IDLE;
+                            current_context <= current_context + 1;
+                        end else begin
+                            if(measurement_fusion_stage ==0) begin
+                                global_stage <= STAGE_MERGE;
+                                measurement_fusion_stage <= 1;
+                            end else begin
+                                global_stage <= STAGE_IDLE;
+                                measurement_fusion_stage <= 0;
+                            end
+                            if(NUM_CONTEXTS > 2) begin
+                                if(current_context == ACTUAL_D-1) begin
+                                    current_context <= ACTUAL_D;
+                                    starting_context <= ACTUAL_D;
+                                end else begin
+                                    current_context <= 0;
+                                    starting_context <= 0;
                                 end
                             end else begin
-                                global_stage <= STAGE_MERGE;
+                                starting_context <= current_context + 1;
+                                current_context <= current_context + 1;
                             end
-                        end else if(global_stage_saved == STAGE_MEASUREMENT_LOADING) begin
-                            global_stage <= STAGE_GROW;
-                        end else if(global_stage_saved == STAGE_PEELING) begin
-                            global_stage <= STAGE_RESULT_VALID;
-                        end else if(global_stage_saved == STAGE_RESULT_VALID) begin
-                            global_stage <= STAGE_IDLE;
-                        end else if(global_stage_saved == STAGE_GROW) begin
-                            global_stage <= STAGE_MERGE;
-                        end else if(global_stage_saved == STAGE_RESET_ROOTS) begin
-                            global_stage <= STAGE_MERGE;
                         end
                     end
-                // end else begin
-                    delay_counter <= 0;
-                // end
                 end else begin
-                    if(measurement_fusion_stage == 1'b0) begin
-                        if(global_stage_saved == STAGE_MERGE) begin
-                            global_stage <= STAGE_RESET_ROOTS;
-                            lower_half_counter <= cycle_counter;
-                            current_context <= current_context + 1;
+                    if(global_stage_saved == STAGE_MERGE) begin
+                        global_stage <= STAGE_MERGE;
+                        current_context <= (current_context == (ACTUAL_D -1))? 0 : (current_context + 1);
+                    end else if(global_stage_saved == STAGE_MEASUREMENT_LOADING) begin
+                        current_measurement_round <= current_measurement_round + 1;
+                        if(current_measurement_round ==  message_measurement_round-1) begin //So this means that the next round has some errors we need to load
+                            global_stage <= STAGE_MEASUREMENT_PREPARING;
+                        end else begin
+                            global_stage <= STAGE_MEASUREMENT_LOADING;
                         end
-                    end else if(measurement_fusion_stage == 1'b1) begin
-                        if(global_stage_saved == STAGE_MERGE) begin
-                            global_stage <= STAGE_RESET_ROOTS;
-                            measurement_fusion_stage <= 2'b10;
-                            current_context <= 0;
-                        end
+                        current_context <= current_context + 1;
+                    end else if(global_stage_saved == STAGE_LOAD_ARTIFICAL_DEFECTS) begin
+                        global_stage <= STAGE_LOAD_ARTIFICAL_DEFECTS;
+                        current_measurement_round <= current_measurement_round + 1;
+                        update_artifical_border <= 0;
+                        current_context <= current_context + 1;
+                    end else if(global_stage_saved == STAGE_PEELING) begin
+                        global_stage <= STAGE_PEELING;
+                        current_context <= current_context + 1;
+                    end else if(global_stage_saved == STAGE_RESULT_VALID) begin
+                        global_stage <= STAGE_RESULT_VALID;
+                        current_context <= current_context + 1;
+                    end else if(global_stage_saved == STAGE_GROW) begin
+                        global_stage <= STAGE_GROW;
+                        current_context <= (current_context == (ACTUAL_D -1))? 0 : (current_context + 1);
+                    end else if(global_stage_saved == STAGE_RESET_ROOTS) begin
+                        global_stage <= STAGE_RESET_ROOTS;
+                        current_context <= current_context + 1;
                     end
                 end
+                delay_counter <= 0;
+                // Reuse timing part of this code
+                // end else begin
+                //     if(measurement_fusion_stage == 1'b0) begin
+                //         if(global_stage_saved == STAGE_MERGE) begin
+                //             global_stage <= STAGE_RESET_ROOTS;
+                //             lower_half_counter <= cycle_counter;
+                //             current_context <= current_context + 1;
+                //         end
+                //     end else if(measurement_fusion_stage == 1'b1) begin
+                //         if(global_stage_saved == STAGE_MERGE) begin
+                //             global_stage <= STAGE_RESET_ROOTS;
+                //             measurement_fusion_stage <= 2'b10;
+                //             current_context <= 0;
+                //         end
+                //     end
+                // end
             end
-            //Laksheen
             STAGE_TEMPORARY: begin
                 global_stage <=STAGE_GROW;
             end
