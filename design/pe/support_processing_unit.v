@@ -56,6 +56,44 @@ wire [RAM_WIDTH - 1:0] data_to_memory;
 
 assign data_to_memory = input_data;
 
+reg [RAM_LOG_DEPTH-1:0] context_min;
+reg [RAM_LOG_DEPTH-1:0] context_max;
+reg context_full_range;
+reg not_first_block;
+
+localparam HALF_CONTEXT = (NUM_CONTEXTS >> 1);
+always@(posedge clk) begin
+    if(reset) begin
+        context_min <= 0;
+        context_max <= HALF_CONTEXT -1;
+        context_full_range <= 0;
+        not_first_block <= 0;
+    end else begin
+        if(stage == STAGE_RESET_ROOTS && (mem_write_address == 0 || mem_write_address == HALF_CONTEXT))begin
+            if(not_first_block) begin
+                if(context_full_range) begin
+                    if(mem_write_address == 0) begin
+                        context_min <= HALF_CONTEXT;
+                        context_max <= NUM_CONTEXTS - 1;
+                    end else begin
+                        context_min <= 0;
+                        context_max <= HALF_CONTEXT - 1;
+                    end
+                    context_full_range <= 0;
+                end else begin
+                    context_min <= 0;
+                    context_max <= NUM_CONTEXTS - 1;
+                    context_full_range <= 1;
+                end
+            end else begin
+                context_min <= HALF_CONTEXT;
+                context_max <= NUM_CONTEXTS - 1;
+                not_first_block <= 1;
+            end
+        end
+    end
+end
+
 rams_sp_nc #(
     .DEPTH(NUM_CONTEXTS),
     .WIDTH(RAM_WIDTH)
@@ -76,10 +114,14 @@ always@(posedge clk) begin
     end else begin
         if (stage == STAGE_WRITE_TO_MEM) begin
             if(do_not_store == 1'b0) begin
-                if(mem_write_address < NUM_CONTEXTS -1) begin
-                    mem_write_address <= mem_write_address + 1;
+                if(NUM_CONTEXTS > 2) begin
+                    if(mem_write_address < context_max) begin
+                        mem_write_address <= mem_write_address + 1;
+                    end else begin
+                        mem_write_address <= context_min;
+                    end
                 end else begin
-                    mem_write_address <= 0;
+                    mem_write_address <= ~mem_write_address;
                 end
             end
         end
@@ -92,10 +134,14 @@ always@(posedge clk) begin
     end else begin
         if (stage == STAGE_WRITE_TO_MEM) begin
             if(do_not_store == 1'b0) begin
-                if(mem_read_address < NUM_CONTEXTS -1) begin
-                    mem_read_address <= mem_read_address + 1;
+                if(NUM_CONTEXTS > 2) begin
+                    if(mem_read_address < context_max) begin
+                        mem_read_address <= mem_read_address + 1;
+                    end else begin
+                        mem_read_address <= context_min;
+                    end
                 end else begin
-                    mem_read_address <= 0;
+                    mem_read_address <= ~mem_read_address;
                 end
             end
         end

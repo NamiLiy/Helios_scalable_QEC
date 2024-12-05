@@ -283,35 +283,80 @@ localparam RAM_WIDTH = ADDRESS_WIDTH + 6 + 3;
 reg [RAM_WIDTH - 1 :0] data_from_memory;
 wire [RAM_WIDTH - 1:0] data_to_memory;
 
-//rams_sp_nc #(
-//    .DEPTH(NUM_CONTEXTS),
-//    .WIDTH(RAM_WIDTH)
-//) PE_mem (
-//    .clk(clk),            // Clock input
-//    //.rsta(reset),            // Reset input (active high)
-//    .en(1'b1),              // Enable input
-//    .we(write_to_mem),            // Write Enable input (0 to 0)
-//    .addr(mem_rw_address),     // Address input (3 downto 0)
-//    .di(data_to_memory),      // Data input (35 downto 0)
-//    .dout(data_from_memory)   // Data output (35 downto 0)
-//);
+reg [RAM_LOG_DEPTH-1:0] context_min;
+reg [RAM_LOG_DEPTH-1:0] context_max;
+reg context_full_range;
+reg not_first_block;
 
+localparam HALF_CONTEXT = (NUM_CONTEXTS >> 1);
 always@(posedge clk) begin
-    if(write_to_mem) begin
-        data_from_memory <= data_to_memory;
+    if(reset) begin
+        context_min <= 0;
+        context_max <= HALF_CONTEXT -1;
+        context_full_range <= 0;
+        not_first_block <= 0;
+    end else begin
+        if(stage == STAGE_RESET_ROOTS && (mem_write_address == 0 || mem_write_address == HALF_CONTEXT))begin
+            if(not_first_block) begin
+                if(context_full_range) begin
+                    if(mem_write_address == 0) begin
+                        context_min <= HALF_CONTEXT;
+                        context_max <= NUM_CONTEXTS - 1;
+                    end else begin
+                        context_min <= 0;
+                        context_max <= HALF_CONTEXT - 1;
+                    end
+                    context_full_range <= 0;
+                end else begin
+                    context_min <= 0;
+                    context_max <= NUM_CONTEXTS - 1;
+                    context_full_range <= 1;
+                end
+            end else begin
+                context_min <= HALF_CONTEXT;
+                context_max <= NUM_CONTEXTS - 1;
+                not_first_block <= 1;
+            end
+        end
     end
 end
 
+
+rams_sp_nc #(
+   .DEPTH(NUM_CONTEXTS),
+   .WIDTH(RAM_WIDTH)
+) PE_mem (
+   .clk(clk),            // Clock input
+   //.rsta(reset),            // Reset input (active high)
+   .en(1'b1),              // Enable input
+   .we(write_to_mem),            // Write Enable input (0 to 0)
+   .addr(mem_rw_address),     // Address input (3 downto 0)
+   .di(data_to_memory),      // Data input (35 downto 0)
+   .dout(data_from_memory)   // Data output (35 downto 0)
+);
+
+// always@(posedge clk) begin
+//     if(write_to_mem) begin
+//         data_from_memory <= data_to_memory;
+//     end
+// end
+
 //logic to calulate the address to write to memory
+
+
 always@(posedge clk) begin
     if(reset) begin
         mem_write_address <= 0;
     end else begin
         if (stage == STAGE_WRITE_TO_MEM) begin
-            if(mem_write_address < NUM_CONTEXTS -1) begin
-                mem_write_address <= mem_write_address + 1;
+            if(NUM_CONTEXTS > 2) begin
+                if(mem_write_address < context_max) begin
+                    mem_write_address <= mem_write_address + 1;
+                end else begin
+                    mem_write_address <= context_min;
+                end
             end else begin
-                mem_write_address <= 0;
+                mem_write_address <= ~mem_write_address;
             end
         end
     end
@@ -322,10 +367,14 @@ always@(posedge clk) begin
         mem_read_address <= 1;
     end else begin
         if (stage == STAGE_WRITE_TO_MEM) begin
-            if(mem_read_address < NUM_CONTEXTS -1) begin
-                mem_read_address <= mem_read_address + 1;
+            if(NUM_CONTEXTS > 2) begin
+                if(mem_read_address < context_max) begin
+                    mem_read_address <= mem_read_address + 1;
+                end else begin
+                    mem_read_address <= context_min;
+                end
             end else begin
-                mem_read_address <= 0;
+                mem_read_address <= ~mem_read_address;
             end
         end
     end
