@@ -117,16 +117,16 @@ end
 assign measurement_out = m;
 
 // Increase growth during the growth stage
-reg already_grown;
-always@(posedge clk) begin
-    if(reset) begin
-        already_grown <= 0;
-    end else begin
-        if((stage == STAGE_GROW) && (last_stage != STAGE_GROW)) begin
-            already_grown <= ~already_grown;
-        end
-    end
-end
+// reg already_grown;
+// always@(posedge clk) begin
+//     if(reset) begin
+//         already_grown <= 0;
+//     end else begin
+//         if((stage == STAGE_GROW) && (last_stage != STAGE_GROW)) begin
+//             already_grown <= ~already_grown;
+//         end
+//     end
+// end
 
 always@(*) begin
     neighbor_increase = 1'b0;
@@ -296,26 +296,39 @@ always@(posedge clk) begin
         context_full_range <= 0;
         not_first_block <= 0;
     end else begin
-        if(stage == STAGE_RESET_ROOTS && (mem_write_address == 0 || mem_write_address == HALF_CONTEXT))begin
-            if(not_first_block) begin
-                if(context_full_range) begin
-                    if(mem_write_address == 0) begin
-                        context_min <= HALF_CONTEXT;
-                        context_max <= NUM_CONTEXTS - 1;
+        if(mem_write_address == 0 || mem_write_address == HALF_CONTEXT) begin
+            if(stage == STAGE_RESET_ROOTS)begin
+                if(not_first_block) begin
+                    if(context_full_range) begin
+                        if(mem_write_address == 0) begin
+                            context_min <= HALF_CONTEXT;
+                            context_max <= NUM_CONTEXTS - 1;
+                        end else begin
+                            context_min <= 0;
+                            context_max <= HALF_CONTEXT - 1;
+                        end
+                        context_full_range <= 0;
                     end else begin
                         context_min <= 0;
-                        context_max <= HALF_CONTEXT - 1;
+                        context_max <= NUM_CONTEXTS - 1;
+                        context_full_range <= 1;
                     end
-                    context_full_range <= 0;
                 end else begin
-                    context_min <= 0;
+                    context_min <= HALF_CONTEXT;
                     context_max <= NUM_CONTEXTS - 1;
-                    context_full_range <= 1;
+                    not_first_block <= 1;
                 end
-            end else begin
-                context_min <= HALF_CONTEXT;
+            end else if(stage == STAGE_PEELING) begin
+                if(mem_write_address == 0) begin
+                    context_min <= 0;
+                    context_max <= HALF_CONTEXT - 1;
+                end else begin
+                    context_min <= HALF_CONTEXT;
+                    context_max <= NUM_CONTEXTS - 1;
+                end
+            end else if(stage == STAGE_RESULT_VALID) begin
+                context_min <= 0;
                 context_max <= NUM_CONTEXTS - 1;
-                not_first_block <= 1;
             end
         end
     end
@@ -350,7 +363,7 @@ always@(posedge clk) begin
     end else begin
         if (stage == STAGE_WRITE_TO_MEM) begin
             if(NUM_CONTEXTS > 2) begin
-                if(mem_write_address < context_max) begin
+                if(mem_write_address < context_max && mem_write_address < NUM_CONTEXTS - 1) begin
                     mem_write_address <= mem_write_address + 1;
                 end else begin
                     mem_write_address <= context_min;
@@ -368,7 +381,7 @@ always@(posedge clk) begin
     end else begin
         if (stage == STAGE_WRITE_TO_MEM) begin
             if(NUM_CONTEXTS > 2) begin
-                if(mem_read_address < context_max) begin
+                if(mem_read_address < context_max && mem_write_address < NUM_CONTEXTS - 1) begin
                     mem_read_address <= mem_read_address + 1;
                 end else begin
                     mem_read_address <= context_min;

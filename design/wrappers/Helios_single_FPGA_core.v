@@ -75,6 +75,7 @@ localparam logical_qubits_in_i_dim = (FPGA_ID < 3) ? (FULL_LOGICAL_QUBITS_PER_DI
 localparam borders_in_j_dim = (logical_qubits_in_j_dim + 1)*logical_qubits_in_i_dim; // number of || border
 localparam borders_in_i_dim = (logical_qubits_in_i_dim + 1)*logical_qubits_in_j_dim; // number of -- borders
 
+localparam CONTEXT_COUNTER_WIDTH = $clog2(NUM_CONTEXTS + 1);
 
 input clk;
 input reset;
@@ -150,7 +151,9 @@ wire [EW_BORDER_WIDTH-1:0] west_border;
 wire [NS_BORDER_WIDTH-1:0] north_border;
 wire [NS_BORDER_WIDTH-1:0] south_border;
 
+wire continutation_from_top;
 wire update_artifical_border;
+input [CONTEXT_COUNTER_WIDTH-1:0] current_context;
 
 single_FPGA_decoding_graph_dynamic_rsc #( 
     .FULL_LOGICAL_QUBITS_PER_DIM(FULL_LOGICAL_QUBITS_PER_DIM),
@@ -177,7 +180,9 @@ single_FPGA_decoding_graph_dynamic_rsc #(
     .north_border(north_border),
     .south_border(south_border),
 
-    .update_artifical_border(update_artifical_border)
+    .update_artifical_border(update_artifical_border),
+    .continutation_from_top(continutation_from_top),
+    .context_stage(current_context)
 );
 
 unified_controller #( 
@@ -222,6 +227,8 @@ unified_controller #(
     .south_border(south_border),
 
     .update_artifical_border(update_artifical_border),
+    .continutation_from_top(continutation_from_top),
+    .current_context(current_context)
 
     .grid_1_in_data(grid_1_in_data),
     .grid_1_in_valid(grid_1_in_valid),

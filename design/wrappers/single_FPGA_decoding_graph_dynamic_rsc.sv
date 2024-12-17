@@ -25,7 +25,9 @@ module single_FPGA_decoding_graph_dynamic_rsc #(
     north_border,
     south_border,
 
-    update_artifical_border
+    update_artifical_border,
+    continutation_from_top,
+    current_context
 
 );
 
@@ -67,7 +69,8 @@ localparam CORRECTION_COUNT_PER_ROUND = HOR_ERROR_COUNT + UD_ERROR_COUNT_PER_ROU
 localparam EXPOSED_DATA_SIZE = ADDRESS_WIDTH_WITH_B + 1 + 1 + 1;
 
 localparam LINK_BIT_WIDTH = $clog2(MAX_WEIGHT + 1);
-
+localparam HALF_CONTEXT = (NUM_CONTEXTS >> 1);
+localparam CONTEXT_COUNTER_WIDTH = $clog2(NUM_CONTEXTS + 1);
 
 input clk;
 input reset;
@@ -92,29 +95,31 @@ input [NS_BORDER_WIDTH-1:0] north_border;
 output [NS_BORDER_WIDTH-1:0] south_border;
 
 input update_artifical_border;
+input continutation_from_top;
+input [CONTEXT_COUNTER_WIDTH-1:0] context_stage;
 
 genvar i;
 genvar j;
 genvar k;
 
 //logic to calulate the context_stage
-reg[$clog2(NUM_CONTEXTS):0] context_stage;
-always@(posedge clk) begin
-    if(reset) begin
-        context_stage <= 0;
-    end else begin
-        if (global_stage == STAGE_WRITE_TO_MEM) begin
-            if(context_stage < NUM_CONTEXTS -1) begin
-                context_stage <= context_stage + 1;
-            end else begin
-                context_stage <= 0;
-            end
-        end
-    end
-end
+
+// always@(posedge clk) begin
+//     if(reset) begin
+//         context_stage <= 0;
+//     end else begin
+//         if (global_stage == STAGE_WRITE_TO_MEM) begin
+//             if(context_stage < NUM_CONTEXTS -1) begin
+//                 context_stage <= context_stage + 1;
+//             end else begin
+//                 context_stage <= 0;
+//             end
+//         end
+//     end
+// end
 
 //context_stage delayed
-reg[$clog2(NUM_CONTEXTS):0] context_stage_delayed;
+reg[CONTEXT_COUNTER_WIDTH -1:0] context_stage_delayed;
 always@(posedge clk) begin
     if(reset) begin
         context_stage_delayed <= 0;
@@ -142,6 +147,8 @@ function IS_LONG_ROW;
     end
 endfunction
 
+localparam CONTEXTS_FOR_UPPER_SPU = (NUM_CONTEXTS > 2) ? NUM_CONTEXTS : 1;
+
 generate
     for (k=PHYSICAL_GRID_WIDTH_U-1; k >= 0; k=k-1) begin: pu_k
         for (i=0; i < GRID_WIDTH_X; i=i+1) begin: pu_i
@@ -168,7 +175,11 @@ generate
                     assign `odd_clusters(i,j,k) = 1'b0;
                     assign root[Z_BIT_WIDTH-1:0] = j;
                     assign root[X_BIT_WIDTH+Z_BIT_WIDTH-1:Z_BIT_WIDTH] = i;
-                    assign root [X_BIT_WIDTH+Z_BIT_WIDTH+U_BIT_WIDTH-1:X_BIT_WIDTH+Z_BIT_WIDTH] = (context_stage_delayed%2 == 0) ? (k + context_stage_delayed*PHYSICAL_GRID_WIDTH_U) : (PHYSICAL_GRID_WIDTH_U - k - 1 + context_stage_delayed*PHYSICAL_GRID_WIDTH_U);
+                    if(NUM_CONTEXTS <=2) begin
+                        assign root [X_BIT_WIDTH+Z_BIT_WIDTH+U_BIT_WIDTH-1:X_BIT_WIDTH+Z_BIT_WIDTH] = (context_stage_delayed) ? (PHYSICAL_GRID_WIDTH_U - k - 1 + PHYSICAL_GRID_WIDTH_U) : (k);
+                    end else begin
+                        assign root [X_BIT_WIDTH+Z_BIT_WIDTH+U_BIT_WIDTH-1:X_BIT_WIDTH+Z_BIT_WIDTH] = context_stage_delayed;
+                    end
                     assign `roots(i, j, k) = root[ADDRESS_WIDTH-1:0];
                     assign measurement_out = 1'b0;
                     assign `measurement_debug(i,j,k) = measurement_out;
@@ -179,10 +190,14 @@ generate
                         address_global[Z_BIT_WIDTH-1:0] = j;
                         address_global[X_BIT_WIDTH+Z_BIT_WIDTH-1:Z_BIT_WIDTH] = i;
                         address_global[ADDRESS_WIDTH_WITH_B-1:ADDRESS_WIDTH] = 1'b1;
-                        if(context_stage_delayed%2 == 0) begin
-                            address_global[X_BIT_WIDTH+Z_BIT_WIDTH+U_BIT_WIDTH-1:X_BIT_WIDTH+Z_BIT_WIDTH] = k + context_stage_delayed*PHYSICAL_GRID_WIDTH_U;
+                        if(NUM_CONTEXTS <= 2) begin
+                            if(context_stage_delayed == 0) begin
+                                address_global[X_BIT_WIDTH+Z_BIT_WIDTH+U_BIT_WIDTH-1:X_BIT_WIDTH+Z_BIT_WIDTH] = k;
+                            end else begin
+                                address_global[X_BIT_WIDTH+Z_BIT_WIDTH+U_BIT_WIDTH-1:X_BIT_WIDTH+Z_BIT_WIDTH] = PHYSICAL_GRID_WIDTH_U - k - 1 + PHYSICAL_GRID_WIDTH_U;
+                            end
                         end else begin
-                            address_global[X_BIT_WIDTH+Z_BIT_WIDTH+U_BIT_WIDTH-1:X_BIT_WIDTH+Z_BIT_WIDTH] = PHYSICAL_GRID_WIDTH_U - k - 1 + context_stage_delayed*PHYSICAL_GRID_WIDTH_U;
+                            address_global[X_BIT_WIDTH+Z_BIT_WIDTH+U_BIT_WIDTH-1:X_BIT_WIDTH+Z_BIT_WIDTH] = context_stage_delayed;
                         end
                     end
 
@@ -233,20 +248,13 @@ generate
                     if(NUM_CONTEXTS <= 2) begin // If there are only 2 contexts then all context switches are local context switches
                         assign local_context_switch = 1'b1;
                     end else if (k==1)
-                        // // This line is for d=27 ctx = 27
-                        // assign local_context_switch = (context_stage_delayed %2 == 0 && context_stage_delayed < NUM_CONTEXTS - 1) ? 1'b1 : 1'b0;
-                        //This line is for d=27 ctx = 4
-                        assign local_context_switch = (context_stage_delayed %2 == 0 && context_stage_delayed < NUM_CONTEXTS - 1) ? 1'b1 : 1'b0;
-                    else if(k==0)
-                        assign local_context_switch = (context_stage_delayed %2 == 1 && context_stage_delayed < NUM_CONTEXTS - 1) ? 1'b1 : 1'b0;
-                    else begin
                         assign local_context_switch = 1'b0;
                     end
                     if(k==1) begin
                         support_processing_unit #(
                             .ADDRESS_WIDTH(ADDRESS_WIDTH_WITH_B),
                             //.NUM_CONTEXTS(NUM_CONTEXTS/2 + 1) // +1 is for ctx = d
-                            .NUM_CONTEXTS((NUM_CONTEXTS + 1)/2) 
+                            .NUM_CONTEXTS(CONTEXTS_FOR_UPPER_SPU)
                         ) spu (
                             .clk(clk),
                             .reset(reset),
@@ -258,7 +266,7 @@ generate
                     end else begin
                         support_processing_unit #(
                             .ADDRESS_WIDTH(ADDRESS_WIDTH_WITH_B),
-                            .NUM_CONTEXTS(NUM_CONTEXTS/2 + 1) // +1 is for ctx = d
+                            .NUM_CONTEXTS(1) // +1 is for ctx = d ??
                         ) spu (
                             .clk(clk),
                             .reset(reset),
@@ -381,7 +389,8 @@ endgenerate
     neighbor_link_internal #( \
         .ADDRESS_WIDTH(ADDRESS_WIDTH_WITH_B), \
         .MAX_WEIGHT(2), \
-        .NUM_CONTEXTS(num_contexts) \
+        .NUM_CONTEXTS(num_contexts), \
+        .STORE_EXTERNAL(0) \
     ) neighbor_link ( \
         .clk(clk), \
         .reset(reset), \
@@ -414,7 +423,8 @@ endgenerate
     neighbor_link_internal #( \
         .ADDRESS_WIDTH(ADDRESS_WIDTH_WITH_B), \
         .MAX_WEIGHT(2), \
-        .NUM_CONTEXTS(num_contexts) \
+        .NUM_CONTEXTS(num_contexts), \
+        .STORE_EXTERNAL(0) \
     ) neighbor_link ( \
         .clk(clk), \
         .reset(reset), \
@@ -439,12 +449,13 @@ endgenerate
         .reset_edge(reset_edge_local) \
     );
 
-`define NEIGHBOR_LINK_INTERNAL_SUPPORT(ai, aj, ak, bi, bj, bk, adirection, type, num_contexts, reset_edge_local) \
+`define NEIGHBOR_LINK_INTERNAL_SUPPORT(ai, aj, ak, bi, bj, bk, adirection, type, num_contexts, reset_edge_local, store_external) \
     wire is_boundary; \
     neighbor_link_internal #( \
         .ADDRESS_WIDTH(ADDRESS_WIDTH_WITH_B), \
         .MAX_WEIGHT(2), \
-        .NUM_CONTEXTS(num_contexts) \
+        .NUM_CONTEXTS(num_contexts), \
+        .STORE_EXTERNAL(store_external) \
     ) neighbor_link ( \
         .clk(clk), \
         .reset(reset), \
@@ -466,7 +477,9 @@ endgenerate
         .boundary_condition_in(type), \
         .boundary_condition_out(), \
         .is_error_systolic_in(0), \
-        .reset_edge(reset_edge_local) \
+        .reset_edge(reset_edge_local), \
+        .context_input(context_extra_in), \
+        .context_output(context_extra_out) \
     );\
         assign `PU(ai, aj, ak).neighbor_fully_grown[adirection] = fully_grown_data;\
         assign `PU(ai, aj, ak).neighbor_is_boundary[adirection] = is_boundary;
@@ -476,6 +489,7 @@ endgenerate
         (horizontal_boundary ? \
         ((i / (ACTUAL_D+1))*(logical_qubits_in_j_dim) + (j / ACTUAL_D) + borders_in_j_dim) : \
         (((i / (ACTUAL_D+1)))*(logical_qubits_in_j_dim + 1) + ((j+1) / ACTUAL_D)))
+
 
 generate
     // Generate Horizontal neighbors
@@ -527,12 +541,6 @@ generate
                         type_for_boundary_links = `NORMAL_EDGE; //  Internal
                     end
                end
-
-                // if(k==PHYSICAL_GRID_WIDTH_U-1) begin
-                //     assign local_context_switch = 1'b1;
-                // end else begin
-                //     assign local_context_switch = 1'b0;
-                // end
 
                 if(i==0) begin // First row
                     if(j%2 ==0) begin // \
@@ -603,66 +611,97 @@ generate
                 wire is_error_systolic_in;
                 wire is_error_out;
                 wire [LINK_BIT_WIDTH-1:0] weight_in;
-                //reg [3:0] type_for_boundary_links;
                 wire fully_grown_data;
                 reg reset_edge_local;
+                wire [2:0] context_extra_in;
+                wire [2:0] context_extra_out;
+                wire local_context_switch;
 
                 if(j == GRID_WIDTH_Z - 1 && (IS_LONG_ROW(i) == 1'b0) ) begin
                     // 
                 end else begin
-    //               always@(*) begin 
-    //                   if(k==0) begin
-    //                        type_for_boundary_links = 3'b01; // This is the bottom row. It is always the boundary.
-    //                   end else if(k==PHYSICAL_GRID_WIDTH_U) begin
-    //                        // type_for_boundary_links = measurement_fusion ? 3'b00 : 3'b01; // This is the top row. When Fusion is on it is internal. Otherwise it is boundary
-    //                        // Laksheen
-    //                        type_for_boundary_links = 3'b01; // Temporary make this external for horizontal merge eval purposes //Check whether this should be boundary or non existant
-    //                   end else begin
-    //                       type_for_boundary_links = 3'b00; //  Internal
-    //                   end
-    //               end
 
-                    reg [3:0] type_for_boundary_links;
+                    reg [1:0] type_for_boundary_links;
 
-                    // always@(*) begin 
-                    //     if(k==0) begin
-                    //         type_for_boundary_links = 3'b01; // This is the northernmost row. It never exists
-                    //    end else if(k==PHYSICAL_GRID_WIDTH_U) begin
-                    //         // type_for_boundary_links = measurement_fusion ? 3'b01 : 3'b01; // This is the border row. When Fusion is on it is
-                    //         type_for_boundary_links = 3'b01; // This is the border row. When Fusion is on it is
-                    //    end else begin
-                    //        type_for_boundary_links = 3'b00; //  Internal
-                    //    end
-                    // end
+                    
 
                     always@(*) begin
-                    if(k==PHYSICAL_GRID_WIDTH_U) begin
+                        if(k==PHYSICAL_GRID_WIDTH_U) begin
                             reset_edge_local = reset_all_edges;
                         end else begin
                             reset_edge_local = (reset_all_edges || global_stage == STAGE_MEASUREMENT_LOADING) ? 1'b1 : 1'b0;
                         end
                     end
+                    
                     assign weight_in = `WEIGHT_UD(i,j);
 
-                    wire local_context_switch;
-                    if(NUM_CONTEXTS <=2 && k==PHYSICAL_GRID_WIDTH_U) begin
-                        assign local_context_switch = 1'b1;
-                    end else if(k==PHYSICAL_GRID_WIDTH_U) begin
-                        // assign local_context_switch = (context_stage_delayed %2 == 0 && context_stage_delayed < NUM_CONTEXTS - 1) ? 1'b1 : 1'b0; //this is for ctx=d version
-                        assign local_context_switch = (context_stage_delayed %2 == 0 && context_stage_delayed < NUM_CONTEXTS - 1) ? 1'b1 : 1'b0;
-                    end else if(k==0) begin
-                        assign local_context_switch = (context_stage_delayed %2 == 1 && context_stage_delayed < NUM_CONTEXTS - 1) ? 1'b1 : 1'b0;
+                    
+                    if(NUM_CONTEXTS <=2) begin
+                        if(k==0) begin
+                            assign local_context_switch = continutation_from_top;
+                        end else begin
+                            assign local_context_switch = ~continutation_from_top;
+                        end
+
+                        always@(*) begin 
+                            if(k==0) begin
+                                if(continutation_from_top || artificial_boundary) begin // 0 1 2 3 4 5
+                                    type_for_boundary_links = 2'b11; // Boundary
+                                end else begin // 3 4 5 0 1 2
+                                    type_for_boundary_links = 2'b00; // Internal
+                                end
+                            end else if(k==PHYSICAL_GRID_WIDTH_U) begin
+                                if(~continutation_from_top || artificial_boundary) begin // 3 4 5 0 1 2
+                                    type_for_boundary_links = 2'b11; // Boundary
+                                end else begin // 0 1 2 3 4 5
+                                    type_for_boundary_links = 2'b00; // Internal
+                                end
+                            end else begin
+                                type_for_boundary_links = 2'b00; //  Internal
+                            end
+                        end
                     end else begin
                         assign local_context_switch = 1'b0;
+                        always@(*) begin
+                            if(k==0) begin
+                                if((continutation_from_top || artificial_boundary) && context_stage == 0) begin
+                                    type_for_boundary_links = 2'b11; // Boundary
+                                end else if((~continutation_from_top || artificial_boundary) && context_stage == HALF_CONTEXT) begin
+                                    type_for_boundary_links = 2'b11; // Internal
+                                end else begin
+                                    type_for_boundary_links = 2'b00; // Internal
+                                end
+                            end else if(k==PHYSICAL_GRID_WIDTH_U) begin
+                                if((~continutation_from_top || artificial_boundary) && context_stage == HALF_CONTEXT-1) begin
+                                    type_for_boundary_links = 2'b11; // Boundary
+                                end else if((continutation_from_top || artificial_boundary) && context_stage == NUM_CONTEXTS-1) begin
+                                    type_for_boundary_links = 2'b11; // Internal
+                                end else begin
+                                    type_for_boundary_links = 2'b00; // Internal
+                                end
+                            end else begin
+                                type_for_boundary_links = 2'b00; //  Internal
+                            end
+                        end
                     end
-                    if(k==0) begin
-                        // `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k, i,j,0, `NEIGHBOR_IDX_DOWN, type_for_boundary_links, NUM_CONTEXTS / 2 + 1) //+1 is only for d=ctx
-                        `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k, i,j,0, `NEIGHBOR_IDX_DOWN, 3'b01, NUM_CONTEXTS / 2 + 1, reset_edge_local)
-                    end else if(k==PHYSICAL_GRID_WIDTH_U) begin
-                        // `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k-1, i,j,1, `NEIGHBOR_IDX_UP, type_for_boundary_links, NUM_CONTEXTS / 2 + 1) //+1 is for d=ctx
-                        `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k-1, i,j,1, `NEIGHBOR_IDX_UP, 3'b01, (NUM_CONTEXTS + 1)/ 2, reset_edge_local) //+1 is for d=ctx
-                    end else if (k < PHYSICAL_GRID_WIDTH_U) begin
-                        `NEIGHBOR_LINK_INTERNAL_0(i, j, k-1, i, j, k, `NEIGHBOR_IDX_UP, `NEIGHBOR_IDX_DOWN, 3'b00, NUM_CONTEXTS, reset_edge_local)
+                    if(NUM_CONTEXTS <=2) begin
+                        if(k==0) begin
+                            // `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k, i,j,0, `NEIGHBOR_IDX_DOWN, type_for_boundary_links, NUM_CONTEXTS / 2 + 1) //+1 is only for d=ctx
+                            `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k, i,j,0, `NEIGHBOR_IDX_DOWN, type_for_boundary_links, 2, reset_edge_local, 0)
+                        end else if(k==PHYSICAL_GRID_WIDTH_U) begin
+                            // `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k-1, i,j,1, `NEIGHBOR_IDX_UP, type_for_boundary_links, NUM_CONTEXTS / 2 + 1) //+1 is for d=ctx
+                            `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k-1, i,j,1, `NEIGHBOR_IDX_UP, type_for_boundary_links, 2, reset_edge_local, 0) //+1 is for d=ctx
+                        end else if (k < PHYSICAL_GRID_WIDTH_U) begin
+                            `NEIGHBOR_LINK_INTERNAL_0(i, j, k-1, i, j, k, `NEIGHBOR_IDX_UP, `NEIGHBOR_IDX_DOWN, 3'b00, 2, reset_edge_local)
+                        end
+                    end else begin
+                        if(k==0) begin
+                            `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k, i,j,0, `NEIGHBOR_IDX_DOWN, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local, 1) //+1 is only for d=ctx
+                        end else if(k==PHYSICAL_GRID_WIDTH_U) begin
+                            `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k-1, i,j,1, `NEIGHBOR_IDX_UP, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local, 2) //+1 is for d=ctx
+                        end else if (k < PHYSICAL_GRID_WIDTH_U) begin
+                            `NEIGHBOR_LINK_INTERNAL_0(i, j, k-1, i, j, k, `NEIGHBOR_IDX_UP, `NEIGHBOR_IDX_DOWN, 3'b00, NUM_CONTEXTS, reset_edge_local) // Doesn't exist
+                        end
                     end
                 end
             end
@@ -719,6 +758,15 @@ generate
                 assign `CORRECTION_UD(i,j) = 1'b0;
             end else begin
                 assign `CORRECTION_UD(i,j) = ud_k[0].ud_i[i].ud_j[j].is_error_out;
+            end
+        end
+    end
+
+    if(NUM_CONTEXTS > 2) begin
+        for(i=0; i<GRID_WIDTH_X; i=i+1) begin: ud_i_output_extra
+            for(j=0; j<GRID_WIDTH_Z; j=j+1) begin: ud_j_output_extra
+                assign ud_k[0].ud_i[i].ud_j[j].context_extra_in = ud_k[1].ud_i[i].ud_j[j].context_extra_out;
+                assign ud_k[1].ud_i[i].ud_j[j].context_extra_in = ud_k[0].ud_i[i].ud_j[j].context_extra_out;
             end
         end
     end

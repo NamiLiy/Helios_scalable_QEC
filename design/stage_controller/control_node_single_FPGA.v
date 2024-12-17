@@ -47,6 +47,8 @@ module unified_controller #(
     south_border,
 
     update_artifical_border,
+    continutation_from_top,
+    current_context,
 
     grid_1_out_data,
     grid_1_out_valid,
@@ -153,7 +155,7 @@ input output_ctrl_tx_ready;
 input router_busy;
 output reg [1:0] border_continous;
 output reg artificial_boundary;
-output [total_borders - 1 : 0] fusion_boundary;
+output reg [total_borders - 1 : 0] fusion_boundary;
 output reg reset_all_edges;
  
 
@@ -163,6 +165,7 @@ output reg [EW_BORDER_WIDTH-1:0] west_border;
 output reg [NS_BORDER_WIDTH-1:0] north_border;
 input [NS_BORDER_WIDTH-1:0] south_border;
 output reg update_artifical_border;
+output reg continutation_from_top;
 
 output reg [63 : 0] grid_1_out_data;
 output reg grid_1_out_valid;
@@ -179,9 +182,11 @@ input grid_2_out_ready;
 input [63 : 0] grid_2_in_data;
 input grid_2_in_valid;
 output reg grid_2_in_ready;
+output reg [CONTEXT_COUNTER_WIDTH-1:0] current_context;
 
-reg [total_borders_padded - 1 : 0] fusion_boundary_reg;
-assign fusion_boundary = fusion_boundary_reg[total_borders-1:0];
+reg [total_borders_padded - 1 : 0] fusion_boundary_reg_1;
+reg [total_borders_padded - 1 : 0] fusion_boundary_reg_2;
+
 
 reg result_valid;
 reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
@@ -191,7 +196,7 @@ reg [31:0] lower_half_counter;
 reg busy;
 reg odd_clusters;
 reg border_busy;
-reg [CONTEXT_COUNTER_WIDTH-1:0] current_context;
+
 
 reg [PU_COUNT_PER_ROUND-1:0] measurement_internal;
 reg measurement_fusion_stage;
@@ -355,6 +360,13 @@ always@(*) begin
     defect_pu_address = input_data[X_BIT_WIDTH + Z_BIT_WIDTH - 1 : Z_BIT_WIDTH]*GRID_WIDTH_Z + input_data[Z_BIT_WIDTH - 1 : 0];
 end
 
+always@(*) begin
+    if(current_context < HALF_CONTEXT) begin
+        fusion_boundary = fusion_boundary_reg_1[total_borders-1:0];
+    end else begin
+        fusion_boundary = fusion_boundary_reg_2[total_borders-1:0];
+    end
+end
 
 always @(posedge clk) begin
     if (reset) begin
@@ -373,6 +385,7 @@ always @(posedge clk) begin
         current_context <= 0;
         starting_context <= 0;
         finishing_context <= 0;
+        continutation_from_top <= 0;
     end else begin
         case (global_stage)
             STAGE_IDLE: begin // 0
@@ -407,8 +420,13 @@ always @(posedge clk) begin
                         delay_counter <= 0;
                         result_valid <= 0;
                         // Store fusion boundary with correct context
-                        fusion_boundary_reg[47:0] <= input_ctrl_rx_data[47:0];
-                        fusion_boundary_reg[total_borders_padded-1 : 48] <= fusion_boundary_reg[total_borders_padded-48-1 : 0];
+                        if(current_context == 0) begin
+                            fusion_boundary_reg_1[47:0] <= input_ctrl_rx_data[47:0];
+                            fusion_boundary_reg_1[total_borders_padded-1 : 48] <= fusion_boundary_reg_1[total_borders_padded-48-1 : 0];
+                        end else begin
+                            fusion_boundary_reg_2[47:0] <= input_ctrl_rx_data[47:0];
+                            fusion_boundary_reg_2[total_borders_padded-1 : 48] <= fusion_boundary_reg_2[total_borders_padded-48-1 : 0];
+                        end
                     end
                     // else if(input_ctrl_rx_data [CTRL_MSG_MSB : CTRL_MSG_MSB - 7] == MOVE_TO_STAGE) begin
                     //     global_stage <= STAGE_GROW;
@@ -579,6 +597,7 @@ always @(posedge clk) begin
                 global_stage <= (NUM_CONTEXTS <= 2 ? STAGE_RESULT_VALID : STAGE_WRITE_TO_MEM); //Laksheen
                 global_stage_saved <= STAGE_PEELING;
                 current_measurement_round <= 0;
+                continutation_from_top <= ~continutation_from_top; //check for d contexts
             end
 
             STAGE_RESULT_VALID: begin //5

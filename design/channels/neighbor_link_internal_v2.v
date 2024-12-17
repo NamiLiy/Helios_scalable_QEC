@@ -1,7 +1,8 @@
 module neighbor_link_internal #(
     parameter ADDRESS_WIDTH = 6,
     parameter MAX_WEIGHT = 2,
-    parameter NUM_CONTEXTS = 2
+    parameter NUM_CONTEXTS = 2,
+    parameter STORE_EXTERNAL = 0 //1 means edges to lower SPEs, 2 means edges to upper PEs. Only needed for support PES when num_ctx > 2
     // parameter WEIGHT = 2,
     // parameter BOUNDARY_CONDITION = 0, //0 : No boundary 1: A boundary 2: Non existant edge 3: fusion edge (fusion edge is connected on both ends but acts like a boundary)
     // parameter ADDRESS_A = 0,
@@ -36,7 +37,9 @@ module neighbor_link_internal #(
     boundary_condition_out,
     do_not_store,
 
-    reset_edge
+    reset_edge,
+    context_input,
+    context_output
 );
 
 `include "../../parameters/parameters.sv"
@@ -69,6 +72,7 @@ input is_error_systolic_in;
 input do_not_store;
 
 input reset_edge;
+input [2:0] context_input;
 
 output reg [LINK_BIT_WIDTH-1:0] weight_out;
 output reg [1:0] boundary_condition_out;
@@ -188,75 +192,292 @@ localparam RAM_LOG_DEPTH = $clog2(NUM_CONTEXTS);
 reg [RAM_LOG_DEPTH-1:0] mem_read_address;
 reg [RAM_LOG_DEPTH-1:0] mem_write_address;
 wire [RAM_LOG_DEPTH-1:0] mem_rw_address;
-wire [4:0] data_from_memory;
-wire [4:0] data_to_memory;
+localparam RAM_WIDTH = 3;
+wire [RAM_WIDTH - 1 :0] data_from_memory;
+wire [RAM_WIDTH - 1:0] data_to_memory;
+
+assign data_to_memory = {growth,is_error};
+
+reg [RAM_LOG_DEPTH-1:0] context_min;
+reg [RAM_LOG_DEPTH-1:0] context_max;
+reg context_full_range;
+reg not_first_block;
+
 
 rams_sp_nc #(
     .DEPTH(NUM_CONTEXTS),
-    .WIDTH(5)
-) edge_mem (
+    .WIDTH(RAM_WIDTH)
+) PE_mem (
     .clk(clk),            // Clock input
     //.rsta(reset),            // Reset input (active high)
     .en(1'b1),              // Enable input
     .we(write_to_mem),            // Write Enable input (0 to 0)
     .addr(mem_rw_address),     // Address input (3 downto 0)
     .di(data_to_memory),      // Data input (35 downto 0)
-    .dout(data_from_memory)    // Data output (35 downto 0)
+    .dout(data_from_memory)   // Data output (35 downto 0)
 );
 
+localparam HALF_CONTEXT = (NUM_CONTEXTS >> 1);
 
-
-//logic to calulate the address to write to memory
 always@(posedge clk) begin
     if(reset) begin
-        mem_write_address <= 0;
+        context_min <= 0;
+        context_max <= HALF_CONTEXT -1;
+        context_full_range <= 0;
+        not_first_block <= 0;
     end else begin
-        if (stage == STAGE_WRITE_TO_MEM) begin
-            if(do_not_store == 1'b0) begin
-                if(mem_write_address < NUM_CONTEXTS -1) begin
-                    mem_write_address <= mem_write_address + 1;
+        if(mem_write_address == 0 || mem_write_address == HALF_CONTEXT) begin
+            if(stage == STAGE_RESET_ROOTS)begin
+                if(not_first_block) begin
+                    if(context_full_range) begin
+                        if(mem_write_address == 0) begin
+                            context_min <= HALF_CONTEXT;
+                            context_max <= NUM_CONTEXTS - 1;
+                        end else begin
+                            context_min <= 0;
+                            context_max <= HALF_CONTEXT - 1;
+                        end
+                        context_full_range <= 0;
+                    end else begin
+                        context_min <= 0;
+                        context_max <= NUM_CONTEXTS - 1;
+                        context_full_range <= 1;
+                    end
                 end else begin
-                    mem_write_address <= 0;
+                    context_min <= HALF_CONTEXT;
+                    context_max <= NUM_CONTEXTS - 1;
+                    not_first_block <= 1;
                 end
+            end else if(stage == STAGE_PEELING) begin
+                if(mem_write_address == 0) begin
+                    context_min <= 0;
+                    context_max <= HALF_CONTEXT - 1;
+                end else begin
+                    context_min <= HALF_CONTEXT;
+                    context_max <= NUM_CONTEXTS - 1;
+                end
+            end else if(stage == STAGE_RESULT_VALID) begin
+                context_min <= 0;
+                context_max <= NUM_CONTEXTS - 1;
             end
         end
     end
 end
 
-always@(posedge clk) begin
-    if(reset) begin
-        mem_read_address <= 1;
-    end else begin
-        if (stage == STAGE_WRITE_TO_MEM) begin
-            if(do_not_store == 1'b0) begin
-                if(mem_read_address < NUM_CONTEXTS -1) begin
-                    mem_read_address <= mem_read_address + 1;
-                end else begin
-                    mem_read_address <= 0;
-                end
-            end
-        end
-    end
-end
+if(STORE_EXTERNAL == 0) begin
 
-assign mem_rw_address = (stage == STAGE_WRITE_TO_MEM) ? mem_write_address : mem_read_address;
-
-always@(*) begin
-    if(reset) begin
-        write_to_mem = 0;
-    end else begin
-        if (stage == STAGE_WRITE_TO_MEM && do_not_store == 1'b0) begin
-            write_to_mem = 1;
+    //logic to calulate the address to write to memory
+    always@(posedge clk) begin
+        if(reset) begin
+            mem_write_address <= 0;
         end else begin
-            write_to_mem = 0;
+            if (stage == STAGE_WRITE_TO_MEM) begin
+                if(do_not_store == 1'b0) begin
+                    if(NUM_CONTEXTS > 2) begin
+                        if(mem_write_address == context_max) begin
+                            mem_write_address <= context_min;
+                        end else if (mem_write_address == NUM_CONTEXTS - 1) begin
+                            mem_write_address <= 0;
+                        end else begin
+                            mem_write_address <= mem_write_address + 1;
+                        end
+                    end else begin
+                        mem_write_address <= ~mem_write_address;
+                    end
+                end
+            end
         end
     end
+
+    always@(posedge clk) begin
+        if(reset) begin
+            mem_read_address <= 1;
+        end else begin
+            if (stage == STAGE_WRITE_TO_MEM) begin
+                if(do_not_store == 1'b0) begin
+                    if(NUM_CONTEXTS > 2) begin
+                        if(mem_read_address == context_max) begin
+                            mem_read_address <= context_min;
+                        end else if (mem_read_address == NUM_CONTEXTS - 1) begin
+                            mem_read_address <= 0;
+                        end else begin
+                            mem_read_address <= mem_read_address + 1;
+                        end
+                    end else begin
+                        mem_read_address <= ~mem_read_address;
+                    end
+                end
+            end
+        end
+    end
+
+    assign mem_rw_address = (stage == STAGE_WRITE_TO_MEM) ? mem_write_address : mem_read_address;
+
+    always@(*) begin
+        if(reset) begin
+            write_to_mem = 0;
+        end else begin
+            if (stage == STAGE_WRITE_TO_MEM && do_not_store == 1'b0) begin
+                write_to_mem = 1;
+            end else begin
+                write_to_mem = 0;
+            end
+        end
+    end
+
+    // logic to check whether last context switch was a local context switch
+
+    //logic to data write to memory
+    assign data_to_memory = {growth,is_error};
+    assign {growth_mem,is_error_mem} = (do_not_store) ? {growth, 0} : data_from_memory;
+
+end else if(STORE_EXTERNAL == 1) begin
+
+    reg [1:0] grow_at_zero;
+    reg [1:0] grow_at_hc;
+
+    reg [1:0] is_error_at_zero;
+    reg [1:0] is_error_at_hc;
+
+    always@(posedge clk) begin
+        if(reset) begin
+            grow_at_zero <= 0;
+            grow_at_hc <= 0;
+            is_error_at_zero <= 0;
+            is_error_at_hc <= 0;
+        end else begin
+            if(stage == STAGE_WRITE_TO_MEM) begin
+                if(mem_write_address == 0) begin
+                    grow_at_zero <= growth;
+                    is_error_at_zero <= is_error;
+                end else if(mem_write_address == HALF_CONTEXT) begin
+                    grow_at_hc <= growth;
+                    is_error_at_hc <= is_error;
+                end
+            end
+        end
+    end
+
+    reg [1:0] growth_selected;
+    reg [1:0] is_error_selected;
+
+    //logic to calulate the address to write to memory
+    //logic to calulate the address to write to memory
+    always@(posedge clk) begin
+        if(reset) begin
+            mem_write_address <= 0;
+        end else begin
+            if (stage == STAGE_WRITE_TO_MEM) begin
+                if(do_not_store == 1'b0) begin
+                    if(NUM_CONTEXTS > 2) begin
+                        if(mem_write_address == context_max) begin
+                            mem_write_address <= context_min;
+                        end else if (mem_write_address == NUM_CONTEXTS - 1) begin
+                            mem_write_address <= 0;
+                        end else begin
+                            mem_write_address <= mem_write_address + 1;
+                        end
+                    end else begin
+                        mem_write_address <= ~mem_write_address;
+                    end
+                end
+            end
+        end
+    end
+
+    always@(*) begin
+        if(mem_write_address == context_max) begin
+            if(context_min == 0) begin
+                growth_selected = grow_at_zero;
+                is_error_selected = is_error_at_zero;
+            end else begin
+                growth_selected = grow_at_hc;
+                is_error_selected = is_error_at_hc;
+            end
+        end else begin
+            growth_selected = context_input[1:0];
+            is_error_selected = context_input[2];
+        end
+    end
+            
+    assign growth_mem = growth_selected;
+    assign is_error_mem = is_error_selected;
+
+    assign context_output = {growth,is_error};
+
+end else if(STORE_EXTERNAL == 2) begin
+
+    reg [RAM_LOG_DEPTH-1:0] mem_read_address_d;
+    reg [2:0] stored_context;
+    reg stored_context_valid;
+
+    always@(posedge clk) begin
+        if(reset) begin
+            stored_context <= 0;
+        end else begin
+            stored_context <= context_input;
+        end
+    end
+
+    always@(posedge clk) begin
+        if(reset) begin
+            stored_context_valid <= 0;
+        end else begin
+            if(stage == STAGE_WRITE_TO_MEM) begin
+                if(mem_read_address == context_min) begin
+                    stored_context_valid <= 1;
+                end else begin
+                    stored_context_valid <= 0;
+                end
+            end
+        end
+    end
+
+    always@(posedge clk) begin
+        if(reset) begin
+            mem_read_address <= 1;
+            mem_read_address_d <= 0;
+            mem_write_address <= HALF_CONTEXT - 1;
+        end else begin
+            if (stage == STAGE_WRITE_TO_MEM) begin
+                if(do_not_store == 1'b0) begin
+                    if(NUM_CONTEXTS > 2) begin
+                        if(mem_read_address == context_max) begin
+                            mem_read_address <= context_min;
+                        end else if (mem_read_address == NUM_CONTEXTS - 1) begin
+                            mem_read_address <= 0;
+                        end else begin
+                            mem_read_address <= mem_read_address + 1;
+                        end
+                    end else begin
+                        mem_read_address <= ~mem_read_address;
+                    end
+                    mem_read_address_d <= mem_read_address;
+                    mem_write_address <= mem_read_address_d;
+                end
+            end
+        end
+    end
+
+    always@(*) begin
+        if(reset) begin
+            write_to_mem = 0;
+        end else begin
+            if (stage == STAGE_WRITE_TO_MEM && do_not_store == 1'b0) begin
+                write_to_mem = 1;
+            end else begin
+                write_to_mem = 0;
+            end
+        end
+    end
+
+    assign data_to_memory = stored_context_valid ? stored_context : context_input;
+    assign mem_rw_address = (stage == STAGE_WRITE_TO_MEM) ? mem_write_address : mem_read_address;
+    assign {growth_mem,is_error_mem} = (do_not_store) ? {growth, 0} : data_from_memory;
 end
 
-//logic to data write to memory
-assign data_to_memory = {growth,is_error};
 
-assign {growth_mem,is_error_mem} = (do_not_store) ? {growth, is_error} : data_from_memory;
+
 
 endmodule
 
