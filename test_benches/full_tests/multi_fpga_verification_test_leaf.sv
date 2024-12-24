@@ -17,7 +17,8 @@ module verification_bench_leaf#(
     parameter ROUTER_DELAY = 18,
     parameter FPGA_ID = 1,
     parameter NUM_CONTEXTS = 1,
-    parameter LOGICAL_QUBITS_PER_DIM = 1
+    parameter LOGICAL_QUBITS_PER_DIM = 1,
+    parameter MEASUREMENT_FUSION_ENABLED=1
 )(
     input clk,
     input reset,
@@ -59,12 +60,10 @@ localparam GRID_X_NORMAL = FULL_LOGICAL_QUBITS_PER_DIM * (ACTUAL_D + 1);
 localparam GRID_Z_NORMAL = (FULL_LOGICAL_QUBITS_PER_DIM * (ACTUAL_D - 1) >> 1) + (FULL_LOGICAL_QUBITS_PER_DIM >> 1);
 localparam GRID_WIDTH_X = GRID_X_NORMAL + GRID_X_EXTRA;
 localparam GRID_WIDTH_Z = (GRID_Z_NORMAL + GRID_Z_EXTRA);
-localparam GRID_WIDTH_U = ACTUAL_D; // Laksheen
-// Nami : I have no idea why the below code is not working. It is essential to run context switching
-// localparam PHYSICAL_GRID_WIDTH_U = ((GRID_WIDTH_U % NUM_CONTEXTS == 0) ? 
-//                                    ($floor(GRID_WIDTH_U / NUM_CONTEXTS)) : 
-//                                    ($floor(GRID_WIDTH_U / NUM_CONTEXTS) + 1));
-localparam PHYSICAL_GRID_WIDTH_U = GRID_WIDTH_U;
+localparam GRID_WIDTH_U = ACTUAL_D*(MEASUREMENT_FUSION_ENABLED + 1);
+localparam PHYSICAL_GRID_WIDTH_U = (GRID_WIDTH_U % NUM_CONTEXTS == 0) ? 
+                                   (GRID_WIDTH_U / NUM_CONTEXTS) : 
+                                   (GRID_WIDTH_U / NUM_CONTEXTS + 1);
 localparam MAX_WEIGHT = 2;
 
 
@@ -131,7 +130,8 @@ Helios_single_FPGA #(
     .NUM_FPGAS(NUM_FPGAS),
     .ROUTER_DELAY_COUNTER(ROUTER_DELAY),
     .FPGA_ID(FPGA_ID),
-    .ACTUAL_D(CODE_DISTANCE)
+    .ACTUAL_D(CODE_DISTANCE),
+    .MEASUREMENT_FUSION_ENABLED(MEASUREMENT_FUSION_ENABLED)
  ) decoder (
     .clk(clk),
     .reset(reset),
@@ -227,11 +227,13 @@ reg [31:0] message_counter;
 reg full_test_completed;
 reg data_loading_complete;
 reg test_case_id_loaded;
+reg is_first_round;
 
 always @(posedge clk) begin
     if(reset) begin
         loading_state <= 3'b0;
         message_counter <= 0;
+        is_first_round <= 1;
     end else begin
         case(loading_state)
             3'b0: begin // reset
@@ -243,7 +245,12 @@ always @(posedge clk) begin
                 end
             end
             3'b10: begin // data reading stage
-                if(output_valid == 1) begin
+                if(is_first_round == 1) begin
+                    is_first_round <= 0;
+                    cycle_counter <= 0;
+                    iteration_counter <= 0;
+                    loading_state <= 3'b1;
+                end else if(output_valid == 1) begin
                     if (message_counter == 0) begin
                         cycle_counter <= output_data[15:0];
                         iteration_counter <= output_data[23:16];
@@ -330,18 +337,28 @@ always @(posedge clk) begin
             output_file_results = $fopen(output_filename_results, "w");
             open = 0;
         end
-        if(decoder.controller.current_context == 0) begin
+        if(NUM_CONTEXTS == 2) begin
             $fwrite (output_file_data, "%h\n", input_test_case);
             $fwrite (output_file_results, "%h\n", input_test_case);
             //$display("%t\tTest case %d", $time, test_case);
         end
+        if(NUM_CONTEXTS > 2) begin
+            if(decoder.controller.current_context == 0 || decoder.controller.current_context == CODE_DISTANCE) begin
+                $fwrite (output_file_data, "%h\n", input_test_case);
+                $fwrite (output_file_results, "%h\n", input_test_case);
+            end
+        end
         for (k=0 ;k <PHYSICAL_GRID_WIDTH_U; k++) begin
             for (i=0 ;i <CODE_DISTANCE_X; i++) begin
                 for (j=0 ;j <CODE_DISTANCE_Z; j++) begin
-                    if(decoder.controller.current_context % 2 == 1) begin
-                        context_k = decoder.controller.current_context*PHYSICAL_GRID_WIDTH_U + PHYSICAL_GRID_WIDTH_U - k - 1;
+                    if(NUM_CONTEXTS == 2) begin
+                        if(decoder.controller.current_context  == 1) begin
+                            context_k = PHYSICAL_GRID_WIDTH_U + PHYSICAL_GRID_WIDTH_U - k - 1;
+                        end else begin
+                            context_k = k;
+                        end
                     end else begin
-                        context_k = decoder.controller.current_context*PHYSICAL_GRID_WIDTH_U  + k;
+                        context_k = k;
                     end
 
                     write_id[7:0] = j;
@@ -365,10 +382,15 @@ always @(posedge clk) begin
                 end
             end
         end
-        if(decoder.controller.current_context == NUM_CONTEXTS-1) begin
+        if(NUM_CONTEXTS == 2) begin
             $fwrite (output_file_data, "%h\n", 32'hffffffff);
             $fwrite (output_file_results, "%h\n", 32'hffffffff);
-            //$display("%t\tTest case %d", $time, test_case);
+        end else begin
+            if(decoder.controller.current_context == NUM_CONTEXTS-1 || decoder.controller.current_context == CODE_DISTANCE - 1) begin
+                $fwrite (output_file_data, "%h\n", 32'hffffffff);
+                $fwrite (output_file_results, "%h\n", 32'hffffffff);
+                //$display("%t\tTest case %d", $time, test_case);
+            end
         end
     end
     if (message_counter == 1 && output_valid == 1 && full_test_completed == 0) begin // Cycle counter and iteration counter is recevied

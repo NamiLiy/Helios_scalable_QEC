@@ -280,7 +280,7 @@ reg [RAM_LOG_DEPTH-1:0] mem_read_address;
 reg [RAM_LOG_DEPTH-1:0] mem_write_address;
 wire [RAM_LOG_DEPTH-1:0] mem_rw_address;
 localparam RAM_WIDTH = ADDRESS_WIDTH + 6 + 3;
-reg [RAM_WIDTH - 1 :0] data_from_memory;
+wire [RAM_WIDTH - 1 :0] data_from_memory;
 wire [RAM_WIDTH - 1:0] data_to_memory;
 
 reg [RAM_LOG_DEPTH-1:0] context_min;

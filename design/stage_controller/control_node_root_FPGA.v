@@ -101,6 +101,7 @@ end
 
 
 reg report_all_latencies;
+reg [3:0] block_id;
 
 always @(posedge clk) begin
     if (reset) begin
@@ -109,6 +110,7 @@ always @(posedge clk) begin
         cycle_counter_on <= 0;
         cycle_counter_reset <= 0;
         measurement_fusion_on <= 0;
+        block_id <= 0;
     end else begin
         case (global_stage)
             STAGE_IDLE: begin // 0
@@ -143,17 +145,36 @@ always @(posedge clk) begin
             //     global_stage <= STAGE_IDLE;
             // end
 
-            STAGE_WAIT_TILL_NODE_RESULTS: begin //4  
+            STAGE_WAIT_TILL_NODE_RESULTS: begin //4
+                if(block_id == 0) begin
+                    global_stage <= STAGE_IDLE;
+                    block_id <= block_id + 1;
+                end
                 if (valid_from_fpgas && ready_from_fpgas && return_msg_count < NUM_CHILDREN) begin
                     if(data_from_fpgas [MSG_HEADER_MSB : MSG_HEADER_LSB] == HEADER_RESULT) begin
-                        return_msg_count <= return_msg_count + 1;
-                        if(return_msg_count == 0) begin
-                            cycle_counter <= data_from_fpgas [31 : 16];
-                        end else if(return_msg_count == 3) begin
-                            if(data_from_fpgas [31 : 16] > cycle_counter) begin
-                                cycle_counter <= data_from_fpgas [31 : 16] - cycle_counter;
+                        if(block_id == 1) begin
+                            global_stage <= STAGE_IDLE;
+                            block_id <= block_id + 1;
+                        end else begin
+                            if(block_id == 2) begin
+                                if(return_msg_count == 2) begin
+                                    global_stage <= STAGE_IDLE;
+                                    block_id <= block_id + 1;
+                                    return_msg_count <= 0;
+                                end else begin
+                                    return_msg_count <= return_msg_count + 1;
+                                end
                             end else begin
-                                cycle_counter <= 16'hffff - cycle_counter + data_from_fpgas [31 : 16];
+                                return_msg_count <= return_msg_count + 1;
+                                if(return_msg_count == 0) begin
+                                    cycle_counter <= data_from_fpgas [31 : 16];
+                                end else if(return_msg_count == 3) begin
+                                    if(data_from_fpgas [31 : 16] > cycle_counter) begin
+                                        cycle_counter <= data_from_fpgas [31 : 16] - cycle_counter;
+                                    end else begin
+                                        cycle_counter <= 16'hffff - cycle_counter + data_from_fpgas [31 : 16];
+                                    end
+                                end
                             end
                         end
                     end

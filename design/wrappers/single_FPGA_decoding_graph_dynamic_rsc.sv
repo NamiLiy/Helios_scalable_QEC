@@ -5,7 +5,8 @@ module single_FPGA_decoding_graph_dynamic_rsc #(
     parameter NUM_CONTEXTS = 4,
     parameter ACTUAL_D = 5,
     parameter FPGA_ID = 1,
-    parameter FULL_LOGICAL_QUBITS_PER_DIM = 2
+    parameter FULL_LOGICAL_QUBITS_PER_DIM = 2,
+    parameter MEASUREMENT_FUSION_ENABLED = 1
 ) (
     clk,
     reset,
@@ -27,7 +28,7 @@ module single_FPGA_decoding_graph_dynamic_rsc #(
 
     update_artifical_border,
     continutation_from_top,
-    current_context
+    context_stage
 
 );
 
@@ -41,7 +42,7 @@ localparam GRID_X_NORMAL = FULL_LOGICAL_QUBITS_PER_DIM * (ACTUAL_D + 1);
 localparam GRID_Z_NORMAL = (FULL_LOGICAL_QUBITS_PER_DIM * (ACTUAL_D - 1) >> 1) + (FULL_LOGICAL_QUBITS_PER_DIM >> 1);
 localparam GRID_WIDTH_X = GRID_X_NORMAL + GRID_X_EXTRA;
 localparam GRID_WIDTH_Z = (GRID_Z_NORMAL + GRID_Z_EXTRA);
-localparam GRID_WIDTH_U = ACTUAL_D;
+localparam GRID_WIDTH_U = ACTUAL_D*(MEASUREMENT_FUSION_ENABLED + 1);
 
 localparam X_BIT_WIDTH = $clog2(GRID_WIDTH_X);
 localparam Z_BIT_WIDTH = $clog2(GRID_WIDTH_Z);
@@ -101,22 +102,6 @@ input [CONTEXT_COUNTER_WIDTH-1:0] context_stage;
 genvar i;
 genvar j;
 genvar k;
-
-//logic to calulate the context_stage
-
-// always@(posedge clk) begin
-//     if(reset) begin
-//         context_stage <= 0;
-//     end else begin
-//         if (global_stage == STAGE_WRITE_TO_MEM) begin
-//             if(context_stage < NUM_CONTEXTS -1) begin
-//                 context_stage <= context_stage + 1;
-//             end else begin
-//                 context_stage <= 0;
-//             end
-//         end
-//     end
-// end
 
 //context_stage delayed
 reg[CONTEXT_COUNTER_WIDTH -1:0] context_stage_delayed;
@@ -247,7 +232,7 @@ generate
                 end else begin
                     if(NUM_CONTEXTS <= 2) begin // If there are only 2 contexts then all context switches are local context switches
                         assign local_context_switch = 1'b1;
-                    end else if (k==1)
+                    end else if (k==1) begin
                         assign local_context_switch = 1'b0;
                     end
                     if(k==1) begin
@@ -729,6 +714,12 @@ generate
         end
     end
 
+    for (i=0; i <= GRID_WIDTH_X; i=i+1) begin: hor_i_extra_2
+        for (j=0; j < (GRID_WIDTH_Z*2); j=j+1) begin: hor_j_extra_2
+            assign hor_k[PHYSICAL_GRID_WIDTH_U-1].hor_i[i].hor_j[j].is_error_systolic_in = 0;
+        end
+    end
+
     for (k=0; k < PHYSICAL_GRID_WIDTH_U-1; k=k+1) begin: ud_k_extra
         for (i=0; i < GRID_WIDTH_X; i=i+1) begin: ud_i_extra
             for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: ud_j_extra
@@ -740,6 +731,18 @@ generate
             end
         end
     end
+
+    for (i=0; i < GRID_WIDTH_X; i=i+1) begin: ud_i_extra_2
+        for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: ud_j_extra_2
+            if(j == GRID_WIDTH_Z - 1 && (IS_LONG_ROW(i) == 1'b0) ) begin
+                //
+            end else begin
+                assign ud_k[PHYSICAL_GRID_WIDTH_U-1].ud_i[i].ud_j[j].is_error_systolic_in = 0;
+                assign ud_k[PHYSICAL_GRID_WIDTH_U].ud_i[i].ud_j[j].is_error_systolic_in = 0;
+            end
+        end
+    end
+    
 
     for (i=1; i < (ACTUAL_D+1)*FULL_LOGICAL_QUBITS_PER_DIM; i=i+1) begin: hor_i_output
         for (j=0; j < ACTUAL_D*FULL_LOGICAL_QUBITS_PER_DIM; j=j+1) begin: hor_j_output

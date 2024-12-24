@@ -4,6 +4,7 @@ distance=5
 num_fpgas=4 #only the leaves
 measurement_fusion=0
 logical_quibits_per_dimension=4
+num_contexts=2
 
 configuration_file="../test_benches/test_data/configuration_${distance}_0.txt"
 
@@ -25,30 +26,7 @@ do
     output_file_unmodified="${output_file%.*}_unmodified.txt"
 
 
-    if [ $measurement_fusion -eq 1 ]; then
-
-        # Call the programs with these arguments
-        ./main $distance $p $test_runs $input_file_unmodified 1 $measurement_fusion
-        ./uf $distance $input_file_unmodified $output_file_unmodified 1 $measurement_fusion
-        sleep 1
-
-        # # Unmodified file paths as variables
-        # input_file_unmodified="${input_file%.*}_unmodified.txt"
-        # output_file_unmodified="${output_file%.*}_unmodified.txt"
-
-        # # Copy files to new '_unmodified' paths
-        # cp "$input_file" "$input_file_unmodified"
-        # cp "$output_file" "$output_file_unmodified"
-        num_contexts=$num_contexts+1
-        
-        sleep 1
-        ./cf $distance $num_contexts $input_file_unmodified $input_file $output_file_unmodified $output_file
-        sleep 1
-    fi
-
-    if [ $measurement_fusion -eq 0 ]; then
-        ./uf $distance $input_file $output_file $num_fpgas $measurement_fusion $logical_quibits_per_dimension $fpga_id $configuration_file
-        sleep 1
-    fi
+    ./uf $distance $input_file $output_file $num_fpgas $measurement_fusion $logical_quibits_per_dimension $fpga_id $configuration_file $num_contexts
+    sleep 1
 
 done

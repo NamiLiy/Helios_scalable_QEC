@@ -1,11 +1,12 @@
 module Helios_single_FPGA #(
-    parameter FULL_LOGICAL_QUBITS_PER_DIM = 1,
+    parameter FULL_LOGICAL_QUBITS_PER_DIM = 5,
     parameter MAX_WEIGHT = 2,
     parameter NUM_CONTEXTS = 2,
     parameter NUM_FPGAS = 5,
     parameter FPGA_ID = 1,
     parameter ROUTER_DELAY_COUNTER = 18,
-    parameter ACTUAL_D = 13
+    parameter ACTUAL_D = 5,
+    parameter MEASUREMENT_FUSION_ENABLED = 1
 ) (
     clk,
     reset,
@@ -56,15 +57,19 @@ localparam GRID_X_NORMAL = FULL_LOGICAL_QUBITS_PER_DIM * (ACTUAL_D + 1);
 localparam GRID_Z_NORMAL = (FULL_LOGICAL_QUBITS_PER_DIM * (ACTUAL_D - 1) >> 1) + (FULL_LOGICAL_QUBITS_PER_DIM >> 1);
 localparam GRID_WIDTH_X = GRID_X_NORMAL + GRID_X_EXTRA;
 localparam GRID_WIDTH_Z = (GRID_Z_NORMAL + GRID_Z_EXTRA);
-localparam GRID_WIDTH_U = ACTUAL_D;
+localparam GRID_WIDTH_U = ACTUAL_D*(MEASUREMENT_FUSION_ENABLED + 1);
 
 localparam X_BIT_WIDTH = $clog2(GRID_WIDTH_X);
 localparam Z_BIT_WIDTH = $clog2(GRID_WIDTH_Z);
 localparam U_BIT_WIDTH = $clog2(GRID_WIDTH_U);
 localparam ADDRESS_WIDTH = X_BIT_WIDTH + Z_BIT_WIDTH + U_BIT_WIDTH;
 
+localparam PHYSICAL_GRID_WIDTH_U = (GRID_WIDTH_U % NUM_CONTEXTS == 0) ? 
+                                   (GRID_WIDTH_U / NUM_CONTEXTS) : 
+                                   (GRID_WIDTH_U / NUM_CONTEXTS + 1);
+
 localparam PU_COUNT_PER_ROUND = GRID_WIDTH_X * GRID_WIDTH_Z;
-localparam PU_COUNT = PU_COUNT_PER_ROUND * GRID_WIDTH_U;
+localparam PU_COUNT = PU_COUNT_PER_ROUND * PHYSICAL_GRID_WIDTH_U;
 
 localparam HOR_ERROR_COUNT = ACTUAL_D*ACTUAL_D*FULL_LOGICAL_QUBITS_PER_DIM*FULL_LOGICAL_QUBITS_PER_DIM;
 localparam UD_ERROR_COUNT_PER_ROUND = GRID_X_NORMAL*GRID_Z_NORMAL; // This has some extra PEs in short rows. That has to be discarded
@@ -153,14 +158,15 @@ wire [NS_BORDER_WIDTH-1:0] south_border;
 
 wire continutation_from_top;
 wire update_artifical_border;
-input [CONTEXT_COUNTER_WIDTH-1:0] current_context;
+wire [CONTEXT_COUNTER_WIDTH-1:0] current_context;
 
 single_FPGA_decoding_graph_dynamic_rsc #( 
     .FULL_LOGICAL_QUBITS_PER_DIM(FULL_LOGICAL_QUBITS_PER_DIM),
     .MAX_WEIGHT(MAX_WEIGHT),
     .NUM_CONTEXTS(NUM_CONTEXTS),
     .ACTUAL_D(ACTUAL_D),
-    .FPGA_ID(FPGA_ID)
+    .FPGA_ID(FPGA_ID),
+    .MEASUREMENT_FUSION_ENABLED(MEASUREMENT_FUSION_ENABLED)
 ) decoding_graph_rsc (
     .clk(clk),
     .reset(reset),
@@ -194,7 +200,8 @@ unified_controller #(
     .NUM_FPGAS(NUM_FPGAS),
     .ROUTER_DELAY_COUNTER(ROUTER_DELAY_COUNTER),
     .ACTUAL_D(ACTUAL_D),
-    .FPGA_ID(FPGA_ID)
+    .FPGA_ID(FPGA_ID),
+    .MEASUREMENT_FUSION_ENABLED(MEASUREMENT_FUSION_ENABLED)
 ) controller (
     .clk(clk),
     .reset(reset),
@@ -228,7 +235,7 @@ unified_controller #(
 
     .update_artifical_border(update_artifical_border),
     .continutation_from_top(continutation_from_top),
-    .current_context(current_context)
+    .current_context(current_context),
 
     .grid_1_in_data(grid_1_in_data),
     .grid_1_in_valid(grid_1_in_valid),

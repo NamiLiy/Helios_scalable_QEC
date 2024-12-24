@@ -18,8 +18,8 @@ struct FPGA_ranges {
 double normal_random(double mean, double std_dev);
 
 int main(int argc, char *argv[]) {
-    if (argc != 8) {
-        fprintf(stderr, "Usage: %s <distance> <p> <test_runs> <syndrome_file_prefix> <m_fusion> <qubits_per_dim> <num_leaves>\n", argv[0]);
+    if (argc != 9) {
+        fprintf(stderr, "Usage: %s <distance> <p> <test_runs> <syndrome_file_prefix> <m_fusion> <qubits_per_dim> <num_leaves> <num_contexts>\n", argv[0]);
         return 1;
     }
 
@@ -32,6 +32,7 @@ int main(int argc, char *argv[]) {
     int m_fusion = atoi(argv[5]); //0 no fusion, 1 fusion
     int qubits_per_dim = atoi(argv[6]);
     int num_leaves = atoi(argv[7]);
+    int num_contexts = atoi(argv[8]);
 
     int distance_i = (distance+1)*qubits_per_dim; //This is ancillas in i direction
     int distance_j = ((distance-1)/2)*qubits_per_dim + qubits_per_dim/2; //This is ancillas in j direction
@@ -40,7 +41,7 @@ int main(int argc, char *argv[]) {
     
     int data_qubits_i = distance_i - 1;//This is data qubits in i direction + fake edge for merging qubits
     int data_qubits_j = distance*qubits_per_dim;//This is data qubits in j direction
-    int meas_rounds = distance*(m_fusion + 1);
+    int meas_rounds = distance;
     int horizontal_borders[qubits_per_dim][qubits_per_dim-1]; // ||
     int vertical_borders[qubits_per_dim-1][qubits_per_dim]; // --
 
@@ -417,32 +418,61 @@ int main(int argc, char *argv[]) {
         }
 
         
-
-        for (int k = 0; k < meas_rounds; k++) {
-            for (int i = 0; i < distance_i; i++) {
-                for (int j = 0; j < distance_j; j++) {
-                    //fprintf(out_fp, "%08X\n", syndrome[k][i][j]);
-                    if(syndrome[k][i][j] == 1) {
-                        for(int f=0; f <num_leaves; f++){
-                            if(i >= fpga_ranges[f].i_min && i <= fpga_ranges[f].i_max && j >= fpga_ranges[f].j_min && j <= fpga_ranges[f].j_max){
-                                int new_i = i - fpga_ranges[f].i_min;
-                                int new_j = j - fpga_ranges[f].j_min;
-                                int new_distance_i = fpga_ranges[f].i_max - fpga_ranges[f].i_min + 1;
-                                int new_distance_j = fpga_ranges[f].j_max - fpga_ranges[f].j_min + 1;
-                                unsigned int defect_address = new_j + (new_i<<((int)(ceil(log2(new_distance_j))))) + (k<<((int)(ceil(log2(new_distance_j)))+(int)(ceil(log2(new_distance_i)))));
-                                fprintf(out_fp[f], "%08X\n", defect_address);
-                                // fprintf(dump_fp[f], "%d %d %d\n", k, i, j); // This is global
-                                fprintf(dump_fp[f], "%d %d %d\n", k, new_i, new_j); // This is local
+        if(num_contexts > 2 || t%2 == 0){ 
+            for (int k = 0; k < meas_rounds; k++) {
+                for (int i = 0; i < distance_i; i++) {
+                    for (int j = 0; j < distance_j; j++) {
+                        //fprintf(out_fp, "%08X\n", syndrome[k][i][j]);
+                        if(syndrome[k][i][j] == 1) {
+                            for(int f=0; f <num_leaves; f++){
+                                if(i >= fpga_ranges[f].i_min && i <= fpga_ranges[f].i_max && j >= fpga_ranges[f].j_min && j <= fpga_ranges[f].j_max){
+                                    int new_i = i - fpga_ranges[f].i_min;
+                                    int new_j = j - fpga_ranges[f].j_min;
+                                    int new_distance_i = fpga_ranges[f].i_max - fpga_ranges[f].i_min + 1;
+                                    int new_distance_j = fpga_ranges[f].j_max - fpga_ranges[f].j_min + 1;
+                                    unsigned int defect_address = new_j + (new_i<<((int)(ceil(log2(new_distance_j))))) + (k<<((int)(ceil(log2(new_distance_j)))+(int)(ceil(log2(new_distance_i)))));
+                                    fprintf(out_fp[f], "%08X\n", defect_address);
+                                    // fprintf(dump_fp[f], "%d %d %d\n", k, i, j); // This is global
+                                    fprintf(dump_fp[f], "%d %d %d\n", k, new_i, new_j); // This is local
+                                }
+                                // unsigned int defect_address = j + (i<<((int)(ceil(log2(distance_j))))) + (k<<((int)(ceil(log2(distance_j)))+(int)(ceil(log2(distance_i))));
+                                
                             }
-                            // unsigned int defect_address = j + (i<<((int)(ceil(log2(distance_j))))) + (k<<((int)(ceil(log2(distance_j)))+(int)(ceil(log2(distance_i))));
-                            
                         }
                     }
+                    // printf("\n");
                 }
                 // printf("\n");
             }
-            // printf("\n");
-        }
+        } else {
+            for (int k = meas_rounds -1; k >= 0; k--) {
+                int new_k = meas_rounds - 1 - k;
+                for (int i = 0; i < distance_i; i++) {
+                    for (int j = 0; j < distance_j; j++) {
+                        //fprintf(out_fp, "%08X\n", syndrome[k][i][j]);
+                        if(syndrome[k][i][j] == 1) {
+                            for(int f=0; f <num_leaves; f++){
+                                if(i >= fpga_ranges[f].i_min && i <= fpga_ranges[f].i_max && j >= fpga_ranges[f].j_min && j <= fpga_ranges[f].j_max){
+                                    int new_i = i - fpga_ranges[f].i_min;
+                                    int new_j = j - fpga_ranges[f].j_min;
+                                    int new_distance_i = fpga_ranges[f].i_max - fpga_ranges[f].i_min + 1;
+                                    int new_distance_j = fpga_ranges[f].j_max - fpga_ranges[f].j_min + 1;
+                                    unsigned int defect_address = new_j + (new_i<<((int)(ceil(log2(new_distance_j))))) + (new_k<<((int)(ceil(log2(new_distance_j)))+(int)(ceil(log2(new_distance_i)))));
+                                    fprintf(out_fp[f], "%08X\n", defect_address);
+                                    // fprintf(dump_fp[f], "%d %d %d\n", k, i, j); // This is global
+                                    fprintf(dump_fp[f], "%d %d %d\n", k, new_i, new_j); // This is local
+                                }
+                                // unsigned int defect_address = j + (i<<((int)(ceil(log2(distance_j))))) + (k<<((int)(ceil(log2(distance_j)))+(int)(ceil(log2(distance_i))));
+                                
+                            }
+                        }
+                    }
+                    // printf("\n");
+                }
+                // printf("\n");
+            }
+        } 
+
         for(int f=0; f <num_leaves; f++){
             fprintf(out_fp[f], "FFFFFFFF\n");
         }

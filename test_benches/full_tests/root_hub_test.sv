@@ -90,7 +90,7 @@ always @(negedge clk) begin
             test_case_count = test_case_count - 1; //Remove the initialization message
             $fclose(input_file);
             input_closed = 1;
-            $display("%t\t Root status message : Test case  %d loaded", $time, test_case_count);
+            $display("%t\t Root status message : Test case  %d loaded", $time, test_case_count/5);
         end
     end
 end

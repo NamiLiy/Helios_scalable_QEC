@@ -125,6 +125,8 @@ localparam CORRECTION_COUNT_PER_ROUND_PADDED_BYTES = CORRECTION_COUNT_PER_ROUND_
 localparam EW_BORDER_WIDTH = (GRID_WIDTH_X + 1) / 2;
 localparam NS_BORDER_WIDTH = GRID_WIDTH_Z;
 
+localparam HALF_CONTEXT = (NUM_CONTEXTS >> 1);
+
 input clk;
 input reset;
 output reg [STAGE_WIDTH-1:0] global_stage;
@@ -156,7 +158,7 @@ input router_busy;
 output reg [1:0] border_continous;
 output reg artificial_boundary;
 output reg [total_borders - 1 : 0] fusion_boundary;
-output reg reset_all_edges;
+output reset_all_edges;
  
 
 // These ports are to the decoding graph
@@ -395,7 +397,8 @@ always @(posedge clk) begin
                         delay_counter <= 0;
                         result_valid <= 0;
                         current_context <= 0;
-                        fusion_boundary_reg[total_borders_padded-1 : 0] <= {total_borders_padded{1'b0}}; 
+                        fusion_boundary_reg_1[total_borders_padded-1 : 0] <= {total_borders_padded{1'b0}};
+                        fusion_boundary_reg_2[total_borders_padded-1 : 0] <= {total_borders_padded{1'b0}}; 
                         // if(input_ctrl_rx_data[0] == 1'b1) begin
                         //     if(FPGA_ID != 1) begin
                         //         border_continous[0] <= 1'b1;
@@ -654,7 +657,7 @@ always @(posedge clk) begin
                         end else begin
                             global_stage <= STAGE_LOAD_ARTIFICAL_DEFECTS;
                         end
-                        current_measurement_round <= 0
+                        current_measurement_round <= 0;
                         current_context <= starting_context;
                     end else if(global_stage_saved == STAGE_LOAD_ARTIFICAL_DEFECTS) begin
                         global_stage <= STAGE_GROW;
@@ -759,9 +762,9 @@ always @(posedge clk) begin
                 //     end
                 // end
             end
-            STAGE_TEMPORARY: begin
-                global_stage <=STAGE_GROW;
-            end
+            // STAGE_TEMPORARY: begin
+            //     global_stage <=STAGE_GROW;
+            // end
             
             default: begin
                 global_stage <= STAGE_IDLE;
@@ -774,17 +777,19 @@ always@(posedge clk) begin
     measurements <= measurement_internal;
 end
 
-always@(*) begin
-    if(global_stage == STAGE_MEASUREMENT_LOADING) begin
-        if(measurement_fusion_on && measurement_fusion_stage != 2'b0) begin
-            reset_all_edges = 0;
-        end else begin
-            reset_all_edges = 1;
-        end
-    end else begin
-        reset_all_edges = 0;
-    end
-end
+// always@(*) begin
+//     if(global_stage == STAGE_MEASUREMENT_LOADING) begin
+//         if(measurement_fusion_on && measurement_fusion_stage != 2'b0) begin
+//             reset_all_edges = 0;
+//         end else begin
+//             reset_all_edges = 1;
+//         end
+//     end else begin
+//         reset_all_edges = 0;
+//     end
+// end
+
+assign reset_all_edges = 0;
 
 always@(*) begin
     if (reset) begin
@@ -810,7 +815,7 @@ always@(*) begin
         input_ctrl_rx_ready = 0;
     end else begin 
         if(global_stage == STAGE_IDLE) begin
-            input_ctrl_rx_ready = 1;`
+            input_ctrl_rx_ready = 1;
         end else begin
             input_ctrl_rx_ready = 0;
         end
@@ -849,11 +854,12 @@ always@(*) begin
             output_ctrl_tx_data [MSG_DEST_MSB : MSG_DEST_LSB] = 8'h0;
             output_ctrl_tx_data [MSG_HEADER_MSB : MSG_HEADER_LSB] = HEADER_RESULT;
             output_ctrl_tx_data [15:0] = cycle_counter;
-            if(FPGA_ID == 1) begin
-                output_ctrl_tx_data [31:16] = start_time[15:0];
-            end else if(FPGA_ID == 4) begin
-                output_ctrl_tx_data [31:16] = clock[15:0];
-            end
+            // if(FPGA_ID == 1) begin
+            //     output_ctrl_tx_data [31:16] = start_time[15:0];
+            // end else if(FPGA_ID == 4) begin
+            //     output_ctrl_tx_data [31:16] = clock[15:0];
+            // end
+            output_ctrl_tx_data [31:16] = 16'b0;
         end
     end
 end

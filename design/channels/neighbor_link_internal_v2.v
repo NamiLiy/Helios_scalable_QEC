@@ -73,6 +73,7 @@ input do_not_store;
 
 input reset_edge;
 input [2:0] context_input;
+output [2:0] context_output;
 
 output reg [LINK_BIT_WIDTH-1:0] weight_out;
 output reg [1:0] boundary_condition_out;
@@ -121,8 +122,8 @@ always@(posedge clk) begin
     if(reset) begin
         growth <= 0;
     end else begin
-        if(reset_edge) begin
-                growth <= 0;
+        if(stage == STAGE_RESULT_VALID) begin
+            growth <= 0;
         end else if(stage == STAGE_WRITE_TO_MEM) begin
             growth <= growth_mem;
         end else begin
@@ -138,17 +139,13 @@ always@(posedge clk) begin
         is_error <= is_error_mem;
     end else begin
         if (boundary_condition_out == 0 || boundary_condition_out == 2'b11)  begin // No boundary default case 
-            if(reset_edge) begin
-                is_error <= 0;
-            end else if(stage == STAGE_RESULT_VALID) begin
+            if(stage == STAGE_RESULT_VALID) begin
                 is_error <= is_error_systolic_in;
             end else begin
                 is_error <= a_is_error_in | b_is_error_in;
             end
         end else if (boundary_condition_out == 1) begin // edge touching a boundary
-            if(reset_edge) begin
-                is_error <= 0;
-            end else if(stage == STAGE_RESULT_VALID) begin
+            if(stage == STAGE_RESULT_VALID) begin
                 is_error <= is_error_systolic_in;
             end else begin
                 is_error <= a_is_error_in;
@@ -195,8 +192,6 @@ wire [RAM_LOG_DEPTH-1:0] mem_rw_address;
 localparam RAM_WIDTH = 3;
 wire [RAM_WIDTH - 1 :0] data_from_memory;
 wire [RAM_WIDTH - 1:0] data_to_memory;
-
-assign data_to_memory = {growth,is_error};
 
 reg [RAM_LOG_DEPTH-1:0] context_min;
 reg [RAM_LOG_DEPTH-1:0] context_max;

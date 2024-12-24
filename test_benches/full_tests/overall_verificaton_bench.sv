@@ -22,6 +22,7 @@ localparam NUM_LEAVES_PER_DIM = 2;
 localparam ROUTER_DELAY = 2;
 localparam MAX_COUNT = 10;
 localparam MEASUREMENT_FUSION=1;
+localparam NUM_CONTEXTS=2;
 
 // `define SLICE_VEC(vec, idx, width) (vec[(idx+1)*width -1 : idx*width])
 
@@ -100,8 +101,9 @@ generate
             .NUM_FPGAS(NUM_LEAVES + 1),
             .ROUTER_DELAY(ROUTER_DELAY),
             .FPGA_ID(i + 1),
-            .NUM_CONTEXTS(MEASUREMENT_FUSION + 1),
-            .LOGICAL_QUBITS_PER_DIM(LOGICAL_QUBITS_PER_DIM_PER_FPGA)
+            .NUM_CONTEXTS(NUM_CONTEXTS),
+            .LOGICAL_QUBITS_PER_DIM(LOGICAL_QUBITS_PER_DIM_PER_FPGA),
+            .MEASUREMENT_FUSION_ENABLED(MEASUREMENT_FUSION)
         ) decoder_tb(
             .clk(clk),
             .reset(reset),
