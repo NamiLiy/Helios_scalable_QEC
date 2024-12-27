@@ -109,7 +109,7 @@ end
 always@(negedge clk) begin
     if((!reset) && local_rx_valid_d) begin
         if(local_rx_data_d[MSG_HEADER_MSB:MSG_HEADER_LSB] == HEADER_RESULT && local_rx_data_d[MSG_HEADER_LSB -1] == 0) begin
-            $display("%t\t Root status message : Latency received  %d", $time, local_rx_data_d[15:0]);
+            $display("%t\t Root status message : Latency received  from %d : %d", $time, local_rx_data_d[18:16], local_rx_data_d[15:0]);
         end else if (local_rx_data_d[MSG_HEADER_MSB:MSG_HEADER_LSB] == HEADER_RESULT && local_rx_data_d[MSG_HEADER_LSB -1] == 1) begin
             $display("%t\t Root status message : Overall latency  %d", $time, local_rx_data_d[15:0]);
         end

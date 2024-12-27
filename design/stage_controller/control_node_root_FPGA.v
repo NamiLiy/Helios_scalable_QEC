@@ -63,8 +63,6 @@ reg odd_clusters;
 
 reg measurement_fusion_on;
 
-reg cycle_counter_on;
-reg cycle_counter_reset;
 reg [$clog2(NUM_CHILDREN + 1)-1:0] return_msg_count;
 
 wire [7:0] message_header;
@@ -74,17 +72,17 @@ wire [7:0] message_dest;
 assign message_dest = data_from_cpu [MSG_DEST_MSB : MSG_DEST_LSB]; 
 
 
-// always @(posedge clk) begin
-//     if (reset) begin
-//         cycle_counter <= 0;
-//     end else begin
-//         if(cycle_counter_reset) begin
-//             cycle_counter <= 2; // to account for propagation time from controller to PEs 
-//         end else if(cycle_counter_on) begin
-//             cycle_counter <= cycle_counter + 1;
-//         end
-//     end
-// end
+always @(posedge clk) begin
+    if (reset) begin
+        cycle_counter <= 0;
+    end else begin
+        if(block_id > 2 && return_msg_count ==0 &&valid_from_fpgas && ready_from_fpgas && data_from_fpgas [MSG_HEADER_MSB : MSG_HEADER_LSB] == HEADER_RESULT) begin
+            cycle_counter <= data_from_fpgas[15:0];
+        end else begin
+            cycle_counter <= cycle_counter + 1;
+        end
+    end
+end
 
 localparam DELAY_COUNTER_WIDTH = 8;
 reg [DELAY_COUNTER_WIDTH-1:0] delay_counter;
@@ -107,8 +105,6 @@ always @(posedge clk) begin
     if (reset) begin
         global_stage <= STAGE_IDLE;
         delay_counter <= 0;
-        cycle_counter_on <= 0;
-        cycle_counter_reset <= 0;
         measurement_fusion_on <= 0;
         block_id <= 0;
     end else begin
@@ -135,8 +131,6 @@ always @(posedge clk) begin
                     end
                 end
                 iteration_counter <= 0;
-                cycle_counter_on <= 0;
-                cycle_counter_reset <= 1;
                 delay_counter <= 0;
                 return_msg_count <= 0;
             end
@@ -166,15 +160,6 @@ always @(posedge clk) begin
                                 end
                             end else begin
                                 return_msg_count <= return_msg_count + 1;
-                                if(return_msg_count == 0) begin
-                                    cycle_counter <= data_from_fpgas [31 : 16];
-                                end else if(return_msg_count == 3) begin
-                                    if(data_from_fpgas [31 : 16] > cycle_counter) begin
-                                        cycle_counter <= data_from_fpgas [31 : 16] - cycle_counter;
-                                    end else begin
-                                        cycle_counter <= 16'hffff - cycle_counter + data_from_fpgas [31 : 16];
-                                    end
-                                end
                             end
                         end
                     end

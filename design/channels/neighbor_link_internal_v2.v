@@ -324,7 +324,7 @@ if(STORE_EXTERNAL == 0) begin
 
     //logic to data write to memory
     assign data_to_memory = {growth,is_error};
-    assign {growth_mem,is_error_mem} = (do_not_store) ? {growth, 0} : data_from_memory;
+    assign {growth_mem,is_error_mem} = (do_not_store) ? {growth, 1'b0} : data_from_memory;
 
 end else if(STORE_EXTERNAL == 1) begin
 
@@ -468,7 +468,7 @@ end else if(STORE_EXTERNAL == 2) begin
 
     assign data_to_memory = stored_context_valid ? stored_context : context_input;
     assign mem_rw_address = (stage == STAGE_WRITE_TO_MEM) ? mem_write_address : mem_read_address;
-    assign {growth_mem,is_error_mem} = (do_not_store) ? {growth, 0} : data_from_memory;
+    assign {growth_mem,is_error_mem} = (do_not_store) ? {growth, 1'b0} : data_from_memory;
 end
 
 

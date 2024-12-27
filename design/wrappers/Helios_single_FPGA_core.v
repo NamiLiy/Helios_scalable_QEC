@@ -80,7 +80,7 @@ localparam logical_qubits_in_i_dim = (FPGA_ID < 3) ? (FULL_LOGICAL_QUBITS_PER_DI
 localparam borders_in_j_dim = (logical_qubits_in_j_dim + 1)*logical_qubits_in_i_dim; // number of || border
 localparam borders_in_i_dim = (logical_qubits_in_i_dim + 1)*logical_qubits_in_j_dim; // number of -- borders
 
-localparam CONTEXT_COUNTER_WIDTH = $clog2(NUM_CONTEXTS + 1);
+localparam CONTEXT_COUNTER_WIDTH = $clog2(NUM_CONTEXTS);
 
 input clk;
 input reset;

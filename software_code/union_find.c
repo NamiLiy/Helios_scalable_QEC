@@ -6,7 +6,7 @@
 #define D 20
 #define TOTAL_MEASUREMENTS D
 
-int debug = 0;
+int debug = 2;
 
 struct Distance {
     int k;
@@ -796,8 +796,8 @@ int loadFileData(FILE* file, int (*array)[D][D+1][(D-1)/2], struct Distance dist
 }
 
 int compare_output(FILE* file, int test, struct Distance distance, int test_id) {
-    int test_id;
-    if (fscanf(file, "%x", &test_id) != 1) {
+    int t;
+    if (fscanf(file, "%x", &t) != 1) {
         //if (debug==1)  printf("Error reading file. No more test cases.\n");
         fclose(file);
         return -1;
@@ -853,12 +853,12 @@ int compare_output(FILE* file, int test, struct Distance distance, int test_id) 
         }
     }
     int return_val = 0;
-    for(int k=0;k<distance.k;k++){
+    for(int k=k_start;k<k_end;k++){
         for(int i=0; i< distance.i; i++){
             for(int j=0; j< distance.j; j++){
                 struct Address root = get_root(node_array[k][i][j].root);
                 if((fpga_roots[k][i][j].k != root.k) || (fpga_roots[k][i][j].j != root.j) || (fpga_roots[k][i][j].i != root.i)){
-                    if (debug==1)  printf("Test %d : At %d %d %d :  C %d %d %d : FPGA %d %d %d\n",test_id,k,i,j,root.k,root.i,root.j,fpga_roots[k][i][j].k,fpga_roots[k][i][j].i,fpga_roots[k][i][j].j);
+                    if (debug==1)  printf("Test %d : At %d %d %d :  C %d %d %d : FPGA %d %d %d\n",t,k,i,j,root.k,root.i,root.j,fpga_roots[k][i][j].k,fpga_roots[k][i][j].i,fpga_roots[k][i][j].j);
                     return_val = -1;
                     return -1;
                 } 
@@ -987,7 +987,9 @@ int main(int argc, char *argv[]) {
         // if(ret_val ==14) {
             union_find(syndrome, distance, num_fpgas, m_fusion, d, leaf_id, fpga_borders_0, fpga_borders_1, qubits_per_dim/2, test_id);
         // }
+        // if(debug == 2) printf("Test id %d done\n", test_id);
         if(test_id==0){
+            test_id++;
             continue;
         }
         ret_val = compare_output(file_op, ret_val, distance, test_id);
@@ -1003,8 +1005,8 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if (fail_count==0) ("Verification Completed\n");
-    if (fail_count>0) ("Verification Failed\n");
+    if (fail_count==0) printf("Verification Completed\n");
+    if (fail_count>0) printf("Verification Failed\n");
     printf("Passed %d\n",pass_count);
     printf("Failed %d\n", fail_count);
 

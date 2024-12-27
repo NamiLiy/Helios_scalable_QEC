@@ -71,7 +71,7 @@ localparam EXPOSED_DATA_SIZE = ADDRESS_WIDTH_WITH_B + 1 + 1 + 1;
 
 localparam LINK_BIT_WIDTH = $clog2(MAX_WEIGHT + 1);
 localparam HALF_CONTEXT = (NUM_CONTEXTS >> 1);
-localparam CONTEXT_COUNTER_WIDTH = $clog2(NUM_CONTEXTS + 1);
+localparam CONTEXT_COUNTER_WIDTH = $clog2(NUM_CONTEXTS);
 
 input clk;
 input reset;
@@ -623,9 +623,9 @@ generate
                     
                     if(NUM_CONTEXTS <=2) begin
                         if(k==0) begin
-                            assign local_context_switch = continutation_from_top;
-                        end else begin
-                            assign local_context_switch = ~continutation_from_top;
+                            assign local_context_switch = ~continutation_from_top; 
+                        end else begin //k==PHYSICAL_GRID_WIDTH_U
+                            assign local_context_switch = continutation_from_top; // 0 1 2 3 4 5
                         end
 
                         always@(*) begin 

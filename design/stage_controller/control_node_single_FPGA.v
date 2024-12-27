@@ -103,7 +103,7 @@ localparam BORDER_BOT_LSB = 0;
 
 //localparam CTRL_MSG_MSB = 47;
 
-localparam CONTEXT_COUNTER_WIDTH = $clog2(NUM_CONTEXTS + 1);
+localparam CONTEXT_COUNTER_WIDTH = $clog2(NUM_CONTEXTS);
 
 localparam logical_qubits_in_j_dim = (FPGA_ID % 2 == 1) ? (FULL_LOGICAL_QUBITS_PER_DIM + 1) : FULL_LOGICAL_QUBITS_PER_DIM;
 localparam logical_qubits_in_i_dim = (FPGA_ID < 3) ? (FULL_LOGICAL_QUBITS_PER_DIM + 1) : FULL_LOGICAL_QUBITS_PER_DIM;
@@ -284,7 +284,7 @@ end
 
 always@(*) begin
     // Laksheen
-    if(global_stage == STAGE_IDLE && input_ctrl_rx_valid && input_ctrl_rx_ready && input_ctrl_rx_data [MSG_HEADER_MSB : MSG_HEADER_LSB] == HEADER_DECODE_BLOCK && input_ctrl_rx_data [0] == 1'b1) begin // The last 0 is to ensure only to set it in the first stage
+    if(global_stage == STAGE_IDLE && input_ctrl_rx_valid && input_ctrl_rx_ready && input_ctrl_rx_data [MSG_HEADER_MSB : MSG_HEADER_LSB] == HEADER_DECODE_BLOCK) begin // The last 0 is to ensure only to set it in the first stage
         cycle_counter_reset = 1;
     end else begin
         cycle_counter_reset = 0;
@@ -345,7 +345,7 @@ always@(*) begin
                 input_ready = 1;
             end
         end else if(global_stage == STAGE_MEASUREMENT_LOADING) begin
-            if(current_measurement_round == GRID_WIDTH_U-1) begin //Pull the 32FFs from the external buffer
+            if(current_measurement_round == ACTUAL_D-1) begin //Pull the 32FFs from the external buffer
                 input_ready = 1;
             end
         end
@@ -387,7 +387,7 @@ always @(posedge clk) begin
         current_context <= 0;
         starting_context <= 0;
         finishing_context <= 0;
-        continutation_from_top <= 0;
+        continutation_from_top <= 1; // 0 1 2 3 4 5
     end else begin
         case (global_stage)
             STAGE_IDLE: begin // 0
@@ -686,6 +686,7 @@ always @(posedge clk) begin
                         end
                     end else if(global_stage_saved == STAGE_GROW) begin
                         global_stage <= STAGE_MERGE;
+                        current_context <= starting_context;
                     end else if(global_stage_saved == STAGE_RESET_ROOTS) begin
                         if(!not_first_block) begin
                             not_first_block <= 1;
@@ -828,7 +829,7 @@ always@(posedge clk) begin
     if (reset) begin
         result_is_send <= 0;
     end else begin
-        if(global_stage == STAGE_RESULT_VALID && current_context == 0) begin
+        if(global_stage == STAGE_RESULT_VALID) begin
             result_is_send <= 1;
         end else if(global_stage == STAGE_IDLE) begin
             result_is_send <= 0;
@@ -859,7 +860,7 @@ always@(*) begin
             // end else if(FPGA_ID == 4) begin
             //     output_ctrl_tx_data [31:16] = clock[15:0];
             // end
-            output_ctrl_tx_data [31:16] = 16'b0;
+            output_ctrl_tx_data [18:16] = FPGA_ID;
         end
     end
 end
@@ -901,7 +902,7 @@ always@(posedge clk) begin
                     output_u <= output_u + 1;
                 end
                 intermediate_out_valid_reg <= 0;
-            end else if(output_u == GRID_WIDTH_U + 1) begin
+            end else if(output_u == ACTUAL_D + 1) begin
                 output_u <= 0;
             end else if(output_fifo_valid_d && |output_fifo_data_d == 1'b0) begin
                 output_u <= output_u + 1;
@@ -955,7 +956,7 @@ always@(*) begin
             output_valid = output_fifo_valid_d;
             output_fifo_ready_d = output_ready;
         end
-        GRID_WIDTH_U + 1 : begin
+        ACTUAL_D + 1 : begin
             output_data = 32'hffffffff;
             output_valid = 1'b1;
             output_fifo_ready_d = 1'b0;
