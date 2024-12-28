@@ -332,8 +332,8 @@ reg [U_BIT_WIDTH:0] message_measurement_round; // we have extra bit since wee ne
 reg [U_BIT_WIDTH:0] current_measurement_round; // Laksheen : maybe we need to divide this in half when loading with fusion
 reg [PU_COUNT_PER_ROUND-1 :0] defect_pu_address;
 reg not_first_block; //When true this indicates the very first block. We don't merge this with previous block, We fuse it together and move on
-reg starting_context;
-reg finishing_context;
+reg [CONTEXT_COUNTER_WIDTH-1:0] starting_context;
+reg [CONTEXT_COUNTER_WIDTH-1:0] finishing_context;
 
 always@(*) begin
     input_ready = 0;
@@ -717,7 +717,11 @@ always @(posedge clk) begin
                 end else begin
                     if(global_stage_saved == STAGE_MERGE) begin
                         global_stage <= STAGE_MERGE;
-                        current_context <= (current_context == (ACTUAL_D -1))? 0 : (current_context + 1);
+                        if(NUM_CONTEXTS > 2) begin
+                            current_context <= (current_context == (2*ACTUAL_D -1))? 0 : (current_context + 1);
+                        end else begin
+                            current_context <= current_context + 1;
+                        end
                     end else if(global_stage_saved == STAGE_MEASUREMENT_LOADING) begin
                         current_measurement_round <= current_measurement_round + 1;
                         if(current_measurement_round ==  message_measurement_round-1) begin //So this means that the next round has some errors we need to load
@@ -739,7 +743,11 @@ always @(posedge clk) begin
                         current_context <= current_context + 1;
                     end else if(global_stage_saved == STAGE_GROW) begin
                         global_stage <= STAGE_GROW;
-                        current_context <= (current_context == (ACTUAL_D -1))? 0 : (current_context + 1);
+                        if(NUM_CONTEXTS > 2) begin
+                            current_context <= (current_context == (2*ACTUAL_D -1))? 0 : (current_context + 1);
+                        end else begin
+                            current_context <= current_context + 1;
+                        end
                     end else if(global_stage_saved == STAGE_RESET_ROOTS) begin
                         global_stage <= STAGE_RESET_ROOTS;
                         current_context <= current_context + 1;
