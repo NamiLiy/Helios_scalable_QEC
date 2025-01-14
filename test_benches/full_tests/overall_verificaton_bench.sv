@@ -22,7 +22,7 @@ localparam NUM_LEAVES_PER_DIM = 2;
 localparam ROUTER_DELAY = 2;
 localparam MAX_COUNT = 10;
 localparam MEASUREMENT_FUSION=1;
-localparam NUM_CONTEXTS=2*CODE_DISTANCE;
+localparam NUM_CONTEXTS=2;
 
 // `define SLICE_VEC(vec, idx, width) (vec[(idx+1)*width -1 : idx*width])
 

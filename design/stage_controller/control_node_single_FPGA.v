@@ -600,7 +600,6 @@ always @(posedge clk) begin
                 global_stage <= (NUM_CONTEXTS <= 2 ? STAGE_RESULT_VALID : STAGE_WRITE_TO_MEM); //Laksheen
                 global_stage_saved <= STAGE_PEELING;
                 current_measurement_round <= 0;
-                continutation_from_top <= ~continutation_from_top; //check for d contexts
             end
 
             STAGE_RESULT_VALID: begin //5
@@ -617,6 +616,9 @@ always @(posedge clk) begin
             STAGE_RESET_ROOTS: begin //8
                 global_stage <= STAGE_WRITE_TO_MEM;
                 global_stage_saved <= STAGE_RESET_ROOTS;
+                if(measurement_fusion_stage == 1) begin
+                    continutation_from_top <= ~continutation_from_top; //check for d contexts
+                end
             end
 
             STAGE_WRITE_TO_MEM: begin //1

@@ -122,7 +122,7 @@ always@(posedge clk) begin
     if(reset) begin
         growth <= 0;
     end else begin
-        if(stage == STAGE_RESULT_VALID) begin
+        if(reset_edge == 1'b1) begin
             growth <= 0;
         end else if(stage == STAGE_WRITE_TO_MEM) begin
             growth <= growth_mem;

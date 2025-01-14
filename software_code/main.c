@@ -249,6 +249,18 @@ int main(int argc, char *argv[]) {
             fgets(line, 200, configuration_dump_read_fp);
         }
 
+        //Except for first round all other rounds will have the last m error of previous round as its first round
+        // Otherwise there would be defect measurements unmatchable
+        for (int i = 0; i < distance_i; i++) {
+            for (int j = 0; j < distance_j; j++) {
+                if(t==0){
+                    m_errors[0][i][j] = 0.0;
+                } else {
+                    m_errors[0][i][j] = m_errors[meas_rounds][i][j];
+                }
+            }
+        }
+
         for (int k = 0; k < meas_rounds; k++) {
             double* values = next_random_values(rs);
             int count = 0;
@@ -295,24 +307,18 @@ int main(int argc, char *argv[]) {
             }
             for (int i = 0; i < distance_i; i++) {
                 for (int j = 0; j < distance_j; j++) {
-                    if (values[count] < p) m_errors[k][i][j] = 1;
-                    else m_errors[k][i][j] = 0;
+                    if (values[count] < p) m_errors[k+1][i][j] = 1;
+                    else m_errors[k+1][i][j] = 0;
                     count++;
-                    if(m_errors[k][i][j] == 1) {
-                        printf("M Error at %d %d %d\n", k, i, j);
+                    if(m_errors[k+1][i][j] == 1) {
+                        printf("M Error at %d %d %d\n", k+1, i, j);
                         errors++;
                     }
                 }
             }
             free(values);
         }
-
-        // we have to remove a set of errors to prevent errors occuring in non-existant data qubits
-        for (int i = 0; i < distance_i; i++) {
-            for (int j = 0; j < distance_j; j++) {
-                m_errors[meas_rounds][i][j] = 0.0;
-            }
-        }
+        
 
         // for (int k = 0; k < distance; k++) {
         //     for (int i = 0; i < distance; i++) {

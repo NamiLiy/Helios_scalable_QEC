@@ -2,7 +2,7 @@
 
 distance=5
 num_fpgas=4 #only the leaves
-measurement_fusion=0
+measurement_fusion=1
 logical_quibits_per_dimension=4
 num_contexts=2
 

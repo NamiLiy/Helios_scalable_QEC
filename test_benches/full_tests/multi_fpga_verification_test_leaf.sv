@@ -338,8 +338,8 @@ always @(posedge clk) begin
             open = 0;
         end
         if(NUM_CONTEXTS == 2) begin
-            $fwrite (output_file_data, "%h\n", input_test_case);
-            $fwrite (output_file_results, "%h\n", input_test_case);
+            $fwrite (output_file_data, "%h\n", (input_test_case -1));
+            $fwrite (output_file_results, "%h\n", (input_test_case-1));
             //$display("%t\tTest case %d", $time, test_case);
         end
         if(NUM_CONTEXTS > 2) begin

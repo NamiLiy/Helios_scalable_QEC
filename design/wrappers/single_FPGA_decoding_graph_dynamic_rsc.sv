@@ -609,12 +609,23 @@ generate
                     reg [1:0] type_for_boundary_links;
 
                     
-
-                    always@(*) begin
-                        if(k==PHYSICAL_GRID_WIDTH_U) begin
-                            reset_edge_local = reset_all_edges;
-                        end else begin
-                            reset_edge_local = (reset_all_edges || global_stage == STAGE_MEASUREMENT_LOADING) ? 1'b1 : 1'b0;
+                    if(NUM_CONTEXTS <=2) begin
+                        always@(*) begin
+                            if(k==PHYSICAL_GRID_WIDTH_U) begin
+                                reset_edge_local = ((~continutation_from_top) && global_stage == STAGE_MEASUREMENT_LOADING) ? 1'b1 : 1'b0;
+                            end else if(k==0) begin
+                                reset_edge_local = (continutation_from_top && global_stage == STAGE_MEASUREMENT_LOADING) ? 1'b1 : 1'b0;
+                            end else begin
+                                reset_edge_local = (global_stage == STAGE_MEASUREMENT_LOADING) ? 1'b1 : 1'b0;
+                            end
+                        end
+                    end else begin //note : check this. reset edge local is zero
+                        always@(*) begin
+                            if(k==PHYSICAL_GRID_WIDTH_U) begin
+                                reset_edge_local = reset_all_edges;
+                            end else begin
+                                reset_edge_local = (reset_all_edges || global_stage == STAGE_MEASUREMENT_LOADING) ? 1'b1 : 1'b0;
+                            end
                         end
                     end
                     
@@ -624,8 +635,10 @@ generate
                     if(NUM_CONTEXTS <=2) begin
                         if(k==0) begin
                             assign local_context_switch = ~continutation_from_top; 
-                        end else begin //k==PHYSICAL_GRID_WIDTH_U
+                        end else if(k==PHYSICAL_GRID_WIDTH_U) begin //k==PHYSICAL_GRID_WIDTH_U
                             assign local_context_switch = continutation_from_top; // 0 1 2 3 4 5
+                        end else begin
+                            assign local_context_switch = 1'b0;
                         end
 
                         always@(*) begin 
