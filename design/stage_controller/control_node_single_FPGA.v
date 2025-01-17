@@ -283,7 +283,6 @@ always@(*) begin
 end
 
 always@(*) begin
-    // Laksheen
     if(global_stage == STAGE_IDLE && input_ctrl_rx_valid && input_ctrl_rx_ready && input_ctrl_rx_data [MSG_HEADER_MSB : MSG_HEADER_LSB] == HEADER_DECODE_BLOCK) begin // The last 0 is to ensure only to set it in the first stage
         cycle_counter_reset = 1;
     end else begin
@@ -1057,6 +1056,99 @@ always@(*) begin
                 grid_1_in_ready = 1;
                 grid_2_in_ready = 1;
             end
+        end
+    end
+end
+
+// Simulation only logic to check distribution. Remove for synthesis
+
+reg [31:0] first_round_decoding_time;
+reg [31:0] fusion_time;
+reg [31:0] data_loading_time;
+reg [31:0] inverse_throughput;
+
+always@(posedge clk) begin
+    if(reset) begin
+        first_round_decoding_time <= 0;
+    end else begin
+        if(measurement_fusion_stage == 0) begin
+            if(global_stage == STAGE_GROW || global_stage == STAGE_MERGE || global_stage == STAGE_RESET_ROOTS) begin
+                first_round_decoding_time <= first_round_decoding_time + 1;
+            end
+        end else begin
+            first_round_decoding_time <= 0;
+            if(first_round_decoding_time != 0) begin
+                //$display("First round decoding time: %d",first_round_decoding_time);
+                $display("Initial, %d",first_round_decoding_time);
+            end
+        end
+    end
+end
+
+always@(posedge clk) begin
+    if(reset) begin
+        fusion_time <= 0;
+    end else begin
+        if(measurement_fusion_stage == 1) begin
+            if(global_stage == STAGE_GROW || global_stage == STAGE_MERGE || global_stage == STAGE_PEELING || global_stage == STAGE_RESET_ROOTS) begin
+                fusion_time <= fusion_time + 1;
+            end else if(global_stage == STAGE_WRITE_TO_MEM) begin
+                if(global_stage_saved == STAGE_GROW || global_stage_saved == STAGE_MERGE || global_stage_saved == STAGE_PEELING || global_stage_saved == STAGE_RESET_ROOTS) begin
+                    fusion_time <= fusion_time + 1;
+                end
+            end
+        end else begin
+            fusion_time <= 0;
+            if(fusion_time != 0) begin
+                // $display("Fusion time: %d",fusion_time);
+                $display("Fusion, %d",fusion_time);
+            end
+        end
+    end
+end
+
+always@(posedge clk) begin
+    if(reset) begin
+        data_loading_time <= 0;
+    end else begin
+        if(global_stage == STAGE_MEASUREMENT_LOADING || global_stage == STAGE_MEASUREMENT_PREPARING) begin
+            data_loading_time <= data_loading_time + 1;
+        end else if(global_stage == STAGE_WRITE_TO_MEM) begin
+            if(global_stage_saved == STAGE_MEASUREMENT_LOADING) begin
+                data_loading_time <= data_loading_time + 1;
+            end
+        end else if (global_stage == STAGE_GROW) begin
+            data_loading_time <= 0;
+            if(data_loading_time != 0) begin
+                // $display("Data loading time: %d",data_loading_time);
+                $display("Loading%1d, %d",FPGA_ID, data_loading_time);
+            end
+        end
+    end
+end
+
+always@(posedge clk) begin
+    if(reset) begin
+        inverse_throughput <= 0;
+    end else begin
+        if(global_stage == STAGE_LOAD_ARTIFICAL_DEFECTS) begin
+            if(FPGA_ID < 4) begin
+                if(grid_1_in_valid || grid_2_in_valid) begin
+                    inverse_throughput <= inverse_throughput + 1;
+                end
+            end else begin
+                if(grid_1_in_valid && grid_2_in_valid) begin
+                    inverse_throughput <= inverse_throughput + 1;
+                end
+            end
+        end else if(global_stage != STAGE_IDLE) begin
+            inverse_throughput <= inverse_throughput + 1;
+        end else begin
+            if(inverse_throughput != 0) begin
+                // $display("Inverse throughput: %d",inverse_throughput);
+                $display("ITP%1d, %d",FPGA_ID,inverse_throughput);
+            end
+            inverse_throughput <= 0;
         end
     end
 end

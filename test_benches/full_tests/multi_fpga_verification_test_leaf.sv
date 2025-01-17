@@ -394,7 +394,7 @@ always @(posedge clk) begin
         end
     end
     if (message_counter == 1 && output_valid == 1 && full_test_completed == 0) begin // Cycle counter and iteration counter is recevied
-        $display("%t\tID  = %d Test case  = %d, %d cycles, %d syndromes\n", $time, FPGA_ID, input_test_case, cycle_counter, syndrome_count);
+        //$display("%t\tID  = %d Test case  = %d, %d cycles, %d syndromes\n", $time, FPGA_ID, input_test_case, cycle_counter, syndrome_count);
 //        if (!test_fail) begin
 //            $display("%t\tID  = %d Test case  = %d, %d pass %d cycles %d first round %d syndromes", $time, FPGA_ID, input_test_case, pass_count, cycle_counter, iteration_counter, syndrome_count);
 //            pass_count = pass_count + 1;

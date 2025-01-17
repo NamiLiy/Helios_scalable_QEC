@@ -90,7 +90,7 @@ always @(negedge clk) begin
             test_case_count = test_case_count - 1; //Remove the initialization message
             $fclose(input_file);
             input_closed = 1;
-            $display("%t\t Root status message : Test case  %d loaded", $time, test_case_count/5);
+            // $display("%t\t Root status message : Test case  %d loaded", $time, test_case_count/5);
         end
     end
 end
@@ -109,9 +109,10 @@ end
 always@(negedge clk) begin
     if((!reset) && local_rx_valid_d) begin
         if(local_rx_data_d[MSG_HEADER_MSB:MSG_HEADER_LSB] == HEADER_RESULT && local_rx_data_d[MSG_HEADER_LSB -1] == 0) begin
-            $display("%t\t Root status message : Latency received  from %d : %d", $time, local_rx_data_d[18:16], local_rx_data_d[15:0]);
+            // $display("%t\t Root status message : Latency received  from %d : %d", $time, local_rx_data_d[18:16], local_rx_data_d[15:0]);
         end else if (local_rx_data_d[MSG_HEADER_MSB:MSG_HEADER_LSB] == HEADER_RESULT && local_rx_data_d[MSG_HEADER_LSB -1] == 1) begin
-            $display("%t\t Root status message : Overall latency  %d", $time, local_rx_data_d[15:0]);
+            // $display("%t\t Root status message : Overall latency  %d", $time, local_rx_data_d[15:0]);
+            $display("Total, %d",local_rx_data_d[15:0]);
         end
     end
 end
