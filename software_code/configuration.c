@@ -17,14 +17,18 @@ int main(int argc, char *argv[]) {
     int num_fpgas = atoi(argv[4]);
     double p_merge = atof(argv[5]);
 
+    int is_odd_logical_qubits_per_dim = (logical_qubits_per_dim % 4 == 0 ? 0 : 1);
+    if(is_odd_logical_qubits_per_dim){
+        printf("Fake loical qubits added for simulation\n");
+        logical_qubits_per_dim = logical_qubits_per_dim + 2;
+    }
+
+
     struct RandomSeeds* rs = init_random_seeds((logical_qubits_per_dim-1)*logical_qubits_per_dim*2);
 
     // It seems I have messed the words horizontal and vertical in this code
     int horizontal_borders[logical_qubits_per_dim][logical_qubits_per_dim-1];
     int vertical_borders[logical_qubits_per_dim-1][logical_qubits_per_dim];
-
-    
-
 
     int merge_prob = 0;
 
@@ -61,11 +65,14 @@ int main(int argc, char *argv[]) {
             }
         }
 
+
         //horizintal merges
         for (int j = 0; j < logical_qubits_per_dim; j++) {
             for(int k = 0; k < logical_qubits_per_dim-1; k++){
                 // horizontal_borders[j][k] = index;
-                if(values[index] < p_merge){
+                if(is_odd_logical_qubits_per_dim && (j == logical_qubits_per_dim-1 || k == logical_qubits_per_dim-2 || j == 0 || k == 0)){
+                    horizontal_borders[j][k] = 0;
+                } else if(values[index] < p_merge){
                     horizontal_borders[j][k] = 1;
                     merge_prob++;
                 }
@@ -77,7 +84,9 @@ int main(int argc, char *argv[]) {
         for (int j = 0; j < logical_qubits_per_dim-1; j++) {
             for(int k = 0; k < logical_qubits_per_dim; k++){
                 // vertical_borders[j][k] = index;
-                if(values[index] < p_merge){
+                if(is_odd_logical_qubits_per_dim && (j == logical_qubits_per_dim-2 || k == logical_qubits_per_dim-1 || j == 0 || k == 0)){
+                    vertical_borders[j][k] = 0;
+                } else if(values[index] < p_merge){
                     vertical_borders[j][k] = 1;
                     merge_prob++;
                 }

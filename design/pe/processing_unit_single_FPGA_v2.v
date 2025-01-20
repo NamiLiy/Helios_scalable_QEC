@@ -5,7 +5,8 @@
 module processing_unit #(
     parameter ADDRESS_WIDTH = 6,
     parameter NEIGHBOR_COUNT = 6,
-    parameter NUM_CONTEXTS = 2
+    parameter NUM_CONTEXTS = 2,
+    parameter DUMMY_PU = 0
 ) (
     clk,
     reset,
@@ -66,6 +67,8 @@ wire [ADDRESS_WIDTH-1:0] root_mem;
 wire odd_mem;
 wire m_mem;
 
+
+
 genvar i;
 generate
 for (i = 0; i < NEIGHBOR_COUNT; i=i+1) begin: input_2d
@@ -81,12 +84,22 @@ reg cluster_parity;
 
 generate
 for (i = 0; i < NEIGHBOR_COUNT; i=i+1) begin: output_2d
-    assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH-1 : i*EXPOSED_DATA_SIZE] = root ;
-    assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 1 -1]  = parent_vector[i];
-    assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 2 -1]  = odd;
-    assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 3 -1]  = cluster_parity;
+
+    if(DUMMY_PU ==0) begin
+        assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH-1 : i*EXPOSED_DATA_SIZE] = root ;
+        assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 1 -1]  = parent_vector[i];
+        assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 2 -1]  = odd;
+        assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 3 -1]  = cluster_parity;
+    end else begin
+        assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH-1 : i*EXPOSED_DATA_SIZE] = {ADDRESS_WIDTH{1'b0}};
+        assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 1 -1]  = 1'b0;
+        assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 2 -1]  = 1'b0;
+        assign output_data[i*EXPOSED_DATA_SIZE + ADDRESS_WIDTH + 3 -1]  = 1'b0;
+    end
 end
 endgenerate
+
+if (DUMMY_PU==0) begin
 
 reg [STAGE_WIDTH - 1 : 0] stage;
 reg [STAGE_WIDTH - 1 : 0] last_stage;
@@ -412,6 +425,16 @@ assign data_to_memory = {cluster_parity, parent_vector[5:0], root, odd, m};
 
 //logic to read data from memory
 assign {cluster_parity_mem, parent_vector_mem, root_mem, odd_mem, m_mem} = data_from_memory;
-            
 
+end else begin
+    assign measurement_out = 0;        
+    assign neighbor_is_error = 0;
+
+    always@(posedge clk) begin
+        odd <= 0;
+        busy <= 0;
+        neighbor_increase <= 0;
+    end
+end
+    
 endmodule

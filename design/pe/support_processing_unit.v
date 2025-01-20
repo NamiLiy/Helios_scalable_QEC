@@ -4,7 +4,8 @@
 
 module support_processing_unit #(
     parameter ADDRESS_WIDTH = 6,
-    parameter NUM_CONTEXTS = 2
+    parameter NUM_CONTEXTS = 2,
+    parameter DUMMY_PU = 0
 ) (
     clk,
     reset,
@@ -32,6 +33,9 @@ input do_not_store;
 
 reg [STAGE_WIDTH - 1 : 0] stage;
 reg [STAGE_WIDTH - 1 : 0] last_stage;
+
+if(DUMMY_PU==0) begin
+    
 
 
 // stage is always equal to global_stage
@@ -199,6 +203,12 @@ end else begin
                 output_data <= input_data;
             end
         end
+    end
+end
+
+end else begin
+    always@(posedge clk) begin
+        output_data <= 0;
     end
 end
             

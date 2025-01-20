@@ -5,7 +5,7 @@ module single_FPGA_decoding_graph_dynamic_rsc #(
     parameter NUM_CONTEXTS = 4,
     parameter ACTUAL_D = 5,
     parameter FPGA_ID = 1,
-    parameter FULL_LOGICAL_QUBITS_PER_DIM = 2,
+    parameter FULL_USEFUL_LOGICAL_QUBITS_PER_DIM = 2,
     parameter MEASUREMENT_FUSION_ENABLED = 1
 ) (
     clk,
@@ -35,6 +35,9 @@ module single_FPGA_decoding_graph_dynamic_rsc #(
 `include "../../parameters/parameters.sv"
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
+
+localparam IS_AN_ODD_LQ_COUNT = (FULL_USEFUL_LOGICAL_QUBITS_PER_DIM % 2 == 1) ? 1 : 0;
+localparam FULL_LOGICAL_QUBITS_PER_DIM = FULL_USEFUL_LOGICAL_QUBITS_PER_DIM + IS_AN_ODD_LQ_COUNT;
 
 localparam GRID_X_EXTRA = (FPGA_ID < 3) ? ((((ACTUAL_D + 1)>>2)<<1) + 1) : 0;
 localparam GRID_Z_EXTRA = (FPGA_ID % 2 == 1) ? ((ACTUAL_D + 3)>>2) : 0;
@@ -186,10 +189,32 @@ generate
                         end
                     end
 
+                    localparam DUMMY_PU = (IS_AN_ODD_LQ_COUNT) ? (
+                        (FPGA_ID == 1) ? (
+                            (i <= ACTUAL_D) ? 1'b1 :
+                            ((j <= (ACTUAL_D >> 1) && IS_LONG_ROW(i)) || (j < (ACTUAL_D >> 1))) ? 1'b1 :
+                            1'b0
+                        ) : (FPGA_ID == 2) ? (
+                            (i <= ACTUAL_D) ? 1'b1 :
+                            (((j >= GRID_WIDTH_Z - 1 - (ACTUAL_D >> 1)) && IS_LONG_ROW(i)) || (j > GRID_WIDTH_Z - 1 - (ACTUAL_D >> 1))) ? 1'b1 :
+                            1'b0
+                        ) : (FPGA_ID == 3) ? (
+                            (i >= GRID_WIDTH_X - 1 - ACTUAL_D) ? 1'b1 :
+                            ((j <= (ACTUAL_D >> 1) && IS_LONG_ROW(i)) || (j < (ACTUAL_D >> 1))) ? 1'b1 :
+                            1'b0
+                        ) : (FPGA_ID == 4) ? (
+                            (i >= GRID_WIDTH_X - 1 - ACTUAL_D) ? 1'b1 :
+                            (((j >= GRID_WIDTH_Z - 1 - (ACTUAL_D >> 1)) && IS_LONG_ROW(i)) || (j > GRID_WIDTH_Z - 1 - (ACTUAL_D >> 1))) ? 1'b1 :
+                            1'b0
+                        ) : 1'b0
+                    ) : 1'b0;
+                        
+
                     processing_unit #(
                         .ADDRESS_WIDTH(ADDRESS_WIDTH_WITH_B),
                         .NEIGHBOR_COUNT(NEIGHBOR_COUNT),
-                        .NUM_CONTEXTS(NUM_CONTEXTS)
+                        .NUM_CONTEXTS(NUM_CONTEXTS),
+                        .DUMMY_PU(DUMMY_PU)
                     ) pu (
                         .clk(clk),
                         .reset(reset),
@@ -227,6 +252,26 @@ generate
                 wire [EXPOSED_DATA_SIZE-1:0] output_data;
                 wire local_context_switch;
 
+                localparam DUMMY_PU = (IS_AN_ODD_LQ_COUNT) ? (
+                    (FPGA_ID == 1) ? (
+                        (i <= ACTUAL_D) ? 1'b1 :
+                        ((j <= (ACTUAL_D >> 1) && IS_LONG_ROW(i)) || (j < (ACTUAL_D >> 1))) ? 1'b1 :
+                        1'b0
+                    ) : (FPGA_ID == 2) ? (
+                        (i <= ACTUAL_D) ? 1'b1 :
+                        (((j >= GRID_WIDTH_Z - 1 - (ACTUAL_D >> 1)) && IS_LONG_ROW(i)) || (j > GRID_WIDTH_Z - 1 - (ACTUAL_D >> 1))) ? 1'b1 :
+                        1'b0
+                    ) : (FPGA_ID == 3) ? (
+                        (i >= GRID_WIDTH_X - 1 - ACTUAL_D) ? 1'b1 :
+                        ((j <= (ACTUAL_D >> 1) && IS_LONG_ROW(i)) || (j < (ACTUAL_D >> 1))) ? 1'b1 :
+                        1'b0
+                    ) : (FPGA_ID == 4) ? (
+                        (i >= GRID_WIDTH_X - 1 - ACTUAL_D) ? 1'b1 :
+                        (((j >= GRID_WIDTH_Z - 1 - (ACTUAL_D >> 1)) && IS_LONG_ROW(i)) || (j > GRID_WIDTH_Z - 1 - (ACTUAL_D >> 1))) ? 1'b1 :
+                        1'b0
+                    ) : 1'b0
+                ) : 1'b0;
+
                 if(j == GRID_WIDTH_Z - 1 && (IS_LONG_ROW(i) == 1'b0) ) begin
                     // skip
                 end else begin
@@ -239,7 +284,8 @@ generate
                         support_processing_unit #(
                             .ADDRESS_WIDTH(ADDRESS_WIDTH_WITH_B),
                             //.NUM_CONTEXTS(NUM_CONTEXTS/2 + 1) // +1 is for ctx = d
-                            .NUM_CONTEXTS(CONTEXTS_FOR_UPPER_SPU)
+                            .NUM_CONTEXTS(CONTEXTS_FOR_UPPER_SPU),
+                            .DUMMY_PU(DUMMY_PU)
                         ) spu (
                             .clk(clk),
                             .reset(reset),

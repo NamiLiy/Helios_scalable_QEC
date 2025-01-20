@@ -3,7 +3,7 @@
 distance=5
 num_fpgas=4 #only the leaves
 measurement_fusion=1
-logical_quibits_per_dimension=4
+logical_quibits_per_dimension=2
 num_contexts=2
 
 configuration_file="../test_benches/test_data/configuration_${distance}_0.txt"

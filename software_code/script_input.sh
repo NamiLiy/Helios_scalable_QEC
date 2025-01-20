@@ -5,7 +5,7 @@ p=0.001
 test_runs=100
 num_fpgas=4 #only the leaves
 measurement_fusion=1
-logical_quibits_per_dimension=4
+logical_quibits_per_dimension=2
 merge_probability=0.5
 num_contexts=2
 

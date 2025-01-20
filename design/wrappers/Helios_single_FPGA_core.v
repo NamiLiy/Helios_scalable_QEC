@@ -1,5 +1,5 @@
 module Helios_single_FPGA #(
-    parameter FULL_LOGICAL_QUBITS_PER_DIM = 5,
+    parameter FULL_USEFUL_LOGICAL_QUBITS_PER_DIM = 5,
     parameter MAX_WEIGHT = 2,
     parameter NUM_CONTEXTS = 2,
     parameter NUM_FPGAS = 5,
@@ -50,6 +50,9 @@ module Helios_single_FPGA #(
 `include "../../parameters/parameters.sv"
 
 `define MAX(a, b) (((a) > (b)) ? (a) : (b))
+
+localparam IS_AN_ODD_LQ_COUNT = (FULL_USEFUL_LOGICAL_QUBITS_PER_DIM % 2 == 1) ? 1 : 0;
+localparam FULL_LOGICAL_QUBITS_PER_DIM = FULL_USEFUL_LOGICAL_QUBITS_PER_DIM + IS_AN_ODD_LQ_COUNT;
 
 localparam GRID_X_EXTRA = (FPGA_ID < 3) ? ((((ACTUAL_D + 1)>>2)<<1) + 1) : 0;
 localparam GRID_Z_EXTRA = (FPGA_ID % 2 == 1) ? ((ACTUAL_D + 3)>>2) : 0;
@@ -161,7 +164,7 @@ wire update_artifical_border;
 wire [CONTEXT_COUNTER_WIDTH-1:0] current_context;
 
 single_FPGA_decoding_graph_dynamic_rsc #( 
-    .FULL_LOGICAL_QUBITS_PER_DIM(FULL_LOGICAL_QUBITS_PER_DIM),
+    .FULL_USEFUL_LOGICAL_QUBITS_PER_DIM(FULL_USEFUL_LOGICAL_QUBITS_PER_DIM),
     .MAX_WEIGHT(MAX_WEIGHT),
     .NUM_CONTEXTS(NUM_CONTEXTS),
     .ACTUAL_D(ACTUAL_D),

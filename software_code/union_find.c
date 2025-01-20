@@ -950,6 +950,9 @@ int compare_output(FILE* file, int test, struct Distance distance, int test_id) 
     for(int k=k_start;k<k_end;k++){
         for(int i=0; i< distance.i; i++){
             for(int j=0; j< distance.j; j++){
+                if(fpga_roots[k][i][j].k == 0 && fpga_roots[k][i][j].i == 0 && fpga_roots[k][i][j].j == 0){
+                    continue;
+                }
                 struct Address root = get_root(node_array[k][i][j].root);
                 if((fpga_roots[k][i][j].k != root.k) || (fpga_roots[k][i][j].j != root.j) || (fpga_roots[k][i][j].i != root.i)){
                     if (debug==1)  printf("Test %d : At %d %d %d :  C %d %d %d : FPGA %d %d %d\n",t,k,i,j,root.k,root.i,root.j,fpga_roots[k][i][j].k,fpga_roots[k][i][j].i,fpga_roots[k][i][j].j);

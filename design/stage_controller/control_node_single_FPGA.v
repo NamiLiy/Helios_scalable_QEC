@@ -9,6 +9,7 @@ module unified_controller #(
     parameter ACTUAL_D = 5,
     parameter FPGA_ID = 1,
     parameter FULL_LOGICAL_QUBITS_PER_DIM = 2
+
 ) (
     clk,
     reset,

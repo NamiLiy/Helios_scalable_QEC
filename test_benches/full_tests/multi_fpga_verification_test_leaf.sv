@@ -52,7 +52,8 @@ module verification_bench_leaf#(
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
 localparam ACTUAL_D = CODE_DISTANCE;
-localparam FULL_LOGICAL_QUBITS_PER_DIM = LOGICAL_QUBITS_PER_DIM;
+localparam IS_AN_ODD_LQ_COUNT = (LOGICAL_QUBITS_PER_DIM % 2 == 1) ? 1 : 0;
+localparam FULL_LOGICAL_QUBITS_PER_DIM = LOGICAL_QUBITS_PER_DIM + IS_AN_ODD_LQ_COUNT;
 
 localparam GRID_X_EXTRA = (FPGA_ID < 3) ? ((((ACTUAL_D + 1)>>2)<<1) + 1) : 0;
 localparam GRID_Z_EXTRA = (FPGA_ID % 2 == 1) ? ((ACTUAL_D + 3)>>2) : 0;
@@ -124,7 +125,7 @@ wire output_ready_fifo;
 
 // instantiate
 Helios_single_FPGA #(
-    .FULL_LOGICAL_QUBITS_PER_DIM(FULL_LOGICAL_QUBITS_PER_DIM),
+    .FULL_USEFUL_LOGICAL_QUBITS_PER_DIM(LOGICAL_QUBITS_PER_DIM),
     .MAX_WEIGHT(MAX_WEIGHT),
     .NUM_CONTEXTS(NUM_CONTEXTS),
     .NUM_FPGAS(NUM_FPGAS),

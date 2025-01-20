@@ -31,6 +31,11 @@ int main(int argc, char *argv[]) {
 
     int m_fusion = atoi(argv[5]); //0 no fusion, 1 fusion
     int qubits_per_dim = atoi(argv[6]);
+    int is_odd_logical_qubits_per_dim = (qubits_per_dim % 4 == 0 ? 0 : 1);
+    if(is_odd_logical_qubits_per_dim){
+        printf("Fake loical qubits added for simulation\n");
+        qubits_per_dim = qubits_per_dim + 2;
+    }
     int num_leaves = atoi(argv[7]);
     int num_contexts = atoi(argv[8]);
 
@@ -408,6 +413,27 @@ int main(int argc, char *argv[]) {
 
                         if((j*2+1)/distance != (j*2+2)/distance){ // This is a logical qubit border ||
                             if(horizontal_borders[i/(distance+1)][(j*2+2)/distance] == 0){
+                                syndrome[k][i][j] = 0;
+                            }
+                        }
+                    }
+
+                    if(is_odd_logical_qubits_per_dim){
+                        if(i <= distance){
+                            syndrome[k][i][j] = 0;
+                        }else if(i >= distance_i - distance){
+                            syndrome[k][i][j] = 0;
+                        }
+                        else if (i%2 == (i / (distance+1))%2 ) { // long rows
+                            if( j <= (distance >> 1)){
+                                syndrome[k][i][j] = 0;
+                            } else if(j >= distance_j - (distance >> 1)){
+                                syndrome[k][i][j] = 0;
+                            }
+                        } else { // short rows
+                            if( j < (distance >> 1)){
+                                syndrome[k][i][j] = 0;
+                            } else if(j > distance_j - (distance >> 1)){
                                 syndrome[k][i][j] = 0;
                             }
                         }
