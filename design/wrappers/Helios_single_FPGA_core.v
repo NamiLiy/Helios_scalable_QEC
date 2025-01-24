@@ -6,7 +6,8 @@ module Helios_single_FPGA #(
     parameter FPGA_ID = 1,
     parameter ROUTER_DELAY_COUNTER = 18,
     parameter ACTUAL_D = 5,
-    parameter MEASUREMENT_FUSION_ENABLED = 1
+    parameter MEASUREMENT_FUSION_ENABLED = 1,
+    parameter IS_SIM = 0
 ) (
     clk,
     reset,
@@ -204,7 +205,8 @@ unified_controller #(
     .ROUTER_DELAY_COUNTER(ROUTER_DELAY_COUNTER),
     .ACTUAL_D(ACTUAL_D),
     .FPGA_ID(FPGA_ID),
-    .MEASUREMENT_FUSION_ENABLED(MEASUREMENT_FUSION_ENABLED)
+    .MEASUREMENT_FUSION_ENABLED(MEASUREMENT_FUSION_ENABLED),
+    .IS_SIM(IS_SIM)
 ) controller (
     .clk(clk),
     .reset(reset),

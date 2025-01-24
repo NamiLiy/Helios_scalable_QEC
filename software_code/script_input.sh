@@ -1,6 +1,6 @@
 #!/bin/bash
 
-distance=5
+distance=11
 p=0.001
 test_runs=100
 num_fpgas=4 #only the leaves

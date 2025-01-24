@@ -1,6 +1,6 @@
 #!/bin/bash
 
-distance=5
+distance=11
 num_fpgas=4 #only the leaves
 measurement_fusion=1
 logical_quibits_per_dimension=2

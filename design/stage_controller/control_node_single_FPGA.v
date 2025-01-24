@@ -8,7 +8,8 @@ module unified_controller #(
     parameter ROUTER_DELAY_COUNTER = 18,
     parameter ACTUAL_D = 5,
     parameter FPGA_ID = 1,
-    parameter FULL_LOGICAL_QUBITS_PER_DIM = 2
+    parameter FULL_LOGICAL_QUBITS_PER_DIM = 2,
+    parameter IS_SIM = 0
 
 ) (
     clk,
@@ -890,6 +891,8 @@ fifo_wrapper #(
     .output_ready(output_fifo_ready_d)
 );
 
+if (IS_SIM != 1) begin //in simulation we have to discard the outputs because if not they will stagnate
+
 
 reg [U_BIT_WIDTH + 1:0] output_u; //The +1 comes from the need to send iteration counter and the data counter
 reg [CORRECTION_COUNT_PER_ROUND_PADDED-1 :0] intermediate_out_data_reg;
@@ -1016,6 +1019,55 @@ always@(*) begin
         end
     endcase
 end
+
+end else begin
+
+reg [U_BIT_WIDTH + 1:0] output_u; //The +1 comes from the need to send iteration counter and the data counter
+
+always@(posedge clk) begin
+    if (reset) begin
+        output_u <= 0;
+    end else begin
+        if(output_ready) begin
+            if(output_u < ACTUAL_D + 1) begin
+                if(output_fifo_valid_d) begin
+                    output_u <= output_u + 1;
+                end
+            end else if(output_u == ACTUAL_D + 1) begin
+                output_u <= 0;
+            end 
+        end
+    end
+end
+
+
+
+always@(*) begin
+    output_data = 32'b0;
+    output_valid = 1'b0;
+    output_fifo_ready_d = 1'b0;
+
+    case(output_u)
+        0: begin
+            output_data = output_fifo_data_d;
+            output_valid = output_fifo_valid_d;
+            output_fifo_ready_d = output_ready;
+        end
+        ACTUAL_D + 1 : begin
+            output_data = 32'hffffffff;
+            output_valid = 1'b1;
+            output_fifo_ready_d = 1'b0;
+        end
+        default: begin
+            output_valid = output_fifo_valid_d;
+            output_fifo_ready_d = output_ready;
+            output_data = output_fifo_data_d;
+        end
+    endcase
+end
+
+end
+
 
 always@(posedge clk) begin
     if(reset) begin

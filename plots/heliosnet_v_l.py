@@ -47,8 +47,13 @@ plt.xlim(-0.5, len(d) - 0.5)  # Limit x-axis range to match the number of bars
 plt.grid(axis='y', linestyle='--', alpha=0.7)
 
 # Save the plot as a PDF
-output_path = "heliosnet_latency_v_l.pdf"
-plt.savefig(output_path, format='pdf')
+# output_path = "heliosnet_latency_v_l.pdf"
+# plt.savefig(output_path, format='pdf')
+# plt.close()
+
+# Save the plot as a Png
+output_path = "heliosnet_latency_v_l.png"
+plt.savefig(output_path, format='png')
 plt.close()
 
 print(f"Plot saved as {output_path}")

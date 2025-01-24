@@ -18,7 +18,8 @@ module verification_bench_leaf#(
     parameter FPGA_ID = 1,
     parameter NUM_CONTEXTS = 1,
     parameter LOGICAL_QUBITS_PER_DIM = 1,
-    parameter MEASUREMENT_FUSION_ENABLED=1
+    parameter MEASUREMENT_FUSION_ENABLED=1,
+    parameter IS_SIM = 0
 )(
     input clk,
     input reset,
@@ -132,7 +133,8 @@ Helios_single_FPGA #(
     .ROUTER_DELAY_COUNTER(ROUTER_DELAY),
     .FPGA_ID(FPGA_ID),
     .ACTUAL_D(CODE_DISTANCE),
-    .MEASUREMENT_FUSION_ENABLED(MEASUREMENT_FUSION_ENABLED)
+    .MEASUREMENT_FUSION_ENABLED(MEASUREMENT_FUSION_ENABLED),
+    .IS_SIM(IS_SIM)
  ) decoder (
     .clk(clk),
     .reset(reset),

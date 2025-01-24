@@ -27,8 +27,8 @@ int main(int argc, char *argv[]) {
     struct RandomSeeds* rs = init_random_seeds((logical_qubits_per_dim-1)*logical_qubits_per_dim*2);
 
     // It seems I have messed the words horizontal and vertical in this code
-    int horizontal_borders[logical_qubits_per_dim][logical_qubits_per_dim-1];
-    int vertical_borders[logical_qubits_per_dim-1][logical_qubits_per_dim];
+    int horizontal_borders[logical_qubits_per_dim][logical_qubits_per_dim-1]; // ||
+    int vertical_borders[logical_qubits_per_dim-1][logical_qubits_per_dim]; // --
 
     int merge_prob = 0;
 
@@ -173,7 +173,7 @@ int main(int argc, char *argv[]) {
             fprintf(file2, "\n");
 
             for(int j = (num_borders+47)/48-1; j >= 0; j--){
-                int value = 0;
+                unsigned int value = 0;
                 for(int k = 0; k < 32; k++){
                     value = value | (fpga_borders[j*48+k] << k);
                     if(j*48+k == num_borders-1){
@@ -181,13 +181,14 @@ int main(int argc, char *argv[]) {
                     }
                 }
                 fprintf(file, "%08x\n", value);
-                value = 0;
+                value = 0x00000000;
                 for(int k = 32; k < 48; k++){
-                    if(j*48+32+k > num_borders-1){
+                    if(j*48+k > num_borders-1){
                         break;
                     }
-                    value = value | (fpga_borders[j*48+32+k] << k);
+                    value = value | (fpga_borders[j*48+k] << (k-32));
                 }
+                value = value & 0x0000ffff;
                 fprintf(file, "%02x01%04x\n", (n+1),value);
             }
         }

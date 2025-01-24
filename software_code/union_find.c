@@ -3,8 +3,8 @@
 #include <math.h>
 #include <time.h>
 
-#define D 20
-#define TOTAL_MEASUREMENTS D
+#define D 15
+#define TOTAL_MEASUREMENTS 2*D
 
 int debug = 0;
 
@@ -44,9 +44,9 @@ int max(int a, int b) {
     return (a > b) ? a : b;
 }
 
-struct Node node_array[D][5*D][5*D];
-struct Edge hor_edges[D][5*D][5*D];
-struct Edge ver_edges[D][5*D][5*D];
+struct Node node_array[2*D][6*D][6*D];
+struct Edge hor_edges[2*D][6*D][6*D];
+struct Edge ver_edges[2*D][6*D][6*D];
 
 struct Address get_root(struct Address a){
     if(node_array[a.k][a.i][a.j].id.k == node_array[a.k][a.i][a.j].root.k &&
@@ -117,7 +117,7 @@ int grow(int k, int i, int j, int direction){ //fusion_direction 0 is no fusion,
         } else{
             int is_odd = get_parity(hor_edges[k][i][j].a);
             if (is_odd && hor_edges[k][i][j].growth < 2) {
-                if (debug==1)  printf("Growth called %d %d %d %d\n", hor_edges[k][i][j].a.k, hor_edges[k][i][j].a.i, hor_edges[k][i][j].a.j, hor_edges[k][i][j].a.fpga_id);
+                if (debug==1)  printf("Growth called %d %d %d to %d %d %d because a is odd\n", hor_edges[k][i][j].a.k, hor_edges[k][i][j].a.i, hor_edges[k][i][j].a.j, hor_edges[k][i][j].b.k, hor_edges[k][i][j].b.i, hor_edges[k][i][j].b.j);
                 hor_edges[k][i][j].growth = hor_edges[k][i][j].growth + 1;
                 grow_ret = 1;
                 if(hor_edges[k][i][j].growth == 2){
@@ -126,7 +126,7 @@ int grow(int k, int i, int j, int direction){ //fusion_direction 0 is no fusion,
             }
             is_odd = get_parity(hor_edges[k][i][j].b);
             if (is_odd && hor_edges[k][i][j].growth < 2) {
-                if (debug==1)  printf("Growth called %d %d %d %d\n", hor_edges[k][i][j].b.k, hor_edges[k][i][j].b.i, hor_edges[k][i][j].b.j, hor_edges[k][i][j].b.fpga_id);
+                if (debug==1)  printf("Growth called %d %d %d to %d %d %d because b is odd\n", hor_edges[k][i][j].a.k, hor_edges[k][i][j].a.i, hor_edges[k][i][j].a.j, hor_edges[k][i][j].b.k, hor_edges[k][i][j].b.i, hor_edges[k][i][j].b.j);
                 hor_edges[k][i][j].growth = hor_edges[k][i][j].growth + 1;
                 grow_ret = 1;
                 if(hor_edges[k][i][j].growth == 2){
@@ -204,7 +204,7 @@ int update_boundary(struct Address a){
         (root.is_boundary_address == 0  && a.fpga_id == root.fpga_id && a.k < root.k) || 
         (root.is_boundary_address == 0  && a.fpga_id == root.fpga_id && a.k == root.k && a.i < root.i) || 
         (root.is_boundary_address == 0  && a.fpga_id == root.fpga_id && a.k == root.k && a.i == root.i && a.j < root.j)){
-            if (debug==1)  printf("Root goes to %d %d %d %d\n", a.k, a.i, a.j, a.fpga_id);
+            if (debug==1)  printf("Root of %d %d %d %d goes to %d %d %d %d\n", root.k, root.i, root.j, root.is_boundary_address, a.k, a.i, a.j, a.is_boundary_address);
             // This node should now be the root
             node_array[root.k][root.i][root.j].root.k = a.k;
             node_array[root.k][root.i][root.j].root.i = a.i;
@@ -246,7 +246,7 @@ int merge_internal(struct Address a, struct Address b){
             node_array[root_a.k][root_a.i][root_a.j].parity = node_array[root_a.k][root_a.i][root_a.j].parity ^ node_array[root_b.k][root_b.i][root_b.j].parity;
         }
 
-        if (debug==1)  printf("A has lower root. B's root goes to %d %d %d %d\n", root_a.k, root_a.i, root_a.j, root_a.is_boundary_address);
+        if (debug==1)  printf("A has lower root. B's root goes from %d %d %d %dto %d %d %d %d\n", root_b.k, root_b.i, root_b.j, root_b.is_boundary_address, root_a.k, root_a.i, root_a.j, root_a.is_boundary_address);
 
         node_array[root_b.k][root_b.i][root_b.j].root.k = root_a.k;
         node_array[root_b.k][root_b.i][root_b.j].root.i = root_a.i;
@@ -264,7 +264,7 @@ int merge_internal(struct Address a, struct Address b){
             node_array[root_b.k][root_b.i][root_b.j].parity = node_array[root_b.k][root_b.i][root_b.j].parity ^ node_array[root_a.k][root_a.i][root_a.j].parity;
         }
 
-        if (debug==1)  printf("B has lower root. A's root goes to %d %d %d %d\n", root_b.k, root_b.i, root_b.j, root_b.is_boundary_address);
+        if (debug==1)  printf("B has lower root. A's root goes from %d %d %d %d to %d %d %d %d\n", root_a.k, root_a.i, root_a.j, root_a.is_boundary_address, root_b.k, root_b.i, root_b.j, root_b.is_boundary_address);
         node_array[root_a.k][root_a.i][root_a.j].root.k = root_b.k;
         node_array[root_a.k][root_a.i][root_a.j].root.i = root_b.i;
         node_array[root_a.k][root_a.i][root_a.j].root.j = root_b.j;
@@ -284,14 +284,14 @@ int merge(int k, int i, int j, int direction){
         if(hor_edges[k][i][j].to_be_updated == 1){
            hor_edges[k][i][j].to_be_updated = 0;
             if(hor_edges[k][i][j].is_boundary == 1){
-                if (debug==1)  printf("Update_boundary hor called %d %d %d %d\n", hor_edges[k][i][j].a.k, hor_edges[k][i][j].a.i, hor_edges[k][i][j].a.j, hor_edges[k][i][j].a.fpga_id);
+                if (debug==1)  printf("Update_boundary hor called %d %d %d\n", hor_edges[k][i][j].a.k, hor_edges[k][i][j].a.i, hor_edges[k][i][j].a.j);
                 update_boundary(hor_edges[k][i][j].a);
             } else if (hor_edges[k][i][j].is_fusion_boundary == 3){
-                if (debug==1)  printf("Update_boundary hor called %d %d %d %d\n", hor_edges[k][i][j].a.k, hor_edges[k][i][j].a.i, hor_edges[k][i][j].a.j, hor_edges[k][i][j].a.fpga_id);
+                if (debug==1)  printf("Update_boundary hor called for %d %d %d %d %d %d\n", hor_edges[k][i][j].a.k, hor_edges[k][i][j].a.i, hor_edges[k][i][j].a.j, hor_edges[k][i][j].b.k, hor_edges[k][i][j].b.i, hor_edges[k][i][j].b.j);
                 update_boundary(hor_edges[k][i][j].a);
                 update_boundary(hor_edges[k][i][j].b);
             } else {
-                if (debug==1)  printf("Merge_internal hor called %d %d %d %d and %d %d %d %d\n", hor_edges[k][i][j].a.k, hor_edges[k][i][j].a.i, hor_edges[k][i][j].a.j, hor_edges[k][i][j].a.fpga_id, hor_edges[k][i][j].b.k, hor_edges[k][i][j].b.i, hor_edges[k][i][j].b.j, hor_edges[k][i][j].b.fpga_id);
+                if (debug==1)  printf("Merge_internal hor called %d %d %d and %d %d %d\n", hor_edges[k][i][j].a.k, hor_edges[k][i][j].a.i, hor_edges[k][i][j].a.j, hor_edges[k][i][j].b.k, hor_edges[k][i][j].b.i, hor_edges[k][i][j].b.j);
                 merge_internal(hor_edges[k][i][j].a, hor_edges[k][i][j].b);
             }
         }
@@ -302,16 +302,16 @@ int merge(int k, int i, int j, int direction){
         if(ver_edges[k][i][j].to_be_updated == 1){
            ver_edges[k][i][j].to_be_updated = 0;
             if(ver_edges[k][i][j].is_boundary == 1){
-                if (debug==1)  printf("Update_boundary ver called %d %d %d %d\n", ver_edges[k][i][j].a.k, ver_edges[k][i][j].a.i, ver_edges[k][i][j].a.j, ver_edges[k][i][j].a.fpga_id);
+                if (debug==1)  printf("Update_boundary ver called %d %d %d\n", ver_edges[k][i][j].a.k, ver_edges[k][i][j].a.i, ver_edges[k][i][j].a.j);
                 update_boundary(ver_edges[k][i][j].a);
             } else if (ver_edges[k][i][j].is_fusion_boundary == 1){
-                if (debug==1)  printf("Update_boundary ver called %d %d %d %d\n", ver_edges[k][i][j].a.k, ver_edges[k][i][j].a.i, ver_edges[k][i][j].a.j, ver_edges[k][i][j].a.fpga_id);
+                if (debug==1)  printf("Update_boundary ver called %d %d %d\n", ver_edges[k][i][j].a.k, ver_edges[k][i][j].a.i, ver_edges[k][i][j].a.j);
                 update_boundary(ver_edges[k][i][j].a);
             } else if (ver_edges[k][i][j].is_fusion_boundary == 2){
-                if (debug==1)  printf("Update_boundary ver called %d %d %d %d\n", ver_edges[k][i][j].a.k, ver_edges[k][i][j].a.i, ver_edges[k][i][j].a.j, ver_edges[k][i][j].a.fpga_id);
+                if (debug==1)  printf("Update_boundary ver called %d %d %d\n", ver_edges[k][i][j].b.k, ver_edges[k][i][j].b.i, ver_edges[k][i][j].b.j);
                 update_boundary(ver_edges[k][i][j].b);
             } else {
-                if (debug==1)  printf("Merge_internal ver called %d %d %d %d and %d %d %d %d\n", ver_edges[k][i][j].a.k, ver_edges[k][i][j].a.i, ver_edges[k][i][j].a.j, ver_edges[k][i][j].a.fpga_id, ver_edges[k][i][j].b.k, ver_edges[k][i][j].b.i, ver_edges[k][i][j].b.j, ver_edges[k][i][j].b.fpga_id);
+                if (debug==1)  printf("Merge_internal ver called %d %d %d and %d %d %d\n", ver_edges[k][i][j].a.k, ver_edges[k][i][j].a.i, ver_edges[k][i][j].a.j, ver_edges[k][i][j].b.k, ver_edges[k][i][j].b.i, ver_edges[k][i][j].b.j);
                 merge_internal(ver_edges[k][i][j].a, ver_edges[k][i][j].b);
             }
         }
@@ -320,6 +320,7 @@ int merge(int k, int i, int j, int direction){
 }
 
 int grow_merge_cycle(struct Distance distance, int k_start, int k_end){ // This is only valid for the full graph
+    if(debug==5) printf("Grow merge cycle called\n");
     int change_occur = 0;
     for(int k=k_start;k<=k_end;k++){
         for(int i=0; i< distance.i + 1;i++){
@@ -357,6 +358,20 @@ int grow_merge_cycle(struct Distance distance, int k_start, int k_end){ // This 
             }
         }
     }
+
+    if(debug ==5){
+        for(int k=0;k<distance.k;k++){
+            for(int i=0;i<distance.i;i++){
+                for(int j=0;j<distance.j;j++){
+                    if(node_array[k][i][j].measurement == 1){
+                        struct Address root = get_root(node_array[k][i][j].root);
+                        printf("Root of %d %d %d is %d %d %d and parity %d and boundary %d \n", k, i, j, root.k, root.i, root.j, node_array[root.k][root.i][root.j].parity, node_array[root.k][root.i][root.j].boundary);
+                    }
+                }
+            }
+        }
+        // printf("Special case root of 6 31 7 is %d %d %d %d %d\n", node_array[6][31][7].root.k, node_array[6][31][7].root.i, node_array[6][31][7].root.j, node_array[node_array[6][31][7].root.k][node_array[6][31][7].root.i][node_array[6][31][7].root.j].parity, node_array[node_array[6][31][7].root.k][node_array[6][31][7].root.i][node_array[6][31][7].root.j].boundary);
+    }
     return change_occur;
     // print_roots_parity_boundary();
 }
@@ -387,8 +402,14 @@ int is_fused(int fpga_borders_1[], int fpga_borders_2[], int i, int j, int is_ho
     }
 } //Todo : write the dump file
 
-void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance distance, int num_fpgas, int is_fusion, int d, int leaf_id, int fpga_borders_1[], int fpga_borders_2[], int full_lq_per_fpga_dim, int test_id){
-    if (debug==1)  printf("test id is %d\n", test_id);
+void union_find (int syndrome[TOTAL_MEASUREMENTS][6*(D+1)][6*(D-1)/2], struct Distance distance, int num_fpgas, int is_fusion, int d, int leaf_id, int fpga_borders_1[], int fpga_borders_2[], int full_lq_per_fpga_dim, int test_id){
+    // if (test_id == 8){
+    //     debug = 5;
+    // }
+    // if (test_id == 3){
+    //     debug = 0;
+    // }
+    if (debug==5 || debug==6)  printf("UF test id is %d\n", test_id + 1);
 
     for(int k=0;k<distance.k;k++){
         for(int i=0;i<distance.i;i++){
@@ -709,10 +730,14 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance
     // print_roots_parity_boundary();
     print_measurements(distance);
 
+    // if(debug == 5) printf("Special case after init root of 6 31 7 is %d %d %d %d %d\n", node_array[6][31][7].root.k, node_array[6][31][7].root.i, node_array[6][31][7].root.j, node_array[node_array[6][31][7].root.k][node_array[6][31][7].root.i][node_array[6][31][7].root.j].parity, node_array[node_array[6][31][7].root.k][node_array[6][31][7].root.i][node_array[6][31][7].root.j].boundary);
+    int iterations = 0;
     while(change_occur == 1){
         change_occur = grow_merge_cycle(distance, k_start, k_end);
+        iterations++;
     }
-    if(debug == 1) printf("Union find initial round done\n");
+    if(debug == 6) printf("Pre Iterations %d\n", iterations);
+    if(debug == 5) printf("Union find initial round done\n");
     // Remove fusion details
     for(int k=k_start;k<=k_end;k++){
         for(int i=0; i< distance.i+1;i++){
@@ -843,12 +868,15 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], struct Distance
     // Now do the fusion
     // if (debug==1)  printf("Fusion starting\n");
     change_occur = 1;
+    iterations = 0;
     while(change_occur == 1){
         change_occur = grow_merge_cycle(distance, 0, distance.k-1);
+        iterations++;
     }
+    if(debug == 6) printf("Post Iterations %d\n", iterations);
 }
 
-int loadFileData(FILE* file, int (*array)[D][D+1][(D-1)/2], struct Distance distance) {
+int loadFileData(FILE* file, int (*array)[2*D][6*(D+1)][6*(D-1)/2], struct Distance distance) {
     int test_id;
     if (fscanf(file, "%x", &test_id) != 1) {
         //if (debug==1)  printf("Error reading file. No more test cases.\n");
@@ -871,7 +899,7 @@ int loadFileData(FILE* file, int (*array)[D][D+1][(D-1)/2], struct Distance dist
                     for(int i=0;i<distance.i;i++){
                         for(int j=0;j<distance.j;j++){
                             // if((*array)[k][i][j] == 1){
-                                if (debug==1 && test_id == 6)  printf("syndrome %d %d %d is %d\n", k, i, j, (*array)[k][i][j]);
+                                //if (debug==1 && test_id == 6)  printf("syndrome %d %d %d is %d\n", k, i, j, (*array)[k][i][j]);
                             // }
                         }
                     }
@@ -882,7 +910,8 @@ int loadFileData(FILE* file, int (*array)[D][D+1][(D-1)/2], struct Distance dist
             int i = (value >> 8) & 255;
             int k = (value >> 16) & 255;
             (*array)[k][i][j] = 1;
-            if (debug==1)  printf("Test id : %d error at %d %d %d = %d\n",test_id,k,i,j, (*array)[k][i][j]);
+            //if(test_id == 90) debug =4;
+            if (debug==1)  printf("Test id : %d defect measurement at %d %d %d = %d\n",test_id,k,i,j, (*array)[k][i][j]);
         }
     }
     // //if (debug==1)  printf("Test id : %x loaded\n",test_id);
@@ -890,6 +919,7 @@ int loadFileData(FILE* file, int (*array)[D][D+1][(D-1)/2], struct Distance dist
 }
 
 int compare_output(FILE* file, int test, struct Distance distance, int test_id) {
+    // return 0;
     int t;
     if (fscanf(file, "%x", &t) != 1) {
         //if (debug==1)  printf("Error reading file. No more test cases.\n");
@@ -898,7 +928,7 @@ int compare_output(FILE* file, int test, struct Distance distance, int test_id) 
     }
 
     //Initialize the trivial roots
-    struct Address fpga_roots[D][5*D][5*D];
+    struct Address fpga_roots[2*D][6*D][6*D];
 
     int k_start,k_end;
     if(test_id%2 == 1){ //Note that when we load one half we verify the other half
@@ -955,7 +985,7 @@ int compare_output(FILE* file, int test, struct Distance distance, int test_id) 
                 }
                 struct Address root = get_root(node_array[k][i][j].root);
                 if((fpga_roots[k][i][j].k != root.k) || (fpga_roots[k][i][j].j != root.j) || (fpga_roots[k][i][j].i != root.i)){
-                    if (debug==1)  printf("Test %d : At %d %d %d :  C %d %d %d : FPGA %d %d %d\n",t,k,i,j,root.k,root.i,root.j,fpga_roots[k][i][j].k,fpga_roots[k][i][j].i,fpga_roots[k][i][j].j);
+                    printf("Test %d : At %d %d %d :  C %d %d %d : FPGA %d %d %d\n",t,k,i,j,root.k,root.i,root.j,fpga_roots[k][i][j].k,fpga_roots[k][i][j].i,fpga_roots[k][i][j].j);
                     return_val = -1;
                     return -1;
                 } 
@@ -967,7 +997,9 @@ int compare_output(FILE* file, int test, struct Distance distance, int test_id) 
 }
 
 int loadConfigData(FILE* file, int (*array)[], int num_borders, int fpga_id) {
+    // printf("num_borders %d\n", num_borders);
     for(int j = (num_borders+47)/48-1; j >= 0; j--){
+        // printf("j %d\n", j);
         int word1;
         int word2;
         while(1){
@@ -977,6 +1009,7 @@ int loadConfigData(FILE* file, int (*array)[], int num_borders, int fpga_id) {
                 break;
             }
         }
+        // printf("word1 %x word2 %x\n", word1, word2);
 
         for(int i=0; i < 48; i++){
             if(i<32){
@@ -989,11 +1022,12 @@ int loadConfigData(FILE* file, int (*array)[], int num_borders, int fpga_id) {
             }
         }
     }
-
+    // debug =5;
     // for(int i=0; i<num_borders; i++){
-    //     if (debug==1)  printf("%d ", (*array)[i]);
+    //     if (debug==5)  printf("%d ", (*array)[i]);
     // }
-    // if (debug==1)  printf("\n");
+    // if (debug==5)  printf("\n");
+    // debug=0;
     return 0;
 }
 
@@ -1014,6 +1048,11 @@ int main(int argc, char *argv[]) {
     int num_fpgas = atoi(argv[4]); //This is num leaves
     int m_fusion = atoi(argv[5]); //0 no fusion, 1 fusion
     int qubits_per_dim = atoi(argv[6]);
+    int is_odd_logical_qubits_per_dim = (qubits_per_dim % 4 == 0 ? 0 : 1);
+    if(is_odd_logical_qubits_per_dim){
+        printf("Fake loical qubits added for simulation\n");
+        qubits_per_dim = qubits_per_dim + 2;
+    }
     int fpga_id = atoi(argv[7]);
     char *config_filename = argv[8];
     int num_contexts = atoi(argv[9]);
@@ -1028,7 +1067,7 @@ int main(int argc, char *argv[]) {
  
     struct Distance distance = {d*(m_fusion + 1), dist_i + dist_i_extra, dist_j + dist_j_extra};
     printf("Distance %d %d %d\n", distance.k, distance.i, distance.j);
-    if(distance.k > D || distance.i > 5*D || distance.j > 5*D) {
+    if(distance.k > 2*D || distance.i > 5*D || distance.j > 5*D) {
         fprintf(stderr, "Some distance is greater than %d please change the parameter in source\n", D);
         return 1;
     }
@@ -1070,7 +1109,7 @@ int main(int argc, char *argv[]) {
     int fpga_borders_0[num_borders];
     int fpga_borders_1[num_borders];
     while(1){
-        int syndrome[D][D+1][(D-1)/2];
+        int syndrome[2*D][6*(D+1)][6*(D-1)/2];
         int ret_val = loadFileData(file, &syndrome, distance);
         if(ret_val < 0) {
             break;
@@ -1086,7 +1125,7 @@ int main(int argc, char *argv[]) {
             for(int i=0;i<distance.i;i++){
                 for(int j=0;j<distance.j;j++){
                     if(syndrome[k][i][j] == 1){
-                        if (debug==1)  printf("syndrome %d %d %d is %d\n", k, i, j, syndrome[k][i][j]);
+                        if (debug==5)  printf("syndrome %d %d %d is %d\n", k, i, j, syndrome[k][i][j]);
                     }
                 }
             }

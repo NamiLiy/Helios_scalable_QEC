@@ -45,7 +45,9 @@ int main(int argc, char *argv[]) {
 
     
     int data_qubits_i = distance_i - 1;//This is data qubits in i direction + fake edge for merging qubits
+    printf("Data qubits i %d\n", data_qubits_i);
     int data_qubits_j = distance*qubits_per_dim;//This is data qubits in j direction
+    printf("Data qubits j %d\n", data_qubits_j);
     int meas_rounds = distance;
     int horizontal_borders[qubits_per_dim][qubits_per_dim-1]; // ||
     int vertical_borders[qubits_per_dim-1][qubits_per_dim]; // --
@@ -202,6 +204,12 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    FILE* error_dump_fp = fopen("error_dump.txt", "wb");
+    if (error_dump_fp == NULL) {
+        fprintf(stderr, "Can't open output file %s!\n", "error_dump.txt");
+        exit(1);
+    }
+
     FILE* configuration_dump_read_fp = fopen("configuration_dump.txt", "r");
     if (configuration_dump_read_fp == NULL) {
         fprintf(stderr, "Can't open input file %s!\n", "configuration_dump.txt");
@@ -221,37 +229,40 @@ int main(int argc, char *argv[]) {
             fprintf(out_fp[f], "%08X\n", t+1);
             fprintf(dump_fp[f], "Test id : %d\n", t+1);
         }
+        fprintf(error_dump_fp, "Test id : %d\n", t+1);
         // read a line from configuration_dump_read.txt
-        char line[200];
-        fgets(line, 200, configuration_dump_read_fp);
+        char line[1000];
+        fgets(line, 1000, configuration_dump_read_fp);
         // printf("%s\n", line); //Test ID
-        fgets(line, 200, configuration_dump_read_fp);
-        printf("%s\n", line); // || inner borders
+        fgets(line, 1000, configuration_dump_read_fp);
+        // printf("%s\n", line); 
+        // || inner borders
         for (int k = 0; k <(qubits_per_dim*(qubits_per_dim-1)); k++) {
             horizontal_borders[k/(qubits_per_dim-1)][k%(qubits_per_dim-1)] = (line[k*2] - '0');
             // printf("%c\n", line[k*2]);
         }
-        fgets(line, 200, configuration_dump_read_fp);
-        for(int k=0;k<qubits_per_dim;k++){
-            for(int l=0;l<qubits_per_dim-1;l++){
-                printf("%d ", horizontal_borders[k][l]);
-            }
-            printf("\n");
-        }
-        printf("%s\n", line); // -- inner borders
+        fgets(line, 1000, configuration_dump_read_fp);
+        // for(int k=0;k<qubits_per_dim;k++){
+        //     for(int l=0;l<qubits_per_dim-1;l++){
+        //         printf("%d ", horizontal_borders[k][l]);
+        //     }
+        //     printf("\n");
+        // }
+        // printf("%s\n", line); 
+        // -- inner borders
         for (int k = 0; k <(qubits_per_dim*(qubits_per_dim-1)); k++) {
             vertical_borders[k/qubits_per_dim][k%(qubits_per_dim)] = (line[k*2] - '0');
             // printf("%c\n", line[k*2]);
         }
-        for(int k=0;k<qubits_per_dim -1 ;k++){
-            for(int l=0;l<qubits_per_dim;l++){
-                printf("%d ", vertical_borders[k][l]);
-            }
-            printf("\n");
-        }
+        // for(int k=0;k<qubits_per_dim -1 ;k++){
+        //     for(int l=0;l<qubits_per_dim;l++){
+        //         printf("%d ", vertical_borders[k][l]);
+        //     }
+        //     printf("\n");
+        // }
         for(int f=0; f <num_leaves; f++){
-            fgets(line, 200, configuration_dump_read_fp);
-            fgets(line, 200, configuration_dump_read_fp);
+            fgets(line, 1000, configuration_dump_read_fp);
+            fgets(line, 1000, configuration_dump_read_fp);
         }
 
         //Except for first round all other rounds will have the last m error of previous round as its first round
@@ -279,6 +290,11 @@ int main(int argc, char *argv[]) {
                     else {
                         data_errors[k][i][j] = 0;
                     }
+                    // temporary debug line
+                    // if (t==89 && k == 4 && i == 40 && j == 29) {
+                    //     data_errors[k][i][j] = 1;
+                    // }
+                    // end of temporary debug
                     count++;
                     if(data_errors[k][i][j] == 1) {
                         errors++;
@@ -319,9 +335,35 @@ int main(int argc, char *argv[]) {
                         printf("M Error at %d %d %d\n", k+1, i, j);
                         errors++;
                     }
+                    if(i>0 && i%(distance+1) == 0){ // This is the duplicated fake measurement. This should be kept at zero //Laksheen
+                        if(m_errors[k+1][i][j] == 1){
+                            printf("M Error removed at %d %d %d\n", k+1, i, j);
+                        }
+                        m_errors[k+1][i][j] = 0;
+                    }
                 }
             }
             free(values);
+        }
+
+        for (int k = 0; k < meas_rounds; k++) {
+            for (int i = 0; i < data_qubits_i; i++) {
+                for (int j = 0; j < data_qubits_j; j++) {
+                    if(data_errors[k][i][j] == 1) {
+                        fprintf(error_dump_fp, "Data error at %d %d %d\n", k, i, j);
+                    }
+                }
+            }
+        }
+
+        for (int k = 0; k < meas_rounds+1; k++) {
+            for (int i = 0; i < distance_i; i++) {
+                for (int j = 0; j < distance_j; j++) {
+                    if(m_errors[k][i][j] == 1) {
+                        fprintf(error_dump_fp, "M error at %d %d %d\n", k, i, j);
+                    }
+                }
+            }
         }
         
 
@@ -369,7 +411,9 @@ int main(int argc, char *argv[]) {
                     }
                     else if(i%2 == (i / (distance+1))%2 ){ // long rows
                         syndrome[k][i][j] = data_errors[k][i-1][j*2] ^ data_errors[k][i-1][j*2+1] ^ data_errors[k][i][j*2] ^ data_errors[k][i][j*2+1] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j];
-
+                        // if(syndrome[k][i][j] == 1) {
+                        //     printf("Syndrome at %d %d %d\n", k, i, j);
+                        // }
                         if(i%(distance+1) == distance){ // This is a logical qubit border -- top ancilla 
                             if(vertical_borders[i/(distance+1)][(j*2)/distance] == 0 || vertical_borders[i/(distance+1)][(j*2+1)/distance] == 0){
                                 syndrome[k][i][j] = data_errors[k][i-1][j*2] ^ data_errors[k][i-1][j*2+1] ^ m_errors[k][i][j] ^ m_errors[k+1][i][j]; 
@@ -387,7 +431,7 @@ int main(int argc, char *argv[]) {
                         }
                         
                         if((j*2)/distance != (j*2+1)/distance){ // This is a logical qubit border || 
-                            if(horizontal_borders[i/(distance+1)][(j*2+1)/distance] == 0){
+                            if(horizontal_borders[i/(distance+1)][(j*2)/distance] == 0){
                                 syndrome[k][i][j] = 0;
                             }
                         }
@@ -411,12 +455,27 @@ int main(int argc, char *argv[]) {
                             }
                         }
 
+                        // if(syndrome[k][i][j] == 1) {
+                        //     printf("Syndrome at %d %d %d\n", k, i, j);
+                        //     for(int k=0;k<qubits_per_dim;k++){
+                        //         for(int l=0;l<qubits_per_dim-1;l++){
+                        //             printf("%d ", horizontal_borders[k][l]);
+                        //         }
+                        //         printf("\n");
+                        //     }
+                        // }
+
                         if((j*2+1)/distance != (j*2+2)/distance){ // This is a logical qubit border ||
-                            if(horizontal_borders[i/(distance+1)][(j*2+2)/distance] == 0){
+                            if(horizontal_borders[i/(distance+1)][(j*2+1)/distance] == 0){
+                                // if(syndrome[k][i][j] == 1) printf("Debug || : %d %d %d, %d %d, %d\n", k, i, j, i/(distance+1), (j*2+2)/distance, horizontal_borders[i/(distance+1)][(j*2+2)/distance]);
                                 syndrome[k][i][j] = 0;
                             }
                         }
                     }
+
+                    // if(syndrome[k][i][j] == 1) {
+                    //     printf("Syndrome at %d %d %d\n", k, i, j);
+                    // }
 
                     if(is_odd_logical_qubits_per_dim){
                         if(i <= distance){
@@ -427,13 +486,13 @@ int main(int argc, char *argv[]) {
                         else if (i%2 == (i / (distance+1))%2 ) { // long rows
                             if( j <= (distance >> 1)){
                                 syndrome[k][i][j] = 0;
-                            } else if(j >= distance_j - (distance >> 1)){
+                            } else if(j >= distance_j - 1- (distance >> 1)){
                                 syndrome[k][i][j] = 0;
                             }
                         } else { // short rows
                             if( j < (distance >> 1)){
                                 syndrome[k][i][j] = 0;
-                            } else if(j > distance_j - (distance >> 1)){
+                            } else if(j >= distance_j - 1 - (distance >> 1)){
                                 syndrome[k][i][j] = 0;
                             }
                         }
