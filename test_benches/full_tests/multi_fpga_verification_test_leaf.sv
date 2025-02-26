@@ -347,8 +347,8 @@ always @(posedge clk) begin
         end
         if(NUM_CONTEXTS > 2) begin
             if(decoder.controller.current_context == 0 || decoder.controller.current_context == CODE_DISTANCE) begin
-                $fwrite (output_file_data, "%h\n", input_test_case);
-                $fwrite (output_file_results, "%h\n", input_test_case);
+                $fwrite (output_file_data, "%h\n", (input_test_case -1));
+                $fwrite (output_file_results, "%h\n", (input_test_case-1));
             end
         end
         for (k=0 ;k <PHYSICAL_GRID_WIDTH_U; k++) begin
@@ -361,7 +361,7 @@ always @(posedge clk) begin
                             context_k = k;
                         end
                     end else begin
-                        context_k = k;
+                        context_k = decoder.controller.current_context;
                     end
 
                     write_id[7:0] = j;

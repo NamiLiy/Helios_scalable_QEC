@@ -16,13 +16,13 @@ module overall_verification_bench;
 `include "../../parameters/parameters.sv"
 `define assert(condition, reason) if(!(condition)) begin $display(reason); $finish(1); end
 
-localparam CODE_DISTANCE = 11;
-localparam LOGICAL_QUBITS_PER_DIM_PER_FPGA = 1;
+localparam CODE_DISTANCE = 5;
+localparam LOGICAL_QUBITS_PER_DIM_PER_FPGA = 2;
 localparam NUM_LEAVES_PER_DIM = 2;
 localparam ROUTER_DELAY = 2;
 localparam MAX_COUNT = 10;
 localparam MEASUREMENT_FUSION=1;
-localparam NUM_CONTEXTS=2;
+localparam NUM_CONTEXTS=2*CODE_DISTANCE;
 localparam IS_SIM=1;
 
 // `define SLICE_VEC(vec, idx, width) (vec[(idx+1)*width -1 : idx*width])

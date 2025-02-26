@@ -297,7 +297,8 @@ generate
                     end else begin
                         support_processing_unit #(
                             .ADDRESS_WIDTH(ADDRESS_WIDTH_WITH_B),
-                            .NUM_CONTEXTS(1) // +1 is for ctx = d ??
+                            .NUM_CONTEXTS(1), // +1 is for ctx = d ??
+                            .DUMMY_PU(DUMMY_PU)
                         ) spu (
                             .clk(clk),
                             .reset(reset),
@@ -415,13 +416,14 @@ endgenerate
 `define WEIGHT_EW(i,j) 2
 `define WEIGHT_UD(i,j) 2
 
-`define NEIGHBOR_LINK_INTERNAL_0(ai, aj, ak, bi, bj, bk, adirection, bdirection, type, num_contexts, reset_edge_local) \
+`define NEIGHBOR_LINK_INTERNAL_0(ai, aj, ak, bi, bj, bk, adirection, bdirection, type, num_contexts, reset_edge_local, DUMMY_EDGE) \
     wire is_boundary; \
     neighbor_link_internal #( \
         .ADDRESS_WIDTH(ADDRESS_WIDTH_WITH_B), \
         .MAX_WEIGHT(2), \
         .NUM_CONTEXTS(num_contexts), \
-        .STORE_EXTERNAL(0) \
+        .STORE_EXTERNAL(0), \
+        .DUMMY_EDGE(DUMMY_EDGE) \
     ) neighbor_link ( \
         .clk(clk), \
         .reset(reset), \
@@ -450,12 +452,13 @@ endgenerate
     assign `PU(ai, aj, ak).neighbor_is_boundary[adirection] = is_boundary;\
     assign `PU(bi, bj, bk).neighbor_is_boundary[bdirection] = is_boundary;
 
-`define NEIGHBOR_LINK_INTERNAL_SINGLE(ai, aj, ak, adirection, type, num_contexts, reset_edge_local) \
+`define NEIGHBOR_LINK_INTERNAL_SINGLE(ai, aj, ak, adirection, type, num_contexts, reset_edge_local, DUMMY_EDGE) \
     neighbor_link_internal #( \
         .ADDRESS_WIDTH(ADDRESS_WIDTH_WITH_B), \
         .MAX_WEIGHT(2), \
         .NUM_CONTEXTS(num_contexts), \
-        .STORE_EXTERNAL(0) \
+        .STORE_EXTERNAL(0), \
+        .DUMMY_EDGE(DUMMY_EDGE) \
     ) neighbor_link ( \
         .clk(clk), \
         .reset(reset), \
@@ -480,13 +483,14 @@ endgenerate
         .reset_edge(reset_edge_local) \
     );
 
-`define NEIGHBOR_LINK_INTERNAL_SUPPORT(ai, aj, ak, bi, bj, bk, adirection, type, num_contexts, reset_edge_local, store_external) \
+`define NEIGHBOR_LINK_INTERNAL_SUPPORT(ai, aj, ak, bi, bj, bk, adirection, type, num_contexts, reset_edge_local, store_external, DUMMY_EDGE) \
     wire is_boundary; \
     neighbor_link_internal #( \
         .ADDRESS_WIDTH(ADDRESS_WIDTH_WITH_B), \
         .MAX_WEIGHT(2), \
         .NUM_CONTEXTS(num_contexts), \
-        .STORE_EXTERNAL(store_external) \
+        .STORE_EXTERNAL(store_external), \
+        .DUMMY_EDGE(DUMMY_EDGE) \
     ) neighbor_link ( \
         .clk(clk), \
         .reset(reset), \
@@ -539,6 +543,26 @@ generate
                 
                 reg [3:0] type_for_boundary_links;
 
+                localparam DUMMY_EDGE = (IS_AN_ODD_LQ_COUNT) ? (
+                    (FPGA_ID == 1) ? (
+                        (i <= ACTUAL_D) ? 1'b1 :
+                        (j < ACTUAL_D) ? 1'b1 :
+                        1'b0
+                    ) : (FPGA_ID == 2) ? (
+                        (i <= ACTUAL_D) ? 1'b1 :
+                        (j >= GRID_WIDTH_Z*2 - ACTUAL_D) ? 1'b1 :
+                        1'b0
+                    ) : (FPGA_ID == 3) ? (
+                        (i >= GRID_WIDTH_X - ACTUAL_D) ? 1'b1 :
+                        (j < ACTUAL_D) ? 1'b1 :
+                        1'b0
+                    ) : (FPGA_ID == 4) ? (
+                        (i >= GRID_WIDTH_X - ACTUAL_D) ? 1'b1 :
+                        (j >= GRID_WIDTH_Z*2 - ACTUAL_D) ? 1'b1 :
+                        1'b0
+                    ) : 1'b0
+                ) : 1'b0;
+
                 always@(*) begin 
 
                     // first handle the lattice boundaries
@@ -575,27 +599,27 @@ generate
 
                 if(i==0) begin // First row
                     if(j%2 ==0) begin // \
-                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j/2, k, `NEIGHBOR_IDX_NW, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j/2, k, `NEIGHBOR_IDX_NW, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local, DUMMY_EDGE)
                     end else begin
-                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i, (j-1)/2, k, `NEIGHBOR_IDX_NE, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i, (j-1)/2, k, `NEIGHBOR_IDX_NE, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local, DUMMY_EDGE)
                     end
                 end else if(i==GRID_WIDTH_X) begin  // Last row
                     if(j%2 ==0) begin // /
-                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j/2, k, `NEIGHBOR_IDX_SW, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j/2, k, `NEIGHBOR_IDX_SW, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local, DUMMY_EDGE)
                     end else begin
-                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, (j-1)/2, k, `NEIGHBOR_IDX_SE, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, (j-1)/2, k, `NEIGHBOR_IDX_SE, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local, DUMMY_EDGE)
                     end
                 end else if (i < GRID_WIDTH_X && i > 0 &&  j==0 && ((i%(ACTUAL_D + 1))!=0)) begin //Left column
                     if (IS_LONG_ROW(i)) begin // \
-                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_NW, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i, j, k, `NEIGHBOR_IDX_NW, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local, DUMMY_EDGE)
                     end else begin // /
-                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_SW, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, j, k, `NEIGHBOR_IDX_SW, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local, DUMMY_EDGE)
                     end
                 end else if(i < GRID_WIDTH_X && i > 0 && j == 2*GRID_WIDTH_Z -1 && ((i%(ACTUAL_D + 1))!=0)) begin // Last element of even rows
                     if (IS_LONG_ROW(i)) begin // /
-                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i, (j-1)/2, k, `NEIGHBOR_IDX_NE, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i, (j-1)/2, k, `NEIGHBOR_IDX_NE, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local, DUMMY_EDGE)
                     end else begin // /
-                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, (j-1)/2, k, `NEIGHBOR_IDX_SE, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
+                        `NEIGHBOR_LINK_INTERNAL_SINGLE(i-1, (j-1)/2, k, `NEIGHBOR_IDX_SE, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local, DUMMY_EDGE)
                     end
                 
                 // then artificial horizontal boundaries
@@ -603,30 +627,30 @@ generate
                 end else if((i%(ACTUAL_D+1))==0) begin
                     if((i/(ACTUAL_D+1))%2 == 1) begin //These rows start with an offset
                         if(j%2 == 0 && j > 0) begin // actual fusion edge
-                            `NEIGHBOR_LINK_INTERNAL_0(i-1, (j/2)-1, k, i, (j/2)-1, k, `NEIGHBOR_IDX_SE, `NEIGHBOR_IDX_NE, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
+                            `NEIGHBOR_LINK_INTERNAL_0(i-1, (j/2)-1, k, i, (j/2)-1, k, `NEIGHBOR_IDX_SE, `NEIGHBOR_IDX_NE, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local, DUMMY_EDGE)
                         end else if (j%2 == 1 && j < 2*GRID_WIDTH_Z - 1) begin // fake edge to missing indice
-                            `NEIGHBOR_LINK_INTERNAL_0(i-1, (j-1)/2, k, i, (j-1)/2, k, `NEIGHBOR_IDX_SW, `NEIGHBOR_IDX_NW, `NO_EDGE, NUM_CONTEXTS, reset_edge_local)
+                            `NEIGHBOR_LINK_INTERNAL_0(i-1, (j-1)/2, k, i, (j-1)/2, k, `NEIGHBOR_IDX_SW, `NEIGHBOR_IDX_NW, `NO_EDGE, NUM_CONTEXTS, reset_edge_local, DUMMY_EDGE)
                         end
                     end else begin
                         if(j%2 == 1) begin // actual fusion edge
-                            `NEIGHBOR_LINK_INTERNAL_0(i-1, (j-1)/2, k, i, (j-1)/2, k, `NEIGHBOR_IDX_SE, `NEIGHBOR_IDX_NE, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
+                            `NEIGHBOR_LINK_INTERNAL_0(i-1, (j-1)/2, k, i, (j-1)/2, k, `NEIGHBOR_IDX_SE, `NEIGHBOR_IDX_NE, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local, DUMMY_EDGE)
                         end else begin // fake edge to missing indice
-                            `NEIGHBOR_LINK_INTERNAL_0(i-1, j/2, k, i, j/2, k, `NEIGHBOR_IDX_SW, `NEIGHBOR_IDX_NW, `NO_EDGE, NUM_CONTEXTS, reset_edge_local)
+                            `NEIGHBOR_LINK_INTERNAL_0(i-1, j/2, k, i, j/2, k, `NEIGHBOR_IDX_SW, `NEIGHBOR_IDX_NW, `NO_EDGE, NUM_CONTEXTS, reset_edge_local, DUMMY_EDGE)
                         end
                     end
                 // Now all the rest inclduing vertical boundaries ||
                 end else  begin
                     if(IS_LONG_ROW(i)) begin // these lines start with \
                         if(j%2 == 0) begin // \
-                            `NEIGHBOR_LINK_INTERNAL_0(i-1, j/2 - 1, k, i, j/2, k, `NEIGHBOR_IDX_SE, `NEIGHBOR_IDX_NW, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
+                            `NEIGHBOR_LINK_INTERNAL_0(i-1, j/2 - 1, k, i, j/2, k, `NEIGHBOR_IDX_SE, `NEIGHBOR_IDX_NW, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local, DUMMY_EDGE)
                         end else begin // /
-                            `NEIGHBOR_LINK_INTERNAL_0(i-1, (j-1)/2, k, i, (j-1)/2, k, `NEIGHBOR_IDX_SW, `NEIGHBOR_IDX_NE, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
+                            `NEIGHBOR_LINK_INTERNAL_0(i-1, (j-1)/2, k, i, (j-1)/2, k, `NEIGHBOR_IDX_SW, `NEIGHBOR_IDX_NE, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local, DUMMY_EDGE)
                         end
                     end else begin // / these lines start with /
                         if(j%2 == 0) begin // /
-                            `NEIGHBOR_LINK_INTERNAL_0(i-1, j/2 , k, i, j/2 - 1, k, `NEIGHBOR_IDX_SW, `NEIGHBOR_IDX_NE, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
+                            `NEIGHBOR_LINK_INTERNAL_0(i-1, j/2 , k, i, j/2 - 1, k, `NEIGHBOR_IDX_SW, `NEIGHBOR_IDX_NE, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local, DUMMY_EDGE)
                         end else begin // \
-                            `NEIGHBOR_LINK_INTERNAL_0(i-1, (j-1)/2, k, i, (j-1)/2, k, `NEIGHBOR_IDX_SE, `NEIGHBOR_IDX_NW, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local)
+                            `NEIGHBOR_LINK_INTERNAL_0(i-1, (j-1)/2, k, i, (j-1)/2, k, `NEIGHBOR_IDX_SE, `NEIGHBOR_IDX_NW, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local, DUMMY_EDGE)
                         end
                     end
                 end
@@ -648,6 +672,26 @@ generate
                 wire [2:0] context_extra_out;
                 wire local_context_switch;
 
+                localparam DUMMY_EDGE = (IS_AN_ODD_LQ_COUNT) ? (
+                        (FPGA_ID == 1) ? (
+                            (i <= ACTUAL_D) ? 1'b1 :
+                            ((j <= (ACTUAL_D >> 1) && IS_LONG_ROW(i)) || (j < (ACTUAL_D >> 1))) ? 1'b1 :
+                            1'b0
+                        ) : (FPGA_ID == 2) ? (
+                            (i <= ACTUAL_D) ? 1'b1 :
+                            (((j >= GRID_WIDTH_Z - 1 - (ACTUAL_D >> 1)) && IS_LONG_ROW(i)) || (j > GRID_WIDTH_Z - 1 - (ACTUAL_D >> 1))) ? 1'b1 :
+                            1'b0
+                        ) : (FPGA_ID == 3) ? (
+                            (i >= GRID_WIDTH_X - 1 - ACTUAL_D) ? 1'b1 :
+                            ((j <= (ACTUAL_D >> 1) && IS_LONG_ROW(i)) || (j < (ACTUAL_D >> 1))) ? 1'b1 :
+                            1'b0
+                        ) : (FPGA_ID == 4) ? (
+                            (i >= GRID_WIDTH_X - 1 - ACTUAL_D) ? 1'b1 :
+                            (((j >= GRID_WIDTH_Z - 1 - (ACTUAL_D >> 1)) && IS_LONG_ROW(i)) || (j > GRID_WIDTH_Z - 1 - (ACTUAL_D >> 1))) ? 1'b1 :
+                            1'b0
+                        ) : 1'b0
+                    ) : 1'b0;
+
                 if(j == GRID_WIDTH_Z - 1 && (IS_LONG_ROW(i) == 1'b0) ) begin
                     // 
                 end else begin
@@ -665,12 +709,16 @@ generate
                                 reset_edge_local = (global_stage == STAGE_MEASUREMENT_LOADING) ? 1'b1 : 1'b0;
                             end
                         end
-                    end else begin //note : check this. reset edge local is zero
+                    end else begin
                         always@(*) begin
                             if(k==PHYSICAL_GRID_WIDTH_U) begin
-                                reset_edge_local = reset_all_edges;
+                                reset_edge_local = (global_stage == STAGE_MEASUREMENT_LOADING) ? 1'b1 : 1'b0;
                             end else begin
-                                reset_edge_local = (reset_all_edges || global_stage == STAGE_MEASUREMENT_LOADING) ? 1'b1 : 1'b0;
+                                if(context_stage == 0 || context_stage == ACTUAL_D) begin
+                                    reset_edge_local = 1'b0;
+                                end else begin
+                                    reset_edge_local = (global_stage == STAGE_MEASUREMENT_LOADING) ? 1'b1 : 1'b0;
+                                end
                             end
                         end
                     end
@@ -731,20 +779,20 @@ generate
                     if(NUM_CONTEXTS <=2) begin
                         if(k==0) begin
                             // `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k, i,j,0, `NEIGHBOR_IDX_DOWN, type_for_boundary_links, NUM_CONTEXTS / 2 + 1) //+1 is only for d=ctx
-                            `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k, i,j,0, `NEIGHBOR_IDX_DOWN, type_for_boundary_links, 2, reset_edge_local, 0)
+                            `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k, i,j,0, `NEIGHBOR_IDX_DOWN, type_for_boundary_links, 2, reset_edge_local, 0, DUMMY_EDGE)
                         end else if(k==PHYSICAL_GRID_WIDTH_U) begin
                             // `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k-1, i,j,1, `NEIGHBOR_IDX_UP, type_for_boundary_links, NUM_CONTEXTS / 2 + 1) //+1 is for d=ctx
-                            `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k-1, i,j,1, `NEIGHBOR_IDX_UP, type_for_boundary_links, 2, reset_edge_local, 0) //+1 is for d=ctx
+                            `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k-1, i,j,1, `NEIGHBOR_IDX_UP, type_for_boundary_links, 2, reset_edge_local, 0, DUMMY_EDGE) //+1 is for d=ctx
                         end else if (k < PHYSICAL_GRID_WIDTH_U) begin
-                            `NEIGHBOR_LINK_INTERNAL_0(i, j, k-1, i, j, k, `NEIGHBOR_IDX_UP, `NEIGHBOR_IDX_DOWN, 3'b00, 2, reset_edge_local)
+                            `NEIGHBOR_LINK_INTERNAL_0(i, j, k-1, i, j, k, `NEIGHBOR_IDX_UP, `NEIGHBOR_IDX_DOWN, 3'b00, 2, reset_edge_local, DUMMY_EDGE)
                         end
                     end else begin
                         if(k==0) begin
-                            `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k, i,j,0, `NEIGHBOR_IDX_DOWN, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local, 1) //+1 is only for d=ctx
+                            `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k, i,j,0, `NEIGHBOR_IDX_DOWN, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local, 1, DUMMY_EDGE) //+1 is only for d=ctx
                         end else if(k==PHYSICAL_GRID_WIDTH_U) begin
-                            `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k-1, i,j,1, `NEIGHBOR_IDX_UP, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local, 2) //+1 is for d=ctx
+                            `NEIGHBOR_LINK_INTERNAL_SUPPORT(i, j, k-1, i,j,1, `NEIGHBOR_IDX_UP, type_for_boundary_links, NUM_CONTEXTS, reset_edge_local, 2, DUMMY_EDGE) //+1 is for d=ctx
                         end else if (k < PHYSICAL_GRID_WIDTH_U) begin
-                            `NEIGHBOR_LINK_INTERNAL_0(i, j, k-1, i, j, k, `NEIGHBOR_IDX_UP, `NEIGHBOR_IDX_DOWN, 3'b00, NUM_CONTEXTS, reset_edge_local) // Doesn't exist
+                            `NEIGHBOR_LINK_INTERNAL_0(i, j, k-1, i, j, k, `NEIGHBOR_IDX_UP, `NEIGHBOR_IDX_DOWN, 3'b00, NUM_CONTEXTS, reset_edge_local, DUMMY_EDGE) // Doesn't exist
                         end
                     end
                 end
@@ -876,22 +924,15 @@ generate
         for (j=0; j < GRID_WIDTH_Z; j=j+1) begin: ud_j_support
             if(j == GRID_WIDTH_Z - 1 && (IS_LONG_ROW(i) == 1'b0) ) begin
                 // 
-            end else begin
-                // assign ud_k[PHYSICAL_GRID_WIDTH_U].ud_i[i].ud_j[j].fully_grown_data = ud_k[PHYSICAL_GRID_WIDTH_U-1].ud_i[i].ud_j[j].fully_grown_data;
-                assign s_pu_i[i].s_pu_j[j].s_pu_k[1].input_data = `SLICE_VEC(`PU(i,j,PHYSICAL_GRID_WIDTH_U-1).output_data, `NEIGHBOR_IDX_UP, EXPOSED_DATA_SIZE);
-                // assign `SLICE_VEC(`PU(i, j, PHYSICAL_GRID_WIDTH_U-1).input_data, `NEIGHBOR_IDX_UP, EXPOSED_DATA_SIZE) = s_pu_i[i].s_pu_j[j].output_data;
-                // assign pu_k[PHYSICAL_GRID_WIDTH_U-1].pu_i[i].pu_j[j].input_data[5*EXPOSED_DATA_SIZE +: EXPOSED_DATA_SIZE] = s_pu_i[i].s_pu_j[j].s_pu_k[1].output_data;
-                // assign pu_k[PHYSICAL_GRID_WIDTH_U-1].pu_i[i].pu_j[j].neighbor_is_boundary[5] = 1'b0;
-
-                assign s_pu_i[i].s_pu_j[j].s_pu_k[0].input_data = `SLICE_VEC(`PU(i,j,0).output_data, `NEIGHBOR_IDX_DOWN, EXPOSED_DATA_SIZE);
-                // assign `SLICE_VEC(`PU(i, j, PHYSICAL_GRID_WIDTH_U-1).input_data, `NEIGHBOR_IDX_UP, EXPOSED_DATA_SIZE) = s_pu_i[i].s_pu_j[j].output_data;
-                // assign pu_k[0].pu_i[i].pu_j[j].input_data[4*EXPOSED_DATA_SIZE +: EXPOSED_DATA_SIZE] = s_pu_i[i].s_pu_j[j].s_pu_k[0].output_data;
-                // if(context_stage_delayed %2 == 0) begin
-                //     assign pu_k[0].pu_i[i].pu_j[j].neighbor_is_boundary[4] = 1'b0;
-                // end else begin
-                //     assign pu_k[0].pu_i[i].pu_j[j].neighbor_is_boundary[4] = 1'b1;
-                // end
-                // assign pu_k[0].pu_i[i].pu_j[j].neighbor_is_boundary[4] = 1'b0;
+            end else begin     
+                if(NUM_CONTEXTS <= 2) begin           
+                    assign s_pu_i[i].s_pu_j[j].s_pu_k[1].input_data = `SLICE_VEC(`PU(i,j,PHYSICAL_GRID_WIDTH_U-1).output_data, `NEIGHBOR_IDX_UP, EXPOSED_DATA_SIZE);
+                    assign s_pu_i[i].s_pu_j[j].s_pu_k[0].input_data = `SLICE_VEC(`PU(i,j,0).output_data, `NEIGHBOR_IDX_DOWN, EXPOSED_DATA_SIZE);
+                end else begin
+                    assign s_pu_i[i].s_pu_j[j].s_pu_k[1].input_data = `SLICE_VEC(`PU(i,j,PHYSICAL_GRID_WIDTH_U-1).output_data, `NEIGHBOR_IDX_DOWN, EXPOSED_DATA_SIZE);
+                    assign s_pu_i[i].s_pu_j[j].s_pu_k[0].input_data = `SLICE_VEC(`PU(i,j,0).output_data, `NEIGHBOR_IDX_UP, EXPOSED_DATA_SIZE);
+                end
+                // Note that up and down is changed when ctx>2 because we no longer need to use the snake mode to go around
             end
         end
     end

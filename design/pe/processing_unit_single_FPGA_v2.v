@@ -249,7 +249,7 @@ always@(*) begin
 end
 
 always@(*) begin
-    if(stage == STAGE_PEELING &&  !(|parent_vector) && next_cluster_parity) begin
+    if(stage == STAGE_PEELING &&  !(|parent_vector) && cluster_parity) begin
         casex (neighbor_is_boundary)
             6'b1xxxxx: neighbor_is_error_border = 6'b100000;
             6'b01xxxx: neighbor_is_error_border = 6'b010000;
@@ -376,8 +376,12 @@ always@(posedge clk) begin
     end else begin
         if (stage == STAGE_WRITE_TO_MEM) begin
             if(NUM_CONTEXTS > 2) begin
-                if(mem_write_address < context_max && mem_write_address < NUM_CONTEXTS - 1) begin
-                    mem_write_address <= mem_write_address + 1;
+                if(mem_write_address < NUM_CONTEXTS - 1) begin
+                    if(mem_write_address == context_max) begin
+                        mem_write_address <= context_min;
+                    end else begin
+                        mem_write_address <= mem_write_address + 1;
+                    end
                 end else begin
                     mem_write_address <= context_min;
                 end
@@ -394,8 +398,12 @@ always@(posedge clk) begin
     end else begin
         if (stage == STAGE_WRITE_TO_MEM) begin
             if(NUM_CONTEXTS > 2) begin
-                if(mem_read_address < context_max && mem_write_address < NUM_CONTEXTS - 1) begin
-                    mem_read_address <= mem_read_address + 1;
+                if(mem_read_address < NUM_CONTEXTS - 1) begin
+                    if(mem_read_address == context_max) begin
+                        mem_read_address <= context_min;
+                    end else begin
+                        mem_read_address <= mem_read_address + 1;
+                    end
                 end else begin
                     mem_read_address <= context_min;
                 end

@@ -403,11 +403,8 @@ int is_fused(int fpga_borders_1[], int fpga_borders_2[], int i, int j, int is_ho
 } //Todo : write the dump file
 
 void union_find (int syndrome[TOTAL_MEASUREMENTS][6*(D+1)][6*(D-1)/2], struct Distance distance, int num_fpgas, int is_fusion, int d, int leaf_id, int fpga_borders_1[], int fpga_borders_2[], int full_lq_per_fpga_dim, int test_id){
-    // if (test_id == 8){
+    // if (test_id == 65){
     //     debug = 5;
-    // }
-    // if (test_id == 3){
-    //     debug = 0;
     // }
     if (debug==5 || debug==6)  printf("UF test id is %d\n", test_id + 1);
 

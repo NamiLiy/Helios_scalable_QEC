@@ -192,7 +192,7 @@ reg [total_borders_padded - 1 : 0] fusion_boundary_reg_1;
 reg [total_borders_padded - 1 : 0] fusion_boundary_reg_2;
 
 
-reg result_valid;
+// reg result_valid;
 reg [ITERATION_COUNTER_WIDTH-1:0] iteration_counter;
 reg [15:0] cycle_counter;
 reg [31:0] lower_half_counter;
@@ -375,7 +375,7 @@ always @(posedge clk) begin
     if (reset) begin
         global_stage <= STAGE_IDLE;
         delay_counter <= 0;
-        result_valid <= 0;
+        // result_valid <= 0;
         border_continous <= 2'b0;
         measurement_fusion_stage <= 0;
         current_measurement_round <= 0;
@@ -396,7 +396,7 @@ always @(posedge clk) begin
                     if(input_ctrl_rx_data [MSG_HEADER_MSB : MSG_HEADER_LSB] == HEADER_INITIALIZE_DECODING) begin
                         global_stage <= STAGE_PARAMETERS_LOADING;
                         delay_counter <= 0;
-                        result_valid <= 0;
+                        // result_valid <= 0;
                         current_context <= 0;
                         fusion_boundary_reg_1[total_borders_padded-1 : 0] <= {total_borders_padded{1'b0}};
                         fusion_boundary_reg_2[total_borders_padded-1 : 0] <= {total_borders_padded{1'b0}}; 
@@ -412,7 +412,7 @@ always @(posedge clk) begin
                         global_stage <= STAGE_MEASUREMENT_PREPARING;
                         measurement_fusion_stage <= 0;
                         delay_counter <= 0;
-                        result_valid <= 0;
+                        // result_valid <= 0;
                         current_measurement_round <= 0;
                         measurement_internal <= {PU_COUNT_PER_ROUND{1'b0}};
                         peel_and_finish <= input_ctrl_rx_data[0];
@@ -422,7 +422,7 @@ always @(posedge clk) begin
                     end else if (input_ctrl_rx_data [MSG_HEADER_MSB : MSG_HEADER_LSB] == HEADER_SET_BOUNDARIES) begin
                         global_stage <= STAGE_IDLE;
                         delay_counter <= 0;
-                        result_valid <= 0;
+                        // result_valid <= 0;
                         // Store fusion boundary with correct context
                         if(current_context == 0) begin
                             fusion_boundary_reg_1[47:0] <= input_ctrl_rx_data[47:0];
@@ -483,7 +483,7 @@ always @(posedge clk) begin
                     global_stage_saved <= STAGE_MEASUREMENT_LOADING;
                 end
                 delay_counter <= 0;
-                result_valid <= 0;
+                // result_valid <= 0;
                 measurement_internal <= {PU_COUNT_PER_ROUND{1'b0}};
             end
 
@@ -605,20 +605,33 @@ always @(posedge clk) begin
 
             STAGE_RESULT_VALID: begin //5
                 current_measurement_round <= current_measurement_round + 1;
-                if(current_measurement_round >= ACTUAL_D - 1) begin
+                if(NUM_CONTEXTS <= 2) begin
+                    if(current_measurement_round >= ACTUAL_D - 1) begin
+                        global_stage_saved <= STAGE_RESULT_VALID;
+                        global_stage <= STAGE_WRITE_TO_MEM;
+                        current_measurement_round <= 0;
+                    end
+                end else begin
                     global_stage_saved <= STAGE_RESULT_VALID;
                     global_stage <= STAGE_WRITE_TO_MEM;
-                    current_measurement_round <= 0;
                 end
                 delay_counter <= 0;
-                result_valid <= 1;
+                // result_valid <= 1;
             end
 
             STAGE_RESET_ROOTS: begin //8
                 global_stage <= STAGE_WRITE_TO_MEM;
                 global_stage_saved <= STAGE_RESET_ROOTS;
-                if(measurement_fusion_stage == 1) begin
-                    continutation_from_top <= ~continutation_from_top; //check for d contexts
+                if(NUM_CONTEXTS <=2) begin
+                    if(measurement_fusion_stage == 1) begin
+                        continutation_from_top <= ~continutation_from_top; //check for d contexts
+                    end
+                end else begin
+                    if(measurement_fusion_stage == 1) begin
+                        if(current_context == 0 || current_context == ACTUAL_D) begin
+                            continutation_from_top <= ~continutation_from_top; //check for d contexts
+                        end
+                    end
                 end
             end
 
@@ -811,8 +824,18 @@ always@(*) begin
             output_fifo_valid = 1;
             output_fifo_data = correction;
         end else if(global_stage == STAGE_RESULT_VALID) begin
-            output_fifo_valid = 1; // One added cycle to send the cycle counter and iteration counter
-            output_fifo_data = {iteration_counter,cycle_counter};
+            if(NUM_CONTEXTS == 2) begin
+                output_fifo_valid = 1; // One added cycle to send the cycle counter and iteration counter
+                output_fifo_data = {iteration_counter,cycle_counter};
+            end else begin
+                if(current_context == 0 || current_context == ACTUAL_D) begin
+                    output_fifo_valid = 1;
+                    output_fifo_data = {iteration_counter,cycle_counter};
+                end else begin
+                    output_fifo_valid = 0;
+                    output_fifo_data = correction;
+                end
+            end
         end else begin
             output_fifo_valid = 0;
             output_fifo_data = correction;

@@ -1,13 +1,14 @@
 #!/bin/bash
 
-distance=11
+distance=5
 p=0.001
 test_runs=100
 num_fpgas=4 #only the leaves
 measurement_fusion=1
-logical_quibits_per_dimension=2
+logical_quibits_per_dimension=4
 merge_probability=0.5
-num_contexts=2
+num_contexts=$((2 * distance))
+#num_contexts=2 
 
 configuration_file="../test_benches/test_data/configuration_${distance}_0.txt"
 gcc configuration.c random_seeds.c -o config -lm

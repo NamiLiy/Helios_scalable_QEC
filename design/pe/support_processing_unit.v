@@ -133,8 +133,12 @@ if(NUM_CONTEXTS > 1) begin
             if (stage == STAGE_WRITE_TO_MEM) begin
                 if(do_not_store == 1'b0) begin
                     if(NUM_CONTEXTS > 2) begin
-                        if(mem_write_address < context_max && mem_write_address < NUM_CONTEXTS - 1) begin
-                            mem_write_address <= mem_write_address + 1;
+                        if(mem_write_address < NUM_CONTEXTS - 1) begin
+                            if(mem_write_address == context_max) begin
+                                mem_write_address <= context_min;
+                            end else begin
+                                mem_write_address <= mem_write_address + 1;
+                            end
                         end else begin
                             mem_write_address <= context_min;
                         end
@@ -153,8 +157,12 @@ if(NUM_CONTEXTS > 1) begin
             if (stage == STAGE_WRITE_TO_MEM) begin
                 if(do_not_store == 1'b0) begin
                     if(NUM_CONTEXTS > 2) begin
-                        if(mem_read_address < context_max && mem_write_address < NUM_CONTEXTS - 1) begin
-                            mem_read_address <= mem_read_address + 1;
+                        if(mem_read_address < NUM_CONTEXTS - 1) begin
+                            if(mem_read_address == context_max) begin
+                                mem_read_address <= context_min;
+                            end else begin
+                                mem_read_address <= mem_read_address + 1;
+                            end
                         end else begin
                             mem_read_address <= context_min;
                         end

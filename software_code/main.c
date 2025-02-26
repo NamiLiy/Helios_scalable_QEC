@@ -48,6 +48,7 @@ int main(int argc, char *argv[]) {
     printf("Data qubits i %d\n", data_qubits_i);
     int data_qubits_j = distance*qubits_per_dim;//This is data qubits in j direction
     printf("Data qubits j %d\n", data_qubits_j);
+    printf("Num Contexts %d\n", num_contexts);
     int meas_rounds = distance;
     int horizontal_borders[qubits_per_dim][qubits_per_dim-1]; // ||
     int vertical_borders[qubits_per_dim-1][qubits_per_dim]; // --
@@ -326,6 +327,7 @@ int main(int argc, char *argv[]) {
                     // }
                 }
             }
+            
             for (int i = 0; i < distance_i; i++) {
                 for (int j = 0; j < distance_j; j++) {
                     if (values[count] < p) m_errors[k+1][i][j] = 1;
@@ -341,6 +343,21 @@ int main(int argc, char *argv[]) {
                         }
                         m_errors[k+1][i][j] = 0;
                     }
+
+                    if((j*2)/distance != (j*2+1)/distance){ // This is a logical qubit border || 
+                        if(horizontal_borders[i/(distance+1)][(j*2)/distance] == 0){ //If the two lqs are unmerged then we don't measure the errors in the middle.
+                            if(m_errors[k+1][i][j] == 1){
+                                printf("M Error removed at %d %d %d\n", k+1, i, j);
+                            }
+                            m_errors[k+1][i][j] = 0;
+                        } else if(k==meas_rounds-1){
+                            if(m_errors[k+1][i][j] == 1){
+                                printf("M Error removed at %d %d %d\n", k+1, i, j);
+                            }
+                            m_errors[k+1][i][j] = 0;
+                        }
+                    }
+
                 }
             }
             free(values);

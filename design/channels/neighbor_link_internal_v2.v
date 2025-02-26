@@ -2,7 +2,8 @@ module neighbor_link_internal #(
     parameter ADDRESS_WIDTH = 6,
     parameter MAX_WEIGHT = 2,
     parameter NUM_CONTEXTS = 2,
-    parameter STORE_EXTERNAL = 0 //1 means edges to lower SPEs, 2 means edges to upper PEs. Only needed for support PES when num_ctx > 2
+    parameter STORE_EXTERNAL = 0, //1 means edges to lower SPEs, 2 means edges to upper PEs. Only needed for support PES when num_ctx > 2
+    parameter DUMMY_EDGE = 0
     // parameter WEIGHT = 2,
     // parameter BOUNDARY_CONDITION = 0, //0 : No boundary 1: A boundary 2: Non existant edge 3: fusion edge (fusion edge is connected on both ends but acts like a boundary)
     // parameter ADDRESS_A = 0,
@@ -89,6 +90,8 @@ wire is_error_mem;
 
 
 `define MIN(a, b) (((a) < (b)) ? (a) : (b))
+
+if (DUMMY_EDGE == 0) begin
 
 localparam GROWTH_CALC_WIDTH = $clog2(MAX_WEIGHT + 3);
 reg [GROWTH_CALC_WIDTH-1:0] growth_new;
@@ -185,7 +188,7 @@ always@(posedge clk) begin
 end
 
 reg write_to_mem;
-localparam RAM_LOG_DEPTH = $clog2(NUM_CONTEXTS);
+localparam RAM_LOG_DEPTH = $clog2(NUM_CONTEXTS + 1);
 reg [RAM_LOG_DEPTH-1:0] mem_read_address;
 reg [RAM_LOG_DEPTH-1:0] mem_write_address;
 wire [RAM_LOG_DEPTH-1:0] mem_rw_address;
@@ -214,12 +217,15 @@ rams_sp_nc #(
 
 localparam HALF_CONTEXT = (NUM_CONTEXTS >> 1);
 
+reg continutation_from_top;
+
 always@(posedge clk) begin
     if(reset) begin
         context_min <= 0;
         context_max <= HALF_CONTEXT -1;
         context_full_range <= 0;
         not_first_block <= 0;
+        continutation_from_top <= 1;
     end else begin
         if(mem_write_address == 0 || mem_write_address == HALF_CONTEXT) begin
             if(stage == STAGE_RESET_ROOTS)begin
@@ -232,10 +238,21 @@ always@(posedge clk) begin
                             context_min <= 0;
                             context_max <= HALF_CONTEXT - 1;
                         end
+                        continutation_from_top <= ~continutation_from_top;
                         context_full_range <= 0;
                     end else begin
-                        context_min <= 0;
-                        context_max <= NUM_CONTEXTS - 1;
+                        if(NUM_CONTEXTS <=2) begin
+                            context_min <= 0;
+                            context_max <= NUM_CONTEXTS - 1;
+                        end else begin
+                            if(mem_write_address == 0) begin
+                                context_min <= HALF_CONTEXT;
+                                context_max <= HALF_CONTEXT - 1;
+                            end else begin
+                                context_min <= 0;
+                                context_max <= NUM_CONTEXTS - 1;
+                            end
+                        end
                         context_full_range <= 1;
                     end
                 end else begin
@@ -252,8 +269,18 @@ always@(posedge clk) begin
                     context_max <= NUM_CONTEXTS - 1;
                 end
             end else if(stage == STAGE_RESULT_VALID) begin
-                context_min <= 0;
-                context_max <= NUM_CONTEXTS - 1;
+                if(NUM_CONTEXTS <=2) begin
+                    context_min <= 0;
+                    context_max <= NUM_CONTEXTS - 1;
+                end else begin
+                    if(mem_write_address == 0) begin
+                        context_min <= HALF_CONTEXT;
+                        context_max <= HALF_CONTEXT-1;
+                    end else begin
+                        context_min <= 0;
+                        context_max <= NUM_CONTEXTS - 1;
+                    end
+                end
             end
         end
     end
@@ -328,39 +355,125 @@ if(STORE_EXTERNAL == 0) begin
 
 end else if(STORE_EXTERNAL == 1) begin
 
-    reg [1:0] grow_at_zero;
-    reg [1:0] grow_at_hc;
+    
+            
+    assign growth_mem = context_input[2:1];
+    assign is_error_mem = context_input[0];
 
-    reg [1:0] is_error_at_zero;
-    reg [1:0] is_error_at_hc;
+    assign context_output[2:1] = growth;
+    assign context_output[0] = is_error;
 
+    always@(*) begin
+        if(reset) begin
+            write_to_mem = 0;
+        end else begin
+            write_to_mem = 0;
+        end
+    end
+
+end else if(STORE_EXTERNAL == 2) begin
+
+    reg [RAM_LOG_DEPTH-1:0] context_address;
+
+    // always@(posedge clk) begin
+    //     if(reset) begin
+    //         stored_context <= 0;
+    //     end else begin
+    //         stored_context <= context_input;
+    //     end
+    // end
+
+    // always@(posedge clk) begin
+    //     if(reset) begin
+    //         stored_context_valid <= 0;
+    //         stored_context <= 0;
+    //     end else begin
+    //         if(stage == STAGE_WRITE_TO_MEM) begin
+    //             if(mem_read_address == context_min) begin
+    //                 stored_context_valid <= 1;
+    //                 stored_context[2:1] <= growth;
+    //                 stored_context[0] <= is_error;
+    //             end else begin
+    //                 stored_context_valid <= 0;
+    //             end
+    //         end
+    //     end
+    // end
+
+    // always@(posedge clk) begin
+    //     if(reset) begin
+    //         mem_read_address <= 1;
+    //         mem_read_address_d <= 0;
+    //         mem_write_address <= HALF_CONTEXT - 1;
+    //     end else begin
+    //         if (stage == STAGE_WRITE_TO_MEM) begin
+    //             if(do_not_store == 1'b0) begin
+    //                 if(NUM_CONTEXTS > 2) begin
+    //                     if(mem_read_address == context_max) begin
+    //                         mem_read_address <= context_min;
+    //                     end else if (mem_read_address == NUM_CONTEXTS - 1) begin
+    //                         mem_read_address <= 0;
+    //                     end else begin
+    //                         mem_read_address <= mem_read_address + 1;
+    //                     end
+    //                 end else begin
+    //                     mem_read_address <= ~mem_read_address;
+    //                 end
+    //                 mem_read_address_d <= mem_read_address;
+    //                 mem_write_address <= mem_read_address_d;
+    //             end
+    //         end
+    //     end
+    // end
+
+    //logic to calulate the address to write to memory
     always@(posedge clk) begin
         if(reset) begin
-            grow_at_zero <= 0;
-            grow_at_hc <= 0;
-            is_error_at_zero <= 0;
-            is_error_at_hc <= 0;
+            context_address <= 0;
         end else begin
-            if(stage == STAGE_WRITE_TO_MEM) begin
-                if(mem_write_address == 0) begin
-                    grow_at_zero <= growth;
-                    is_error_at_zero <= is_error;
-                end else if(mem_write_address == HALF_CONTEXT) begin
-                    grow_at_hc <= growth;
-                    is_error_at_hc <= is_error;
+            if (stage == STAGE_WRITE_TO_MEM) begin
+                if(do_not_store == 1'b0) begin
+                    if(NUM_CONTEXTS > 2) begin
+                        if(context_address == context_max) begin
+                            context_address <= context_min;
+                        end else if (context_address == NUM_CONTEXTS - 1) begin
+                            context_address <= 0;
+                        end else begin
+                            context_address <= context_address + 1;
+                        end
+                    end else begin
+                        context_address <= ~context_address;
+                    end
                 end
             end
         end
     end
 
-    reg [1:0] growth_selected;
-    reg [1:0] is_error_selected;
-
-    //logic to calulate the address to write to memory
-    //logic to calulate the address to write to memory
     always@(posedge clk) begin
         if(reset) begin
-            mem_write_address <= 0;
+            mem_read_address <= 1;
+        end else begin
+            if (stage == STAGE_WRITE_TO_MEM) begin
+                if(do_not_store == 1'b0) begin
+                    if(NUM_CONTEXTS > 2) begin
+                        if(mem_read_address == context_max) begin
+                            mem_read_address <= context_min;
+                        end else if (mem_read_address == NUM_CONTEXTS - 1) begin
+                            mem_read_address <= 0;
+                        end else begin
+                            mem_read_address <= mem_read_address + 1;
+                        end
+                    end else begin
+                        mem_read_address <= ~mem_read_address;
+                    end
+                end
+            end
+        end
+    end
+
+    always@(posedge clk) begin
+        if(reset) begin
+            mem_write_address <= HALF_CONTEXT - 1;
         end else begin
             if (stage == STAGE_WRITE_TO_MEM) begin
                 if(do_not_store == 1'b0) begin
@@ -380,75 +493,56 @@ end else if(STORE_EXTERNAL == 1) begin
         end
     end
 
-    always@(*) begin
-        if(mem_write_address == context_max) begin
-            if(context_min == 0) begin
-                growth_selected = grow_at_zero;
-                is_error_selected = is_error_at_zero;
-            end else begin
-                growth_selected = grow_at_hc;
-                is_error_selected = is_error_at_hc;
-            end
-        end else begin
-            growth_selected = context_input[1:0];
-            is_error_selected = context_input[2];
-        end
-    end
-            
-    assign growth_mem = growth_selected;
-    assign is_error_mem = is_error_selected;
+    reg [1:0] grow_at_zero;
+    reg [1:0] grow_at_2d;
+    reg [1:0] grow_at_d_low;
+    reg [1:0] grow_at_d_high;
 
-    assign context_output = {growth,is_error};
-
-end else if(STORE_EXTERNAL == 2) begin
-
-    reg [RAM_LOG_DEPTH-1:0] mem_read_address_d;
-    reg [2:0] stored_context;
-    reg stored_context_valid;
+    reg is_error_at_zero;
+    reg is_error_at_2d;
+    reg is_error_at_d_low;
+    reg is_error_at_d_high;
 
     always@(posedge clk) begin
         if(reset) begin
-            stored_context <= 0;
-        end else begin
-            stored_context <= context_input;
-        end
-    end
-
-    always@(posedge clk) begin
-        if(reset) begin
-            stored_context_valid <= 0;
+            grow_at_zero <= 0;
+            grow_at_2d <= 0;
+            grow_at_d_low <= 0;
+            grow_at_d_high <= 0;
+            is_error_at_zero <= 0;
+            is_error_at_2d <= 0;
+            is_error_at_d_low <= 0;
+            is_error_at_d_high <= 0;
         end else begin
             if(stage == STAGE_WRITE_TO_MEM) begin
-                if(mem_read_address == context_min) begin
-                    stored_context_valid <= 1;
-                end else begin
-                    stored_context_valid <= 0;
-                end
-            end
-        end
-    end
-
-    always@(posedge clk) begin
-        if(reset) begin
-            mem_read_address <= 1;
-            mem_read_address_d <= 0;
-            mem_write_address <= HALF_CONTEXT - 1;
-        end else begin
-            if (stage == STAGE_WRITE_TO_MEM) begin
-                if(do_not_store == 1'b0) begin
-                    if(NUM_CONTEXTS > 2) begin
-                        if(mem_read_address == context_max) begin
-                            mem_read_address <= context_min;
-                        end else if (mem_read_address == NUM_CONTEXTS - 1) begin
-                            mem_read_address <= 0;
-                        end else begin
-                            mem_read_address <= mem_read_address + 1;
-                        end
-                    end else begin
-                        mem_read_address <= ~mem_read_address;
+                if(context_address == 0) begin
+                    grow_at_zero <= context_input[2:1];
+                    is_error_at_zero <= context_input[0];
+                    if(~continutation_from_top) begin
+                        grow_at_2d <= context_input[2:1];
+                        is_error_at_2d <= context_input[0];
                     end
-                    mem_read_address_d <= mem_read_address;
-                    mem_write_address <= mem_read_address_d;
+                end else if(context_address == HALF_CONTEXT-1) begin
+                    grow_at_d_low <= growth;
+                    is_error_at_d_low <= is_error;
+                    if(continutation_from_top) begin
+                        grow_at_d_high <= growth;
+                        is_error_at_d_high <= is_error;
+                    end
+                end else if(context_address == HALF_CONTEXT) begin
+                    grow_at_d_high <= context_input[2:1];
+                    is_error_at_d_high <= context_input[0];
+                    if(continutation_from_top) begin
+                        grow_at_d_low <= context_input[2:1];
+                        is_error_at_d_low <= context_input[0];
+                    end
+                end else if(context_address == NUM_CONTEXTS - 1) begin
+                    grow_at_2d <= growth;
+                    is_error_at_2d <= is_error;
+                    if(~continutation_from_top) begin
+                        grow_at_zero <= growth;
+                        is_error_at_zero <= is_error;
+                    end
                 end
             end
         end
@@ -459,16 +553,71 @@ end else if(STORE_EXTERNAL == 2) begin
             write_to_mem = 0;
         end else begin
             if (stage == STAGE_WRITE_TO_MEM && do_not_store == 1'b0) begin
-                write_to_mem = 1;
+                if(context_address == 0 || context_address == HALF_CONTEXT) begin
+                    write_to_mem = 0;
+                end else begin
+                    write_to_mem = 1;
+                end
             end else begin
                 write_to_mem = 0;
             end
         end
     end
 
-    assign data_to_memory = stored_context_valid ? stored_context : context_input;
+    assign data_to_memory = context_input;
     assign mem_rw_address = (stage == STAGE_WRITE_TO_MEM) ? mem_write_address : mem_read_address;
-    assign {growth_mem,is_error_mem} = (do_not_store) ? {growth, 1'b0} : data_from_memory;
+    assign {growth_mem,is_error_mem} = (mem_read_address == (HALF_CONTEXT -1) ? {grow_at_d_low,is_error_at_d_low} : 
+                                        (mem_read_address == (NUM_CONTEXTS - 1) ? 
+                                        {grow_at_2d,is_error_at_2d} : data_from_memory));
+
+    reg [1:0] grow_for_low;
+    reg is_error_for_low;
+
+    always@(*) begin
+        if(mem_read_address == 0) begin
+            if(context_address == HALF_CONTEXT -1) begin
+                grow_for_low = grow_at_zero;
+                is_error_for_low = is_error_at_zero;
+            end else if(context_address == NUM_CONTEXTS - 1 && ~continutation_from_top) begin
+                grow_for_low = growth;
+                is_error_for_low = is_error;
+            end else begin
+                grow_for_low = grow_at_zero;
+                is_error_for_low = is_error_at_zero;
+            end
+        end else if(mem_read_address == HALF_CONTEXT) begin
+            if(context_address == NUM_CONTEXTS -1) begin
+                grow_for_low = grow_at_d_high;
+                is_error_for_low = is_error_at_d_high;
+            end else if(context_address == HALF_CONTEXT -1 && continutation_from_top) begin
+                grow_for_low = growth;
+                is_error_for_low = is_error;
+            end else begin
+                grow_for_low = grow_at_d_high;
+                is_error_for_low = is_error_at_d_high;
+            end
+        end else begin
+            grow_for_low = growth;
+            is_error_for_low = is_error;
+        end
+    end
+
+    assign context_output[2:1] = grow_for_low;
+    assign context_output[0] = is_error_for_low;
+end
+
+end else begin
+    assign fully_grown = 0;
+    assign is_boundary = 0;
+    assign a_output_data = 0;
+    assign b_output_data = 0;
+    assign context_output = 0;
+
+    always@(posedge clk) begin
+        is_error <= 0;
+        weight_out <= 0;
+        boundary_condition_out <= 0;
+    end
 end
 
 
