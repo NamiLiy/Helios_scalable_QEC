@@ -143,8 +143,7 @@ always @(posedge clk) begin
                 if(block_id == 0) begin
                     global_stage <= STAGE_IDLE;
                     block_id <= block_id + 1;
-                end
-                if (valid_from_fpgas && ready_from_fpgas && return_msg_count < NUM_CHILDREN) begin
+                end else if (valid_from_fpgas && ready_from_fpgas && return_msg_count < NUM_CHILDREN) begin
                     if(data_from_fpgas [MSG_HEADER_MSB : MSG_HEADER_LSB] == HEADER_RESULT) begin
                         if(block_id == 1) begin
                             global_stage <= STAGE_IDLE;
