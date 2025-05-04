@@ -5,7 +5,9 @@
 module processing_unit #(
     parameter ADDRESS_WIDTH = 6,
     parameter NEIGHBOR_COUNT = 6,
-    parameter ADDRESS = 0 // M,X,Z, address
+    parameter ADDRESS = 0, // M,X,Z, address
+    parameter IS_STREAMING_WINDOW_BORDER = 0,
+    parameter STREAMING =  1
 ) (
     clk,
     reset,
@@ -23,7 +25,9 @@ module processing_unit #(
 
     odd,
     root,
-    busy
+    busy,
+    has_correction,
+    output_streaming_corrected_syndrome
 );
 
 `include "../../parameters/parameters.sv"
@@ -47,6 +51,9 @@ output [NEIGHBOR_COUNT*EXPOSED_DATA_SIZE-1:0] output_data;
 output reg [ADDRESS_WIDTH-1:0] root;
 output reg odd;
 output reg busy;
+
+input wire has_correction;
+output reg output_streaming_corrected_syndrome;
 
 wire [NEIGHBOR_COUNT*ADDRESS_WIDTH-1:0] neighbor_root;
 wire [NEIGHBOR_COUNT-1:0] neighbor_parent_vector;
@@ -111,8 +118,15 @@ reg m;
 always@(posedge clk) begin
     if(reset) begin
         m <= 0;
-    end else if(stage == STAGE_MEASUREMENT_LOADING) begin
+    end else if(stage == STAGE_MEASUREMENT_LOADING || (stage == STAGE_STREAMING_CORRECTION && IS_STREAMING_WINDOW_BORDER && has_correction)) begin 
         m <= measurement;
+    end
+
+end
+
+always@(posedge clk) begin
+    if(stage == STAGE_GROW && STREAMING) begin
+        output_streaming_corrected_syndrome <= (m == 1 | m == 0) ? m : 0; 
     end
 end
 
@@ -284,16 +298,17 @@ end
 
 reg [NEIGHBOR_COUNT-1:0] neighbor_is_error_internal;
 reg [NEIGHBOR_COUNT-1:0] neighbor_is_error_border;
-always@(*) begin
-    if(stage == STAGE_PEELING && !some_child_is_not_peeling_complete) begin
+
+always@(*) begin //new
+    if((stage == STAGE_PEELING || stage == STAGE_STREAMING_CORRECTION) && !some_child_is_not_peeling_complete) begin //NEW @Siona: Do you need the || here?
         neighbor_is_error_internal = neighbor_parent_vector & child_peeling_m;
     end else begin
         neighbor_is_error_internal = 6'b0;
     end
 end
 
-always@(*) begin
-    if(stage == STAGE_PEELING && !some_child_is_not_peeling_complete && odd) begin
+always@(*) begin //new
+    if((stage == STAGE_PEELING || stage == STAGE_STREAMING_CORRECTION) && !some_child_is_not_peeling_complete && odd) begin //NEW @Siona: Do you need the || here?
         casex (neighbor_is_boundary)
             6'b1xxxxx: neighbor_is_error_border = 6'b100000;
             6'b01xxxx: neighbor_is_error_border = 6'b010000;

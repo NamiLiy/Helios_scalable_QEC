@@ -3,8 +3,10 @@
 #include <math.h>
 #include <time.h>
 
-#define D 13
-#define TOTAL_MEASUREMENTS D
+#define D 5
+#define TOTAL_MEASUREMENTS (D*2-1)
+#define MEASUREMENT_ROUNDS 2
+int count;
 
 struct Address {
     int k;
@@ -31,9 +33,9 @@ int max(int a, int b) {
     return (a > b) ? a : b;
 }
 
-struct Node node_array[D][D+1][(D-1)/2];
-struct Edge hor_edges[D][D][D];
-struct Edge ver_edges[D][D+1][(D-1)/2];
+struct Node node_array[TOTAL_MEASUREMENTS][D+1][(D-1)/2];
+struct Edge hor_edges[TOTAL_MEASUREMENTS][D][D];
+struct Edge ver_edges[TOTAL_MEASUREMENTS][D+1][(D-1)/2];
 
 struct Address get_root(struct Address a){
     if(node_array[a.k][a.i][a.j].id.k == node_array[a.k][a.i][a.j].root.k &&
@@ -56,7 +58,7 @@ int grow(int k, int i, int j, int direction){
     // If fully grown mark as to_be_updated
     // Update change_occur
     int grow_ret = 0;
-    if(direction ==0){
+    if(direction == 0){
         if(hor_edges[k][i][j].is_boundary == 1){
             int is_odd = get_parity(hor_edges[k][i][j].a);
             if (is_odd && hor_edges[k][i][j].growth < 2) {
@@ -188,14 +190,47 @@ int merge(int k, int i, int j, int direction){
     return 0;
 }
 
-void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2]){
-    // printf("%d", syndrome[0][0][0]);
+void verifyVerilogRoots(FILE* file, struct Node node_array[TOTAL_MEASUREMENTS][D+1][(D-1)/2]) {
+
+    int verilog_root_u;
+    int verilog_root_z;
+    int verilog_root_x;
+
+    for(int k = 0; k < TOTAL_MEASUREMENTS; k++) {
+        for(int i = 0; i < D+1; i++) {
+            for(int j = 0; j < (D-1)/2; j++) {
+                if (fscanf(file, "%1d %1d %d", &verilog_root_z, &verilog_root_x, &verilog_root_u) != 3) {
+                    printf("Error reading file. No more test cases.\n");
+
+                }
+
+                struct Address a;
+                a.k = k;
+                a.i = i;
+                a.j = j;
+                struct Address root = get_root(a);
+
+                if(root.k == verilog_root_u && root.i == verilog_root_x && root.j == verilog_root_z) {
+                //    printf("roots match %d %d %d \n", root.k, root.i, root.j);
+                ;
+                } else{
+                    printf("fail expected: %d %d %d got %d %d %d \n", root.k, root.i, root.j, verilog_root_u, verilog_root_x, verilog_root_z);
+                }
+                
+            }
+        }
+    }
+}
+
+void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2], FILE* syndrome_test_file){
+    printf("%d", syndrome[0][0][0]);
 
     //Initialize Nodearray
 
     for(int k=0;k<TOTAL_MEASUREMENTS;k++){
         for(int i=0; i< (D+1);i++){
             for(int j=0; j<(D-1)/2;j++){
+                fprintf(syndrome_test_file, "%d \n", (syndrome)[k][i][j]);
                 node_array[k][i][j].parity = syndrome[k][i][j];
                 node_array[k][i][j].id.k = k;
                 node_array[k][i][j].id.i = i;
@@ -256,7 +291,7 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2]){
                         hor_edges[k][i][j].a.i = i;
                         hor_edges[k][i][j].a.j = j/2;
                         hor_edges[k][i][j].b.i = i+1;
-                        hor_edges[k][i][j].b.j = j/2 - 1;
+                        hor_edges[k][i][j].b.j = j/2;
                     }
                 }
                 hor_edges[k][i][j].to_be_updated = 0;
@@ -269,17 +304,17 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2]){
             for(int j=0; j< (D-1)/2;j++){
 		        ver_edges[k][i][j].growth = 0;
 		        ver_edges[k][i][j].to_be_updated = 0;
-                if(k==0){ // Bottom layer is an open boundary
+                if(k==(TOTAL_MEASUREMENTS-1)){ //Topmost measurement round is an open border
                     ver_edges[k][i][j].is_boundary = 1;
                     ver_edges[k][i][j].a.k = k;
                     ver_edges[k][i][j].a.i = i;
                     ver_edges[k][i][j].a.j = j;
                 } else {
                     ver_edges[k][i][j].is_boundary = 0;
-                    ver_edges[k][i][j].a.k = k-1;
+                    ver_edges[k][i][j].a.k = k;
                     ver_edges[k][i][j].a.i = i;
                     ver_edges[k][i][j].a.j = j;
-                    ver_edges[k][i][j].b.k = k;
+                    ver_edges[k][i][j].b.k = k+1;
                     ver_edges[k][i][j].b.i = i;
                     ver_edges[k][i][j].b.j = j;
                 }
@@ -289,9 +324,6 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2]){
 	}
 
     int change_occur = 1;
-
-    // print_edges_array();
-    // print_roots_parity_boundary();
 
     while(change_occur == 1){
 	    change_occur = 0;
@@ -313,7 +345,7 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2]){
             }
         }
 
-        // print_edges_array();
+
 
 	    // Merge cycle
         for(int k=0;k<TOTAL_MEASUREMENTS;k++){
@@ -332,43 +364,37 @@ void union_find (int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2]){
             }
         }
 
-        // print_roots_parity_boundary();
     }
-
-
 }
 
-int loadFileData(FILE* file, int (*array)[D][D+1][(D-1)/2]) {
-    int test_id;
-    if (fscanf(file, "%x", &test_id) != 1) {
-        printf("Error reading file. No more test cases.\n");
-        fclose(file);
-        return -1;
-    }
-    for(int k=0;k<D;k++){
+
+
+int loadFileData(FILE* file, int (*array)[TOTAL_MEASUREMENTS][D+1][(D-1)/2]) {
+    for(int k=0;k<TOTAL_MEASUREMENTS;k++){
         for(int i=0; i< D + 1;i++){
             for(int j=0; j< (D-1)/2;j++){
                 int value;
-                if (fscanf(file, "%x", &value) != 1) {
-                    printf("Error reading file.\n");
+                if (fscanf(file, "%d", &value) != 1) {
+                    printf("Error reading input streaming file.\n");
                     fclose(file);
                     return -1;
                 }
+
                 (*array)[k][i][j] = value;
+
             }
         }
     }
-    printf("Test id : %x loaded\n",test_id);
-    return test_id;
+
+    return 1;
 }
 
 int print_output(FILE* file, int test) {
     fprintf(file, "%08X\n", test);
-    for(int k=0;k<D;k++){
+    for(int k=0;k<TOTAL_MEASUREMENTS;k++){
         for(int i=0; i< D + 1;i++){
             for(int j=0; j< (D-1)/2;j++){
-                struct Address root = get_root(node_array[k][i][j].root);
-                fprintf(file, "00%02X%02X%02X\n", root.k, root.i, root.j);
+                fprintf(file, "00%02X%02X%02X\n", node_array[k][i][j].root.k, node_array[k][i][j].root.i, node_array[k][i][j].root.j);
             }
         }
     }
@@ -376,16 +402,24 @@ int print_output(FILE* file, int test) {
 }
 
 int main(){
-    // load syndrome
+
     int distance = D;
-    char filename[100];
-    sprintf(filename, "../test_benches/test_data/input_data_%d_streaming.txt", distance);
-    FILE* file = fopen(filename, "r");
-    if (file == NULL) {
-        printf("Error opening file %s.\n", filename);
+    //load verilog roots
+    char roots_filename[100];
+    sprintf(roots_filename, "../test_benches/test_data/output_data_%d_roots.txt", D);
+    FILE* roots_file = fopen(roots_filename, "r");
+
+    if (roots_file == NULL) {
+        printf("Error opening roots file %s.\n", roots_filename);
         return -1;
     }
 
+    //output c syndrome values
+    char syn_filename[100];
+    sprintf(syn_filename, "output_syndrome_test");
+    FILE* syndrome_test_file = fopen(syn_filename, "w");
+
+    //output roots
     char output_filename[100];
     sprintf(output_filename, "../test_benches/test_data/output_data_%d_streaming.txt", distance);
     FILE* file_op = fopen(output_filename, "wb");
@@ -394,16 +428,34 @@ int main(){
         return -1;
     }
 
+    //load corrected syndrome from verilog
+    char syndrome_filename[100];
+    sprintf(syndrome_filename, "../test_benches/test_data/output_data_%d_syndrome.txt", D);
+    FILE* syndrome_file = fopen(syndrome_filename, "r");
+    if (syndrome_file == NULL) {
+        printf("Error opening syndrome file %s.\n", syndrome_filename);
+        return -1;
+    }
+
+    count = 1;
     while(1){
-        int syndrome[D][D+1][(D-1)/2];
-        int ret_val = loadFileData(file, &syndrome);
+        printf("count %d \n", count);
+        int syndrome[TOTAL_MEASUREMENTS][D+1][(D-1)/2];
+        int ret_val = loadFileData(syndrome_file, &syndrome);
         if(ret_val < 0) {
             break;
         }
-        union_find(syndrome);
+        count++;
+
+        union_find(syndrome, syndrome_test_file);
         print_output(file_op, ret_val);
+        verifyVerilogRoots(roots_file, node_array);
+
     }
 
     fclose(file_op);
+    // fclose(syndrome_file);
+    fclose(syndrome_test_file);
+    fclose(roots_file);
     return 0;
 }
